@@ -25,6 +25,7 @@ export function VideoPlayerCard() {
   const clearSeek = useVideoStore((s) => s.clearSeek);
   const setPlaying = useVideoStore((s) => s.setPlaying);
   const setCurrentPlaybackSeconds = useVideoStore((s) => s.setCurrentPlaybackSeconds);
+  const playbackRate = useVideoStore((s) => s.playbackRate);
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -242,6 +243,16 @@ export function VideoPlayerCard() {
       playerRef.current.pause();
     }
   }, [isPlaying, ready]);
+
+  // Applies the highlights-reel speed control (or any future caller of
+  // setPlaybackRate) to the live player -- separate effect from
+  // isPlaying/pause above so a mid-playback speed change doesn't need to
+  // toggle play/pause to take effect. Re-applied on `ready` too, since a
+  // rate set before the player finished mounting would otherwise be lost.
+  useEffect(() => {
+    if (!ready || !playerRef.current) return;
+    playerRef.current.setPlaybackRate?.(playbackRate);
+  }, [playbackRate, ready]);
 
   // Poll current playback position while playing so entity-seek can pick the
   // nearest mention to where the video currently is. A true ~250ms interval

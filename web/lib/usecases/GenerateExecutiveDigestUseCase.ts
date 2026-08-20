@@ -5,10 +5,11 @@ import {
   type ExecutiveDigest,
 } from '@/lib/prompts/executive-digest';
 import {
-  HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+  buildHighlightsExtractionSystemPrompt,
   buildHighlightsExtractionUserMessage,
   parseHighlightsExtraction,
 } from '@/lib/prompts/highlights-extraction';
+import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type {
   TextCompletionPort,
   CompletionModel,
@@ -180,18 +181,41 @@ export class GenerateExecutiveDigestUseCase {
     videoId: string;
     models: readonly CompletionModel[];
   }): Promise<void> {
-    const segments = await this.persistence.getTranscriptSegments(params.videoId);
+    // /simplify review (2026-08-20): these two awaits are independent (the
+    // registry fetch doesn't depend on segments) -- parallelized to save a
+    // round-trip on the common non-empty-segments path.
+    const [segments, resolvedHighlightsRegistry] = await Promise.all([
+      this.persistence.getTranscriptSegments(params.videoId),
+      // Registry-resolved, not hardcoded (2026-08-20 -- see
+      // 20260820120000_highlights_reel_uncap_settings.sql RCA). maxOutputTokens
+      // in particular used to be unset here, silently falling back to
+      // OpenRouterCompletionAdapter's DEFAULT_MAX_TOKENS=2000 -- too small for
+      // a dense video's full highlight set, truncating the response mid-array.
+      SupabaseSettingsAdapter.getRegistrySettings(
+        ['highlights.maxCount', 'highlights.maxOutputTokens'],
+        HIGHLIGHTS_REGISTRY_FALLBACK
+      ),
+    ]);
     if (!segments || segments.length === 0) return;
 
+    // /simplify review (2026-08-20): this was the one of three highlights-
+    // settings call sites that DIDN'T route through clampHighlightsSetting
+    // (web/app/api/analyses/highlights/route.ts does) -- a bare `|| fallback`
+    // only guards falsy values, not a malformed/out-of-range registry value.
+    // Same bounds as the migration's own validation jsonb.
+    const maxCount = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxCount'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount'], 4, 80);
+    const maxOutputTokens = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxOutputTokens'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens'], 500, 8000);
+
     const completion = await this.completion.complete({
-      system: HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+      system: buildHighlightsExtractionSystemPrompt(maxCount),
       user: buildHighlightsExtractionUserMessage(segments),
       models: params.models,
+      maxTokens: maxOutputTokens,
       analysisId: params.analysisId,
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts);
+    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount);
 
     // 'invalid' means the model response was unparseable -- a transient LLM
     // failure, not a genuine "no highlights" finding. Must NOT touch any

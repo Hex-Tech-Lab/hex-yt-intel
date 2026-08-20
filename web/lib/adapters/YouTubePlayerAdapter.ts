@@ -11,6 +11,7 @@ interface YTPlayerInstance {
   pauseVideo(): void;
   destroy(): void;
   getCurrentTime(): number;
+  setPlaybackRate(rate: number): void;
 }
 
 interface YTPlayerConstructor {
@@ -180,6 +181,24 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
   pause(): void {
     if (this.player?.pauseVideo && !this.destroyed) {
       this.player.pauseVideo();
+    }
+  }
+
+  setPlaybackRate(rate: number): void {
+    // YouTube's IFrame API silently ignores rates outside its own supported
+    // set (getAvailablePlaybackRates(), typically 0.25-2 in the real
+    // player); clamp to this component's documented 0.5-3 UI range so a bad
+    // caller value can't be passed through unchecked, even though the
+    // player itself is the final authority on what it actually applies.
+    if (this.player?.setPlaybackRate && !this.destroyed) {
+      // Real bug fix (automated review): a non-finite `rate` (NaN in
+      // particular -- Infinity/-Infinity already clamp correctly through
+      // Math.min/max) propagates NaN through both calls, forwarding an
+      // invalid rate to the YouTube IFrame API. Reject non-finite input
+      // before clamping.
+      if (!Number.isFinite(rate)) return;
+      const clamped = Math.min(3, Math.max(0.5, rate));
+      this.player.setPlaybackRate(clamped);
     }
   }
 

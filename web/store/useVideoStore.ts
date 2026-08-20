@@ -8,9 +8,17 @@ export interface VideoState {
   /** Current playback position in seconds, updated by VideoPlayerCard's
    *  timeupdate polling. Null when no video has been played yet. */
   currentPlaybackSeconds: number | null;
+  /** Playback speed multiplier applied to the mounted YouTube player
+   *  (highlights-reel redesign, 2026-08-20). Read by VideoPlayerCard and
+   *  applied via YouTubePlayerAdapter.setPlaybackRate whenever it or
+   *  `ready` changes -- not just once on mount -- so a speed change made
+   *  mid-playback (e.g. from the highlights reel's speed control) takes
+   *  effect immediately instead of only on the next player mount. */
+  playbackRate: number;
   setPlaying: (isPlaying: boolean) => void;
   setSeekTo: (seconds: number) => void;
   setCurrentPlaybackSeconds: (seconds: number | null) => void;
+  setPlaybackRate: (rate: number) => void;
   setEntityTimeSeekEnabled: (enabled: boolean) => void;
   toggleEntityTimeSeek: () => void;
   clearPendingNav: () => void;
@@ -24,7 +32,9 @@ export const useVideoStore = create<VideoState>((set) => ({
   pendingNav: null,
   entityTimeSeekEnabled: false,
   currentPlaybackSeconds: null,
+  playbackRate: 1,
   setPlaying: (isPlaying) => set({ isPlaying }),
+  setPlaybackRate: (rate) => set({ playbackRate: rate }),
   setEntityTimeSeekEnabled: (enabled) => set({ entityTimeSeekEnabled: enabled }),
   toggleEntityTimeSeek: () => set((s) => ({ entityTimeSeekEnabled: !s.entityTimeSeekEnabled })),
   // A timestamp click always means "play from here" -- without this, a
@@ -37,5 +47,5 @@ export const useVideoStore = create<VideoState>((set) => ({
   setCurrentPlaybackSeconds: (seconds) => set({ currentPlaybackSeconds: seconds }),
   clearPendingNav: () => set({ pendingNav: null }),
   clearSeek: () => set({ seekTo: null }),
-  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null }),
+  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1 }),
 }));

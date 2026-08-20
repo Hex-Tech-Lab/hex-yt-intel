@@ -262,3 +262,15 @@ adding the new form. Real fix: also reject any `next` value containing
 a backslash, or parse with `new URL(next, origin)` and compare
 `.origin` instead of a startsWith heuristic. Low urgency (modern
 browsers don't do this normalization), not launch-blocking.
+
+## 2026-08-20 — Highlights-reel redesign: /simplify findings deferred past merge (PR #257/#258)
+
+Real findings from the mandatory 4-agent /simplify pass, applied where safe, deferred here where the fix was too large/risky to land right before merge:
+
+1. **Duplicated media-time-clamping state machine.** `HighlightsScrubber.tsx` (store-driven) and `PublicHighlightsReel.tsx` (own `YouTubePlayerAdapter` poller) implement the same segment-advance/seek-settlement-guard logic twice, only the time-source primitive differs. Extract a shared `useSegmentPlayback({getCurrentTime, seekTo, play, setRate}, highlights, segmentDurationSeconds, contextLeadSeconds)` hook, parameterized over `VideoPlayerPort` (which already exists). Also covers the duplicated `SPEED_OPTIONS` array (a third copy of the same 0.5-3 range is hardcoded again as the clamp bounds inside `YouTubePlayerAdapter.setPlaybackRate`).
+2. **Duplicated markdown link-renderer.** `ApexSummaryCard.tsx`'s `apexComponents.link` is a verbatim copy (including the comment) of `SelectedDimensionReadout.tsx`'s `readoutComponents.link` (the `#t=` -> `TimestampLink` routing + external-link `target="_blank"` guard). Extract one shared `createMarkdownLinkRenderer()` used by both.
+3. **Three uncoordinated timers for one concept.** `useHighlightTicker`'s own 150ms `setInterval` (word-reveal) runs alongside the 250ms advance-poller in both scrubber variants -- all three are independently deriving "how far into this segment are we" from slightly different sources. Have the ticker accept an externally-supplied elapsed-time value from the same poll already computing it, instead of owning a second timer.
+4. **`HighlightsScrubber`'s videoMetadata guard lives in the caller, not the component.** `DashboardContainer.tsx` was patched with `&& videoMetadata` at the one current call site to prevent an orphaned scrubber with no player context -- a future call site would need to independently rediscover this same guard. Move the no-op condition into `HighlightsScrubber` itself.
+5. **`astryx-list-item > span:first-child` CSS selector** (numbered-marker width fix, `web/app/globals.css`) targets Astryx's private/undocumented DOM structure inferred from reading its source, not a public contract -- any Astryx version bump could silently break it with no compile-time signal. No better option available without an upstream Astryx fix; flagged, not fixable from this repo alone.
+
+None of these are correctness bugs in the shipped code -- all were judged safe to defer past this merge, not silently dropped.

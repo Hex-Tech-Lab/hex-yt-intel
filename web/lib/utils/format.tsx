@@ -39,8 +39,20 @@ export function preprocessMarkdown(content: string): string {
   const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(row);
   const countCols = (row: string) => row.split('|').filter(cell => cell.trim() !== '').length;
 
+  // /simplify review (2026-08-20): reused the existing fenced-code-block
+  // guard pattern from this same function's tab-table pass below (was
+  // missing here -- a real gap, not just duplication, since a code block
+  // containing pipe-table-like text could otherwise get mangled). Also
+  // advances `i` to the end of each handled table instead of re-entering
+  // already-scanned rows one at a time (was O(rows^2) per table).
+  let inTableNormalizationFence = false;
   for (let i = 0; i < rawLines.length - 1; i++) {
     const line = rawLines[i]?.trim() || '';
+    if (line.startsWith('```')) {
+      inTableNormalizationFence = !inTableNormalizationFence;
+      continue;
+    }
+    if (inTableNormalizationFence) continue;
     const nextLine = rawLines[i + 1]?.trim() || '';
 
     if (!isTableRow(line) || !isDelimiterRow(nextLine)) continue;
@@ -65,6 +77,7 @@ export function preprocessMarkdown(content: string): string {
       rawLines[i] = line.slice(0, -1) + ' |'.repeat(maxCols - headerCols) + '|';
     }
     rawLines[i + 1] = '|' + Array(maxCols).fill('---').join('|') + '|';
+    i = j - 1; // skip past this table's already-scanned rows
   }
   processed = rawLines.join('\n');
 
