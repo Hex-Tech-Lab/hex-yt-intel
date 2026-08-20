@@ -39,7 +39,19 @@ const readoutComponents = {
       const timestamp = href.replace('#t=', '');
       return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
     }
-    return <a href={href} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>;
+    // Real bug fix (automated review, same session): only genuinely external
+    // http(s) links should open in a new tab -- a catch-all target="_blank"
+    // would also break relative/same-origin/mailto/in-page links.
+    const isExternal = /^https?:\/\//i.test(href ?? '');
+    return (
+      <a
+        href={href}
+        className="text-[var(--accent)] hover:underline"
+        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
+        {children}
+      </a>
+    );
   },
 };
 
