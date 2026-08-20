@@ -1,0 +1,60 @@
+docs/legal/refund-policy.md
+  s_0eded1e9d0cab6::t_806c5337ba759d 5,8,17
+web/app/layout.tsx
+  s_0eded1e9d0cab6::t_858bbc9bbde653 28
+web/app/auth/signin/form.tsx
+  s_0eded1e9d0cab6::t_376f1f4b1944f0 99
+web/components/organisms/MobileBreadcrumb.tsx
+  s_0eded1e9d0cab6::t_b518376491d8d5 47
+web/app/refund-policy/page.tsx
+  s_0eded1e9d0cab6::t_5a2b6123147764 7-8
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_85da3474b0b1f7 1261-1262
+  s_0eded1e9d0cab6::t_47f3c5f7271720 1263
+web/components/templates/LegalPage.tsx
+  s_0eded1e9d0cab6::t_e2fb9563525883 29
+web/app/share/[token]/page.tsx
+  s_0eded1e9d0cab6::t_f04452ed632d23 34
+  s_0eded1e9d0cab6::t_e9c54729aeb526 92
+web/components/Footer.tsx
+  s_0eded1e9d0cab6::t_0dbf273d268f4b 26
+  s_0eded1e9d0cab6::t_81f2fb3d28a24a 66
+web/app/legal/sub-processors/page.tsx
+  s_0eded1e9d0cab6::t_fda6fc7d9448b5 7-8
+web/app/landing-page.tsx
+  s_0eded1e9d0cab6::t_2f89eda0f344b2 66
+web/app/terms-and-conditions/page.tsx
+  s_0eded1e9d0cab6::t_5a2b6123147764 7-8
+web/components/templates/console/Sidebar.tsx
+  s_0eded1e9d0cab6::t_847903c20434cb 80
+web/app/privacy-policy/page.tsx
+  s_0eded1e9d0cab6::t_5a2b6123147764 7-8
+web/components/organisms/ResponsiveHeader.tsx
+  s_0eded1e9d0cab6::t_8f8c215b4c471f 36
+docs/legal/terms-of-service.md
+  s_0eded1e9d0cab6::t_bcaa4e97a8e9e9 5,8,12-14,17,21,27,29,32,35
+docs/legal/sub-processors.md
+  s_0eded1e9d0cab6::t_497377f3fd5230 5
+web/app/analyses/saved/page.tsx
+  s_0eded1e9d0cab6::t_f89dd56d924b42 79
+web/components/organisms/Navigation.tsx
+  s_0eded1e9d0cab6::t_4562d486681cdd 13
+docs/legal/privacy-policy.md
+  s_0eded1e9d0cab6::t_793e4d3841e682 5,15,20,37,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8a5922e6a7a744938ffa244b415d3ed44d5819e3",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
