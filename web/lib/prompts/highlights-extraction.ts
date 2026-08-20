@@ -6,12 +6,23 @@
  * place real segment timing exists.
  */
 
-export const HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT =
-  `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text. Select the moments a viewer researching this video would most want to see -- claims, reveals, pricing/numbers mentioned, strong opinions, key demonstrations -- not filler, greetings, or transitions.
+/**
+ * Built dynamically (not a static string) because maxCount is a Settings
+ * Registry tunable (highlights.maxCount, default 40) -- see
+ * 20260820120000_highlights_reel_uncap_settings.sql. There is deliberately
+ * no fixed target count or percentage-of-runtime instruction here: a live
+ * user report (2026-08-20) rejected the prior "select between 4 and 12
+ * moments" wording as an arbitrary compression cap that discarded
+ * genuinely important content on dense videos. maxCount is a defensive
+ * ceiling against runaway output, not a target to aim for.
+ */
+export function buildHighlightsExtractionSystemPrompt(maxCount: number): string {
+  return `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text. Select the moments a viewer researching this video would most want to see -- claims, reveals, pricing/numbers mentioned, strong opinions, key demonstrations -- not filler, greetings, or transitions.
 
 Output ONLY a JSON array, no prose before or after, no markdown code fence. Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, the end of the relevant span -- the start of the next selected segment or a later segment's start if the point continues>, "label": <string, one short sentence describing what happens at this moment>}.
 
-Select between 4 and 12 moments depending on video length and density -- fewer for short/sparse videos, more for long/dense ones. Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments, return an empty array [].`;
+Select every genuinely important moment -- there is NO fixed target count and NO fixed percentage of the video's runtime to aim for. A short, sparse video may only have a handful of real moments; a long, dense video may genuinely have several dozen. Do not artificially limit yourself to a small round number, and do not pad the list with filler to hit a count either -- only include moments a viewer would actually want to see. Hard ceiling: never return more than ${maxCount} moments even if more exist (pick the ${maxCount} most noteworthy if the video has more than that). Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments, return an empty array [].`;
+}
 
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>): string {
   const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
@@ -24,7 +35,6 @@ export interface ExtractedHighlight {
   label: string;
 }
 
-const MAX_HIGHLIGHTS = 12;
 const MAX_LABEL_LENGTH = 200;
 
 /**
@@ -45,12 +55,14 @@ export type HighlightsExtractionResult =
  * match a real segment start time (guards against a hallucinated timestamp
  * slipping through despite the prompt instruction) or is otherwise malformed.
  * De-dupes by start (keeps the first), sorts by start, and caps at
- * MAX_HIGHLIGHTS -- defensive limits even though the prompt already asks for
- * this shape, since a bad model response shouldn't be trusted to self-limit.
+ * maxHighlights (Settings Registry `highlights.maxCount`, default 40) --
+ * a defensive limit even though the prompt already asks for this shape,
+ * since a bad model response shouldn't be trusted to self-limit.
  */
 export function parseHighlightsExtraction(
   text: string,
-  validSegmentStarts: ReadonlySet<number>
+  validSegmentStarts: ReadonlySet<number>,
+  maxHighlights: number
 ): HighlightsExtractionResult {
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return { status: 'invalid' };
@@ -87,6 +99,6 @@ export function parseHighlightsExtraction(
   }
 
   out.sort((left, right) => left.start - right.start);
-  while (out.length > MAX_HIGHLIGHTS) out.pop(); // cap item count, not a string-display truncation
+  while (out.length > maxHighlights) out.pop(); // cap item count, not a string-display truncation
   return { status: 'ok', highlights: out };
 }

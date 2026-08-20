@@ -6,6 +6,15 @@
 export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   'highlights.segmentDurationSeconds': 10,
   'highlights.contextLeadSeconds': 2.5,
+  // Uncapped-selection tunables (2026-08-20, live user report -- see
+  // 20260820120000_highlights_reel_uncap_settings.sql for the full RCA).
+  // maxCount replaces the prior hardcoded MAX_HIGHLIGHTS=12 in
+  // highlights-extraction.ts; maxOutputTokens replaces the implicit
+  // DEFAULT_MAX_TOKENS=2000 completion fallback that was silently
+  // truncating dense-video highlight sets before the count cap even
+  // mattered.
+  'highlights.maxCount': 40,
+  'highlights.maxOutputTokens': 6000,
 } as const;
 
 /** A malformed/missing/out-of-range registry value must never reach the

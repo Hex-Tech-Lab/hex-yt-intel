@@ -5,10 +5,11 @@ import {
   type ExecutiveDigest,
 } from '@/lib/prompts/executive-digest';
 import {
-  HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+  buildHighlightsExtractionSystemPrompt,
   buildHighlightsExtractionUserMessage,
   parseHighlightsExtraction,
 } from '@/lib/prompts/highlights-extraction';
+import { HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import type {
   TextCompletionPort,
   CompletionModel,
@@ -183,15 +184,28 @@ export class GenerateExecutiveDigestUseCase {
     const segments = await this.persistence.getTranscriptSegments(params.videoId);
     if (!segments || segments.length === 0) return;
 
+    // Registry-resolved, not hardcoded (2026-08-20 -- see
+    // 20260820120000_highlights_reel_uncap_settings.sql RCA). maxOutputTokens
+    // in particular used to be unset here, silently falling back to
+    // OpenRouterCompletionAdapter's DEFAULT_MAX_TOKENS=2000 -- too small for
+    // a dense video's full highlight set, truncating the response mid-array.
+    const resolvedHighlightsRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['highlights.maxCount', 'highlights.maxOutputTokens'],
+      HIGHLIGHTS_REGISTRY_FALLBACK
+    );
+    const maxCount = Number(resolvedHighlightsRegistry['highlights.maxCount']) || HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount'];
+    const maxOutputTokens = Number(resolvedHighlightsRegistry['highlights.maxOutputTokens']) || HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens'];
+
     const completion = await this.completion.complete({
-      system: HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+      system: buildHighlightsExtractionSystemPrompt(maxCount),
       user: buildHighlightsExtractionUserMessage(segments),
       models: params.models,
+      maxTokens: maxOutputTokens,
       analysisId: params.analysisId,
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts);
+    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount);
 
     // 'invalid' means the model response was unparseable -- a transient LLM
     // failure, not a genuine "no highlights" finding. Must NOT touch any

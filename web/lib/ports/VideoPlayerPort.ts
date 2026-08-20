@@ -18,4 +18,9 @@ export interface VideoPlayerPort {
   pause(): void;
   destroy(): void;
   getCurrentTime(): number;
+  /** Playback speed multiplier (e.g. 0.5-3). Optional -- not every
+   *  implementation of this port necessarily supports variable speed, so
+   *  callers must guard with `?.` (highlights-reel speed control,
+   *  2026-08-20). */
+  setPlaybackRate?(rate: number): void;
 }
