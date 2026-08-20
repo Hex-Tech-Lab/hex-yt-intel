@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
+import { describe, expect, it } from 'vitest';
 import { middleware } from './middleware';
 
 /**
