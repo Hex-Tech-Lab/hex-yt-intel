@@ -1,5 +1,16 @@
 'use client';
 
+import { Tooltip } from '@astryxdesign/core';
+
+/** MM:SS formatter local to this file -- deliberately not imported from
+ *  entity-time-seek.ts's formatTimestamp, per this component's own
+ *  no-coupling-to-that-file rule (see file doc comment below). */
+function formatClock(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainderSeconds = Math.floor(totalSeconds % 60);
+  return `${minutes}:${remainderSeconds.toString().padStart(2, '0')}`;
+}
+
 /**
  * Shared marker-track scrubber shell for the highlights reel (2026-08-20
  * redesign, live user report -- docs/UI_FEEDBACK_TRIAGE_2026-08-20.md items
@@ -107,18 +118,29 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
       {/* Scrubber track container */}
       <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
-          {activeHighlight && (
-            <div
-              className="absolute top-0 bottom-0 bg-[var(--accent-a15)]"
-              style={{
-                left: `${Math.min(100, (activeHighlight.start / maxTime) * 100)}%`,
-                width: `${Math.max(
-                  1,
-                  Math.min(100 - (activeHighlight.start / maxTime) * 100, ((activeHighlight.end - activeHighlight.start) / maxTime) * 100)
-                )}%`,
-              }}
-            />
-          )}
+          {activeHighlight && (() => {
+            const segLeftPct = Math.min(100, (activeHighlight.start / maxTime) * 100);
+            const segWidthPct = Math.max(
+              1,
+              Math.min(100 - segLeftPct, ((activeHighlight.end - activeHighlight.start) / maxTime) * 100)
+            );
+            return (
+              // Real fix (live report, 2026-08-20): the active-segment fill
+              // was accent-a15 (15% opacity) on a 4px-tall bar -- too faint
+              // to read as a segment at all ("the segment is missing").
+              // Stronger fill + a real top/bottom border, taller than the
+              // base line so it visually reads as its own band, not just
+              // more line. Stays in the single-accent cyan family
+              // (web/app/globals.css has no secondary/warning/success
+              // palette anywhere in this app -- introducing a new hue here
+              // would be the first departure from that system, not a
+              // deliberate second color) -- intensity, not hue, was the gap.
+              <div
+                className="absolute top-1/2 -translate-y-1/2 h-3 bg-[var(--accent-a30)] border-y border-[var(--accent-a70)]"
+                style={{ left: `${segLeftPct}%`, width: `${segWidthPct}%` }}
+              />
+            );
+          })()}
         </div>
 
         <div className="absolute left-2 right-2 inset-y-0 pointer-events-none">
@@ -126,32 +148,53 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
             const isActive = idx === clampedActiveIndex;
             return (
-              // Real accessibility fix (automated review on PR #266): the
-              // marker's visual square (2-4px wide) was previously ALSO the
-              // interactive hit area -- nearly unclickable, especially on
-              // touch. The button now keeps a proper minimum hit target
-              // (24x24px min, WCAG 2.5.5-adjacent guidance) while an inner
-              // span carries the actual thin Obsidian-Escher marker mark.
-              <button
+              <Tooltip
                 key={highlight.idx}
-                type="button"
-                onClick={() => onSelect(idx)}
-                style={{ left: `${leftPct}%` }}
-                title={highlight.label}
-                aria-label={`Jump to highlight ${idx + 1}: ${highlight.label}`}
-                className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto flex items-center justify-center w-6 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1"
+                content={`${highlight.label} (${formatClock(highlight.start)}–${formatClock(highlight.end)})`}
+                placement="above"
               >
-                <span
-                  aria-hidden="true"
-                  className={`block transition-transform group-hover:scale-125 ${
-                    isActive
-                      ? 'w-1 h-4 bg-[var(--accent)] z-10'
-                      : 'w-0.5 h-3 bg-[var(--ink-muted)] group-hover:bg-[var(--accent)]'
-                  }`}
-                />
-              </button>
+                {/* Real accessibility fix (automated review on PR #266): the
+                    marker's visual square (2-4px wide) was previously ALSO
+                    the interactive hit area -- nearly unclickable,
+                    especially on touch. The button now keeps a proper
+                    minimum hit target (24x24px min, WCAG 2.5.5-adjacent
+                    guidance) while an inner span carries the actual mark:
+                    a rounded start dot for the active highlight (its own
+                    segment-start anchor), a thin bar otherwise. */}
+                <button
+                  type="button"
+                  onClick={() => onSelect(idx)}
+                  style={{ left: `${leftPct}%` }}
+                  aria-label={`Jump to highlight ${idx + 1}: ${highlight.label}`}
+                  className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto flex items-center justify-center w-6 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`block transition-transform group-hover:scale-125 ${
+                      isActive
+                        ? 'w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent-glow)] z-10'
+                        : 'w-0.5 h-3 bg-[var(--ink-muted)] group-hover:bg-[var(--accent)]'
+                    }`}
+                  />
+                </button>
+              </Tooltip>
             );
           })}
+
+          {/* End bracket: visual-only closure mark at the active segment's
+              end -- deliberately not a button. Clicking anywhere in the
+              segment body (or the end point specifically) to seek to an
+              arbitrary mid-segment time would need real new playback
+              plumbing (useSegmentPlayback only supports jumping to a
+              highlight's start today) -- out of scope for this visual
+              pass, per explicit user direction. */}
+          {activeHighlight && (
+            <span
+              aria-hidden="true"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-3.5 border-r-2 border-t-2 border-b-2 border-[var(--accent-a70)] z-10"
+              style={{ left: `${Math.min(99, Math.max(1, (activeHighlight.end / maxTime) * 100))}%` }}
+            />
+          )}
         </div>
       </div>
     </div>
