@@ -10,6 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 import { ApexSummaryCard } from '@/components/templates/console/ApexSummaryCard';
+import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
 import { useVideoStore } from '@/store/useVideoStore';
 
 const MARKDOWN_WITH_LINKS =
@@ -70,6 +71,40 @@ describe('shared MarkdownLink override', () => {
       const externalLink = screen.getByRole('link', { name: 'external site' });
       expect(externalLink).toHaveAttribute('target', '_blank');
       expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+  });
+
+  // Real gap fix (automated review, PR #260): the two tests above only ever
+  // exercised #t= and https:// -- the full external/internal decision matrix
+  // was never actually asserted. Exercises MarkdownLink directly so every
+  // URL class is covered precisely, not just the two happy-path forms.
+  describe('MarkdownLink URL-class matrix', () => {
+    it('treats protocol-relative URLs as external', () => {
+      render(<MarkdownLink href="//example.com/docs">proto-relative</MarkdownLink>);
+      const link = screen.getByRole('link', { name: 'proto-relative' });
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('does not treat a relative path as external', () => {
+      render(<MarkdownLink href="/dashboard">relative</MarkdownLink>);
+      const link = screen.getByRole('link', { name: 'relative' });
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+    });
+
+    it('does not treat a mailto link as external', () => {
+      render(<MarkdownLink href="mailto:test@example.com">email</MarkdownLink>);
+      const link = screen.getByRole('link', { name: 'email' });
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+    });
+
+    it('does not treat an in-page anchor as external', () => {
+      render(<MarkdownLink href="#section">anchor</MarkdownLink>);
+      const link = screen.getByRole('link', { name: 'anchor' });
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
     });
   });
 });

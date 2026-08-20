@@ -25,7 +25,12 @@ export function MarkdownLink({ href, children }: { href: string; children: React
     const timestamp = href.replace('#t=', '');
     return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
   }
-  const isExternal = /^https?:\/\//i.test(href ?? '');
+  // Real bug fix (automated review, PR #260): protocol-relative URLs
+  // (`//host/path`) are valid external navigation targets in a browser but
+  // didn't match the http(s)-only regex, so they'd open in the current tab
+  // without noopener/noreferrer -- a real external-link-behavior gap, not
+  // just a missed test case.
+  const isExternal = /^(https?:)?\/\//i.test(href ?? '');
   return (
     <a
       href={href}
