@@ -15,11 +15,13 @@ describe('middleware public-route allowlist', () => {
   it('exempts /api/test-auth/login (exact) from the session gate', async () => {
     const req = new NextRequest('https://getvintel.com/api/test-auth/login', { method: 'POST' });
     const res = await middleware(req);
-    // NextResponse.next() carries the x-middleware-next header and is NOT
-    // a 401 JSON response -- the real proof this path skips the auth gate.
-    expect(res.status).not.toBe(401);
-    const body = await res.text().catch(() => '');
-    expect(body).not.toContain('Unauthorized');
+    // Strengthened assertion (real finding 2026-08-20, automated PR review):
+    // `status !== 401` alone would also pass for a redirect or 500, neither
+    // of which is the real exemption contract. NextResponse.next() -- the
+    // only way this middleware "lets a request through" -- is specifically
+    // a 200 carrying the x-middleware-next header, so assert both.
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-next')).toBe('1');
   });
 
   it('does NOT exempt a hypothetical child path under /api/test-auth/login', async () => {

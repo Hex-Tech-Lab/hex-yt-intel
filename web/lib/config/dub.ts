@@ -47,8 +47,14 @@ export async function resolveDubConfig(): Promise<DubConfig> {
   const enabled = typeof resolved['dub.enabled'] === 'boolean'
     ? (resolved['dub.enabled'] as boolean)
     : DUB_CONFIG_FALLBACK.enabled;
-  const requestTimeoutMs = typeof resolved['dub.requestTimeoutMs'] === 'number' && resolved['dub.requestTimeoutMs'] > 0
-    ? (resolved['dub.requestTimeoutMs'] as number)
-    : DUB_CONFIG_FALLBACK.requestTimeoutMs;
+  // Number.isFinite (not typeof + > 0) so a malformed registry value of
+  // Infinity/NaN can't slip through and hang every Dub request indefinitely
+  // -- real validation gap found 2026-08-20, automated PR review. Also caps
+  // at a sane 60s ceiling.
+  const rawTimeout = resolved['dub.requestTimeoutMs'];
+  const requestTimeoutMs =
+    typeof rawTimeout === 'number' && Number.isFinite(rawTimeout) && rawTimeout > 0 && rawTimeout <= 60000
+      ? rawTimeout
+      : DUB_CONFIG_FALLBACK.requestTimeoutMs;
   return { domain, enabled, requestTimeoutMs };
 }
