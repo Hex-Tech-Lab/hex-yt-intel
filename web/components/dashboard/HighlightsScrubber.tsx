@@ -58,9 +58,24 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   // interval re-reads this closure every tick, and useVideoStore's
   // currentPlaybackSeconds is already kept fresh by VideoPlayerCard's own
   // 250ms poll, so no second independent poller is introduced here.
+  //
+  // Real regression fix (live report, 2026-08-20, post PR #263): PR #263
+  // made useSegmentPlayback's start()/jumpTo() queue instead of acting when
+  // getCurrentTime() returns null -- correct for PublicHighlightsReel.tsx,
+  // where null genuinely means "player iframe not mounted yet". But here,
+  // currentPlaybackSeconds starts null simply because nothing has PLAYED
+  // yet -- VideoPlayerCard.tsx only writes to it while isPlaying is true
+  // (its own poll effect is gated on `isPlaying`), and isPlaying only
+  // becomes true via the very `setSeekTo` call the readiness gate was
+  // withholding. By the time HighlightsScrubber mounts, VideoPlayerCard
+  // is ALREADY mounted (DashboardContainer's render guard requires
+  // `status === 'complete' && analysisId`, itself downstream of the video
+  // having loaded) -- so "no time yet" here means "at t=0", not "not
+  // ready", and null must not be forwarded as-is or every first click on
+  // "Play highlights" queues forever with nothing left to ever flush it.
   const primitives: SegmentPlaybackPrimitives = useMemo(
     () => ({
-      getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds,
+      getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds ?? 0,
       seekTo: setSeekTo, // setSeekTo already flips isPlaying -- no separate play() needed
       setPlaybackRate,
     }),
