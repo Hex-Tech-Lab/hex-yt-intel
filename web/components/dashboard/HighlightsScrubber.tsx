@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, IconButton, Selector, Spinner } from '@astryxdesign/core';
+import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
@@ -132,7 +132,17 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     elapsedInSegmentSeconds
   );
 
-  const speedOptions = useMemo(() => SPEED_OPTIONS.map((rate) => `${rate}x`), []);
+  // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
+  // as an oversized grey box out of step with the rest of the design, and
+  // repeating chevrons right next to HighlightsNav's own prev/next arrows
+  // was flagged as visual clutter. Replaced with a minimal tap-to-cycle
+  // pill (no dropdown, no chevrons) -- click advances to the next speed in
+  // SPEED_OPTIONS, wrapping back to the start after the last one.
+  const cycleSpeed = () => {
+    const currentIdx = SPEED_OPTIONS.indexOf(speed as (typeof SPEED_OPTIONS)[number]);
+    const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % SPEED_OPTIONS.length;
+    setSpeed(SPEED_OPTIONS[nextIdx]!);
+  };
 
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
   if (loading || !data) return <Spinner size="sm" />;
@@ -168,29 +178,31 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       {/* Timeline row: the track stays one continuous element (real
           highlight-timestamp positions preserved -- unlike a visually
           split two-segment track, which would misplace markers relative
-          to their true percentage position). The icon-only Play/Pause
-          toggle overlays it, centered, z-index above the markers. */}
-      <div className="relative w-full">
-        <HighlightsTrack
-          highlights={data.highlights}
-          activeIndex={playingIdx}
-          onSelect={jumpTo}
-          videoDurationSeconds={videoDurationSeconds}
-          hideNav
-        />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-          <IconButton
-            label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
-            icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
-            variant="primary"
-            size="sm"
-            onClick={playingIdx === null ? start : stop}
+          to their true percentage position). Play/Pause sits flush right
+          as a real flex sibling (not a centered overlay -- corrected per
+          live feedback), shortening the track by exactly the button's own
+          width instead of floating over the middle of it. */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <HighlightsTrack
+            highlights={data.highlights}
+            activeIndex={playingIdx}
+            onSelect={jumpTo}
+            videoDurationSeconds={videoDurationSeconds}
+            hideNav
           />
         </div>
+        <IconButton
+          label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
+          icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+          variant="primary"
+          size="sm"
+          onClick={playingIdx === null ? start : stop}
+        />
       </div>
 
       {/* Footer row: live transcript ticker (left, grows/truncates) +
-          Speed dropdown + relocated moment stepper (right). */}
+          Speed cycle-pill + relocated moment stepper (right). */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
           {activeHighlight ? (
@@ -208,15 +220,15 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Selector
-            label="Playback speed"
-            isLabelHidden
-            size="sm"
-            value={`${speed}x`}
-            onChange={(val) => setSpeed(Number(val.replace('x', '')))}
-            options={speedOptions}
-            width={80}
-          />
+          <button
+            type="button"
+            onClick={cycleSpeed}
+            title="Cycle playback speed"
+            aria-label={`Playback speed: ${speed}x. Click to change.`}
+            className="text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 py-0.5 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+          >
+            {speed}x
+          </button>
           <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
         </div>
       </div>
