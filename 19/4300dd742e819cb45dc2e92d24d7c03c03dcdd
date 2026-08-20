@@ -1,0 +1,32 @@
+web/tests/pairwise/model.pict
+  s_0eded1e9d0cab6::t_f71344890c8301 14-16
+  s_0eded1e9d0cab6::t_526287413fb11f 17-19
+web/tests/pairwise/generate.mjs
+  s_0eded1e9d0cab6::t_1718fceeacc4c5 1-25
+web/package.json
+  s_0eded1e9d0cab6::t_1e9325df87ca7a 7
+docs/testing/PICT_REAL_INTEGRATION_PLAN.md
+  s_0eded1e9d0cab6::t_d1f19e2de4e11a 279,284-289
+  s_0eded1e9d0cab6::t_bfd9c8e842b9c7 312-313,316
+  s_0eded1e9d0cab6::t_cd58fb91c45402 101,105-112
+  s_0eded1e9d0cab6::t_6cbc28b84c5643 140,145-181
+  s_0eded1e9d0cab6::t_5c02530f2f4b43 113
+  s_0eded1e9d0cab6::t_90753f8ea6c5fd 182
+  s_0eded1e9d0cab6::t_f4c5dd9c58ad7e 290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "194300dd742e819cb45dc2e92d24d7c03c03dcdd",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
