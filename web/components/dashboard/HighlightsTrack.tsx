@@ -75,7 +75,7 @@ export function HighlightsNav({
         onClick={handlePrev}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="p-0.5 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">‹</span>
       </button>
@@ -88,7 +88,7 @@ export function HighlightsNav({
         onClick={handleNext}
         title="Next highlight"
         aria-label="Next highlight"
-        className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="p-0.5 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">›</span>
       </button>
