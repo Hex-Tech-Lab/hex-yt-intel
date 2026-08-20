@@ -1176,7 +1176,11 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const description = (req.metadata as { description?: string }).description;
   if (description !== undefined) {
     const chapters = parseChapters(description);
-    const appUrl = req.appUrl || c.env.APP_URL || '';
+    // Same fallback as the persist callback above (line ~769) -- previously
+    // fell back to '' here, which silently skipped chapter persistence with
+    // no error when both req.appUrl and APP_URL were absent (real P1 found
+    // by automated PR review on #244, fixed same session).
+    const appUrl = req.appUrl || c.env.APP_URL || "https://getvintel.com";
     if (appUrl && signingKey) {
       c.executionCtx.waitUntil((async () => {
         try {
