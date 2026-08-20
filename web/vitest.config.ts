@@ -47,6 +47,7 @@ export default defineConfig({
       'components/**/*.test.{ts,tsx}',
       'store/**/*.test.{ts,tsx}',
       'app/api/admin/logs/**/*.test.ts',
+      'app/api/test-auth/**/*.test.ts',
       '../worker/src/__tests__/**/*.test.ts',
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',

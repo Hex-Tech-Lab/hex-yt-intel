@@ -20,6 +20,7 @@ import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { HighlightsScrubber } from '@/components/dashboard/HighlightsScrubber';
+import { ShareButton } from '@/components/dashboard/ShareButton';
 import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
@@ -718,7 +719,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               {status !== 'idle' && (
                 <div className="flex flex-col gap-1">
-                  <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={(t) => startTransition(() => setConsoleTab(t))} />
+                  <div className="flex items-center justify-between gap-2">
+                    <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={(t) => startTransition(() => setConsoleTab(t))} />
+                    {status === 'complete' && analysisId && <ShareButton analysisId={analysisId} />}
+                  </div>
 
                   {consoleTab === 'synthesis' ? (
                     <>
