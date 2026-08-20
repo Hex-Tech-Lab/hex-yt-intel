@@ -1,0 +1,25 @@
+# PICT model: hex-yt-intel test dimension combinations
+# Generated 2026-08-20 from PAIRWISE_TEST_MATRIX_WAVES_1_4.md dimensions
+# Auth Method dropped from original 7 dims (NextAuth removed per ADR 001)
+# API endpoints mapped to current web/app/api/ routes
+
+Environment: Production, Development, CI
+RateTier: Free, Pro, Enterprise
+ErrorType: None, NetworkFail, MissingData, InvalidInput
+CacheState: Fresh, Stale, Expired
+APIEndpoint: analyses, search, metadata, export, share, health
+AuthLevel: Public, Protected, Admin
+
+#
+# Constraints: illustrative only, NOT yet verified against real route/auth/
+# billing behavior -- proof-of-concept for the PICT model-file mechanics,
+# not a production-ready test contract. See docs/testing/
+# PICT_REAL_INTEGRATION_PLAN.md section 3.5 for the required follow-up:
+# trace each dimension/constraint to the actual code path it claims before
+# this model is used to generate cases anyone trusts as real coverage.
+#
+IF [RateTier] = "Free" AND [APIEndpoint] = "export" THEN [ErrorType] = "None";
+# Health endpoint is always public and has no tier logic
+IF [APIEndpoint] = "health" THEN [AuthLevel] = "Public";
+# Admin auth only applies to specific endpoints
+IF [AuthLevel] = "Admin" THEN [APIEndpoint] = "analyses" OR [APIEndpoint] = "metadata";
