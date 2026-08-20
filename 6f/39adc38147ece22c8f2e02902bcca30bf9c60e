@@ -1,0 +1,38 @@
+web/lib/utils/highlights-settings.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 34-41
+web/lib/hooks/useSegmentPlayback.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 1-210
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_af462ff8a8e210 270,272-273
+  s_0eded1e9d0cab6::t_2ce8c2f60449e0 271
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_af462ff8a8e210 3,9,23-28,62-75,78-93,95-99,104-108,111,159
+web/lib/hooks/useHighlightTicker.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 16-26,31-32,37-39,41-45
+web/lib/hooks/useSegmentPlayback.test.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 1-272
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_af462ff8a8e210 711-731
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 2,191-196,204
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_af462ff8a8e210 3,9,41-46,52,56-70,72-77,117-119,123-128,176
+web/lib/hooks/useHighlightTicker.test.ts
+  s_0eded1e9d0cab6::t_af462ff8a8e210 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6f39adc38147ece22c8f2e02902bcca30bf9c60e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
