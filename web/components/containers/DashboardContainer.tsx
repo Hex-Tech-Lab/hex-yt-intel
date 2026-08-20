@@ -703,6 +703,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       onClose={() => setSelectedNodeId(null)}
                     />
                   )}
+                  {/* Repositioned 2026-08-20 (live report): was rendered far
+                      below, under Executive Summary/Video Intelligence
+                      Context, disconnected from the player it controls.
+                      Moved directly under the video (and its own entity
+                      timeline scrubber above) per explicit instruction. */}
+                  {status === 'complete' && analysisId && (
+                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
+                  )}
                   {videoMetadata && (
                     <BentoMetadata
                       title={videoMetadata.title}
@@ -728,9 +736,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     <>
                       {status === 'complete' && (digest || digestLoading) && (
                         <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
-                      )}
-                      {status === 'complete' && analysisId && (
-                        <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
                       )}
                       {partialInfo && (
                         <div

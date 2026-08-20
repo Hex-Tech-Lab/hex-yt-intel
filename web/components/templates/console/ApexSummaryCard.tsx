@@ -3,11 +3,31 @@
 import { useState, useMemo } from 'react';
 import { TabList, Tab, Skeleton, Markdown } from '@astryxdesign/core';
 import { MonoLabel, GlowBorder, Icon, CornerFrame } from '@/components/templates/_shared/primitives';
+import { preprocessMarkdown } from '@/lib/utils/format';
+import { TimestampLink } from '@/components/TimestampLink';
 import type { Dimension } from './StreamingGrid';
 
 interface ApexSummaryCardProps {
   dimension: Dimension;
 }
+
+// Real bug fix (2026-08-20, live report): this card rendered raw `content`
+// through `<Markdown>` with no `components` override and without calling
+// `preprocessMarkdown()` first -- the shared timestamp-linkify pass
+// (linkifyTimestamps, converts bare "00:30" into `[00:30](#t=30)`) never ran,
+// and even if it had, there was no `link` override to route `#t=` hrefs
+// through TimestampLink. Timestamps here (e.g. "Source Anchor: 00:30 -
+// 02:15") rendered as indistinguishable plain text. Matches the same `link`
+// override used in SelectedDimensionReadout.tsx for consistency.
+const apexComponents = {
+  link: ({ href, children }: { href: string; children: React.ReactNode }) => {
+    if (href?.startsWith('#t=')) {
+      const timestamp = href.replace('#t=', '');
+      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+    }
+    return <a href={href} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>;
+  },
+};
 
 type SummaryTab = 'executive' | 'short' | 'long';
 
@@ -119,8 +139,8 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
 
           <div className="flex-1 overflow-y-auto max-h-[500px] hx-custom-scrollbar pr-2">
             {status === "done" || (status === "streaming" && parsedSummaries[activeTab]) ? (
-              <Markdown density="compact">
-                {parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`}
+              <Markdown density="compact" components={apexComponents}>
+                {preprocessMarkdown(parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`)}
               </Markdown>
             ) : status === "error" ? (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--err)] opacity-80">
