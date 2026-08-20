@@ -68,6 +68,11 @@ const TEST_ACCOUNT_EMAIL = 'testSprite@getvintel.com';
 export async function POST(request: NextRequest) {
   const configuredSecret = env.testAuthBypassSecret;
 
+  // TEMP DIAGNOSTIC — remove immediately after use, never leaks the value
+  if (request.headers.get('x-diag-probe') === '1') {
+    return NextResponse.json({ hasSecret: Boolean(configuredSecret), len: configuredSecret?.length ?? 0 });
+  }
+
   // Gate 1: env var not configured at all (the prod/default state) -> inert.
   if (!configuredSecret) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
