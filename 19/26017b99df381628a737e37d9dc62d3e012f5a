@@ -1,0 +1,32 @@
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_5a378a75bff42e 166
+  s_0eded1e9d0cab6::t_4fce538efcbb19 120-128
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_d1ef330aedeaee 6,207-208
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_d1ef330aedeaee 6,183-184
+web/lib/utils/format.tsx
+  s_0eded1e9d0cab6::t_1e3c92debd587b 42-47,51,53-54,80
+  s_0eded1e9d0cab6::t_4f7a49a5dca36b 48,52,55
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_67fa30cdaff8c8 12
+  s_0eded1e9d0cab6::t_d9cc3877553891 184-198,201-207
+web/lib/utils/highlights-settings.ts
+  s_0eded1e9d0cab6::t_68b9aa3047a85d 33-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1926017b99df381628a737e37d9dc62d3e012f5a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
