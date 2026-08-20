@@ -65,16 +65,63 @@ import { logActivityBestEffort } from '@/lib/services/activity-log';
 
 const TEST_ACCOUNT_EMAIL = 'testSprite@getvintel.com';
 
+/**
+ * GET variant, real gap found 2026-08-20: TestSprite's browser automation
+ * can only *navigate* (issue a GET) to a URL -- it has no action for an
+ * arbitrary POST with a custom header, so every authenticated test case
+ * blocked on a 405 against the POST-only route (confirmed via TestSprite's
+ * own real run: 12/15 cases blocked exactly here). Accepts the secret as a
+ * `?secret=` query param instead of the header, same two upstream gates
+ * (env var configured + registry toggle), same hardcoded single target
+ * account, same fail-closed 404 on any mismatch. Redirects to /dashboard on
+ * success instead of returning JSON, since a GET is a real navigation.
+ * Secret-in-URL is a real, accepted tradeoff for this specific structural
+ * constraint (test-only, default-off, rotatable, short-lived per run) --
+ * not used for the POST path, which stays header-based.
+ */
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const providedSecret = url.searchParams.get('secret') ?? '';
+  const result = await runBypass(request, providedSecret);
+  if (!result.ok) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+  const redirectUrl = new URL('/dashboard', request.url);
+  const redirectResponse = NextResponse.redirect(redirectUrl);
+  result.cookies.forEach(({ name, value, options }) => {
+    redirectResponse.cookies.set(name, value, options);
+  });
+  return redirectResponse;
+}
+
 export async function POST(request: NextRequest) {
+  const providedSecret = request.headers.get('x-test-auth-secret') ?? '';
+  const result = await runBypass(request, providedSecret);
+  if (!result.ok) {
+    return NextResponse.json({ error: 'Not found' }, { status: result.status });
+  }
+  const response = NextResponse.json({ ok: true, email: TEST_ACCOUNT_EMAIL });
+  result.cookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options);
+  });
+  return response;
+}
+
+interface BypassResult {
+  ok: boolean;
+  status: number;
+  cookies: { name: string; value: string; options: Record<string, unknown> }[];
+}
+
+async function runBypass(request: NextRequest, providedSecret: string): Promise<BypassResult> {
   const configuredSecret = env.testAuthBypassSecret;
 
   // Gate 1: env var not configured at all (the prod/default state) -> inert.
   if (!configuredSecret) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return { ok: false, status: 404, cookies: [] };
   }
 
   // Gate 2: per-request secret must match, via a constant-time comparison.
-  const providedSecret = request.headers.get('x-test-auth-secret') ?? '';
   const configuredBuf = Buffer.from(configuredSecret);
   const providedBuf = Buffer.from(providedSecret);
   const secretsMatch =
@@ -83,7 +130,7 @@ export async function POST(request: NextRequest) {
     timingSafeEqual(configuredBuf, providedBuf);
 
   if (!secretsMatch) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return { ok: false, status: 404, cookies: [] };
   }
 
   // Gate 3 (registry): the bypass must ALSO be explicitly enabled in the
@@ -104,7 +151,7 @@ export async function POST(request: NextRequest) {
     Sentry.captureException(registryErr, { tags: { operation: 'test-auth-bypass-registry' } });
   }
   if (!registryEnabled) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return { ok: false, status: 404, cookies: [] };
   }
 
   if (!env.supabaseServiceRoleKey) {
@@ -112,12 +159,12 @@ export async function POST(request: NextRequest) {
       level: 'error',
       tags: { operation: 'test-auth-bypass' },
     });
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    return { ok: false, status: 500, cookies: [] };
   }
 
   const adminClient = createSupabaseClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
-  // Gate 3 (structural, not request-controlled): the target account is a
+  // Gate 4 (structural, not request-controlled): the target account is a
   // hardcoded constant above -- there is no way for a caller to authenticate
   // as anyone else through this route.
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
@@ -129,14 +176,16 @@ export async function POST(request: NextRequest) {
     Sentry.captureException(linkError ?? new Error('generateLink returned no hashed_token'), {
       tags: { operation: 'test-auth-bypass' },
     });
-    return NextResponse.json({ error: 'Failed to mint test session' }, { status: 500 });
+    return { ok: false, status: 500, cookies: [] };
   }
 
   const cookieStore = await cookies();
-  const response = NextResponse.json({ ok: true, email: TEST_ACCOUNT_EMAIL });
+  const collectedCookies: BypassResult['cookies'] = [];
 
   // Same cookie-write pattern as the real OAuth callback (route.ts in
-  // auth/callback): anon-key client, setAll writes onto the response.
+  // auth/callback): anon-key client, setAll collected instead of written
+  // directly onto a response -- both GET and POST callers build their own
+  // response shape (redirect vs JSON) from this same collected list.
   const supabase = createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -144,7 +193,7 @@ export async function POST(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, { ...options, path: options?.path ?? '/' });
+          collectedCookies.push({ name, value, options: { ...options, path: options?.path ?? '/' } });
         });
       },
     },
@@ -157,7 +206,7 @@ export async function POST(request: NextRequest) {
 
   if (verifyError) {
     Sentry.captureException(verifyError, { tags: { operation: 'test-auth-bypass' } });
-    return NextResponse.json({ error: 'Failed to verify test session' }, { status: 500 });
+    return { ok: false, status: 500, cookies: [] };
   }
 
   // Real activity log of bypass usage (never the secret itself) -- best-effort,
@@ -180,5 +229,5 @@ export async function POST(request: NextRequest) {
     'test-auth-bypass-audit'
   );
 
-  return response;
+  return { ok: true, status: 200, cookies: collectedCookies };
 }
