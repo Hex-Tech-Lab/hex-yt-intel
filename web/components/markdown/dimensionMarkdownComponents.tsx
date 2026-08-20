@@ -1,5 +1,5 @@
-import type React from 'react';
 import { TimestampLink } from '@/components/TimestampLink';
+import type React from 'react';
 
 /**
  * Shared Astryx `<Markdown>` `link` component override.
