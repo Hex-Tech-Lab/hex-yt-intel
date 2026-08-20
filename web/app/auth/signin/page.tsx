@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import SignInForm from './form';
 import { loadConsoleProfile } from '@/lib/services/console-profile';
+import { resolveTestAuthBypassEnabled } from '@/lib/config/test-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +24,22 @@ export default async function SignIn({
     redirect(dest);
   }
 
+  // Real gap found 2026-08-20: TestSprite's browser automation can only fill
+  // real form fields and click buttons -- it cannot issue a raw POST with a
+  // custom header, which blocked every authenticated test case against the
+  // header-based bypass route. Supabase's Email provider is already enabled
+  // (confirmed live in the dashboard); this shows a real email/password
+  // field -- Supabase's own signInWithPassword, no custom mechanism -- gated
+  // behind the SAME testAuthBypass.enabled registry toggle that already
+  // governs the header-based route, so it's off by default in production
+  // and only appears when explicitly enabled for a test run. Only the one
+  // pre-existing test account has a password set at all (real Google-OAuth
+  // users have none), so this can't be used to sign in as anyone else.
+  const testAuthBypassEnabled = await resolveTestAuthBypassEnabled();
+
   return (
     <Suspense fallback={<div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "var(--void)", color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Loading...</div>}>
-      <SignInForm />
+      <SignInForm showTestAuth={testAuthBypassEnabled} />
     </Suspense>
   );
 }
