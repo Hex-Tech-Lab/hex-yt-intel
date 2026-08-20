@@ -1,0 +1,24 @@
+web/lib/icons/solar-subset.json
+  s_0eded1e9d0cab6::t_21d8cc4f08c051 1
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_156ea62292516e 156-158,160,168-172,174-180,182-194,210-221
+  s_0eded1e9d0cab6::t_e27d0d7f6dd2f5 173
+  s_0eded1e9d0cab6::t_60809b2a35ad3f 181
+  s_0eded1e9d0cab6::t_c7f7d738da9ae0 4-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "43bff2036c76940d68993d075c3d0266600e8e3a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
