@@ -1,0 +1,26 @@
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_0eded1e9d0cab6::t_9baa3c5c7aa2b7 12-13
+web/lib/hooks/useHighlightTicker.ts
+  s_0eded1e9d0cab6::t_84a996e3c72e26 56,58
+  s_0eded1e9d0cab6::t_6b3eec4bccc11d 57,66
+web/components/dashboard/HighlightsTrack.tsx
+  s_0eded1e9d0cab6::t_9baa3c5c7aa2b7 41
+web/lib/prompts/highlights-extraction.test.ts
+  s_0eded1e9d0cab6::t_74400b4608d296 12-13,18,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d492526b74c551f10b014f00b9a6cb1aad02134a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
