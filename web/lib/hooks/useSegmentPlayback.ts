@@ -84,6 +84,14 @@ export interface UseSegmentPlaybackResult {
    *  "should the component render at all" -- callers may still choose a
    *  component-level guard for other reasons (nothing to show, etc). */
   isReady: boolean;
+  /** Both `start()` and `jumpTo()` queue their request (latest-request-wins:
+   *  a scalar ref, not a FIFO queue) when the primitive isn't ready yet, and
+   *  flush on the next poll tick where it becomes ready. Both current call
+   *  sites (`HighlightsScrubber.tsx`, `PublicHighlightsReel.tsx`) only wire
+   *  these to user click handlers, never at mount/effect time, so the
+   *  pre-ready path is a defensive guard today, not a load-bearing race a
+   *  caller relies on. `stop()` (including the hook's own unmount cleanup)
+   *  cancels any pending queued request. */
   start: () => void;
   stop: () => void;
   jumpTo: (index: number) => void;
@@ -102,6 +110,14 @@ export function useSegmentPlayback({
   const [elapsedInSegmentSeconds, setElapsedInSegmentSeconds] = useState<number | null>(null);
   const stopRef = useRef(false);
   const pendingSeekTargetRef = useRef<number | null>(null);
+  // Real bug fix (post-merge review): `isReady` was computed and returned but
+  // never actually consulted by `start`/`jumpTo` -- both called `seekTo`/
+  // `play` unconditionally, so a caller invoking them before the primitive
+  // had a real current time (player not mounted/ready yet) fired a seek/play
+  // against a not-yet-ready player. `pendingStartIndexRef` queues the request;
+  // the poll loop below flushes it as soon as `getCurrentTime()` stops
+  // returning null, instead of silently dropping it.
+  const pendingStartIndexRef = useRef<number | null>(null);
 
   // Primitives/segments identity churns every render for callers that pass
   // fresh closures (both current call sites do) -- keep the poll effect's
@@ -119,6 +135,7 @@ export function useSegmentPlayback({
   const stop = useCallback(() => {
     stopRef.current = true;
     pendingSeekTargetRef.current = null;
+    pendingStartIndexRef.current = null;
     setPlayingIdx(null);
     setElapsedInSegmentSeconds(null);
   }, []);
@@ -130,9 +147,15 @@ export function useSegmentPlayback({
     if (index >= currentSegments.length) {
       setPlayingIdx(null);
       pendingSeekTargetRef.current = null;
+      pendingStartIndexRef.current = null;
       setElapsedInSegmentSeconds(null);
       return;
     }
+    if (primitivesRef.current.getCurrentTime() === null) {
+      pendingStartIndexRef.current = index;
+      return;
+    }
+    pendingStartIndexRef.current = null;
     const segment = currentSegments[index]!;
     const leadIn = Math.max(0, segment.start - contextLeadRef.current);
     pendingSeekTargetRef.current = leadIn;
@@ -168,6 +191,13 @@ export function useSegmentPlayback({
     const tick = () => {
       const currentTime = primitivesRef.current.getCurrentTime();
       setIsReady(currentTime !== null);
+
+      if (currentTime !== null && pendingStartIndexRef.current !== null && !stopRef.current) {
+        const queuedIndex = pendingStartIndexRef.current;
+        pendingStartIndexRef.current = null;
+        playFrom(queuedIndex);
+        return;
+      }
 
       if (stopRef.current) return;
       const idx = playingIdx;
