@@ -1,0 +1,26 @@
+web/lib/hooks/useSegmentPlayback.ts
+  s_0eded1e9d0cab6::t_16c0708c21d79f 4
+  s_0eded1e9d0cab6::t_062dca0829c57f 62-67
+web/components/dashboard/HighlightsTrack.tsx
+  s_0eded1e9d0cab6::t_0906cbb0403d1c 33-36,39-88,101-103,105
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_fc945a1a709c50 7
+  s_0eded1e9d0cab6::t_44e4ddd22fda25 155-160,172,175-203
+  s_0eded1e9d0cab6::t_f7ff32561a3aed 204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5fb1345056e3dc1a0bfdd44ad3520231d604a502",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
