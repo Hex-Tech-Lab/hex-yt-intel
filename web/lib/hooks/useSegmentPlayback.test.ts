@@ -193,6 +193,83 @@ describe('useSegmentPlayback', () => {
     expect(seekCalls).toEqual([8, 28]);
   });
 
+  it('start() before the primitive is ready queues the request instead of seeking immediately', () => {
+    // Regression test: post-merge review found isReady was computed but
+    // never enforced -- start()/jumpTo() called seekTo/play unconditionally
+    // even while getCurrentTime() still returned null.
+    const fake = makeFakePrimitives(null);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start();
+    });
+    expect(fake.seekCalls).toEqual([]);
+    expect(fake.playCalls).toBe(0);
+    expect(result.current.playingIdx).toBeNull();
+    expect(result.current.isReady).toBe(false);
+
+    // Player becomes ready on the next poll tick -- queued start flushes.
+    act(() => {
+      fake.setTime(0);
+      vi.advanceTimersByTime(250);
+    });
+    expect(fake.seekCalls).toEqual([8]);
+    expect(fake.playCalls).toBe(1);
+    expect(result.current.playingIdx).toBe(0);
+  });
+
+  it('jumpTo() before the primitive is ready queues the request instead of seeking immediately', () => {
+    const fake = makeFakePrimitives(null);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.jumpTo(2);
+    });
+    expect(fake.seekCalls).toEqual([]);
+    expect(result.current.playingIdx).toBeNull();
+
+    act(() => {
+      fake.setTime(0);
+      vi.advanceTimersByTime(250);
+    });
+    expect(fake.seekCalls).toEqual([58]);
+    expect(result.current.playingIdx).toBe(2);
+  });
+
+  it('stop() while a start is queued cancels the queued start', () => {
+    const fake = makeFakePrimitives(null);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start();
+      result.current.stop();
+    });
+    act(() => {
+      fake.setTime(0);
+      vi.advanceTimersByTime(250);
+    });
+    expect(fake.seekCalls).toEqual([]);
+    expect(result.current.playingIdx).toBeNull();
+  });
+
   it('stop() clears playingIdx and elapsed time', () => {
     const fake = makeFakePrimitives(0);
     const { result } = renderHook(() =>
