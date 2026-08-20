@@ -76,7 +76,7 @@ export class DubShortLinkAdapter implements ShortLinkPort {
       // 2026-08-20, automated PR review -- reverted from an earlier
       // fire-and-forget attempt in this same session that traded a real
       // audit-durability guarantee for a minor latency win).
-      await logActivityBestEffort('dub_share', { linkId: link.id, tenantId: tenantId ?? null }, 'dub-share-audit');
+      await logActivityBestEffort('dub_share', { linkId: link.id, tenantId: tenantId ?? null }, 'DubShortLinkAdapter', 'dub-share-audit');
       return { id: link.id, shortLink: link.shortLink, url: link.url };
     } catch (err) {
       const error = toError(err);
