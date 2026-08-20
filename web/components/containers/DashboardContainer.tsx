@@ -707,9 +707,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       below, under Executive Summary/Video Intelligence
                       Context, disconnected from the player it controls.
                       Moved directly under the video (and its own entity
-                      timeline scrubber above) per explicit instruction. */}
-                  {status === 'complete' && analysisId && (
-                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
+                      timeline scrubber above) per explicit instruction.
+                      Real regression fix (automated review, same session):
+                      requires videoMetadata specifically, not just the
+                      broader hasHadVideoRef/nucleusAnalysis fallback this
+                      block itself renders under -- without it, a completed
+                      analysis whose metadata is still loading, failed, or
+                      never arrived could render an orphaned scrubber with
+                      no real player/duration context (setSeekTo would fire
+                      against a VideoPlayerCard with nothing to seek). */}
+                  {status === 'complete' && analysisId && videoMetadata && (
+                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata.duration ?? null} />
                   )}
                   {videoMetadata && (
                     <BentoMetadata

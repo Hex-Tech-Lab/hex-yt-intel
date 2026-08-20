@@ -501,8 +501,13 @@ button:focus-visible,
    above the label. Not overridable via Markdown's `components` prop (List/
    ListItem aren't in MarkdownComponents) so this targets Astryx's own stable
    `astryx-list-item` class -- the marker is always its first child span
-   (Item.tsx: marker/startContent/endContent are direct siblings). */
-.astryx-list-item > span:first-child {
+   (Item.tsx: marker/startContent/endContent are direct siblings).
+   Scoped to `ol` only (automated review finding, same session): List.tsx
+   renders a real `<ol>` only when `listStyle === 'decimal'` (numbered) and
+   a `<ul>` for disc/circle bullets -- an unscoped selector would also widen
+   the small dot/circle marker box on every bullet list in the app, adding
+   unwanted indentation there. */
+ol.astryx-list > .astryx-list-item > span:first-child {
   width: auto !important;
   min-width: 22px !important;
   white-space: nowrap !important;
