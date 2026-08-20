@@ -1,0 +1,27 @@
+supabase/migrations/20260820095600_revoke_admin_rpc_authenticated_grant.sql
+  s_0eded1e9d0cab6::t_87d77f746eafc4 1-16
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_9e0b295681ee9a 251-264
+web/app/auth/signin/page.tsx
+  s_0eded1e9d0cab6::t_b8f7c60442e29c 5,27-39,42
+web/app/auth/signin/form.tsx
+  s_0eded1e9d0cab6::t_cb55db0d999cef 4,8,11-12,16-22,26,44-66
+  s_0eded1e9d0cab6::t_25a35e2aca16db 142-173
+  s_0eded1e9d0cab6::t_eb5e4f7a23f9f6 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "231eadfcf38fe9c646c2c75c9bfb3f0be2278566",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
