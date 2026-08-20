@@ -1,0 +1,40 @@
+web/tests/pairwise/model.pict
+  s_44fb9bdfb79f12::t_ad231d5ac05e22 1-21
+docs/testing/PICT_REAL_INTEGRATION_PLAN.md
+  s_44fb9bdfb79f12::t_410d2cce8b12e3 1-281
+docs/agent-prompts/2026-08-20-oc-real-pict-pairwise-testing.md
+  s_0eded1e9d0cab6::t_3c854cca4b429e 1-120
+web/package.json
+  s_0eded1e9d0cab6::t_5542709ccfd897 81
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_bc9e6d3c5ffff9 1266
+  s_0eded1e9d0cab6::t_ad3d0287149d1e 1265
+  s_44fb9bdfb79f12::t_715f306f11902d 190
+  s_0eded1e9d0cab6::t_a1e62b344fdffb 1267
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_2d226624e752a6 238-240,4464-4466,4706-4709,5007-5010,5214-5218,5560-5563,10305-10306,10743-10746,11049-11053,11305-11308,11780-11784
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "20fba701c09a002af81157f7b840bcfaa87da5cc",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_44fb9bdfb79f12": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdf0aa325ffecMaK6Rfj8NgYZ8",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
