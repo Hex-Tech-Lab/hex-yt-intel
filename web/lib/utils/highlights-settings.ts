@@ -30,3 +30,11 @@ export function clampHighlightsSetting(value: unknown, fallback: number, min: nu
   if (!Number.isFinite(numericValue) || numericValue < min || numericValue > max) return fallback;
   return numericValue;
 }
+
+/** Shared by HighlightsScrubber.tsx and PublicHighlightsReel.tsx -- was
+ *  duplicated verbatim in both (/simplify review, 2026-08-20). */
+export function fmtHighlightsDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainderSeconds = Math.round(seconds % 60);
+  return minutes > 0 ? `${minutes}m${remainderSeconds.toString().padStart(2, '0')}s` : `${remainderSeconds}s`;
+}

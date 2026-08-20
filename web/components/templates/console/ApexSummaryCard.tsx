@@ -117,6 +117,15 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     return summaries;
   }, [content, status]);
 
+  // /simplify review (2026-08-20): preprocessMarkdown() -- now a table-
+  // normalization scan, not a cheap string op -- was called inline in JSX,
+  // re-running on every render including frequent streaming re-renders even
+  // though parsedSummaries itself is already memoized above.
+  const preprocessedActiveSummary = useMemo(
+    () => preprocessMarkdown(parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`),
+    [parsedSummaries, activeTab]
+  );
+
   const tabs: { key: SummaryTab; label: string; icon: string }[] = [
     { key: 'executive', label: 'Executive', icon: 'solar:case-linear' },
     { key: 'short', label: 'Short', icon: 'solar:notes-linear' },
@@ -154,7 +163,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
           <div className="flex-1 overflow-y-auto max-h-[500px] hx-custom-scrollbar pr-2">
             {status === "done" || (status === "streaming" && parsedSummaries[activeTab]) ? (
               <Markdown density="compact" components={apexComponents}>
-                {preprocessMarkdown(parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`)}
+                {preprocessedActiveSummary}
               </Markdown>
             ) : status === "error" ? (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--err)] opacity-80">

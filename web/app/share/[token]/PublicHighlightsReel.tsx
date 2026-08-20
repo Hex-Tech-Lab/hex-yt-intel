@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
+import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 
@@ -15,11 +16,6 @@ interface Highlight {
 
 const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 3] as const;
 
-function fmtDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainderSeconds = Math.round(seconds % 60);
-  return minutes > 0 ? `${minutes}m${remainderSeconds.toString().padStart(2, '0')}s` : `${remainderSeconds}s`;
-}
 
 /**
  * Read-only, no-signin variant of HighlightsScrubber for the public
@@ -184,8 +180,8 @@ export function PublicHighlightsReel({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-sm font-semibold text-gray-900">Highlights reel</span>
         <span className="text-xs text-gray-500">
-          {highlights.length} keypoints · {fmtDuration(totalHighlightsSeconds)}
-          {videoDurationSeconds ? ` of ${fmtDuration(videoDurationSeconds)}` : ''}
+          {highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
+          {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
         </span>
       </div>

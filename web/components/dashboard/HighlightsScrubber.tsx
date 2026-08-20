@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Button, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
+import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 
@@ -21,11 +22,6 @@ interface HighlightsResponse {
 
 const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 3] as const;
 
-function fmtDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainderSeconds = Math.round(seconds % 60);
-  return minutes > 0 ? `${minutes}m${remainderSeconds.toString().padStart(2, '0')}s` : `${remainderSeconds}s`;
-}
 
 /**
  * Marker-track highlights reel (2026-08-20 redesign, live user report --
@@ -208,8 +204,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-[var(--ink-main)]">Highlights reel</span>
         <span className="text-[10px] text-[var(--ink-muted)]">
-          {data.highlights.length} keypoints · {fmtDuration(totalHighlightsSeconds)}
-          {videoDurationSeconds ? ` of ${fmtDuration(videoDurationSeconds)}` : ''}
+          {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
+          {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
         </span>
       </div>
