@@ -41,6 +41,17 @@ export async function logActivityBestEffort(
       console.warn(`[${componentTag}] activity_log write returned an error:`, logError.message);
     }
   } catch (logErr) {
-    console.warn(`[${componentTag}] activity_log write failed:`, logErr instanceof Error ? logErr.message : String(logErr));
+    // Real gap found 2026-08-20 (CodeRabbit): this branch only ever hit
+    // console.warn, unlike the returned-{error} branch above -- client
+    // construction, network, or unexpected adapter failures were invisible
+    // to Sentry dashboards/alerts even though the doc comment claimed both
+    // paths were reported the same way. Now genuinely symmetric.
+    const error = logErr instanceof Error ? logErr : new Error(String(logErr));
+    Sentry.captureMessage(`[${componentTag}] activity_log write failed`, {
+      level: 'warning',
+      tags: { operation },
+      extra: { message: error.message, category },
+    });
+    console.warn(`[${componentTag}] activity_log write failed:`, error.message);
   }
 }
