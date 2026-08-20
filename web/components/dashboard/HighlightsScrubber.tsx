@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spinner } from '@astryxdesign/core';
+import { Button, Card, Selector, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
@@ -142,6 +142,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     elapsedInSegmentSeconds
   );
 
+  const speedOptions = useMemo(() => SPEED_OPTIONS.map((rate) => `${rate}x`), []);
+
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
   if (loading || !data) return <Spinner size="sm" />;
   if (data.highlights.length === 0) return null;
@@ -160,9 +162,9 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     : null;
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
+    <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[var(--ink-main)]">Highlights reel</span>
+        <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
         <span className="text-[10px] text-[var(--ink-muted)]">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
@@ -184,21 +186,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           <Button label="Stop" variant="ghost" size="sm" onClick={stop} />
         )}
 
-        <label className="flex items-center gap-1 text-[10px] text-[var(--ink-muted)]">
+        <span className="flex items-center gap-1.5 text-[10px] text-[var(--ink-muted)]">
           Speed
-          <select
-            value={speed}
-            onChange={(changeEvent) => setSpeed(Number(changeEvent.target.value))}
-            aria-label="Playback speed"
-            className="text-[10px] rounded border border-[var(--border-muted)] bg-transparent px-1 py-0.5"
-          >
-            {SPEED_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}x
-              </option>
-            ))}
-          </select>
-        </label>
+          <Selector
+            label="Playback speed"
+            isLabelHidden
+            size="sm"
+            value={`${speed}x`}
+            onChange={(val) => setSpeed(Number(val.replace('x', '')))}
+            options={speedOptions}
+            width={80}
+          />
+        </span>
       </div>
 
       {activeHighlight && (
@@ -214,6 +213,6 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           Up next: {previewWords(nextHighlight.label)}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

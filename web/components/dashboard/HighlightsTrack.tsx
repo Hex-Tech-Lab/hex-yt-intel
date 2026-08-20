@@ -53,18 +53,18 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 bg-[var(--surface-quiet,#f3f4f6)] p-0.5 rounded-lg border border-[var(--line,#e5e7eb)]">
+        <div className="flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
           <button
             type="button"
             disabled={clampedActiveIndex === null || clampedActiveIndex === 0}
             onClick={handlePrev}
             title="Previous highlight"
             aria-label="Previous highlight"
-            className="p-1 rounded text-[var(--ink-secondary,#4b5563)] hover:text-[var(--ink,#111827)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line,#e5e7eb)]/50 transition-colors"
+            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
           >
             <span aria-hidden="true">‹</span>
           </button>
-          <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted,#6b7280)]">
+          <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
             {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
           </span>
           <button
@@ -73,7 +73,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             onClick={handleNext}
             title="Next highlight"
             aria-label="Next highlight"
-            className="p-1 rounded text-[var(--ink-secondary,#4b5563)] hover:text-[var(--ink,#111827)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line,#e5e7eb)]/50 transition-colors"
+            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
           >
             <span aria-hidden="true">›</span>
           </button>
@@ -81,11 +81,11 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
       </div>
 
       {/* Scrubber track container */}
-      <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet,#f3f4f6)] rounded-lg px-2 border border-[var(--line-faint,#eef0f3)]">
-        <div className="absolute left-2 right-2 h-1.5 bg-[var(--line,#e5e7eb)] rounded-full overflow-hidden">
+      <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">
+        <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (
             <div
-              className="absolute top-0 bottom-0 bg-[var(--accent,#3b82f6)]/40 rounded-full"
+              className="absolute top-0 bottom-0 bg-[var(--accent-a15)]"
               style={{
                 left: `${Math.min(100, (activeHighlight.start / maxTime) * 100)}%`,
                 width: `${Math.max(
@@ -109,10 +109,10 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
                 style={{ left: `${leftPct}%` }}
                 title={highlight.label}
                 aria-label={`Jump to highlight ${idx + 1}: ${highlight.label}`}
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent,#3b82f6)] focus-visible:ring-offset-1 ${
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 ${
                   isActive
-                    ? 'w-3.5 h-3.5 rounded-full bg-[var(--accent,#3b82f6)] shadow-[0_0_10px_rgba(59,130,246,0.8)] border-2 border-white z-10 scale-110'
-                    : 'w-2 h-2 rounded-full bg-[var(--ink-muted,#9ca3af)] hover:bg-[var(--accent,#3b82f6)]'
+                    ? 'w-1 h-4 bg-[var(--accent)] z-10'
+                    : 'w-0.5 h-3 bg-[var(--ink-muted)] hover:bg-[var(--accent)]'
                 }`}
               />
             );
