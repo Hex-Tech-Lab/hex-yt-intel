@@ -1,38 +1,48 @@
 import type { MiddlewareHandler } from "hono";
 
-// Worker-side code constant, not Settings-Registry-driven: the CF Worker has
-// no direct DB access by design (ADR 005 -- resolved config is forwarded
-// through the signed stream payload from Vercel, not queried per-request),
-// and a live DB lookup on every CORS preflight would add a real latency/
-// reliability regression. Update this array by hand when the domain changes.
-const ALLOWED_ORIGINS = [
+// Invariant: this is a worker-side code constant, not Settings-Registry-driven
+// -- the Worker has no direct DB access (ADR 005). Update by hand when the
+// domain changes; migration history/rationale lives in docs/, not here.
+//
+// Single source of truth for BOTH CORS preflight (resolveCorsOrigin) and
+// callback-target validation (isValidAppUrl). Previously these were two
+// independently-maintained allowlists in the same file -- one got the
+// getvintel.com migration and a spoof fix, the other didn't, until a review
+// caught the drift (real P0 on PR #244, fixed same session). Never
+// reintroduce a second copy of this list.
+const PRODUCTION_ORIGINS = [
   "https://hex-yt-intel.vercel.app",
-  // New canonical production domain (2026-08-19 migration).
   "https://getvintel.com",
   "https://www.getvintel.com",
   "https://yt-intel.getmytestdrive.com",
-  // Parallel domain cutover (2026-07-25): both getmytestdrive.com domains
-  // still valid, currently-live parallel-cutover domains per CLAUDE.md's
-  // Infrastructure Coordinates section; drop once the hard cutoff to
-  // getvintel.com is confirmed by the user.
   "https://v-intel.getmytestdrive.com",
-  "http://localhost:3000",
-  "http://localhost:3005",
 ];
 
-const VERCEL_PREVIEW_ORIGIN_RE = /^https:\/\/hex-yt-intel-[a-z0-9-]+\.vercel\.app$/;
+// Kept separate from PRODUCTION_ORIGINS: isValidAppUrl must reject localhost
+// as a callback target when isProd is true (trusting it there would let a
+// request claim a same-origin callback into the worker's own dev-only trust
+// path). resolveCorsOrigin has no such prod/dev distinction -- CORS preflight
+// from a real browser never carries a localhost Origin in production traffic
+// anyway -- so it trusts both lists unconditionally.
+const LOCAL_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:3005"];
+
+const OWN_VERCEL_PREVIEW_RE = /^hex-yt-intel-[a-z0-9-]+\.vercel\.app$/;
+
+/** True for this app's own production/legacy origins or its own preview deployments -- never any arbitrary *.vercel.app host. */
+function isTrustedProductionOrigin(origin: string): boolean {
+  if (PRODUCTION_ORIGINS.includes(origin)) return true;
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return OWN_VERCEL_PREVIEW_RE.test(hostname);
+  } catch {
+    return false;
+  }
+}
 
 export function resolveCorsOrigin(origin: string | undefined): string | null {
   if (!origin) return null;
-  // Exact match, not startsWith: `startsWith` let a spoofed origin like
-  // `https://getvintel.com.evil.com` pass (real gap found 2026-08-20).
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    return origin;
-  }
-  if (VERCEL_PREVIEW_ORIGIN_RE.test(origin)) {
-    return origin;
-  }
-  return null;
+  if (LOCAL_DEV_ORIGINS.includes(origin)) return origin;
+  return isTrustedProductionOrigin(origin) ? origin : null;
 }
 
 export function isValidAppUrl(
@@ -53,25 +63,13 @@ export function isValidAppUrl(
       ? allowedOrigins.split(",").map((o) => o.trim().toLowerCase())
       : [];
 
-    const originMap: Record<string, boolean> = {
-      envMatch: parsedEnv ? origin === parsedEnv : false,
-      listMatch: originList.includes(origin),
-      localhost: hostname === "localhost" || hostname === "127.0.0.1",
-      vercel: hostname.endsWith(".vercel.app"),
-      // New canonical production domain (2026-08-19) + parallel-cutover
-      // getmytestdrive.com domains (2026-07-25) -- all valid until hard cutoff.
-      production:
-        hostname === "getvintel.com" ||
-        hostname === "www.getvintel.com" ||
-        hostname === "yt-intel.getmytestdrive.com" ||
-        hostname === "v-intel.getmytestdrive.com",
-    };
+    if (parsedEnv && origin === parsedEnv) return true;
+    if (originList.includes(origin)) return true;
 
-    if (originMap.envMatch || originMap.listMatch) return true;
-    if (!isProd && (originMap.localhost || originMap.vercel)) return true;
-    if (originMap.vercel || originMap.production) return true;
+    const localhost = hostname === "localhost" || hostname === "127.0.0.1";
+    if (!isProd && localhost) return true;
 
-    return false;
+    return isTrustedProductionOrigin(origin);
   } catch {
     return false;
   }
