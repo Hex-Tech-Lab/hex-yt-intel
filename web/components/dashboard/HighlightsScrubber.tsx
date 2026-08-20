@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
+import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 
 interface Highlight {
   idx: number;
@@ -19,9 +20,6 @@ interface HighlightsResponse {
   segmentDurationSeconds: number;
   contextLeadSeconds: number;
 }
-
-const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 3] as const;
-
 
 /**
  * Marker-track highlights reel (2026-08-20 redesign, live user report --
@@ -40,40 +38,43 @@ const SPEED_OPTIONS = [0.5, 1, 1.5, 2, 3] as const;
  * GenerateExecutiveDigestUseCase.extractHighlights /
  * highlights.maxCount -- this component just renders however many come
  * back.
+ *
+ * The segment-advance state machine itself (media-time-clamping poll,
+ * seek-settlement guard, speed state) is owned by the shared
+ * `useSegmentPlayback` hook (extracted 2026-08-20, see
+ * docs/agent-prompts/2026-08-20-cc-simplify-shared-playback-hook.md) --
+ * this component only supplies the store-backed primitives and renders.
  */
 export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analysisId: string; videoDurationSeconds: number | null }) {
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
-  const [speed, setSpeed] = useState<number>(1);
-  // Real bug class fix (2026-08-20, live report + external research corroboration
-  // on the exact same wall-clock-vs-media-time failure mode): segment advance
-  // was a setTimeout keyed off segmentDurationSeconds -- immune to neither
-  // buffering stalls (timer keeps ticking while the player is frozen
-  // mid-seek/rebuffer) nor speed changes mid-segment (only fixed at the moment
-  // playFrom fires). Replaced with a media-time watcher against the shared
-  // useVideoStore.currentPlaybackSeconds (already polled by VideoPlayerCard at
-  // 250ms for EntityMentionTimeline's own auto-advance -- same established
-  // pattern, reused here rather than adding a second independent poller).
+
   const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
-  const currentPlaybackSeconds = useVideoStore((state) => state.currentPlaybackSeconds);
-  const stopRef = useRef(false);
-  // Seek-settlement guard (mirrors EntityMentionTimeline.tsx's issueSeek/
-  // pendingSeekSeconds pattern): a just-issued seek doesn't land in
-  // currentPlaybackSeconds for a poll tick or two -- without this guard the
-  // stale pre-seek time could still read as "past the new segment's end" and
-  // trigger an immediate double-advance.
-  const [pendingSeekTarget, setPendingSeekTarget] = useState<number | null>(null);
 
-  const stop = useCallback(() => {
-    stopRef.current = true;
-    setPendingSeekTarget(null);
-    setPlayingIdx(null);
-  }, []);
+  // Store-backed primitives -- getCurrentTime reads the store value
+  // directly rather than polling itself; the shared hook's own poll
+  // interval re-reads this closure every tick, and useVideoStore's
+  // currentPlaybackSeconds is already kept fresh by VideoPlayerCard's own
+  // 250ms poll, so no second independent poller is introduced here.
+  const primitives: SegmentPlaybackPrimitives = useMemo(
+    () => ({
+      getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds,
+      seekTo: setSeekTo, // setSeekTo already flips isPlaying -- no separate play() needed
+      setPlaybackRate,
+    }),
+    [setSeekTo, setPlaybackRate]
+  );
 
-  useEffect(() => stop, [stop]); // unmount cleanup
+  const segments = useMemo(() => data?.highlights ?? [], [data]);
+
+  const { playingIdx, elapsedInSegmentSeconds, speed, start, stop, jumpTo, setSpeed } = useSegmentPlayback({
+    segments,
+    contextLeadSeconds: data?.contextLeadSeconds ?? 0,
+    segmentDurationSeconds: data?.segmentDurationSeconds ?? 10,
+    primitives,
+  });
 
   useEffect(() => {
     // Stop any in-progress playback from the previous analysisId -- otherwise
@@ -113,74 +114,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     return () => {
       controller.abort();
     };
-  }, [analysisId, stop]);
-
-  const playFrom = useCallback(
-    (index: number) => {
-      if (!data || index >= data.highlights.length) {
-        setPlayingIdx(null);
-        setPendingSeekTarget(null);
-        return;
-      }
-      const highlight = data.highlights[index]!;
-      const leadIn = Math.max(0, highlight.start - data.contextLeadSeconds);
-      setSeekTo(leadIn);
-      setPendingSeekTarget(leadIn);
-      setPlayingIdx(index);
-    },
-    [data, setSeekTo]
-  );
-
-  // Media-time clamping: advance once the shared playback-position store
-  // (polled from the real player, not a timer) crosses this segment's end.
-  // 0.3s lead buffer accounts for the store's 250ms poll cadence (tighter
-  // than the naive fixed-duration timeout, and immune to buffering stalls
-  // and speed changes since it reads the actual media clock every tick).
-  useEffect(() => {
-    if (playingIdx === null || !data || currentPlaybackSeconds === null || stopRef.current) return;
-    const highlight = data.highlights[playingIdx];
-    if (!highlight) return;
-    const leadIn = Math.max(0, highlight.start - data.contextLeadSeconds);
-    const segmentEnd = leadIn + data.segmentDurationSeconds;
-
-    if (pendingSeekTarget !== null) {
-      if (Math.abs(currentPlaybackSeconds - pendingSeekTarget) <= 1) {
-        setPendingSeekTarget(null);
-      }
-      return;
-    }
-
-    if (currentPlaybackSeconds >= segmentEnd - 0.3) {
-      playFrom(playingIdx + 1);
-    }
-  }, [currentPlaybackSeconds, playingIdx, data, pendingSeekTarget, playFrom]);
-
-  const start = useCallback(() => {
-    stopRef.current = false;
-    playFrom(0);
-  }, [playFrom]);
-
-  // Prev/Next navigation jumps directly rather than replaying the sequence
-  // from index 0.
-  const jumpTo = useCallback(
-    (index: number) => {
-      stopRef.current = false;
-      playFrom(index);
-    },
-    [playFrom]
-  );
-
-  const handleSpeedChange = useCallback(
-    (rate: number) => {
-      setSpeed(rate);
-      setPlaybackRate(rate);
-    },
-    [setPlaybackRate]
-  );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop is stable
+    // (useSegmentPlayback's own useCallback with an empty dep array).
+  }, [analysisId]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
-  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, data?.segmentDurationSeconds ?? 10);
+  const { revealedText } = useHighlightTicker(
+    playingIdx,
+    activeHighlight?.label ?? null,
+    data?.segmentDurationSeconds ?? 10,
+    elapsedInSegmentSeconds
+  );
 
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
   if (loading || !data) return <Spinner size="sm" />;
@@ -228,7 +173,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           Speed
           <select
             value={speed}
-            onChange={(changeEvent) => handleSpeedChange(Number(changeEvent.target.value))}
+            onChange={(changeEvent) => setSpeed(Number(changeEvent.target.value))}
             aria-label="Playback speed"
             className="text-[10px] rounded border border-[var(--border-muted)] bg-transparent px-1 py-0.5"
           >

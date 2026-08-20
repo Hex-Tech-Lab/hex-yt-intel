@@ -31,6 +31,14 @@ export function clampHighlightsSetting(value: unknown, fallback: number, min: nu
   return numericValue;
 }
 
+/** Single source of truth for the highlights-reel playback-speed range
+ *  (tangent fix, 2026-08-20 shared-hook extraction -- previously the same
+ *  0.5-3 bounds were hardcoded a THIRD time in
+ *  YouTubePlayerAdapter.setPlaybackRate's clamp, independent of
+ *  useSegmentPlayback's SPEED_OPTIONS UI list). Both derive from this. */
+export const HIGHLIGHTS_SPEED_MIN = 0.5;
+export const HIGHLIGHTS_SPEED_MAX = 3;
+
 /** Shared by HighlightsScrubber.tsx and PublicHighlightsReel.tsx -- was
  *  duplicated verbatim in both (/simplify review, 2026-08-20). */
 export function fmtHighlightsDuration(seconds: number): string {

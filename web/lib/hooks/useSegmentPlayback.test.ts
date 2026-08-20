@@ -1,0 +1,272 @@
+/**
+ * Regression/contract test for the shared useSegmentPlayback hook
+ * (extracted 2026-08-20, docs/agent-prompts/2026-08-20-cc-simplify-shared-
+ * playback-hook.md). Exercises the media-time-clamping poll, seek-
+ * settlement guard, and readiness guard against a fake in-memory
+ * primitives implementation -- this is the exact state machine both
+ * HighlightsScrubber.tsx and PublicHighlightsReel.tsx previously
+ * duplicated, so proving it here proves both call sites' shared behavior.
+ *
+ * Follows the renderHook + @vitest-environment happy-dom pattern from
+ * AnalysisHistory-restore.test.tsx. Uses vi.useFakeTimers() to drive the
+ * hook's internal setInterval deterministically.
+ */
+
+// @vitest-environment happy-dom
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useSegmentPlayback, type SegmentPlaybackPrimitives } from './useSegmentPlayback';
+
+function makeFakePrimitives(initialTime: number | null = null) {
+  let currentTime = initialTime;
+  const seekCalls: number[] = [];
+  const rateCalls: number[] = [];
+  let playCalls = 0;
+
+  const primitives: SegmentPlaybackPrimitives = {
+    getCurrentTime: () => currentTime,
+    seekTo: (seconds: number) => {
+      seekCalls.push(seconds);
+      // Simulate instantaneous seek settlement by default; tests that need
+      // to exercise the pending-seek guard call setTime with a mismatched
+      // value first instead.
+      currentTime = seconds;
+    },
+    play: () => {
+      playCalls++;
+    },
+    setPlaybackRate: (rate: number) => {
+      rateCalls.push(rate);
+    },
+  };
+
+  return {
+    primitives,
+    seekCalls,
+    rateCalls,
+    get playCalls() {
+      return playCalls;
+    },
+    setTime: (t: number | null) => {
+      currentTime = t;
+    },
+  };
+}
+
+const SEGMENTS = [
+  { start: 10, end: 15 },
+  { start: 30, end: 35 },
+  { start: 60, end: 65 },
+];
+
+describe('useSegmentPlayback', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reports not ready while getCurrentTime returns null', () => {
+    const fake = makeFakePrimitives(null);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.isReady).toBe(false);
+  });
+
+  it('becomes ready once getCurrentTime returns a real number', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it('start() seeks to the first segment lead-in and sets playingIdx to 0', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start();
+    });
+    expect(fake.seekCalls).toEqual([8]); // 10 - 2 lead-in
+    expect(fake.playCalls).toBe(1);
+    expect(result.current.playingIdx).toBe(0);
+  });
+
+  it('advances to the next segment once media time crosses the clamp boundary', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // seeks to 8, currentTime -> 8
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // settle the pending seek at t=8
+    });
+    // Segment 0 window: leadIn=8, end=8+5=13. Push time past 13-0.3.
+    act(() => {
+      fake.setTime(13);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBe(1);
+    expect(fake.seekCalls).toEqual([8, 28]); // second segment: 30 - 2
+  });
+
+  it('does not double-advance while a just-issued seek has not settled (seek-settlement guard)', () => {
+    // A fake whose seekTo does NOT auto-settle currentTime (unlike the
+    // default makeFakePrimitives helper) -- needed to actually observe the
+    // pending-seek window rather than have it clear on the very next tick.
+    let currentTime: number | null = 20; // stale time from BEFORE the seek,
+    // still reading past segment 0's clamp window -- the exact race
+    // EntityMentionTimeline.tsx's issueSeek/pendingSeekSeconds guard exists
+    // to prevent (a stale read that looks like "already past segment end").
+    const seekCalls: number[] = [];
+    const primitives: SegmentPlaybackPrimitives = {
+      getCurrentTime: () => currentTime,
+      seekTo: (seconds: number) => seekCalls.push(seconds), // does NOT settle currentTime
+      play: () => {},
+      setPlaybackRate: () => {},
+    };
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // issues seekTo(8); pendingSeekTarget = 8
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // poll tick sees stale currentTime=20
+    });
+    // Guard should suppress the advance entirely while pendingSeekTarget is
+    // still set (currentTime=20 is nowhere near the target of 8), even
+    // though 20 also reads well past segment 0's own clamp boundary (13).
+    expect(seekCalls).toEqual([8]);
+    expect(result.current.playingIdx).toBe(0);
+
+    // Once currentTime actually reflects having reached the seek target,
+    // the guard clears and normal clamping resumes.
+    act(() => {
+      currentTime = 8;
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBe(0); // still segment 0, within window
+    act(() => {
+      currentTime = 13; // now past segment 0's clamp boundary for real
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBe(1);
+    expect(seekCalls).toEqual([8, 28]);
+  });
+
+  it('stop() clears playingIdx and elapsed time', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start();
+    });
+    act(() => {
+      result.current.stop();
+    });
+    expect(result.current.playingIdx).toBeNull();
+    expect(result.current.elapsedInSegmentSeconds).toBeNull();
+  });
+
+  it('jumpTo() seeks directly to an arbitrary segment index', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.jumpTo(2);
+    });
+    expect(result.current.playingIdx).toBe(2);
+    expect(fake.seekCalls).toEqual([58]); // 60 - 2
+  });
+
+  it('setSpeed() updates state and calls the primitive', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.setSpeed(2);
+    });
+    expect(result.current.speed).toBe(2);
+    expect(fake.rateCalls).toEqual([2]);
+  });
+
+  it('advancing past the last segment stops playback (playingIdx -> null)', () => {
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.jumpTo(2); // last segment, seeks to 58
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // settle
+    });
+    act(() => {
+      fake.setTime(63); // 58 + 5 - lead
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBeNull();
+  });
+});
