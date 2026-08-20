@@ -114,11 +114,16 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       const leadIn = Math.max(0, highlight.start - data.contextLeadSeconds);
       setSeekTo(leadIn);
       setPlayingIdx(index);
+      // Real bug fix (automated review): this timeout is wall-clock, but the
+      // video advances at `speed`x -- scale by the current speed so the
+      // timer tracks media time, not wall time. Does not rescale an
+      // already-running timer if speed changes mid-segment -- deferred,
+      // known limitation (same as the public-share variant).
       timerRef.current = setTimeout(() => {
         if (!stopRef.current) playFrom(index + 1);
-      }, data.segmentDurationSeconds * 1000);
+      }, (data.segmentDurationSeconds * 1000) / speed);
     },
-    [data, setSeekTo]
+    [data, setSeekTo, speed]
   );
 
   const start = useCallback(() => {

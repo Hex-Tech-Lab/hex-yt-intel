@@ -87,11 +87,19 @@ export function PublicHighlightsReel({
       playerRef.current?.seekTo(leadIn);
       playerRef.current?.play();
       setPlayingIdx(index);
+      // Real bug fix (automated review): this timeout is wall-clock, but the
+      // video advances at `speed`x -- at 2x the segment finishes playing in
+      // half the wall-clock time (leaving a stall before advancing); at
+      // 0.5x the timer fires while the segment is still mid-playback
+      // (cutting it short). Scale by the current speed so the timer tracks
+      // media time, not wall time. Does not rescale an already-running
+      // timer if speed changes mid-segment (would need a remaining-time
+      // recompute) -- deferred, flagged as a known limitation.
       timerRef.current = setTimeout(() => {
         if (!stopRef.current) playFrom(index + 1);
-      }, segmentDurationSeconds * 1000);
+      }, (segmentDurationSeconds * 1000) / speed);
     },
-    [highlights, contextLeadSeconds, segmentDurationSeconds]
+    [highlights, contextLeadSeconds, segmentDurationSeconds, speed]
   );
 
   const start = useCallback(() => {
@@ -112,6 +120,16 @@ export function PublicHighlightsReel({
     setSpeed(rate);
     playerRef.current?.setPlaybackRate?.(rate);
   }, []);
+
+  // Real bug fix (automated review): a speed selected before the player is
+  // ready (`playerRef.current?.setPlaybackRate?.(rate)` above is a silent
+  // no-op pre-mount) was never reapplied once the player became ready --
+  // playback would start at 1x despite the UI showing the chosen speed.
+  // VideoPlayerCard (the authenticated dashboard variant) already reapplies
+  // on a [ready, speed] effect; this public variant was missing it.
+  useEffect(() => {
+    if (ready) playerRef.current?.setPlaybackRate?.(speed);
+  }, [ready, speed]);
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
