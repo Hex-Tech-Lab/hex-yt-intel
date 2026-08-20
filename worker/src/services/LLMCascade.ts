@@ -49,6 +49,17 @@ const LLM_TIMEOUT_MS_FALLBACK = 240000;
 // llmCascadeHandshakeTimeoutMs (analysis.llmCascade.handshakeTimeoutMs).
 const LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK = 15000;
 
+// Defensive fallback ONLY, used when a claude-haiku-4.5 tier arrives with no
+// providerOrder at all (e.g. a stale/legacy `models`-only request that
+// doesn't resolve to a MODEL_CHAIN entry). The real per-request order comes
+// from the `cascade` field's per-tier `providerOrder` (see constructor),
+// forwarded end-to-end from web/lib/config/cascade.ts's ANALYSIS_CASCADE_FALLBACK
+// / the `cascade.analysis` Settings Registry key -- this literal must be kept
+// in sync with that SSOT's provider set (issue #241: this array previously
+// omitted 'azure' entirely and silently drifted out of sync since the SSOT
+// was never wired to reach this file until the `cascade` field was added).
+const HAIKU_PROVIDER_ORDER_FALLBACK = ['google-vertex', 'azure', 'anthropic', 'amazon-bedrock'];
+
 export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
@@ -307,7 +318,7 @@ export class LLMCascade implements LLMCascadePort {
     // OpenRouter-level substitution is redundant and actively defeats
     // deliberate provider choice (e.g. paying more for Cerebras speed).
     const requestProvider = isHaiku45
-      ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
+      ? { order: providerOrder ?? HAIKU_PROVIDER_ORDER_FALLBACK, allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {
@@ -493,7 +504,7 @@ export class LLMCascade implements LLMCascadePort {
     // cascade's own tier-to-tier fallback and defeats deliberate provider
     // pinning (e.g. Cerebras for chat speed).
     const requestProvider = isHaiku45
-      ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
+      ? { order: providerOrder ?? HAIKU_PROVIDER_ORDER_FALLBACK, allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {
