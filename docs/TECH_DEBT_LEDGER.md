@@ -198,14 +198,20 @@ fallback, defensive registry-resolve wrap) or deliberately deferred here:
    supplied cascade array, so a regression in `resolveAnalysisCascade()`,
    payload serialization, or constructor wiring could pass unit tests while
    production silently loses the provider order. Needs a real contract test.
-4. **`/api/test-auth/login` has no rate limiting** — a leaked
-   `TEST_AUTH_BYPASS_SECRET` plus the registry toggle enabled would allow
-   unlimited session minting. Existing `web/lib/services/traffic.ts`
-   (`checkRateLimitSlidingWindow`) is the real primitive to reuse, but it's
-   keyed on `userId`/`tier`/`endpoint` (built for authenticated-user rate
-   limiting) — this route has no user yet at the point rate limiting would
-   need to apply. Needs a small IP-or-secret-hash-keyed variant, not a blind
-   reuse of the existing function signature.
+4. **`P1 — ELEVATED PRIORITY 2026-08-20 (explicit user directive: "put it on
+   a higher priority... it's a security issue")`. `/api/test-auth/login`
+   has no rate limiting** — a leaked `TEST_AUTH_BYPASS_SECRET` plus the
+   registry toggle enabled would allow unlimited session minting. Existing
+   `web/lib/services/traffic.ts` (`checkRateLimitSlidingWindow`) is the real
+   primitive to reuse, but it's keyed on `userId`/`tier`/`endpoint` (built
+   for authenticated-user rate limiting) — this route has no user yet at the
+   point rate limiting would need to apply. Needs a small
+   IP-or-secret-hash-keyed variant, not a blind reuse of the existing
+   function signature. Not P0 (route is default-OFF via `testAuthBypass.enabled`
+   and gated by a 64-char random secret — real exposure requires two
+   independent misconfigurations), but real and should land soon after
+   launch, not indefinitely deferred. Next real task after the TestSprite
+   re-run.
 5. **`dub.domain` registry value has no hostname validation** — only
    `maxLength` in the migration's `validation` jsonb. An admin could persist
    a malformed value (URL, path, whitespace) and every Dub share would
