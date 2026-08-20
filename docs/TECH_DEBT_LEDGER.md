@@ -248,3 +248,17 @@ overrides instead of CSS class targeting (per `MediaTheme.tsx`'s own doc
 comment, this may be exactly what that API is for). If genuinely no override
 slot exists for these specific cases, that's an upstream/dependency gap worth
 filing directly with Astryx rather than treating as tribal CSS knowledge.
+
+## 2026-08-20 — Open-redirect guard has a theoretical backslash-normalization bypass (pre-existing pattern)
+
+`next.startsWith('/') && !next.startsWith('//')` (used in both
+`web/app/auth/signin/page.tsx`'s existing redirect logic and the new
+`form.tsx` test-auth form added this session) doesn't reject
+`/\evil.com` -- some older browsers historically normalized a leading
+`/\` to `//` before following a redirect, which would make this an
+external-origin bypass. Not introduced by tonight's work (page.tsx
+already had this exact check); found via owasp-top-10 review while
+adding the new form. Real fix: also reject any `next` value containing
+a backslash, or parse with `new URL(next, origin)` and compare
+`.origin` instead of a startsWith heuristic. Low urgency (modern
+browsers don't do this normalization), not launch-blocking.
