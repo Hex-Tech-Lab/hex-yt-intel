@@ -283,21 +283,37 @@ For every node, provide:
 - \`label\`: The entity name.
 - \`type\`: Category (person|concept|framework|tool|organization|study|trend|metric).
 - \`weight\`: Importance (1-10), scored against these concrete criteria, not a
-  vague overall impression:
-  - **Mention frequency**: how many times this entity is referenced across
-    the transcript (more mentions -> higher weight).
-  - **Centrality to the core thesis**: does the content's argument depend on
-    this entity, or is it a passing/incidental reference? (load-bearing to
-    the thesis -> higher weight; a one-off aside -> lower weight).
+  vague overall impression and NOT primarily mention count -- a concept
+  named once but explained at length, or one that other important concepts
+  depend on understanding first, can outweigh a concept repeated many times
+  in passing:
+  - **Explanatory depth/duration**: how much of the transcript's TIME or
+    TEXT is spent explaining, defining, or developing this entity -- not
+    how many times it is merely named. A concept mentioned once but given a
+    multi-minute explanation carries more weight than one repeated a dozen
+    times only in passing.
+  - **Foundational/prerequisite role**: is this entity a load-bearing
+    premise that other important entities or the core thesis depend on
+    being understood first? A briefly-stated but foundational definition
+    can outweigh a frequently-repeated but secondary concept. Look for
+    entities the speaker defines BEFORE building later points on top of
+    them.
+  - **Centrality to the core thesis**: does the content's argument actually
+    depend on this entity, or is it a passing/incidental reference?
   - **Explicit speaker emphasis**: did the speaker call this out as
     important, foundational, or a key takeaway (e.g. "the main thing to
-    understand is...", repeated for emphasis)? -> higher weight.
+    understand is...")?
+  - **Mention frequency**: a WEAK, LAST-RESORT signal only -- how many
+    times this entity is referenced. Use this only to break ties between
+    entities that score similarly on the criteria above; never let raw
+    repetition alone outrank a briefly-stated but foundational or
+    deeply-explained entity.
   - **Connection count**: how many edges (8.2) this entity participates in
-    -> more connections signals higher structural importance -> higher
-    weight.
+    -- more connections signals higher structural importance.
   Use the full 1-10 range across a video's nodes -- do not cluster every
   entity around the same middle value. A video's most load-bearing entity
-  should score near 10; a single incidental mention should score 1-3.
+  should score near 10 even if mentioned only once; a single incidental,
+  briefly-explained aside should score 1-3 even if repeated often.
 
 #### 8.2 Semantic Relations
 
@@ -498,6 +514,19 @@ For Dimension 11, compute:
 - Sponsorship ceiling = (Authority score × audience size × niche premium)
 - Lead-gen fit = (Problem clarity × call-to-action strength × audience intent signals)
 - Assign **persona weights**: P1 wants RPM, P2 wants leads + affiliate scalability, P3 wants service positioning
+
+### Step 6 – Internal Knowledge-Graph Entity Ranking (CRITICAL)
+Before assigning \`weight\` values in 8.1, do NOT score each entity in
+isolation as you write it -- relative importance is a comparative judgment,
+not an absolute one. First hold the full candidate entity list internally
+and rank them against each other using the criteria in 8.1 (explanatory
+depth/duration, foundational/prerequisite role, centrality to thesis,
+explicit speaker emphasis; mention frequency only as a tie-breaker). Only
+after ranking the full set relative to each other, map rank position to the
+1-10 \`weight\` scale. This mirrors Step 2's insight-ranking approach --
+writing scores node-by-node without first ranking the whole set produces
+inconsistent, clustered values that don't actually reflect relative
+importance.
 
 ---
 
