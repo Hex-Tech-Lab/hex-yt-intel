@@ -28,7 +28,11 @@ describe('HighlightsTrack', () => {
     expect(screen.getAllByRole('button', { name: /Jump to highlight/i })).toHaveLength(5);
   });
 
-  it('Next/Prev call onSelect with the adjacent index and respect the ends', () => {
+  it('Next/Prev call onSelect with the adjacent index and wrap at the ends', () => {
+    // Real functional bug fix (live report, 2026-08-21): Prev/Next used to
+    // dead-end at the first/last highlight -- explicit user direction is
+    // that nav should never be capped once something is active, it should
+    // rotate (last -> first, first -> last).
     const highlights = makeHighlights(3);
     const onSelect = vi.fn();
     render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={onSelect} videoDurationSeconds={90} segmentDurationSeconds={5} />);
@@ -36,9 +40,27 @@ describe('HighlightsTrack', () => {
     const prevButton = screen.getByRole('button', { name: 'Previous highlight' });
     const nextButton = screen.getByRole('button', { name: 'Next highlight' });
 
-    expect(prevButton).toBeDisabled(); // already at index 0
+    expect(prevButton).not.toBeDisabled(); // active -> Prev wraps, no longer capped
+    fireEvent.click(prevButton);
+    expect(onSelect).toHaveBeenCalledWith(2); // wraps from first to last
+
     fireEvent.click(nextButton);
     expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
+  it('Next wraps from the last highlight back to the first', () => {
+    const highlights = makeHighlights(3);
+    const onSelect = vi.fn();
+    render(<HighlightsTrack highlights={highlights} activeIndex={2} onSelect={onSelect} videoDurationSeconds={90} segmentDurationSeconds={5} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next highlight' }));
+    expect(onSelect).toHaveBeenCalledWith(0);
+  });
+
+  it('Prev stays disabled while idle (nothing to go back to)', () => {
+    const highlights = makeHighlights(3);
+    render(<HighlightsTrack highlights={highlights} activeIndex={null} onSelect={() => {}} videoDurationSeconds={90} segmentDurationSeconds={5} />);
+    expect(screen.getByRole('button', { name: 'Previous highlight' })).toBeDisabled();
   });
 
   it('clicking a marker jumps directly to that highlight index', () => {

@@ -77,16 +77,24 @@ export function HighlightsNav({
   // from a specific highlight via the nav while idle. Next now starts at
   // index 0 when idle, matching the Play button's own start() semantics;
   // Prev correctly stays disabled while idle (nothing to go back to).
+  //
+  // Real functional bug #2 (live report, 2026-08-21): once active, Prev/Next
+  // dead-ended at the first/last highlight instead of wrapping -- "once you
+  // reach the end, the left/prev button stops working." Explicit user
+  // direction: navigation should never be capped once something is playing;
+  // it should rotate (last -> first, first -> last). Only the idle-Prev
+  // case stays disabled (there's genuinely nothing to go back to yet).
   const handlePrev = () => {
-    if (clampedActiveIndex !== null && clampedActiveIndex > 0) onSelect(clampedActiveIndex - 1);
+    if (clampedActiveIndex === null) return;
+    onSelect(clampedActiveIndex === 0 ? highlights.length - 1 : clampedActiveIndex - 1);
   };
   const handleNext = () => {
     if (clampedActiveIndex === null) onSelect(0);
-    else if (clampedActiveIndex < highlights.length - 1) onSelect(clampedActiveIndex + 1);
+    else onSelect((clampedActiveIndex + 1) % highlights.length);
   };
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
+    <div className="h-5 flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
       {/* Real fix (live report, 2026-08-21): the earlier text-[10px]
           leading-none applied to match this bar's height against the
           speed pill shrank the '<'/'>' glyphs into near-illegibility.
@@ -96,7 +104,7 @@ export function HighlightsNav({
           font-size no longer controls the button's outer height. */}
       <button
         type="button"
-        disabled={clampedActiveIndex === null || clampedActiveIndex === 0}
+        disabled={clampedActiveIndex === null}
         onClick={handlePrev}
         title="Previous highlight"
         aria-label="Previous highlight"
@@ -109,7 +117,6 @@ export function HighlightsNav({
       </span>
       <button
         type="button"
-        disabled={clampedActiveIndex !== null && clampedActiveIndex >= highlights.length - 1}
         onClick={handleNext}
         title="Next highlight"
         aria-label="Next highlight"

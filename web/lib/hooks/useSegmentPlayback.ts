@@ -31,8 +31,12 @@ export interface SegmentPlaybackPrimitives {
   getCurrentTime: () => number | null;
   seekTo: (seconds: number) => void;
   /** Optional: not every primitive source needs an explicit resume call
-   *  (the store-backed variant's setSeekTo already flips isPlaying). */
+   *  (the store-backed variant's setSeekTo already flips isPlaying). Also
+   *  used by resume() to un-pause without re-seeking. */
   play?: () => void;
+  /** Optional: used by pause() to actually pause the underlying player
+   *  without resetting playingIdx/position (unlike stop()). */
+  pause?: () => void;
   setPlaybackRate: (rate: number) => void;
 }
 
@@ -101,6 +105,18 @@ export interface UseSegmentPlaybackResult {
   stop: () => void;
   jumpTo: (index: number) => void;
   setSpeed: (rate: number) => void;
+  /** True while playingIdx is non-null but the poll loop is not advancing
+   *  (pause() was called, not stop()). */
+  isPaused: boolean;
+  /** Real bug fix (live report, 2026-08-21): the UI previously faked "pause"
+   *  with stop() (which nulls playingIdx) and faked "resume" with start()
+   *  (which always replays from index 0) -- so pressing pause then play
+   *  jumped back to the first highlight regardless of where playback
+   *  actually was. pause()/resume() preserve playingIdx and the underlying
+   *  player position; only the poll loop's advance-to-next-segment check is
+   *  suspended while paused. */
+  pause: () => void;
+  resume: () => void;
 }
 
 export function useSegmentPlayback({
@@ -114,6 +130,8 @@ export function useSegmentPlayback({
   const [speed, setSpeedState] = useState<number>(1);
   const [elapsedInSegmentSeconds, setElapsedInSegmentSeconds] = useState<number | null>(null);
   const stopRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const pausedRef = useRef(false);
   const pendingSeekTargetRef = useRef<number | null>(null);
   // Real bug fix (post-merge review): `isReady` was computed and returned but
   // never actually consulted by `start`/`jumpTo` -- both called `seekTo`/
@@ -139,10 +157,24 @@ export function useSegmentPlayback({
 
   const stop = useCallback(() => {
     stopRef.current = true;
+    pausedRef.current = false;
+    setIsPaused(false);
     pendingSeekTargetRef.current = null;
     pendingStartIndexRef.current = null;
     setPlayingIdx(null);
     setElapsedInSegmentSeconds(null);
+  }, []);
+
+  const pause = useCallback(() => {
+    pausedRef.current = true;
+    setIsPaused(true);
+    primitivesRef.current.pause?.();
+  }, []);
+
+  const resume = useCallback(() => {
+    pausedRef.current = false;
+    setIsPaused(false);
+    primitivesRef.current.play?.();
   }, []);
 
   useEffect(() => stop, [stop]); // unmount cleanup
@@ -161,6 +193,8 @@ export function useSegmentPlayback({
       return;
     }
     pendingStartIndexRef.current = null;
+    pausedRef.current = false;
+    setIsPaused(false);
     const segment = currentSegments[index]!;
     const leadIn = Math.max(0, segment.start - contextLeadRef.current);
     pendingSeekTargetRef.current = leadIn;
@@ -204,7 +238,7 @@ export function useSegmentPlayback({
         return;
       }
 
-      if (stopRef.current) return;
+      if (stopRef.current || pausedRef.current) return;
       const idx = playingIdx;
       if (idx === null || currentTime === null) return;
       const segment = segmentsRef.current[idx];
@@ -241,5 +275,5 @@ export function useSegmentPlayback({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playingIdx, pollIntervalMs, playFrom]);
 
-  return { playingIdx, elapsedInSegmentSeconds, speed, isReady, start, stop, jumpTo, setSpeed };
+  return { playingIdx, elapsedInSegmentSeconds, speed, isReady, isPaused, start, stop, pause, resume, jumpTo, setSpeed };
 }

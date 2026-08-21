@@ -67,6 +67,12 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     () => ({
       getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds ?? 0,
       seekTo: setSeekTo, // setSeekTo already flips isPlaying -- no separate play() needed
+      // Real bug fix (live report, 2026-08-21): resume() must NOT re-seek --
+      // it only needs to flip isPlaying back on, which VideoPlayerCard's own
+      // isPlaying effect is the sole authority for (see its play/pause
+      // effect). pause() is the same store flag, the other direction.
+      play: () => useVideoStore.getState().setPlaying(true),
+      pause: () => useVideoStore.getState().setPlaying(false),
       setPlaybackRate,
     }),
     [setSeekTo, setPlaybackRate]
@@ -74,7 +80,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
 
   const segments = useMemo(() => data?.highlights ?? [], [data]);
 
-  const { playingIdx, elapsedInSegmentSeconds, speed, start, stop, jumpTo, setSpeed } = useSegmentPlayback({
+  const { playingIdx, elapsedInSegmentSeconds, speed, isPaused, start, stop, pause, resume, jumpTo, setSpeed } = useSegmentPlayback({
     segments,
     contextLeadSeconds: data?.contextLeadSeconds ?? 0,
     segmentDurationSeconds: data?.segmentDurationSeconds ?? 10,
@@ -213,12 +219,19 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           />
         </div>
         <div className="flex items-center" style={{ height: TRACK_HEIGHT_PX }}>
+          {/* Real bug fix (live report, 2026-08-21): this used to toggle
+              start()/stop() -- stop() nulled playingIdx entirely, so
+              pressing "pause" then "play" again always replayed from
+              highlight #1 instead of resuming where it was. Now toggles
+              start (nothing playing) / pause (playing, not paused) /
+              resume (playing, paused) -- playingIdx and player position
+              are preserved across pause/resume. */}
           <IconButton
-            label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
-            icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+            label={playingIdx === null ? 'Play highlights' : isPaused ? 'Resume highlights' : 'Pause highlights'}
+            icon={<Icon icon={playingIdx === null || isPaused ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
             variant="primary"
             size="sm"
-            onClick={playingIdx === null ? start : stop}
+            onClick={playingIdx === null ? start : isPaused ? resume : pause}
           />
         </div>
       </div>
@@ -242,12 +255,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Real fix (live report, 2026-08-21): height was left to derive
+              from padding + line-height (21px rendered) while HighlightsNav's
+              own strip derives its height from its fixed h-4 buttons (18px
+              rendered) -- the two only coincidentally looked close, never
+              pixel-matched. Both now share an explicit h-5, verified
+              (getBoundingClientRect) to render identically. */}
           <button
             type="button"
             onClick={cycleSpeed}
             title="Cycle playback speed"
             aria-label={`Playback speed: ${speed}x. Click to change.`}
-            className="text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 py-0.5 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+            className="h-5 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 border border-[var(--line)] hover:border-[var(--accent-a70)]"
           >
             {speed}x
           </button>
