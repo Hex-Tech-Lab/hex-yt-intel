@@ -293,3 +293,19 @@ User's explicit sequencing (2026-08-20): text/copy rebrand only, done as its own
 Post-merge automated review found `isReady` was computed and returned by the hook but never actually consulted by its own `start()`/`jumpTo()` actions — both called `seekTo`/`play` unconditionally even while `getCurrentTime()` still returned `null` (player not ready). Fixed: `start()`/`jumpTo()` now queue the requested index in `pendingStartIndexRef` when not ready; the existing poll loop flushes it on the first tick the primitive becomes ready; `stop()` cancels a pending queued start. 3 new regression tests added. See PR #263.
 
 Text-only scope (222 hits across code+docs, 6 legal documents in `docs/legal/*.md` + their `web/app/*/page.tsx` renders) is a real KYC-driven ask (MOR payment provider review) — not cosmetic, needs to actually land, just sequenced after the open PRs.
+
+## 2026-08-21 — Astryx `variant="primary"` renders white instead of app cyan (app-wide, pre-existing)
+
+Live report on the highlights-reel Play/Pause `IconButton`: rendered as a plain white circle instead of the app's cyan accent, despite `variant="primary"` being coded correctly (Astryx's own source: `primary` variant sets `backgroundColor: colorVars['--color-accent']`, `color: colorVars['--color-on-accent']` — the component code isn't wrong).
+
+**Root cause (confirmed, not a guess):** every single live screenshot taken this session — across every component, not just the highlights reel — logged this console warning:
+
+```
+[Astryx] Theme "neutral" is using runtime style injection. For better performance, use the pre-built theme:
+  import {neutralTheme} from '@astryxdesign/theme-neutral/built';
+  import '@astryxdesign/theme-neutral/theme.css';
+```
+
+The app is using Astryx's theme-neutral package in runtime-injection mode rather than the pre-built theme, and `--color-accent` is falling back to Astryx's own generic default (white) instead of this app's actual cyan (`#06B6D4`, `web/app/globals.css`'s own `--accent`). This is **app-wide and pre-existing** — confirmed by grepping for other already-shipped components using `variant="primary"`: `web/components/search/result-card.tsx`, `web/components/organisms/ResponsiveHeader.tsx`, `web/components/billing/checkout-button.tsx`, `web/components/billing/founders-table-client.tsx`, `web/components/billing/pricing-table-client.tsx` — all potentially affected, not something introduced by tonight's highlights-reel work.
+
+**Not fixed inline** — a one-off cyan override on just the highlights-reel `IconButton` would mask the real bug and cause drift the next time anyone uses `variant="primary"` elsewhere. Needs the real fix: wire the app's root theme provider to `@astryxdesign/theme-neutral/built` + `theme.css` per Astryx's own stated fix, and confirm `--color-accent` actually resolves to the app's cyan afterward (not just that the warning disappears). User flagged this as "deal with it ASAP" — next session priority, not deferred indefinitely.
