@@ -8,10 +8,14 @@ Welcome to vIntel ("we," "our," or "us"). By accessing or using our application,
 vIntel provides an AI-powered summarization, transcription, and intelligence synthesis tool. We operate strictly as a specialized **User-Agent**. We do not "scrape" or host third-party content; rather, we act as a specialized browser that renders data in a more useful way for the User, who has already legitimately accessed the content. 
 
 ## 2. User Responsibilities & Rights to Content
-**2.1 Necessary Rights Firewall:** You are strictly required to ensure that you own or hold all necessary rights, licenses, and permissions to access and process any content you provide to the Service. By submitting a YouTube URL, you warrant that you are authorized to view and interact with that content.
-**2.2 Third-Party Terms Compliance:** Because you are using vIntel as a User-Agent to interact with platforms like YouTube, you remain bound by the terms and conditions of those third-party services. vIntel is not responsible for your compliance with these third-party platforms.
-**2.3 Prohibited Use:** You may not use the Service to infringe on any third party's intellectual property rights. vIntel assumes no responsibility for any copyright or trademark infringements that may result from user-directed processing.
-**2.4 Assumption of Liability:** You assume all legal liability for the content you process through vIntel. We are merely a processing conduit and do not claim ownership of the underlying content you submit.
+
+**2.1 Authorization & Content Rights:** You are strictly required to ensure that you own or hold all necessary rights, licenses, and permissions to access and process any content you provide to the Service. By submitting a URL, you warrant that you are authorized to view, access, and interact with that content.
+
+**2.2 Third-Party Terms Compliance:** Because you use vIntel as a User-Agent to interact with third-party platforms (including YouTube), you remain independently bound by their respective terms of service. vIntel assumes no liability for your compliance or non-compliance with third-party platform rules.
+
+**2.3 Prohibited Uses & Infringement:** You may not use the Service to infringe upon any third party's intellectual property rights. vIntel assumes no liability for copyright or trademark infringement arising from user-directed operations.
+
+**2.4 Allocation of Liability:** You assume full legal responsibility for any content you direct vIntel to process. vIntel operates solely as a technical processing conduit and asserts no ownership over user-submitted materials.
 
 ## 3. DMCA Safe Harbor Registry
 vIntel operates strictly as a service provider under the "Safe Harbor" provisions of the Digital Millennium Copyright Act (DMCA), 17 U.S.C. Section 512. We maintain a designated DMCA Agent registered with the US Copyright Office. We do not host original video content and are immune from copyright damages for user-submitted links, provided we strictly comply with valid takedown requests.
