@@ -293,3 +293,34 @@ User's explicit sequencing (2026-08-20): text/copy rebrand only, done as its own
 Post-merge automated review found `isReady` was computed and returned by the hook but never actually consulted by its own `start()`/`jumpTo()` actions — both called `seekTo`/`play` unconditionally even while `getCurrentTime()` still returned `null` (player not ready). Fixed: `start()`/`jumpTo()` now queue the requested index in `pendingStartIndexRef` when not ready; the existing poll loop flushes it on the first tick the primitive becomes ready; `stop()` cancels a pending queued start. 3 new regression tests added. See PR #263.
 
 Text-only scope (222 hits across code+docs, 6 legal documents in `docs/legal/*.md` + their `web/app/*/page.tsx` renders) is a real KYC-driven ask (MOR payment provider review) — not cosmetic, needs to actually land, just sequenced after the open PRs.
+
+## 2026-08-21 — Astryx `variant="primary"` renders white instead of app cyan (app-wide, pre-existing)
+
+Live report on the highlights-reel Play/Pause `IconButton`: rendered as a plain white circle instead of the app's cyan accent, despite `variant="primary"` being coded correctly (Astryx's own source: `primary` variant sets `backgroundColor: colorVars['--color-accent']`, `color: colorVars['--color-on-accent']` — the component code isn't wrong).
+
+**Root cause (confirmed, not a guess):** every single live screenshot taken this session — across every component, not just the highlights reel — logged this console warning:
+
+```
+[Astryx] Theme "neutral" is using runtime style injection. For better performance, use the pre-built theme:
+  import {neutralTheme} from '@astryxdesign/theme-neutral/built';
+  import '@astryxdesign/theme-neutral/theme.css';
+```
+
+The app is using Astryx's theme-neutral package in runtime-injection mode rather than the pre-built theme, and `--color-accent` is falling back to Astryx's own generic default (white) instead of this app's actual cyan (`#06B6D4`, `web/app/globals.css`'s own `--accent`). This is **app-wide and pre-existing** — confirmed by grepping for other already-shipped components using `variant="primary"`: `web/components/search/result-card.tsx`, `web/components/organisms/ResponsiveHeader.tsx`, `web/components/billing/checkout-button.tsx`, `web/components/billing/founders-table-client.tsx`, `web/components/billing/pricing-table-client.tsx` — all potentially affected, not something introduced by tonight's highlights-reel work.
+
+**Not fixed inline** — a one-off cyan override on just the highlights-reel `IconButton` would mask the real bug and cause drift the next time anyone uses `variant="primary"` elsewhere. Needs the real fix: wire the app's root theme provider to `@astryxdesign/theme-neutral/built` + `theme.css` per Astryx's own stated fix, and confirm `--color-accent` actually resolves to the app's cyan afterward (not just that the warning disappears). User flagged this as "deal with it ASAP" — next session priority, not deferred indefinitely.
+
+## 2026-08-21 — HighlightsTrack permanent-label collision uses percentage gap, not pixels
+
+`web/components/dashboard/HighlightsTrack.tsx`'s `MIN_LABEL_GAP_PCT` (6) is a percentage of the track's rendered width, not a measured pixel gap. Flagged by the `/simplify` altitude pass on PR #266 (`design/highlights-reel-astryx-overhaul`): on a much narrower or wider track than the ~700px dashboard card this was verified against, the same 6% could be too permissive (labels genuinely overlap) or too strict (labels drop that would have fit). Verified correct on the actual reported 9-highlight case at the real card width, but the mechanism itself is width-agnostic by construction, not measured.
+
+**Not fixed** — a pixel-accurate version needs a `ref` + `getBoundingClientRect()`/`ResizeObserver` on the track container to know its real rendered width, which is a bigger lift than tonight's pass. Low priority unless this component is reused somewhere with a meaningfully different width than the dashboard scrubber card.
+
+## 2026-08-21 — Highlights-reel scrubber: mobile/narrow-viewport not verified
+
+All live verification tonight (PR #266, `design/highlights-reel-astryx-overhaul`) was done at a single fixed ~945px desktop viewport via Playwright screenshots. Responsive behavior at mobile/narrow widths was NOT tested. Two concrete, code-level risks spotted (not confirmed live):
+
+1. `HighlightsScrubber.tsx`'s footer row (transcript ticker + speed pill + moment nav) is `flex items-center justify-between gap-2` with no `flex-wrap` — on a narrow phone width, the fixed-content-width speed pill + nav could squeeze the `flex-1` transcript text down hard or off-balance, with no tested fallback.
+2. The `MIN_LABEL_GAP_PCT` percentage-based collision threshold (item above) means the same 6% gap represents fewer real pixels on a narrow screen than on the ~700px card this was verified against — permanent labels are more likely to visually collide on mobile specifically, not just a theoretical edge case.
+
+No hardcoded pixel widths were found in either file (everything is `flex`/`%`-based), which is a reasonable baseline, but that's not the same as verified. Needs a real live check at common mobile breakpoints (375px, 390px) before this can be called done.
