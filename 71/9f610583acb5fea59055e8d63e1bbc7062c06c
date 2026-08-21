@@ -1,0 +1,41 @@
+web/lib/hooks/useSegmentPlayback.ts
+  s_0eded1e9d0cab6::t_ed1cbd44e27bf8 67
+  s_0eded1e9d0cab6::t_ae8b6613a4c485 4
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_c21b80d5df6681 170
+  s_0eded1e9d0cab6::t_5a40d279a35be9 187-194
+  s_0eded1e9d0cab6::t_a8f32f1a6c28c1 8
+  s_0eded1e9d0cab6::t_881e7b6165e6a8 205
+web/components/dashboard/HighlightsTrack.tsx
+  s_0eded1e9d0cab6::t_90e4bd1a8d99c0 162
+  s_0eded1e9d0cab6::t_f4012f5eb3e371 179
+  s_0eded1e9d0cab6::t_8a9d80172ab4ee 3
+  s_0eded1e9d0cab6::t_6d7642670cd8f3 196
+  s_0eded1e9d0cab6::t_bcdeafbc432913 125-130,135-141,152-158,160-161,163-166,168-169,173,176-177
+  s_0eded1e9d0cab6::t_8e57e81c01199a 131-134
+  s_0eded1e9d0cab6::t_346b8948184d95 227,291
+  s_0eded1e9d0cab6::t_9ba423f5925575 269
+  s_0eded1e9d0cab6::t_c7050d7557950f 284
+  s_0eded1e9d0cab6::t_24643a94f44e75 110-115
+  s_0eded1e9d0cab6::t_ae4230faba6bd3 5,7-14
+  s_0eded1e9d0cab6::t_7b1312c4d581eb 222
+  s_0eded1e9d0cab6::t_698e3c34b0c2dc 178
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_a2a26190b210b3 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "719f610583acb5fea59055e8d63e1bbc7062c06c",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
