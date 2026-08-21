@@ -75,7 +75,7 @@ export function HighlightsNav({
         onClick={handlePrev}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="p-0.5 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="p-0.5 text-[10px] leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">‹</span>
       </button>
@@ -88,7 +88,7 @@ export function HighlightsNav({
         onClick={handleNext}
         title="Next highlight"
         aria-label="Next highlight"
-        className="p-0.5 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="p-0.5 text-[10px] leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">›</span>
       </button>
@@ -115,6 +115,30 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
   const activeHighlight = clampedActiveIndex !== null ? highlights[clampedActiveIndex] : null;
   const showPermanentLabels = highlights.length <= PERMANENT_LABEL_MAX_COUNT;
+
+  // Real fix (live report, 2026-08-21): permanent labels for two markers
+  // close together visually collided/overlapped ("0:551:17"). Collision
+  // check walks left-to-right comparing each marker's leftPct against the
+  // last one actually SHOWN (not the immediately preceding one, so a
+  // skipped label doesn't let the next one crowd in right after it) --
+  // below MIN_LABEL_GAP_PCT, the label loses UNLESS it's the last
+  // highlight in the whole list, which always shows per explicit
+  // direction ("the one on the right should lose unless it's the last
+  // one"). Hover tooltip (title + time range) stays available on every
+  // marker regardless of whether its permanent label is shown.
+  const MIN_LABEL_GAP_PCT = 6;
+  const labelVisibility: boolean[] = [];
+  if (showPermanentLabels) {
+    let lastShownLeftPct: number | null = null;
+    highlights.forEach((highlight, idx) => {
+      const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
+      const isLast = idx === highlights.length - 1;
+      const collides = lastShownLeftPct !== null && leftPct - lastShownLeftPct < MIN_LABEL_GAP_PCT;
+      const show = isLast || !collides;
+      labelVisibility.push(show);
+      if (show) lastShownLeftPct = leftPct;
+    });
+  }
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -217,7 +241,8 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
           label collision at high density. */}
       {showPermanentLabels && (
         <div className="relative w-full h-3 px-2" aria-hidden="true">
-          {highlights.map((highlight) => {
+          {highlights.map((highlight, idx) => {
+            if (!labelVisibility[idx]) return null;
             const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
             return (
               <span

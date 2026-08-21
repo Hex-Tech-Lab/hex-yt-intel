@@ -182,7 +182,15 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           as a real flex sibling (not a centered overlay -- corrected per
           live feedback), shortening the track by exactly the button's own
           width instead of floating over the middle of it. */}
-      <div className="flex items-center gap-2">
+      {/* Real fix (live report, 2026-08-21): items-center here used to
+          vertically center the Play/Pause button against this row's FULL
+          height -- fine when HighlightsTrack was just the h-7 track, but
+          once the density-gated permanent-label row was added below it,
+          the row grew taller and the button drifted down, no longer
+          aligned with the track itself. items-start + a matching h-7
+          wrapper around the button pins it to the track's own height
+          regardless of whatever renders below (labels or not). */}
+      <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <HighlightsTrack
             highlights={data.highlights}
@@ -192,13 +200,15 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             hideNav
           />
         </div>
-        <IconButton
-          label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
-          icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
-          variant="primary"
-          size="sm"
-          onClick={playingIdx === null ? start : stop}
-        />
+        <div className="h-7 flex items-center">
+          <IconButton
+            label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
+            icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+            variant="primary"
+            size="sm"
+            onClick={playingIdx === null ? start : stop}
+          />
+        </div>
       </div>
 
       {/* Footer row: live transcript ticker (left, grows/truncates) +
