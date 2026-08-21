@@ -1,0 +1,33 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_6251582ebe486a 211
+  s_0eded1e9d0cab6::t_e8956452f1922e 151-164,166
+web/components/dashboard/HighlightsTrack.tsx
+  s_0eded1e9d0cab6::t_7614feadeeeeaa 308
+  s_0eded1e9d0cab6::t_7113498dad4a8f 132
+  s_0eded1e9d0cab6::t_43d4d9699f8d9a 74-79,84-85,90-96,103,112,116
+  s_0eded1e9d0cab6::t_d138ca1fa9d598 154-161,163
+  s_0eded1e9d0cab6::t_4dfb818b1f063c 227-235,238
+  s_0eded1e9d0cab6::t_7ee6c4a715bf22 46-54
+  s_0eded1e9d0cab6::t_9e1c1eb5956dbe 266
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_0eded1e9d0cab6::t_dea14bc2c0e843 19,26,34,47,60
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_49460a8e49e851 115-119,121
+  s_0eded1e9d0cab6::t_0c812ecf3f3af8 148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b195e4ef780aa94d85a17f1f93a1a92c7f8b2224",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
