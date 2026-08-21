@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last Updated:** June 9, 2026
+**Last Updated:** August 21, 2026
 
 Welcome to vIntel ("we," "our," or "us"). By accessing or using our application, website, Chrome extensions, and related services (collectively, the "Service"), you ("User") agree to be bound by these Terms of Service. If you do not agree to these Terms, you must not use our Service.
 
