@@ -1,0 +1,21 @@
+.github/workflows/ci-cd.yml
+  s_8a38081885a262::t_5e323e2e158a99 302
+  s_8a38081885a262::t_65de7f3158ba65 57
+  s_8a38081885a262::t_fd64ef4698ac29 294-301,303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f9fb2f43fe100b9bde720dd986de1d4898d59745",
+  "prompts": {},
+  "sessions": {
+    "s_8a38081885a262": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdad891e3ffeUP62QCBCrMqXqp",
+        "model": "z-ai/glm-5.2:free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
