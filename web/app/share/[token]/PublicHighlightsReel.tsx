@@ -112,11 +112,13 @@ export function PublicHighlightsReel({
 
   if (highlights.length === 0) return null;
 
-  // Display total: see HighlightsScrubber.tsx's identical comment -- sum of
-  // each highlight's own span, not count * fixed segment duration, now that
-  // selection is uncapped.
+  // Real fix (live report, 2026-08-21): see HighlightsScrubber.tsx's
+  // identical fix -- highlight.end is contractually "the start of the
+  // next selected segment," not a short highlight-worthy span, so
+  // (end - start) overstated the real total. Fixed segmentDurationSeconds
+  // (what playback actually advances by) now drives this total instead.
   const totalHighlightsSeconds = Math.min(
-    highlights.reduce((sum, highlight) => sum + Math.max(0, highlight.end - highlight.start), 0) || highlights.length * segmentDurationSeconds,
+    highlights.length * segmentDurationSeconds,
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
@@ -126,7 +128,7 @@ export function PublicHighlightsReel({
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-sm font-semibold text-gray-900">Highlights reel</span>
+        <span className="text-sm font-semibold text-gray-900">Highlights Reel</span>
         <span className="text-xs text-gray-500">
           {highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
@@ -143,6 +145,7 @@ export function PublicHighlightsReel({
         activeIndex={playingIdx}
         onSelect={jumpTo}
         videoDurationSeconds={videoDurationSeconds}
+        segmentDurationSeconds={segmentDurationSeconds}
       />
 
       <div className="flex items-center gap-2 flex-wrap">

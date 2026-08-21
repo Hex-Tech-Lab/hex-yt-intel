@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spinner } from '@astryxdesign/core';
+import { Card, IconButton, Spinner } from '@astryxdesign/core';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
-import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
+import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 
@@ -54,25 +55,14 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
 
   // Store-backed primitives -- getCurrentTime reads the store value
-  // directly rather than polling itself; the shared hook's own poll
-  // interval re-reads this closure every tick, and useVideoStore's
-  // currentPlaybackSeconds is already kept fresh by VideoPlayerCard's own
-  // 250ms poll, so no second independent poller is introduced here.
-  //
-  // Real regression fix (live report, 2026-08-20, post PR #263): PR #263
-  // made useSegmentPlayback's start()/jumpTo() queue instead of acting when
-  // getCurrentTime() returns null -- correct for PublicHighlightsReel.tsx,
-  // where null genuinely means "player iframe not mounted yet". But here,
-  // currentPlaybackSeconds starts null simply because nothing has PLAYED
-  // yet -- VideoPlayerCard.tsx only writes to it while isPlaying is true
-  // (its own poll effect is gated on `isPlaying`), and isPlaying only
-  // becomes true via the very `setSeekTo` call the readiness gate was
-  // withholding. By the time HighlightsScrubber mounts, VideoPlayerCard
-  // is ALREADY mounted (DashboardContainer's render guard requires
-  // `status === 'complete' && analysisId`, itself downstream of the video
-  // having loaded) -- so "no time yet" here means "at t=0", not "not
-  // ready", and null must not be forwarded as-is or every first click on
-  // "Play highlights" queues forever with nothing left to ever flush it.
+  // directly; VideoPlayerCard's own 250ms poll keeps currentPlaybackSeconds
+  // fresh, so no second poller here. currentPlaybackSeconds is null until
+  // playback first starts (not "player not mounted" -- VideoPlayerCard is
+  // already mounted by the time this component renders), so null must map
+  // to t=0, not "not ready" (PR #264: mapping it to "not ready" deadlocked
+  // the Play button, since nothing else would ever flip isPlaying to make
+  // it non-null). PublicHighlightsReel.tsx's own primitives are correctly
+  // different -- its null really does mean "player iframe not mounted yet".
   const primitives: SegmentPlaybackPrimitives = useMemo(
     () => ({
       getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds ?? 0,
@@ -142,17 +132,38 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     elapsedInSegmentSeconds
   );
 
+  // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
+  // as an oversized grey box out of step with the rest of the design, and
+  // repeating chevrons right next to HighlightsNav's own prev/next arrows
+  // was flagged as visual clutter. Replaced with a minimal tap-to-cycle
+  // pill (no dropdown, no chevrons) -- click advances to the next speed in
+  // SPEED_OPTIONS, wrapping back to the start after the last one.
+  const cycleSpeed = () => {
+    const currentIdx = SPEED_OPTIONS.indexOf(speed as (typeof SPEED_OPTIONS)[number]);
+    const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % SPEED_OPTIONS.length;
+    setSpeed(SPEED_OPTIONS[nextIdx]!);
+  };
+
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
   if (loading || !data) return <Spinner size="sm" />;
   if (data.highlights.length === 0) return null;
 
-  // Display total: sum of each highlight's own (end - start) span, not
-  // count * fixed segment duration -- with selection now uncapped, the
-  // count can be large (up to highlights.maxCount) and the fixed-duration
-  // multiplication would overstate a dense video's real total. Still
-  // clamped to the source video's length as a display sanity bound.
+  // Real fix (live report, 2026-08-21): this used to sum each highlight's
+  // own (end - start) span, on the assumption that a fixed-duration total
+  // would OVERSTATE the real total for a dense video. That assumption was
+  // backwards -- highlight.end is contractually "the start of the next
+  // selected segment" (web/lib/prompts/highlights-extraction.ts's own
+  // prompt + parser validation), so (end - start) spans nearly the ENTIRE
+  // gap to the next highlight, not a short highlight-worthy clip. That's
+  // what produced the reported "94% of video duration" stat. Actual
+  // playback (useSegmentPlayback.ts) already ignores highlight.end and
+  // advances using this same fixed segmentDurationSeconds -- this display
+  // total now matches what actually plays, tonight's contained fix.
+  // Real fix for highlight.end's definition itself is tracked separately
+  // (docs/TECH_DEBT_LEDGER.md) -- needs a prompt/parser contract change,
+  // not a display-layer one.
   const totalHighlightsSeconds = Math.min(
-    data.highlights.reduce((sum, highlight) => sum + Math.max(0, highlight.end - highlight.start), 0) || data.highlights.length * data.segmentDurationSeconds,
+    data.highlights.length * data.segmentDurationSeconds,
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
@@ -160,60 +171,89 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     : null;
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[var(--ink-main)]">Highlights reel</span>
-        <span className="text-[10px] text-[var(--ink-muted)]">
+    <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
+      {/* Header row: title left, keypoint/duration stats right -- the
+          moment stepper moved to the footer row (below) per the 2nd
+          layout revision, replacing the old text-label Play button slot. */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-[var(--ink)]">Highlights Reel</span>
+        <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
         </span>
       </div>
 
-      <HighlightsTrack
-        highlights={data.highlights}
-        activeIndex={playingIdx}
-        onSelect={jumpTo}
-        videoDurationSeconds={videoDurationSeconds}
-      />
-
-      <div className="flex items-center gap-2 flex-wrap">
-        {playingIdx === null ? (
-          <Button label="Play highlights" variant="primary" size="sm" onClick={start} />
-        ) : (
-          <Button label="Stop" variant="ghost" size="sm" onClick={stop} />
-        )}
-
-        <label className="flex items-center gap-1 text-[10px] text-[var(--ink-muted)]">
-          Speed
-          <select
-            value={speed}
-            onChange={(changeEvent) => setSpeed(Number(changeEvent.target.value))}
-            aria-label="Playback speed"
-            className="text-[10px] rounded border border-[var(--border-muted)] bg-transparent px-1 py-0.5"
-          >
-            {SPEED_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}x
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* Timeline row: the track stays one continuous element (real
+          highlight-timestamp positions preserved -- unlike a visually
+          split two-segment track, which would misplace markers relative
+          to their true percentage position). Play/Pause sits flush right
+          as a real flex sibling (not a centered overlay -- corrected per
+          live feedback), shortening the track by exactly the button's own
+          width instead of floating over the middle of it. */}
+      {/* Real fix (live report, 2026-08-21): items-center here used to
+          vertically center the Play/Pause button against this row's FULL
+          height -- fine when HighlightsTrack was just its own fixed-height
+          track, but once the density-gated permanent-label row was added
+          below it, the row grew taller and the button drifted down, no
+          longer aligned with the track itself. items-start + a wrapper
+          sized to HighlightsTrack's own exported TRACK_HEIGHT_PX (not a
+          second hardcoded height duplicating that file's internals --
+          /simplify altitude finding, 2026-08-21) pins the button to the
+          track's own height regardless of whatever renders below. */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <HighlightsTrack
+            highlights={data.highlights}
+            activeIndex={playingIdx}
+            onSelect={jumpTo}
+            videoDurationSeconds={videoDurationSeconds}
+            segmentDurationSeconds={data.segmentDurationSeconds}
+            hideNav
+          />
+        </div>
+        <div className="flex items-center" style={{ height: TRACK_HEIGHT_PX }}>
+          <IconButton
+            label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
+            icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+            variant="primary"
+            size="sm"
+            onClick={playingIdx === null ? start : stop}
+          />
+        </div>
       </div>
 
-      {activeHighlight && (
-        <div className="text-xs text-[var(--ink-secondary)] leading-snug" aria-live="polite">
-          <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
-            {playingIdx! + 1}/{data.highlights.length}
-          </span>
-          {revealedText || activeHighlight.label}
+      {/* Footer row: live transcript ticker (left, grows/truncates) +
+          Speed cycle-pill + relocated moment stepper (right). */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
+          {activeHighlight ? (
+            <>
+              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
+                {playingIdx! + 1}/{data.highlights.length}
+              </span>
+              {revealedText || activeHighlight.label}
+            </>
+          ) : nextHighlight ? (
+            <span className="italic text-[var(--ink-muted)]">Up next: {previewWords(nextHighlight.label)}</span>
+          ) : (
+            <span className="text-[var(--ink-muted)]">{data.highlights.length} keypoints ready to play</span>
+          )}
         </div>
-      )}
-      {nextHighlight && (
-        <div className="text-[10px] text-[var(--ink-muted)] italic truncate">
-          Up next: {previewWords(nextHighlight.label)}
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={cycleSpeed}
+            title="Cycle playback speed"
+            aria-label={`Playback speed: ${speed}x. Click to change.`}
+            className="text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 py-0.5 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+          >
+            {speed}x
+          </button>
+          <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
         </div>
-      )}
-    </div>
+      </div>
+    </Card>
   );
 }
