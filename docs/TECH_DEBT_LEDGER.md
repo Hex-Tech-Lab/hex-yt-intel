@@ -315,3 +315,12 @@ The app is using Astryx's theme-neutral package in runtime-injection mode rather
 `web/components/dashboard/HighlightsTrack.tsx`'s `MIN_LABEL_GAP_PCT` (6) is a percentage of the track's rendered width, not a measured pixel gap. Flagged by the `/simplify` altitude pass on PR #266 (`design/highlights-reel-astryx-overhaul`): on a much narrower or wider track than the ~700px dashboard card this was verified against, the same 6% could be too permissive (labels genuinely overlap) or too strict (labels drop that would have fit). Verified correct on the actual reported 9-highlight case at the real card width, but the mechanism itself is width-agnostic by construction, not measured.
 
 **Not fixed** — a pixel-accurate version needs a `ref` + `getBoundingClientRect()`/`ResizeObserver` on the track container to know its real rendered width, which is a bigger lift than tonight's pass. Low priority unless this component is reused somewhere with a meaningfully different width than the dashboard scrubber card.
+
+## 2026-08-21 — Highlights-reel scrubber: mobile/narrow-viewport not verified
+
+All live verification tonight (PR #266, `design/highlights-reel-astryx-overhaul`) was done at a single fixed ~945px desktop viewport via Playwright screenshots. Responsive behavior at mobile/narrow widths was NOT tested. Two concrete, code-level risks spotted (not confirmed live):
+
+1. `HighlightsScrubber.tsx`'s footer row (transcript ticker + speed pill + moment nav) is `flex items-center justify-between gap-2` with no `flex-wrap` — on a narrow phone width, the fixed-content-width speed pill + nav could squeeze the `flex-1` transcript text down hard or off-balance, with no tested fallback.
+2. The `MIN_LABEL_GAP_PCT` percentage-based collision threshold (item above) means the same 6% gap represents fewer real pixels on a narrow screen than on the ~700px card this was verified against — permanent labels are more likely to visually collide on mobile specifically, not just a theoretical edge case.
+
+No hardcoded pixel widths were found in either file (everything is `flex`/`%`-based), which is a reasonable baseline, but that's not the same as verified. Needs a real live check at common mobile breakpoints (375px, 390px) before this can be called done.
