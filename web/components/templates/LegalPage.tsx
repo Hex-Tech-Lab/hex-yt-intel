@@ -134,11 +134,11 @@ export function LegalPage({ content }: LegalPageProps) {
           margin-top: 1.5rem !important;
           margin-bottom: 1.5rem !important;
           padding-left: 1.5rem !important;
+          row-gap: 10px !important;
         }
 
         .legal-prose li {
-          margin-top: 0.75rem !important;
-          margin-bottom: 0.75rem !important;
+          margin: 0 !important;
           color: #94A3B8 !important;
         }
 

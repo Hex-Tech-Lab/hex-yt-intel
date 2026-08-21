@@ -16,7 +16,7 @@ We process your data to:
 - Generate AI summaries via secure third-party Large Language Model (LLM) APIs.
 - Detect fraud, abuse, and security vulnerabilities.
 
-## 3. Data Custodian Defense: Automated Data Expiry
+## 3. Data Retention & Automated Expiry
 vIntel operates as a real-time processing engine, not a permanent archive for third-party intellectual property. **We do not permanently store YouTube video data or full transcripts.**
 - When you request a summary, we process the transcript in real-time.
 - The source text and intermediate processing data are subjected to **Automated Data Expiry** and are permanently deleted from our temporary processing caches within 24 to 72 hours.
@@ -28,8 +28,9 @@ When your data is passed to our third-party LLM partners, it is strictly for the
 
 ## 5. Third-Party Sharing & International Transfers
 We do not sell your personal data. We share data only with essential service providers necessary for our core operations:
-- **Core Infrastructure:** Cloud hosting, content delivery, and managed database services.
-- **AI Synthesis:** Third-party Large Language Model (LLM) interface providers.
+- **Core Infrastructure:** Cloud hosting, edge compute, content delivery, and managed database services.
+- **AI Synthesis:** Third-party Large Language Model (LLM) providers for content analysis and summarization.
+- **Billing & Payments:** Merchant of Record (MoR) and payment gateway providers for transaction handling, fraud prevention, and global tax compliance.
 
 For a full list of our current sub-processors, their functions, and locations, please visit our [Sub-processor Disclosure Page](/legal/sub-processors). For EEA users, all transfers are protected by Standard Contractual Clauses (SCCs).
 
