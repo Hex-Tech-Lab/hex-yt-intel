@@ -1,0 +1,19 @@
+docs/legal/terms-of-service.md
+  s_8a38081885a262::t_dada27095e31b3 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "b7e7f6d2ddc9f639715657edf8b3f9b71da6a642",
+  "prompts": {},
+  "sessions": {
+    "s_8a38081885a262": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdad891e3ffeUP62QCBCrMqXqp",
+        "model": "z-ai/glm-5.2:free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
