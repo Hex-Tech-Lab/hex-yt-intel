@@ -126,7 +126,7 @@ export function PublicHighlightsReel({
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-sm font-semibold text-gray-900">Highlights reel</span>
+        <span className="text-sm font-semibold text-gray-900">Highlights Reel</span>
         <span className="text-xs text-gray-500">
           {highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}

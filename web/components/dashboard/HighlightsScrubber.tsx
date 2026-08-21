@@ -5,7 +5,7 @@ import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
-import { HighlightsTrack, HighlightsNav } from '@/components/dashboard/HighlightsTrack';
+import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 
@@ -167,7 +167,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           moment stepper moved to the footer row (below) per the 2nd
           layout revision, replacing the old text-label Play button slot. */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
+        <span className="text-xs font-semibold text-[var(--ink)]">Highlights Reel</span>
         <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
@@ -184,12 +184,14 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           width instead of floating over the middle of it. */}
       {/* Real fix (live report, 2026-08-21): items-center here used to
           vertically center the Play/Pause button against this row's FULL
-          height -- fine when HighlightsTrack was just the h-7 track, but
-          once the density-gated permanent-label row was added below it,
-          the row grew taller and the button drifted down, no longer
-          aligned with the track itself. items-start + a matching h-7
-          wrapper around the button pins it to the track's own height
-          regardless of whatever renders below (labels or not). */}
+          height -- fine when HighlightsTrack was just its own fixed-height
+          track, but once the density-gated permanent-label row was added
+          below it, the row grew taller and the button drifted down, no
+          longer aligned with the track itself. items-start + a wrapper
+          sized to HighlightsTrack's own exported TRACK_HEIGHT_PX (not a
+          second hardcoded height duplicating that file's internals --
+          /simplify altitude finding, 2026-08-21) pins the button to the
+          track's own height regardless of whatever renders below. */}
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <HighlightsTrack
@@ -200,7 +202,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             hideNav
           />
         </div>
-        <div className="h-7 flex items-center">
+        <div className="flex items-center" style={{ height: TRACK_HEIGHT_PX }}>
           <IconButton
             label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
             icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}

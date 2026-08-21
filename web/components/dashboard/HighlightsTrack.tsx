@@ -1,15 +1,17 @@
 'use client';
 
+import { useCallback, useMemo } from 'react';
 import { Tooltip } from '@astryxdesign/core';
+import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 
-/** MM:SS formatter local to this file -- deliberately not imported from
- *  entity-time-seek.ts's formatTimestamp, per this component's own
- *  no-coupling-to-that-file rule (see file doc comment below). */
-function formatClock(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainderSeconds = Math.floor(totalSeconds % 60);
-  return `${minutes}:${remainderSeconds.toString().padStart(2, '0')}`;
-}
+/**
+ * Track height in px -- the single source of truth for the scrubber's own
+ * height (h-7 = 28px), imported by HighlightsScrubber.tsx to size its
+ * Play/Pause button wrapper instead of hardcoding a second "h-7" that could
+ * silently drift out of sync if this track's own height ever changes
+ * (/simplify altitude finding, 2026-08-21).
+ */
+export const TRACK_HEIGHT_PX = 28;
 
 /**
  * Shared marker-track scrubber shell for the highlights reel (2026-08-20
@@ -105,8 +107,12 @@ export function HighlightsNav({
 const PERMANENT_LABEL_MAX_COUNT = 15;
 
 export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, hideNav = false }: HighlightsTrackProps) {
-  if (highlights.length === 0) return null;
-
+  // Real fix (/simplify + code-review pass, 2026-08-21): the empty-array
+  // early return used to run BEFORE the hooks added below (markerLeftPcts/
+  // labelVisibility useMemo) -- a Rules-of-Hooks violation, since hooks
+  // must run unconditionally on every render. Moved past all hooks;
+  // `maxTime`'s own `|| 1` fallback already made it safe to compute
+  // against an empty highlights array.
   const maxTime =
     videoDurationSeconds && videoDurationSeconds > 0
       ? videoDurationSeconds
@@ -116,6 +122,23 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   const activeHighlight = clampedActiveIndex !== null ? highlights[clampedActiveIndex] : null;
   const showPermanentLabels = highlights.length <= PERMANENT_LABEL_MAX_COUNT;
 
+  // Shared percentage-position math (/simplify reuse finding, 2026-08-21):
+  // was independently re-derived at 4 call sites (segment fill, markers,
+  // end bracket, labels) with slightly different clamp bounds each time --
+  // one helper, clamp bounds passed explicitly so each site's real
+  // requirement (98 for markers/labels to keep them inside the track's
+  // padding, 100/99 for the segment fill/end-bracket edges) stays visible.
+  const pctFor = useCallback(
+    (time: number, clampMax = 98) => Math.min(clampMax, Math.max(1, (time / maxTime) * 100)),
+    [maxTime]
+  );
+
+  // Marker positions + which permanent labels survive collision detection
+  // -- memoized (/simplify efficiency finding, 2026-08-21): both were
+  // recomputed on every render including the ~250ms playback-position poll
+  // tick, even though neither depends on that tick (only `isActive`, read
+  // separately in the render below, needs to be render-fresh).
+  //
   // Real fix (live report, 2026-08-21): permanent labels for two markers
   // close together visually collided/overlapped ("0:551:17"). Collision
   // check walks left-to-right comparing each marker's leftPct against the
@@ -126,19 +149,34 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   // direction ("the one on the right should lose unless it's the last
   // one"). Hover tooltip (title + time range) stays available on every
   // marker regardless of whether its permanent label is shown.
+  //
+  // MIN_LABEL_GAP_PCT is a percentage of the track's rendered width, not a
+  // pixel gap -- on a much narrower or wider track than this component has
+  // been tested against, the same 6% could be too permissive or too
+  // strict. Known limitation (docs/TECH_DEBT_LEDGER.md), not fixed here --
+  // a pixel-accurate version needs a ref + measured width, out of scope
+  // for tonight's pass.
   const MIN_LABEL_GAP_PCT = 6;
-  const labelVisibility: boolean[] = [];
-  if (showPermanentLabels) {
+  const markerLeftPcts = useMemo(
+    () => highlights.map((highlight) => pctFor(highlight.start)),
+    [highlights, pctFor]
+  );
+  const labelVisibility = useMemo(() => {
+    if (!showPermanentLabels) return [];
+    const visible: boolean[] = [];
     let lastShownLeftPct: number | null = null;
-    highlights.forEach((highlight, idx) => {
-      const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
+    highlights.forEach((_highlight, idx) => {
+      const leftPct = markerLeftPcts[idx]!;
       const isLast = idx === highlights.length - 1;
       const collides = lastShownLeftPct !== null && leftPct - lastShownLeftPct < MIN_LABEL_GAP_PCT;
       const show = isLast || !collides;
-      labelVisibility.push(show);
+      visible.push(show);
       if (show) lastShownLeftPct = leftPct;
     });
-  }
+    return visible;
+  }, [highlights, markerLeftPcts, showPermanentLabels]);
+
+  if (highlights.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -155,7 +193,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
       <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
-            const segLeftPct = Math.min(100, (activeHighlight.start / maxTime) * 100);
+            const segLeftPct = pctFor(activeHighlight.start, 100);
             const segWidthPct = Math.max(
               1,
               Math.min(100 - segLeftPct, ((activeHighlight.end - activeHighlight.start) / maxTime) * 100)
@@ -181,12 +219,12 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
 
         <div className="absolute left-2 right-2 inset-y-0 pointer-events-none">
           {highlights.map((highlight, idx) => {
-            const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
+            const leftPct = markerLeftPcts[idx]!;
             const isActive = idx === clampedActiveIndex;
             return (
               <Tooltip
                 key={highlight.idx}
-                content={`${highlight.label} (${formatClock(highlight.start)}–${formatClock(highlight.end)})`}
+                content={`${highlight.label} (${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end)})`}
                 placement="above"
               >
                 {/* Real accessibility fix (automated review on PR #266): the
@@ -228,7 +266,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             <span
               aria-hidden="true"
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-3.5 border-r-2 border-t-2 border-b-2 border-[var(--accent-a70)] z-10"
-              style={{ left: `${Math.min(99, Math.max(1, (activeHighlight.end / maxTime) * 100))}%` }}
+              style={{ left: `${pctFor(activeHighlight.end, 99)}%` }}
             />
           )}
         </div>
@@ -243,14 +281,14 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
         <div className="relative w-full h-3 px-2" aria-hidden="true">
           {highlights.map((highlight, idx) => {
             if (!labelVisibility[idx]) return null;
-            const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
+            const leftPct = markerLeftPcts[idx]!;
             return (
               <span
                 key={highlight.idx}
                 className="absolute -translate-x-1/2 text-[9px] font-mono text-[var(--ink-muted)] whitespace-nowrap"
                 style={{ left: `${leftPct}%` }}
               >
-                {formatClock(highlight.start)}
+                {formatTimestamp(highlight.start)}
               </span>
             );
           })}

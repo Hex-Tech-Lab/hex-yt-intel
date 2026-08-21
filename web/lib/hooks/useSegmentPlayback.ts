@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { HIGHLIGHTS_SPEED_MAX } from '@/lib/utils/highlights-settings';
+import { HIGHLIGHTS_SPEED_MIN, HIGHLIGHTS_SPEED_MAX } from '@/lib/utils/highlights-settings';
 
 /**
  * Shared playback-engine hook for the highlights reel (extracted 2026-08-20
@@ -64,7 +64,7 @@ export interface UseSegmentPlaybackOptions {
 // options now. HIGHLIGHTS_SPEED_MIN/MAX (0.5/3) still bound the list and
 // the adapter clamp -- keep both endpoints in sync if this list ever
 // changes range.
-export const SPEED_OPTIONS = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0, HIGHLIGHTS_SPEED_MAX] as const;
+export const SPEED_OPTIONS = [HIGHLIGHTS_SPEED_MIN, 0.8, 1.0, 1.2, 1.5, 2.0, HIGHLIGHTS_SPEED_MAX] as const;
 
 const DEFAULT_POLL_INTERVAL_MS = 250;
 /** Lead buffer before a segment's end counts as "reached" -- accounts for
