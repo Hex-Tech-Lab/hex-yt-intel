@@ -1,0 +1,31 @@
+docs/agent-prompts/2026-08-20-oc-real-pict-pairwise-testing.md
+  s_0eded1e9d0cab6::t_588d20f01f7f88 1-120
+web/package.json
+  s_0eded1e9d0cab6::t_588d20f01f7f88 7,82
+web/tests/pairwise/model.pict
+  s_0eded1e9d0cab6::t_588d20f01f7f88 1-25
+web/tests/pairwise/generate.mjs
+  s_0eded1e9d0cab6::t_588d20f01f7f88 1-25
+docs/testing/PICT_REAL_INTEGRATION_PLAN.md
+  s_0eded1e9d0cab6::t_588d20f01f7f88 1-336
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_588d20f01f7f88 296-326
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_00b3bf68dbe993 238-240,4464-4466,4706-4709,5007-5010,5214-5218,5560-5563,10305-10306,10743-10746,11049-11053,11305-11308,11780-11784
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3981aaacaf00da0b9e259309280194f587cee4f9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
