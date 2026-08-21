@@ -148,13 +148,22 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   if (loading || !data) return <Spinner size="sm" />;
   if (data.highlights.length === 0) return null;
 
-  // Display total: sum of each highlight's own (end - start) span, not
-  // count * fixed segment duration -- with selection now uncapped, the
-  // count can be large (up to highlights.maxCount) and the fixed-duration
-  // multiplication would overstate a dense video's real total. Still
-  // clamped to the source video's length as a display sanity bound.
+  // Real fix (live report, 2026-08-21): this used to sum each highlight's
+  // own (end - start) span, on the assumption that a fixed-duration total
+  // would OVERSTATE the real total for a dense video. That assumption was
+  // backwards -- highlight.end is contractually "the start of the next
+  // selected segment" (web/lib/prompts/highlights-extraction.ts's own
+  // prompt + parser validation), so (end - start) spans nearly the ENTIRE
+  // gap to the next highlight, not a short highlight-worthy clip. That's
+  // what produced the reported "94% of video duration" stat. Actual
+  // playback (useSegmentPlayback.ts) already ignores highlight.end and
+  // advances using this same fixed segmentDurationSeconds -- this display
+  // total now matches what actually plays, tonight's contained fix.
+  // Real fix for highlight.end's definition itself is tracked separately
+  // (docs/TECH_DEBT_LEDGER.md) -- needs a prompt/parser contract change,
+  // not a display-layer one.
   const totalHighlightsSeconds = Math.min(
-    data.highlights.reduce((sum, highlight) => sum + Math.max(0, highlight.end - highlight.start), 0) || data.highlights.length * data.segmentDurationSeconds,
+    data.highlights.length * data.segmentDurationSeconds,
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
@@ -199,6 +208,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             activeIndex={playingIdx}
             onSelect={jumpTo}
             videoDurationSeconds={videoDurationSeconds}
+            segmentDurationSeconds={data.segmentDurationSeconds}
             hideNav
           />
         </div>

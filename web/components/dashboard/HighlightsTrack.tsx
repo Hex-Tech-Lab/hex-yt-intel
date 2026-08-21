@@ -43,6 +43,15 @@ export interface HighlightsTrackProps {
   activeIndex: number | null;
   onSelect: (index: number) => void;
   videoDurationSeconds: number | null;
+  /** Real fix (live report, 2026-08-21): highlight.end is contractually
+   *  "the start of the next selected segment" (web/lib/prompts/highlights-
+   *  extraction.ts), not a genuinely short highlight-worthy span -- using
+   *  it directly rendered the active segment's fill/end-bracket spanning
+   *  nearly the whole gap to the next highlight. Actual playback
+   *  (useSegmentPlayback.ts) already ignores highlight.end and advances
+   *  using this same fixed duration; the segment fill and end bracket now
+   *  match what actually plays instead of the broken end timestamp. */
+  segmentDurationSeconds: number;
   /** Suppress the built-in Prev/Next + "#N of M" nav row -- set when a
    *  caller renders <HighlightsNav> itself elsewhere (e.g. in a shared
    *  header row alongside other stats) instead of stacked above the track. */
@@ -62,22 +71,36 @@ export function HighlightsNav({
 }: Pick<HighlightsTrackProps, 'highlights' | 'activeIndex' | 'onSelect'>) {
   const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
 
+  // Real functional bug (live report, 2026-08-21): Next/Prev only worked
+  // once something was ALREADY playing (both disabled whenever
+  // clampedActiveIndex was null) -- there was no way to start playback
+  // from a specific highlight via the nav while idle. Next now starts at
+  // index 0 when idle, matching the Play button's own start() semantics;
+  // Prev correctly stays disabled while idle (nothing to go back to).
   const handlePrev = () => {
     if (clampedActiveIndex !== null && clampedActiveIndex > 0) onSelect(clampedActiveIndex - 1);
   };
   const handleNext = () => {
-    if (clampedActiveIndex !== null && clampedActiveIndex < highlights.length - 1) onSelect(clampedActiveIndex + 1);
+    if (clampedActiveIndex === null) onSelect(0);
+    else if (clampedActiveIndex < highlights.length - 1) onSelect(clampedActiveIndex + 1);
   };
 
   return (
     <div className="flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
+      {/* Real fix (live report, 2026-08-21): the earlier text-[10px]
+          leading-none applied to match this bar's height against the
+          speed pill shrank the '<'/'>' glyphs into near-illegibility.
+          Decoupled: the button itself is a fixed h-4 box (matches the
+          speed pill's rendered height), the glyph inside is a normal,
+          clearly-visible text-xs -- flex centering means the glyph's own
+          font-size no longer controls the button's outer height. */}
       <button
         type="button"
         disabled={clampedActiveIndex === null || clampedActiveIndex === 0}
         onClick={handlePrev}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="p-0.5 text-[10px] leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="h-4 w-4 flex items-center justify-center text-xs leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">‹</span>
       </button>
@@ -86,11 +109,11 @@ export function HighlightsNav({
       </span>
       <button
         type="button"
-        disabled={clampedActiveIndex === null || clampedActiveIndex >= highlights.length - 1}
+        disabled={clampedActiveIndex !== null && clampedActiveIndex >= highlights.length - 1}
         onClick={handleNext}
         title="Next highlight"
         aria-label="Next highlight"
-        className="p-0.5 text-[10px] leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="h-4 w-4 flex items-center justify-center text-xs leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
         <span aria-hidden="true">›</span>
       </button>
@@ -106,7 +129,7 @@ export function HighlightsNav({
 // own number, not a guess.
 const PERMANENT_LABEL_MAX_COUNT = 15;
 
-export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, hideNav = false }: HighlightsTrackProps) {
+export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, segmentDurationSeconds, hideNav = false }: HighlightsTrackProps) {
   // Real fix (/simplify + code-review pass, 2026-08-21): the empty-array
   // early return used to run BEFORE the hooks added below (markerLeftPcts/
   // labelVisibility useMemo) -- a Rules-of-Hooks violation, since hooks
@@ -128,8 +151,16 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   // one helper, clamp bounds passed explicitly so each site's real
   // requirement (98 for markers/labels to keep them inside the track's
   // padding, 100/99 for the segment fill/end-bracket edges) stays visible.
+  // Real fix (/code-review finding, 2026-08-21): the hardcoded floor of 1
+  // was written for markers/labels that need a little padding so they
+  // don't render flush against the track's edge -- applying that same
+  // floor to the segment-fill/end-bracket edges made a highlight starting
+  // at t=0 render 1% offset instead of exactly 0%, a small positional
+  // regression from the pre-refactor behavior. clampMin now defaults to
+  // the marker-safe 1 but callers needing an exact edge (segment fill)
+  // pass 0 explicitly.
   const pctFor = useCallback(
-    (time: number, clampMax = 98) => Math.min(clampMax, Math.max(1, (time / maxTime) * 100)),
+    (time: number, clampMax = 98, clampMin = 1) => Math.min(clampMax, Math.max(clampMin, (time / maxTime) * 100)),
     [maxTime]
   );
 
@@ -193,10 +224,18 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
       <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
-            const segLeftPct = pctFor(activeHighlight.start, 100);
+            const segLeftPct = pctFor(activeHighlight.start, 100, 0);
+            // Real fix (live report, 2026-08-21): activeHighlight.end is
+            // contractually "the start of the next selected segment," not
+            // a genuinely short highlight-worthy span -- using it directly
+            // rendered this fill spanning nearly the whole gap to the next
+            // highlight (the reported "94% of video duration" symptom).
+            // segmentDurationSeconds (the same fixed duration
+            // useSegmentPlayback.ts actually advances by) now drives the
+            // fill width instead, matching what actually plays.
             const segWidthPct = Math.max(
               1,
-              Math.min(100 - segLeftPct, ((activeHighlight.end - activeHighlight.start) / maxTime) * 100)
+              Math.min(100 - segLeftPct, (segmentDurationSeconds / maxTime) * 100)
             );
             return (
               // Real fix (live report, 2026-08-20): the active-segment fill
@@ -224,7 +263,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             return (
               <Tooltip
                 key={highlight.idx}
-                content={`${highlight.label} (${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end)})`}
+                content={`${highlight.label} (${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.start + segmentDurationSeconds)})`}
                 placement="above"
               >
                 {/* Real accessibility fix (automated review on PR #266): the
@@ -266,7 +305,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             <span
               aria-hidden="true"
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-3.5 border-r-2 border-t-2 border-b-2 border-[var(--accent-a70)] z-10"
-              style={{ left: `${pctFor(activeHighlight.end, 99)}%` }}
+              style={{ left: `${pctFor(activeHighlight.start + segmentDurationSeconds, 99)}%` }}
             />
           )}
         </div>

@@ -16,14 +16,14 @@ function makeHighlights(count: number): HighlightsTrackHighlight[] {
 describe('HighlightsTrack', () => {
   it('renders nothing for an empty highlight list', () => {
     const { container } = render(
-      <HighlightsTrack highlights={[]} activeIndex={null} onSelect={() => {}} videoDurationSeconds={600} />
+      <HighlightsTrack highlights={[]} activeIndex={null} onSelect={() => {}} videoDurationSeconds={600} segmentDurationSeconds={5} />
     );
     expect(container.firstChild).toBeNull();
   });
 
   it('renders a marker per highlight and the "#N of M" counter for the active one', () => {
     const highlights = makeHighlights(5);
-    render(<HighlightsTrack highlights={highlights} activeIndex={2} onSelect={() => {}} videoDurationSeconds={600} />);
+    render(<HighlightsTrack highlights={highlights} activeIndex={2} onSelect={() => {}} videoDurationSeconds={600} segmentDurationSeconds={5} />);
     expect(screen.getByText('#3 of 5')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Jump to highlight/i })).toHaveLength(5);
   });
@@ -31,7 +31,7 @@ describe('HighlightsTrack', () => {
   it('Next/Prev call onSelect with the adjacent index and respect the ends', () => {
     const highlights = makeHighlights(3);
     const onSelect = vi.fn();
-    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={onSelect} videoDurationSeconds={90} />);
+    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={onSelect} videoDurationSeconds={90} segmentDurationSeconds={5} />);
 
     const prevButton = screen.getByRole('button', { name: 'Previous highlight' });
     const nextButton = screen.getByRole('button', { name: 'Next highlight' });
@@ -44,7 +44,7 @@ describe('HighlightsTrack', () => {
   it('clicking a marker jumps directly to that highlight index', () => {
     const highlights = makeHighlights(4);
     const onSelect = vi.fn();
-    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={onSelect} videoDurationSeconds={120} />);
+    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={onSelect} videoDurationSeconds={120} segmentDurationSeconds={5} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Jump to highlight 3/i }));
     expect(onSelect).toHaveBeenCalledWith(2); // idx is 0-based, label is 1-based
@@ -57,7 +57,7 @@ describe('HighlightsTrack', () => {
   // Obsidian-Escher mark lives in an inner (aria-hidden) span instead.
   it('marker buttons carry a real minimum hit target, not just the thin visual mark', () => {
     const highlights = makeHighlights(3);
-    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={() => {}} videoDurationSeconds={90} />);
+    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={() => {}} videoDurationSeconds={90} segmentDurationSeconds={5} />);
 
     const marker = screen.getByRole('button', { name: /Jump to highlight 1/i });
     // w-6 h-7 in Tailwind = 24px x 28px -- both well above the ~2-4px the
