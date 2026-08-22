@@ -1,0 +1,113 @@
+web/lib/hooks/useHighlightTicker.ts
+  s_a0a91c37a5e32a::t_5c941b8ec6cd48 39-40,42-43
+  s_a0a91c37a5e32a::t_571f4ee7771ab0 15-21
+supabase/migrations/20260821120000_highlights_segment_duration_clamps.sql
+  s_235d9bedebef70::t_a9dfa61eaa3632 1-41
+supabase/migrations/20260821120100_analysis_highlights_takeaway_idx_verbatim_excerpt.sql
+  s_235d9bedebef70::t_c1adef9a9f51f5 1-56
+  s_e1655cb52d41a4::t_81aa663d13b74a 57-80
+web/app/api/analyses/highlights/route.ts
+  s_a0a91c37a5e32a::t_f7334bdb5a8025 26
+  s_a0a91c37a5e32a::t_ebe21a682c55c9 41-48
+web/lib/utils/highlights-settings.ts
+  s_235d9bedebef70::t_5ee9f9f73c4371 18-26
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_a0a91c37a5e32a::t_aad24a07c5e0d9 16-17
+  s_a0a91c37a5e32a::t_430d1ca53f3b16 113
+web/lib/ports/AnalysisPersistencePort.ts
+  s_a0a91c37a5e32a::t_085b1240385ee2 220-221
+.memory/AGENT_LEDGER.md
+  s_235d9bedebef70::t_18570ad8d75f17 1268-1269
+  s_e1655cb52d41a4::t_34a8fec3924f2a 1270
+  s_a0a91c37a5e32a::t_7094787bac8ee3 4
+  s_e1655cb52d41a4::t_0050486bf88902 1271
+  s_a0a91c37a5e32a::t_32021b771c6d38 3
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_a0a91c37a5e32a::t_c7cc3eb318cc1e 740-741,747,756-763
+  s_a0a91c37a5e32a::t_7ba689feaaba36 666
+  s_e1655cb52d41a4::t_41ddd07a895484 917-928,931
+  s_e1655cb52d41a4::t_00cf7d22a727a3 942-966
+  s_a0a91c37a5e32a::t_74b69b687a0679 541
+  s_a0a91c37a5e32a::t_28afb3301ab622 913
+  s_a0a91c37a5e32a::t_11f81ba772b443 621-648
+  s_e1655cb52d41a4::t_2d1eafb933bfb2 941
+web/components/dashboard/HighlightsScrubber.tsx
+  s_a0a91c37a5e32a::t_fe3b2b668e2865 17-18
+  s_a0a91c37a5e32a::t_be6e28182e1bcb 140-141
+web/lib/ports/ExecutiveDigestPorts.ts
+  s_235d9bedebef70::t_4e26a2c98de865 63,66,76,78-88,97-100
+  s_235d9bedebef70::t_0f2f6c787b0fa6 68-75
+  s_235d9bedebef70::t_510eae7aa5097b 77
+web/lib/config/cascade.ts
+  s_235d9bedebef70::t_d6110d05004f59 119
+  s_235d9bedebef70::t_8f59c11b127943 138
+  s_235d9bedebef70::t_304f95b290d573 79-96
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_a0a91c37a5e32a::t_49726744b4636a 451
+  s_a0a91c37a5e32a::t_77efa4bd57110f 472
+  s_a0a91c37a5e32a::t_b9d69707093fa7 358-364,366-379,383
+  s_a0a91c37a5e32a::t_2a1e69ff59342b 13
+  s_a0a91c37a5e32a::t_e8992ff7dba6b9 380-382
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_235d9bedebef70::t_043d90ac4646ed 12-18
+  s_e1655cb52d41a4::t_389c58c82c9047 289
+  s_235d9bedebef70::t_fbc7cdffcfe1cf 177
+  s_235d9bedebef70::t_b5d52661fb8514 190,202-203,205,218-219,222-223,230,243-249,252-288,290-313
+web/lib/prompts/highlights-reconciliation.ts
+  s_235d9bedebef70::t_8d0dd24b1fa9cc 1-62,64-126
+  s_235d9bedebef70::t_46ead10180db0d 63
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_a0a91c37a5e32a::t_35e5cb2e9ab0d8 92
+  s_e1655cb52d41a4::t_9d8b48c199f25c 119-125
+web/components/dashboard/HighlightsTrack.tsx
+  s_a0a91c37a5e32a::t_2aabc680d1cf0a 241-248
+  s_a0a91c37a5e32a::t_9663f44606804f 39-44
+web/lib/prompts/highlights-extraction.ts
+  s_e1655cb52d41a4::t_4df755d43b88c7 37
+  s_235d9bedebef70::t_b4b1f9f9afbbe6 78-80,98,101,103-105,107-112,114-119,124
+  s_235d9bedebef70::t_e2f8660ec50296 18-23,25,28-30,35-36,38,40,47-48
+docs/agent-prompts/2026-08-21-oc-highlights-consistency-design-proposal.md
+  s_0eded1e9d0cab6::t_d8d30c37538ae4 1-889
+docs/agent-prompts/2026-08-21-oc-highlights-consistency-implementation.md
+  s_0eded1e9d0cab6::t_dca4880cb27d71 1-341
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "d77f56f182515458e9209c6d5f01152934a9a7a9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_235d9bedebef70": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdab5278fffe2TvEMnSsaS0GkF",
+        "model": "z-ai/glm-5.2:free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a0a91c37a5e32a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fd99509ebffeQ4KA9wlWuHodp2",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e1655cb52d41a4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fd9f9546cffe5L8T4m86UUdAl3",
+        "model": "z-ai/glm-5.2:free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
