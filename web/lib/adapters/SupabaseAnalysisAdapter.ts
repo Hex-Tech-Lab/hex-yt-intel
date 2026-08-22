@@ -622,15 +622,24 @@ export class SupabaseAnalysisAdapter {
       // (§2.B.3 / 2026-08-21). Includes takeaway_idx and verbatim_excerpt so the
       // grounding can annotate which takeaway each highlight backs and display
       // verbatim transcript excerpts instead of LLM-synthesized labels.
+      type HighlightRow = {
+        idx: number;
+        start_seconds: number;
+        end_seconds: number;
+        label: string;
+        takeaway_idx: number | null;
+        verbatim_excerpt: string | null;
+      };
       let highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null = null;
       try {
-        const { data: hlData } = await service
+        const { data: hlData, error: hlQueryError } = await service
           .from('analysis_highlights')
           .select('idx, start_seconds, end_seconds, label, takeaway_idx, verbatim_excerpt')
           .eq('analysis_id', params.analysisId)
           .order('idx', { ascending: true });
+        if (hlQueryError) throw hlQueryError;
         if (hlData && hlData.length > 0) {
-          highlights = hlData.map((row: any) => ({
+          highlights = (hlData as HighlightRow[]).map((row) => ({
             idx: row.idx,
             start: row.start_seconds,
             end: row.end_seconds,
@@ -639,11 +648,15 @@ export class SupabaseAnalysisAdapter {
             verbatimExcerpt: row.verbatim_excerpt ?? null,
           }));
         }
-      } catch (hlError: any) {
+      } catch (hlError: unknown) {
         // Highlights are best-effort — a read failure on analysis_highlights
         // must never abort the entire grounding fetch (the digest + transcript
         // + dimensions are the core source; highlights are supplementary).
-        console.warn('[SupabaseAnalysisAdapter] analysis_highlights query failed:', hlError.message);
+        // PostgREST resolves { data, error }, it does NOT reject — so without
+        // the explicit error check above, a query failure would silently drop
+        // the HIGHLIGHTS REEL section with zero Sentry visibility.
+        console.warn('[SupabaseAnalysisAdapter] analysis_highlights query failed:', hlError instanceof Error ? hlError.message : String(hlError));
+        Sentry.captureException(hlError, { tags: { method: 'getAnalysisGrounding.highlights' }, extra: { analysisId: params.analysisId } });
       }
 
       const rawDigest = (data as any).executive_digest;

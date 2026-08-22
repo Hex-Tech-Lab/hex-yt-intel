@@ -9,18 +9,9 @@
  * Design: docs/agent-prompts/2026-08-21-oc-highlights-consistency-design-proposal.md §2.B.6.
  */
 import type { ExtractedHighlight } from './highlights-extraction';
+import type { ReconciledTakeaway, ReconciliationResult } from '@/lib/ports/ExecutiveDigestPorts';
 
-/** One takeaway's grounding verdict — persisted to executive_digest.reconciliation. */
-export interface ReconciledTakeaway {
-  idx: number;
-  grounded: boolean;
-  backingHighlightIdx: number | null;
-}
-
-/** The full reconciliation result — stored in executive_digest.reconciliation (jsonb). */
-export interface ReconciliationResult {
-  takeaways: ReconciledTakeaway[];
-}
+export type { ReconciledTakeaway, ReconciliationResult };
 
 export function buildHighlightsReconciliationSystemPrompt(): string {
   return `You are a fact-checking assistant for video analysis. You are given:
@@ -56,11 +47,11 @@ export function buildHighlightsReconciliationUserMessage(
   highlights: ExtractedHighlight[]
 ): string {
   const takeawaysBlock = takeaways
-    .map((t, i) => `${i + 1}. ${t}`)
+    .map((takeaway, index) => `${index + 1}. ${takeaway}`)
     .join('\n');
 
   const highlightsBlock = highlights
-    .map((h, i) => `[idx=${i}, ${h.start}–${h.end}] ${h.label} (takeawayIdx: ${h.takeawayIdx ?? 'null'})`)
+    .map((highlight, index) => `[idx=${index}, ${highlight.start}–${highlight.end}] ${highlight.label} (takeawayIdx: ${highlight.takeawayIdx ?? 'null'})`)
     .join('\n');
 
   return `--- KEY TAKEAWAYS ---\n${takeawaysBlock}\n\n--- HIGHLIGHTS (with takeawayIdx mappings) ---\n${highlightsBlock}\n\nFor each takeaway (1-indexed above, 0-indexed in output), determine if it is grounded by at least one highlight.`;
@@ -81,32 +72,31 @@ export function parseHighlightsReconciliation(rawText: string, takeawaysCount: n
   let raw: unknown;
   try {
     raw = JSON.parse(jsonMatch[0]);
-  } catch {
+  } catch (parseError) {
+    console.warn('[highlights-reconciliation] model response matched a JSON-array shape but failed to parse:', parseError instanceof Error ? parseError.message : String(parseError));
     return { status: 'invalid' };
   }
   if (!Array.isArray(raw)) return { status: 'invalid' };
 
   const out: ReconciledTakeaway[] = [];
+  const seenIdx = new Set<number>();
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
     const { takeawayIdx, grounded, backingHighlightIdx } = item as Record<string, unknown>;
-    if (typeof takeawayIdx !== 'number' || !Number.isFinite(takeawayIdx)) continue;
+    if (typeof takeawayIdx !== 'number' || !Number.isInteger(takeawayIdx)) continue;
+    if (takeawayIdx < 0 || takeawayIdx >= takeawaysCount) continue;
+    if (seenIdx.has(takeawayIdx)) continue;
     if (typeof grounded !== 'boolean') continue;
-    // backingHighlightIdx is number or null
     let parsedBackingIdx: number | null = null;
     if (typeof backingHighlightIdx === 'number' && Number.isFinite(backingHighlightIdx)) {
       parsedBackingIdx = backingHighlightIdx;
     }
-    out.push({
-      idx: takeawayIdx,
-      grounded,
-      backingHighlightIdx: parsedBackingIdx,
-    });
+    seenIdx.add(takeawayIdx);
+    out.push({ idx: takeawayIdx, grounded, backingHighlightIdx: parsedBackingIdx });
   }
 
-  // Validate: exactly takeawaysCount entries
   if (out.length !== takeawaysCount) return { status: 'invalid' };
-
+  out.sort((left, right) => left.idx - right.idx);
   return { status: 'ok', reconciliation: { takeaways: out } };
 }
 
@@ -119,8 +109,8 @@ export function buildVerbatimExcerpt(
   segments: Array<{ start: number; text: string }>
 ): string {
   return segments
-    .filter((s) => s.start >= start && s.start < end)
-    .map((s) => s.text)
+    .filter((segment) => segment.start >= start && segment.start < end)
+    .map((segment) => segment.text)
     .join(' ')
     .trim();
 }

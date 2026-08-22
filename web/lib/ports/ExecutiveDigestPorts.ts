@@ -67,11 +67,11 @@ export interface DigestPersistencePort {
   }): Promise<boolean>;
 
   /** Save the reconciliation result as a targeted jsonb field update on
-   *  the existing executive_digest row (NOT a full saveExecutiveDigest —
-   *  avoids clobbering other digest fields written concurrently). */
+    *  the existing executive_digest row (NOT a full saveExecutiveDigest —
+    *  avoids clobbering other digest fields written concurrently). */
   saveReconciliation(params: {
     analysisId: string;
-    reconciliation: unknown;
+    reconciliation: ReconciliationResult;
   }): Promise<boolean>;
 }
 

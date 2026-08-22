@@ -77,7 +77,8 @@ export function parseHighlightsExtraction(
   validSegmentStarts: ReadonlySet<number>,
   maxHighlights: number,
   minSegmentDurationSeconds: number,
-  maxSegmentDurationSeconds: number
+  maxSegmentDurationSeconds: number,
+  takeawaysCount: number = 0
 ): HighlightsExtractionResult {
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return { status: 'invalid' };
@@ -105,23 +106,27 @@ export function parseHighlightsExtraction(
     // highlight's start. Only end > start and a duration clamp are enforced.
     if (end <= start) continue;
     // Duration clamp: old data with "end = next segment start" could produce
-    // very long spans; the clamp prevents those from passing through. New
-    // data with content-driven ends is bounded to [min, max].
+    // very long spans, and a model can return a sub-floor point. Clamp the
+    // duration into [min, max] instead of discarding the highlight.
     const duration = end - start;
-    if (duration < minSegmentDurationSeconds) continue;
-    if (duration > maxSegmentDurationSeconds) continue;
+    const clampedEnd = duration < minSegmentDurationSeconds
+      ? start + minSegmentDurationSeconds
+      : duration > maxSegmentDurationSeconds
+        ? start + maxSegmentDurationSeconds
+        : end;
     if (seenStarts.has(start)) continue;
-    // takeawayIdx: nullable integer. A non-integer (string, NaN, etc.) is
-    // treated as null (standalone highlight, not mapped to any takeaway).
+    // takeawayIdx: nullable integer in [0, takeawaysCount). A non-integer
+    // (string, NaN, etc.) or out-of-range value is treated as null
+    // (standalone highlight, not mapped to any takeaway).
     let parsedTakeawayIdx: number | null = null;
-    if (typeof takeawayIdx === 'number' && Number.isFinite(takeawayIdx) && Number.isInteger(takeawayIdx) && takeawayIdx >= 0) {
+    if (typeof takeawayIdx === 'number' && Number.isFinite(takeawayIdx) && Number.isInteger(takeawayIdx) && takeawayIdx >= 0 && takeawayIdx < takeawaysCount) {
       parsedTakeawayIdx = takeawayIdx;
     }
     const rawLabel = label.trim();
     const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
     if (trimmedLabel.length === 0) continue;
     seenStarts.add(start);
-    out.push({ start, end, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
+    out.push({ start, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
   }
 
   out.sort((left, right) => left.start - right.start);

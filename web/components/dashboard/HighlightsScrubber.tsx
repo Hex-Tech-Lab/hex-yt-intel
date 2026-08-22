@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -133,10 +133,13 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
+  const activeDuration = activeHighlight && Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start
+    ? Math.max(1, activeHighlight.end - activeHighlight.start)
+    : (data?.segmentDurationSeconds ?? 10);
   const { revealedText } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
-    data?.segmentDurationSeconds ?? 10,
+    activeDuration,
     elapsedInSegmentSeconds,
     activeHighlight?.verbatimExcerpt ?? null
   );
@@ -157,22 +160,16 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   if (loading || !data) return <Spinner size="sm" />;
   if (data.highlights.length === 0) return null;
 
-  // Real fix (live report, 2026-08-21): this used to sum each highlight's
-  // own (end - start) span, on the assumption that a fixed-duration total
-  // would OVERSTATE the real total for a dense video. That assumption was
-  // backwards -- highlight.end is contractually "the start of the next
-  // selected segment" (web/lib/prompts/highlights-extraction.ts's own
-  // prompt + parser validation), so (end - start) spans nearly the ENTIRE
-  // gap to the next highlight, not a short highlight-worthy clip. That's
-  // what produced the reported "94% of video duration" stat. Actual
-  // playback (useSegmentPlayback.ts) already ignores highlight.end and
-  // advances using this same fixed segmentDurationSeconds -- this display
-  // total now matches what actually plays, tonight's contained fix.
-  // Real fix for highlight.end's definition itself is tracked separately
-  // (docs/TECH_DEBT_LEDGER.md) -- needs a prompt/parser contract change,
-  // not a display-layer one.
+  // Sum each highlight's real clamped duration (fallback to
+  // segmentDurationSeconds when end is null/invalid), matching the
+  // variable-duration playback advance on segment.end.
+  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
+  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
   const totalHighlightsSeconds = Math.min(
-    data.highlights.length * data.segmentDurationSeconds,
+    data.highlights.reduce((sum, highlight) => {
+      const dur = (Number.isFinite(highlight.end) && highlight.end > highlight.start) ? (highlight.end - highlight.start) : data.segmentDurationSeconds;
+      return sum + Math.min(maxDur, Math.max(minDur, dur));
+    }, 0),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0

@@ -819,8 +819,8 @@ While reading the files for this investigation, the following adjacent issues we
 
 Per the dispatch prompt (section 5), the following skills were evaluated for this task:
 
-| Skill | Applicable? | Finding |
-|---|---|---|
+| Skill | Applicability + Finding |
+|---|---|
 | `qa-intel` | **Not applicable** — no code changes in this dispatch. No diff to audit. |
 | `contract-auditor` | **Not applicable** — no code changes, no contract to verify against. |
 | `/simplify` | **Not applicable** — no code to simplify. |

@@ -7,10 +7,22 @@ import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 
+type HighlightRow = {
+  idx: number;
+  start_seconds: number;
+  end_seconds: number;
+  label: string;
+  verbatim_excerpt: string | null;
+  takeaway_idx: number | null;
+};
+
 /**
  * GET /api/analyses/highlights?analysisId=... — request-scoped client, so
  * RLS (owner-only select policy on analysis_highlights) does the ownership
  * check rather than a manual verifyOwnership call.
+ *
+ * Streams the JSON response per Law #3 (all analytical route handlers MUST
+ * stream to extend connection lifetime).
  */
 export async function GET(request: NextRequest) {
   const parsed = z.object({ analysisId: z.string().uuid() }).safeParse({
@@ -37,8 +49,8 @@ export async function GET(request: NextRequest) {
     HIGHLIGHTS_REGISTRY_FALLBACK
   );
 
-  return NextResponse.json({
-    highlights: (data ?? []).map((row: any) => ({
+  const body = JSON.stringify({
+    highlights: (data ?? []).map((row: HighlightRow) => ({
       idx: row.idx,
       start: row.start_seconds,
       end: row.end_seconds,
@@ -49,4 +61,11 @@ export async function GET(request: NextRequest) {
     segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
   });
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(body));
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: { 'Content-Type': 'application/json' } });
 }

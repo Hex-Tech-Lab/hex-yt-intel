@@ -227,7 +227,7 @@ export class GenerateExecutiveDigestUseCase {
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount, minSegmentDurationSeconds, maxSegmentDurationSeconds);
+    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount, minSegmentDurationSeconds, maxSegmentDurationSeconds, params.takeaways.length);
 
     // 'invalid' means the model response was unparseable -- a transient LLM
     // failure, not a genuine "no highlights" finding. Must NOT touch any
@@ -247,7 +247,7 @@ export class GenerateExecutiveDigestUseCase {
       verbatimExcerpt: buildVerbatimExcerpt(highlight.start, highlight.end, segments),
     }));
 
-    await this.persistence.saveHighlights({
+    const saved = await this.persistence.saveHighlights({
       analysisId: params.analysisId,
       highlights: highlightsWithExcerpts.map((highlight, idx) => ({
         idx,
@@ -259,18 +259,25 @@ export class GenerateExecutiveDigestUseCase {
       })),
     });
 
+    // Skip reconciliation when saveHighlights failed — there's nothing to
+    // reconcile against, and running it would persist a reconciliation
+    // pointing at highlights that weren't saved.
+    if (!saved) {
+      console.warn(`[digest-usecase] saveHighlights failed for ${params.analysisId}; skipping reconciliation`);
+      return;
+    }
+
     // Post-extraction reconciliation (§2.B.6): verify each takeaway is
-    // semantically grounded by at least one mapped highlight. Runs only if
-    // we have highlights to reconcile against. On 'invalid' or any thrown
-    // error, leave reconciliation unset (null) — same fail-open pattern as
-    // extractHighlights itself. Do NOT run if extractHighlights returned no
-    // valid highlights (§2.B.6 Step 6).
-    if (highlightsWithExcerpts.length > 0 && params.takeaways.length > 0) {
+    // semantically grounded by at least one mapped highlight. Runs whenever
+    // there are takeaways to reconcile — a valid 'ok' result with ZERO
+    // highlights must still reconcile (every takeaway → grounded:false).
+    // The 'invalid' case already returned early above, so reaching here
+    // means the extraction result was structurally valid.
+    if (params.takeaways.length > 0) {
       await this.reconcileHighlights({
         analysisId: params.analysisId,
         takeaways: params.takeaways,
         highlights: highlightsWithExcerpts,
-        userId: undefined,
       }).catch((error) => {
         console.warn(`[digest-usecase] Reconciliation failed for ${params.analysisId}:`, error);
       });
@@ -287,14 +294,15 @@ export class GenerateExecutiveDigestUseCase {
     analysisId: string;
     takeaways: string[];
     highlights: Array<{ start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string }>;
-    userId?: string;
   }): Promise<void> {
     const reconciliationModels = await resolveHighlightsReconciliationCascade();
+    // TODO: move to Settings Registry (highlights.reconciliationMaxOutputTokens) — deferred from PR #267
+    const maxTokens = Math.max(500, params.takeaways.length * 150);
     const completion = await this.completion.complete({
       system: buildHighlightsReconciliationSystemPrompt(),
       user: buildHighlightsReconciliationUserMessage(params.takeaways, params.highlights),
       models: reconciliationModels,
-      maxTokens: 500,
+      maxTokens,
       analysisId: params.analysisId,
     });
 

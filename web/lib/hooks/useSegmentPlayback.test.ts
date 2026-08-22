@@ -118,7 +118,7 @@ describe('useSegmentPlayback', () => {
     expect(result.current.playingIdx).toBe(0);
   });
 
-  it('advances to the next segment once media time crosses the clamp boundary', () => {
+  it('advances to the next segment once media time crosses segment.end (variable-duration)', () => {
     const fake = makeFakePrimitives(0);
     const { result } = renderHook(() =>
       useSegmentPlayback({
@@ -134,9 +134,10 @@ describe('useSegmentPlayback', () => {
     act(() => {
       vi.advanceTimersByTime(250); // settle the pending seek at t=8
     });
-    // Segment 0 window: leadIn=8, end=8+5=13. Push time past 13-0.3.
+    // Segment 0: start=10, end=15, leadIn=8. Variable-duration advance
+    // uses segment.end (15), not leadIn + segmentDurationSeconds (13).
     act(() => {
-      fake.setTime(13);
+      fake.setTime(15);
       vi.advanceTimersByTime(250);
     });
     expect(result.current.playingIdx).toBe(1);
@@ -174,7 +175,7 @@ describe('useSegmentPlayback', () => {
     });
     // Guard should suppress the advance entirely while pendingSeekTarget is
     // still set (currentTime=20 is nowhere near the target of 8), even
-    // though 20 also reads well past segment 0's own clamp boundary (13).
+    // though 20 also reads well past segment 0's own end boundary (15).
     expect(seekCalls).toEqual([8]);
     expect(result.current.playingIdx).toBe(0);
 
@@ -186,7 +187,7 @@ describe('useSegmentPlayback', () => {
     });
     expect(result.current.playingIdx).toBe(0); // still segment 0, within window
     act(() => {
-      currentTime = 13; // now past segment 0's clamp boundary for real
+      currentTime = 15; // now past segment 0's end for real
       vi.advanceTimersByTime(250);
     });
     expect(result.current.playingIdx).toBe(1);
@@ -388,9 +389,95 @@ describe('useSegmentPlayback', () => {
       vi.advanceTimersByTime(250); // settle
     });
     act(() => {
-      fake.setTime(63); // 58 + 5 - lead
+      fake.setTime(65); // segment.end for last segment (60+5=65... actually 65)
       vi.advanceTimersByTime(250);
     });
     expect(result.current.playingIdx).toBeNull();
+  });
+
+  // --- Variable-duration advance regression tests (C4, 2026-08-23) ---
+  // The hook now advances on segment.end (when valid) instead of the fixed
+  // segmentDurationSeconds. These cases prove each branch of the fallback logic.
+
+  it('advances at segment.end for a long highlight (end-start = 60s)', () => {
+    const longSegments = [{ start: 100, end: 160 }];
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: longSegments,
+        contextLeadSeconds: 0,
+        segmentDurationSeconds: 10,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // seeks to 100
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // settle
+    });
+    // At t=110 (100 + segmentDurationSeconds=10), should NOT advance yet —
+    // the real end is 160, not 110.
+    act(() => {
+      fake.setTime(110);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBe(0);
+    // At t=160 (segment.end), should advance (to null — last segment)
+    act(() => {
+      fake.setTime(160);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBeNull();
+  });
+
+  it('falls back to segmentDurationSeconds when segment.end is null (legacy data)', () => {
+    const legacySegments = [{ start: 10, end: NaN }];
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: legacySegments,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // seeks to 8
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // settle
+    });
+    // end is NaN (not Number.isFinite), so fallback: leadIn + segmentDurationSeconds = 8 + 5 = 13
+    act(() => {
+      fake.setTime(13);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBeNull(); // advanced past last segment
+  });
+
+  it('falls back to segmentDurationSeconds when end < start (invalid data)', () => {
+    const invalidSegments = [{ start: 10, end: 5 }];
+    const fake = makeFakePrimitives(0);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: invalidSegments,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // seeks to 8
+    });
+    act(() => {
+      vi.advanceTimersByTime(250); // settle
+    });
+    // end (5) is not > start (10), so fallback: leadIn + segmentDurationSeconds = 8 + 5 = 13
+    act(() => {
+      fake.setTime(13);
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current.playingIdx).toBeNull(); // advanced past last segment
   });
 });

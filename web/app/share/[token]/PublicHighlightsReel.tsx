@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
-import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -110,17 +110,23 @@ export function PublicHighlightsReel({
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
-  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, segmentDurationSeconds, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
+  const activeDuration = activeHighlight && Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start
+    ? Math.max(1, activeHighlight.end - activeHighlight.start)
+    : segmentDurationSeconds;
+  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
 
   if (highlights.length === 0) return null;
 
-  // Real fix (live report, 2026-08-21): see HighlightsScrubber.tsx's
-  // identical fix -- highlight.end is contractually "the start of the
-  // next selected segment," not a short highlight-worthy span, so
-  // (end - start) overstated the real total. Fixed segmentDurationSeconds
-  // (what playback actually advances by) now drives this total instead.
+  // Sum each highlight's real clamped duration (fallback to
+  // segmentDurationSeconds when end is null/invalid), so the display total
+  // matches what actually plays (variable-duration advance on segment.end).
+  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
+  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
   const totalHighlightsSeconds = Math.min(
-    highlights.length * segmentDurationSeconds,
+    highlights.reduce((sum, highlight) => {
+      const dur = (Number.isFinite(highlight.end) && highlight.end > highlight.start) ? (highlight.end - highlight.start) : segmentDurationSeconds;
+      return sum + Math.min(maxDur, Math.max(minDur, dur));
+    }, 0),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0

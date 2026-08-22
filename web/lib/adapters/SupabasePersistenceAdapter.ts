@@ -81,7 +81,25 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findAnalysisForPersist(params);
   }
 
-  getAnalysisGrounding(params: { analysisId: string; userId?: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string; transcript?: string | null } | null> {
+  getAnalysisGrounding(params: { analysisId: string; userId?: string }): Promise<{
+    title: string;
+    channelTitle: string | null;
+    description: string | null;
+    analysisMarkdown: string | null;
+    status: string;
+    transcript?: string | null;
+    videoMetadata?: Record<string, unknown> | null;
+    channelMetadata?: Record<string, unknown> | null;
+    executiveDigest?: {
+      snapshot?: string;
+      overview?: string;
+      takeaways?: string[];
+      detailedSummary?: string;
+      reconciliation?: { takeaways: Array<{ idx: number; grounded: boolean; backingHighlightIdx: number | null }> } | null;
+    } | null;
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
+    highlights?: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null;
+  } | null> {
     return SupabaseAnalysisAdapter.getAnalysisGrounding(params);
   }
 
@@ -111,7 +129,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   saveHighlights(params: {
     analysisId: string;
-    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string }>;
   }): Promise<boolean> {
     return SupabaseAnalysisAdapter.saveHighlights(params);
   }

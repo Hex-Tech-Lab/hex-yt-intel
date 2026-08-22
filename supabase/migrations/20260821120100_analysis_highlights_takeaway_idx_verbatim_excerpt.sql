@@ -67,6 +67,12 @@ create or replace function public.set_executive_digest_reconciliation(
   p_reconciliation jsonb
 ) returns void as $func$
 begin
+  -- jsonb_set is strict: a NULL p_reconciliation would set the entire
+  -- executive_digest column to NULL and destroy the digest payload.
+  if p_reconciliation is null then
+    return;
+  end if;
+
   update public.analyses
     set executive_digest = jsonb_set(
       coalesce(executive_digest, '{}'::jsonb),
