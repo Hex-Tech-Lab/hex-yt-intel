@@ -1,0 +1,106 @@
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_3d4c82e6cfef27::t_3c3d273c3b5202 230
+  s_3d4c82e6cfef27::t_58c3c6be18aa71 250,262-269,271-276,299-300,305
+web/lib/hooks/useSegmentPlayback.ts
+  s_3d4c82e6cfef27::t_4dce218c6633e4 257-262
+  s_3d4c82e6cfef27::t_24cbf0b6c235fd 53-55
+.memory/AGENT_LEDGER.md
+  s_3d4c82e6cfef27::t_02ad04120fc694 1272
+  s_3d4c82e6cfef27::t_7ba5f40b8e3cc4 1273
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_3d4c82e6cfef27::t_67a7f68e30d386 120-124,128-129
+  s_3d4c82e6cfef27::t_ff36f094561844 6
+  s_3d4c82e6cfef27::t_71cf8bdb3f299d 113-116
+  s_3d4c82e6cfef27::t_cdf2a0394c917b 126-127
+web/lib/hooks/useHighlightTicker.test.ts
+  s_3d4c82e6cfef27::t_589144bc04424b 82-115
+web/app/api/analyses/highlights/route.ts
+  s_3d4c82e6cfef27::t_475d871eed0a6a 10-18,23-25,52-53,64-70
+web/lib/__tests__/highlights-parser-reconciliation.test.ts
+  s_3d4c82e6cfef27::t_bb219d5f24fcf2 1-194
+web/lib/ports/ExecutiveDigestPorts.ts
+  s_3d4c82e6cfef27::t_163e710b561330 70-71,74
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_3d4c82e6cfef27::t_5f8b98fd03181e 132
+  s_3d4c82e6cfef27::t_fd11693ed97628 84-102
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_3d4c82e6cfef27::t_8987b6e17a3933 625-632,635,640,642,651,655-659
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_3d4c82e6cfef27::t_e733ff72c9cdc2 340,344
+  s_3d4c82e6cfef27::t_16394ea21c09c4 158
+  s_3d4c82e6cfef27::t_9b0ce1f72d1c73 402
+  s_3d4c82e6cfef27::t_80d419ac7e3eb0 439-440
+  s_3d4c82e6cfef27::t_d28521c3c11adb 484
+  s_3d4c82e6cfef27::t_9f1be59961b0a5 363
+  s_3d4c82e6cfef27::t_dee139485c80b1 466-467
+  s_3d4c82e6cfef27::t_36ee6c211ab084 408
+  s_3d4c82e6cfef27::t_81ea76a64c7ee7 391,393-394
+  s_3d4c82e6cfef27::t_101306bafd8017 389
+  s_3d4c82e6cfef27::t_2e0f5ad0fe9aae 300
+  s_3d4c82e6cfef27::t_80c675c983c07c 302
+  s_3d4c82e6cfef27::t_2c0760db4561ce 352-353,355-356
+  s_3d4c82e6cfef27::t_a47de42cb31330 374-379
+  s_3d4c82e6cfef27::t_9aee8561c202dc 297-299,301
+docs/agent-prompts/2026-08-21-oc-highlights-consistency-design-proposal.md
+  s_3d4c82e6cfef27::t_b8ea943569dc5d 822-823
+web/lib/prompts/highlights-extraction.ts
+  s_3d4c82e6cfef27::t_dca5ca9d855e3c 109-110,112-116,118-120,122,129
+  s_3d4c82e6cfef27::t_c5cfdd0b06d610 80-81
+web/lib/prompts/highlights-reconciliation.ts
+  s_3d4c82e6cfef27::t_a320d88e00105d 50,54
+  s_3d4c82e6cfef27::t_d33ff858058d30 12,14
+  s_3d4c82e6cfef27::t_5355fd0853bbb8 82,86-88,94-95,99
+  s_3d4c82e6cfef27::t_c0c237667081f8 112-113
+  s_3d4c82e6cfef27::t_0826acb0232497 75-76
+.opencode/opencode.json
+  s_8e7f839e37c207::t_7c88b634a21d65 3-17
+  s_0eded1e9d0cab6::t_b206bed0f9c327 1-2,18
+supabase/migrations/20260821120100_analysis_highlights_takeaway_idx_verbatim_excerpt.sql
+  s_3d4c82e6cfef27::t_1e9391283577d3 70-75
+web/lib/hooks/useSegmentPlayback.test.ts
+  s_3d4c82e6cfef27::t_8ff47d6c6d8304 392
+  s_3d4c82e6cfef27::t_11d7ae4c82f4fd 121,137-138,140
+  s_3d4c82e6cfef27::t_4ce5f0388fb309 397-482
+  s_3d4c82e6cfef27::t_143f4df965b8ad 178,190
+docs/agent-prompts/2026-08-23-oc-pr-267-remediation.md
+  s_8e7f839e37c207::t_86f5cc7e149352 1-511
+web/components/dashboard/HighlightsScrubber.tsx
+  s_3d4c82e6cfef27::t_ac1a505a1fc89d 136-138,142
+  s_3d4c82e6cfef27::t_35681893e4b724 163-167,171-172
+  s_3d4c82e6cfef27::t_e595527fa5790c 169-170
+  s_3d4c82e6cfef27::t_650683add8c70f 7
+web/lib/ports/ChatPersistencePort.ts
+  s_3d4c82e6cfef27::t_21fc37acdffc8f 68,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e4c3b1e306ede39bd7f9fa623446b9306c48b8f9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "anthropic/claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_3d4c82e6cfef27": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fd4422b3cffelhyFqSMMok5y5Z",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_8e7f839e37c207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c0d38e0b-4a01-450d-95e1-83e512d3cc6a",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
