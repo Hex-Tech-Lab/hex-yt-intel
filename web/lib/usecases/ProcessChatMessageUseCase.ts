@@ -10,6 +10,7 @@ import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService'
 import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
 import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
+import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
@@ -354,8 +355,32 @@ export class ProcessChatMessageUseCase {
     // only ever saw dimensions 1-11. Surfaced explicitly, ahead of the
     // 11-dimension body, since it's the highest-level synthesis of the video.
     const digest = groundingResult.executiveDigest;
+    // Annotate each takeaway with its grounded status from the reconciliation
+    // pass (§2.B.6 Step 5, 2026-08-21). A absent/null reconciliation means
+    // all takeaways are treated as grounded (fail-open — old rows, or
+    // reconciliation call failed). The `grounded` flag is used by the LLM to
+    // know which claims have real transcript backing vs. which were produced
+    // by the digest LLM alone.
+    const reconciliation = digest?.reconciliation ?? null;
     const executiveDigestSection = digest
-      ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string) => `- ${t}`).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
+      ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string, i: number) => {
+        const rec = reconciliation?.takeaways?.[i];
+        const grounded = rec ? rec.grounded : true; // fail-open: old rows / failed reconciliation
+        const backing = grounded && rec?.backingHighlightIdx != null ? ` (backed by highlight #${rec.backingHighlightIdx})` : '';
+        return `- [${grounded ? 'grounded' : 'ungrounded'}] ${t}${backing}`;
+      }).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
+      : '';
+
+    // Highlights reel section (§2.B.3, 2026-08-21): timestamped key moments
+    // with takeaway mappings from the reconciliation pass. Inserted between
+    // the executive digest and top-comments sections so the LLM knows the
+    // exact highlights shown in the Reel including which takeaway each backs.
+    const highlightsData = groundingResult.highlights;
+    const highlightsSection = highlightsData && highlightsData.length > 0
+      ? `\n\n--- HIGHLIGHTS REEL (timestamped key moments) ---\n${highlightsData.map((highlight: { idx: number; start: number; end: number; label: string; takeawayIdx: number | null }) => {
+        const takeawayLabel = highlight.takeawayIdx !== null ? ` (takeaway ${highlight.takeawayIdx + 1})` : '';
+        return `[${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end)}] ${highlight.label}${takeawayLabel}`;
+      }).join('\n')}\n`
       : '';
 
     // Top relevance-ordered comments (author/date/like-count metadata included so
@@ -423,7 +448,7 @@ export class ProcessChatMessageUseCase {
     // as it has to be, not by an arbitrary amount unrelated to its own length.
     const fixedSectionsLength =
       descriptionSection.length + videoMetadataSection.length + channelMetadataSection.length
-      + executiveDigestSection.length + commentsSection.length + analysisSection.length
+      + executiveDigestSection.length + highlightsSection.length + commentsSection.length + analysisSection.length
       + requestedRangeSection.length;
     const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
     const transcriptSection = groundingResult.transcript
@@ -444,7 +469,7 @@ export class ProcessChatMessageUseCase {
     // source for anything requiring exact wording, direct quotes, or a specific
     // timestamp, and must be used for those regardless of what the analysis says.
     const groundingInstructions = await getChatGroundingInstructions();
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. ${groundingInstructions}${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. ${groundingInstructions}${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${highlightsSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);

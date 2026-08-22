@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const supabase = await getSupabaseClientWithAuth();
   const { data, error } = await supabase
     .from('analysis_highlights')
-    .select('idx, start_seconds, end_seconds, label')
+    .select('idx, start_seconds, end_seconds, label, verbatim_excerpt, takeaway_idx')
     .eq('analysis_id', parsed.data.analysisId)
     .order('idx', { ascending: true });
 
@@ -38,7 +38,14 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json({
-    highlights: (data ?? []).map((row) => ({ idx: row.idx, start: row.start_seconds, end: row.end_seconds, label: row.label })),
+    highlights: (data ?? []).map((row: any) => ({
+      idx: row.idx,
+      start: row.start_seconds,
+      end: row.end_seconds,
+      label: row.label,
+      verbatimExcerpt: row.verbatim_excerpt ?? null,
+      takeawayIdx: row.takeaway_idx ?? null,
+    })),
     segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
   });

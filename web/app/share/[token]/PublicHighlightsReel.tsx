@@ -13,6 +13,8 @@ interface Highlight {
   start: number;
   end: number;
   label: string;
+  takeawayIdx?: number | null;
+  verbatimExcerpt?: string | null;
 }
 
 /**
@@ -108,7 +110,7 @@ export function PublicHighlightsReel({
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
-  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, segmentDurationSeconds, elapsedInSegmentSeconds);
+  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, segmentDurationSeconds, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
 
   if (highlights.length === 0) return null;
 

@@ -9,6 +9,13 @@ import {
   buildHighlightsExtractionUserMessage,
   parseHighlightsExtraction,
 } from '@/lib/prompts/highlights-extraction';
+import {
+  buildHighlightsReconciliationSystemPrompt,
+  buildHighlightsReconciliationUserMessage,
+  parseHighlightsReconciliation,
+  buildVerbatimExcerpt,
+} from '@/lib/prompts/highlights-reconciliation';
+import { resolveHighlightsReconciliationCascade } from '@/lib/config/cascade';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type {
   TextCompletionPort,
@@ -167,7 +174,7 @@ export class GenerateExecutiveDigestUseCase {
     // of real segment timing, so a missing transcript here is a real, expected
     // outcome for an old/re-generated analysis, not an error to surface.
     if (row.video_id) {
-      await this.extractHighlights({ analysisId, videoId: row.video_id, models }).catch((error) => {
+      await this.extractHighlights({ analysisId, videoId: row.video_id, models, takeaways: digest.takeaways }).catch((error) => {
         console.warn(`[digest-usecase] Highlights extraction failed for ${analysisId}:`, error);
       });
     }
@@ -180,6 +187,7 @@ export class GenerateExecutiveDigestUseCase {
     analysisId: string;
     videoId: string;
     models: readonly CompletionModel[];
+    takeaways: string[];
   }): Promise<void> {
     // /simplify review (2026-08-20): these two awaits are independent (the
     // registry fetch doesn't depend on segments) -- parallelized to save a
@@ -191,8 +199,10 @@ export class GenerateExecutiveDigestUseCase {
       // in particular used to be unset here, silently falling back to
       // OpenRouterCompletionAdapter's DEFAULT_MAX_TOKENS=2000 -- too small for
       // a dense video's full highlight set, truncating the response mid-array.
+      // 2026-08-21: added minSegmentDurationSeconds/maxSegmentDurationSeconds
+      // for the variable segment-duration clamp (new prompt/parser contract).
       SupabaseSettingsAdapter.getRegistrySettings(
-        ['highlights.maxCount', 'highlights.maxOutputTokens'],
+        ['highlights.maxCount', 'highlights.maxOutputTokens', 'highlights.minSegmentDurationSeconds', 'highlights.maxSegmentDurationSeconds'],
         HIGHLIGHTS_REGISTRY_FALLBACK
       ),
     ]);
@@ -205,17 +215,19 @@ export class GenerateExecutiveDigestUseCase {
     // Same bounds as the migration's own validation jsonb.
     const maxCount = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxCount'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount'], 4, 80);
     const maxOutputTokens = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxOutputTokens'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens'], 500, 8000);
+    const minSegmentDurationSeconds = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15);
+    const maxSegmentDurationSeconds = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300);
 
     const completion = await this.completion.complete({
-      system: buildHighlightsExtractionSystemPrompt(maxCount),
-      user: buildHighlightsExtractionUserMessage(segments),
+      system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDurationSeconds),
+      user: buildHighlightsExtractionUserMessage(segments, params.takeaways),
       models: params.models,
       maxTokens: maxOutputTokens,
       analysisId: params.analysisId,
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount);
+    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount, minSegmentDurationSeconds, maxSegmentDurationSeconds);
 
     // 'invalid' means the model response was unparseable -- a transient LLM
     // failure, not a genuine "no highlights" finding. Must NOT touch any
@@ -228,9 +240,77 @@ export class GenerateExecutiveDigestUseCase {
       return;
     }
 
+    // Compute verbatim excerpts from the transcript (§2.C.1) — zero LLM
+    // cost, pure array filter + join on the segments already in memory.
+    const highlightsWithExcerpts = result.highlights.map((highlight) => ({
+      ...highlight,
+      verbatimExcerpt: buildVerbatimExcerpt(highlight.start, highlight.end, segments),
+    }));
+
     await this.persistence.saveHighlights({
       analysisId: params.analysisId,
-      highlights: result.highlights.map((highlight, idx) => ({ idx, start: highlight.start, end: highlight.end, label: highlight.label })),
+      highlights: highlightsWithExcerpts.map((highlight, idx) => ({
+        idx,
+        start: highlight.start,
+        end: highlight.end,
+        label: highlight.label,
+        takeawayIdx: highlight.takeawayIdx,
+        verbatimExcerpt: highlight.verbatimExcerpt,
+      })),
+    });
+
+    // Post-extraction reconciliation (§2.B.6): verify each takeaway is
+    // semantically grounded by at least one mapped highlight. Runs only if
+    // we have highlights to reconcile against. On 'invalid' or any thrown
+    // error, leave reconciliation unset (null) — same fail-open pattern as
+    // extractHighlights itself. Do NOT run if extractHighlights returned no
+    // valid highlights (§2.B.6 Step 6).
+    if (highlightsWithExcerpts.length > 0 && params.takeaways.length > 0) {
+      await this.reconcileHighlights({
+        analysisId: params.analysisId,
+        takeaways: params.takeaways,
+        highlights: highlightsWithExcerpts,
+        userId: undefined,
+      }).catch((error) => {
+        console.warn(`[digest-usecase] Reconciliation failed for ${params.analysisId}:`, error);
+      });
+    }
+  }
+
+  /** Post-extraction reconciliation pass (§2.B.6 Step 1). A separate, small
+   *  LLM call (Haiku 4.5 via cascade.highlightsReconciliation) that checks
+   *  whether each digest takeaway is semantically grounded by a mapped
+   *  highlight. Persisted to executive_digest.reconciliation (jsonb UPDATE,
+   *  same row — not a full saveExecutiveDigest, to avoid clobbering other
+   *  digest fields). */
+  private async reconcileHighlights(params: {
+    analysisId: string;
+    takeaways: string[];
+    highlights: Array<{ start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string }>;
+    userId?: string;
+  }): Promise<void> {
+    const reconciliationModels = await resolveHighlightsReconciliationCascade();
+    const completion = await this.completion.complete({
+      system: buildHighlightsReconciliationSystemPrompt(),
+      user: buildHighlightsReconciliationUserMessage(params.takeaways, params.highlights),
+      models: reconciliationModels,
+      maxTokens: 500,
+      analysisId: params.analysisId,
+    });
+
+    const parsed = parseHighlightsReconciliation(completion.text, params.takeaways.length);
+    if (parsed.status === 'invalid') {
+      console.warn(`[digest-usecase] Reconciliation unparseable for ${params.analysisId}; leaving reconciliation unset`);
+      return;
+    }
+
+    // Persist the reconciliation result as a targeted jsonb field update on
+    // the existing executive_digest — NOT a full saveExecutiveDigest, to
+    // avoid clobbering snapshot/overview/takeaways/detailedSummary that were
+    // written concurrently (and may have been updated by a parallel path).
+    await this.persistence.saveReconciliation({
+      analysisId: params.analysisId,
+      reconciliation: parsed.reconciliation,
     });
   }
 }

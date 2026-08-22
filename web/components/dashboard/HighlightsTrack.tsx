@@ -36,6 +36,12 @@ export interface HighlightsTrackHighlight {
   start: number;
   end: number;
   label: string;
+  /** 0-indexed mapping to the digest's takeaway array (2026-08-21, §2.B.2).
+   *  null for standalone highlights not mapped to any takeaway. */
+  takeawayIdx?: number | null;
+  /** Verbatim transcript excerpt between start-end (2026-08-21, §2.C).
+   *  null/undefined for old rows that predate this column. */
+  verbatimExcerpt?: string | null;
 }
 
 export interface HighlightsTrackProps {
@@ -232,14 +238,14 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
             const segLeftPct = pctFor(activeHighlight.start, 100, 0);
-            // Real fix (live report, 2026-08-21): activeHighlight.end is
-            // contractually "the start of the next selected segment," not
-            // a genuinely short highlight-worthy span -- using it directly
-            // rendered this fill spanning nearly the whole gap to the next
-            // highlight (the reported "94% of video duration" symptom).
-            // segmentDurationSeconds (the same fixed duration
-            // useSegmentPlayback.ts actually advances by) now drives the
-            // fill width instead, matching what actually plays.
+            // Note (2026-08-21, post-fix): highlight.end now has content-driven
+            // semantics (the real end of the topic, not the next highlight's
+            // start) after the prompt/parser changes in highlights-extraction.ts.
+            // For display purposes, the fill still uses segmentDurationSeconds
+            // (the fixed duration from Settings Registry) rather than end-start,
+            // because existing rows predating the fix may still have the old
+            // "next-highlight-start" semantics for end. The fill already clamps
+            // to min 1% and max 100-leftPct, which is acceptable.
             const segWidthPct = Math.max(
               1,
               Math.min(100 - segLeftPct, (segmentDurationSeconds / maxTime) * 100)

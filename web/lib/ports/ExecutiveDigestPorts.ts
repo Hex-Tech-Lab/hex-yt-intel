@@ -60,11 +60,32 @@ export interface DigestPersistencePort {
   getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null>;
 
   /** Idempotent: safe to call even if highlights already exist for this
-   *  analysis (e.g. a digest re-gen) -- replaces the prior set. */
+    *  analysis (e.g. a digest re-gen) -- replaces the prior set. */
   saveHighlights(params: {
     analysisId: string;
-    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string }>;
   }): Promise<boolean>;
+
+  /** Save the reconciliation result as a targeted jsonb field update on
+   *  the existing executive_digest row (NOT a full saveExecutiveDigest —
+   *  avoids clobbering other digest fields written concurrently). */
+  saveReconciliation(params: {
+    analysisId: string;
+    reconciliation: unknown;
+  }): Promise<boolean>;
+}
+
+/** A single takeaway's grounding verdict from the reconciliation pass. */
+export interface ReconciledTakeaway {
+  idx: number;
+  grounded: boolean;
+  backingHighlightIdx: number | null;
+}
+
+/** The full reconciliation result — stored in executive_digest.reconciliation
+ *  (jsonb, no new column needed). */
+export interface ReconciliationResult {
+  takeaways: ReconciledTakeaway[];
 }
 
 /** What we persist in the `executive_digest` jsonb column. */
@@ -73,4 +94,8 @@ export interface StoredExecutiveDigest extends ExecutiveDigest {
   model: string;
   /** ISO 8601 generation timestamp. */
   generatedAt: string;
+  /** Reconciliation result from the post-extraction LLM pass (2026-08-21,
+   *  §2.B.6). null/undefined when the reconciliation call failed or hasn't
+   *  been run yet — display logic treats null as "all takeaways grounded". */
+  reconciliation?: ReconciliationResult | null;
 }

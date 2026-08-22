@@ -15,6 +15,15 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   // mattered.
   'highlights.maxCount': 40,
   'highlights.maxOutputTokens': 6000,
+  // Variable segment-duration clamps (2026-08-21). The LLM now returns a
+  // content-driven end timestamp (the real end of the topic, not the next
+  // highlight's start). Playback/visual layers clamp each highlight's real
+  // (end - start) to [min, max] so old data with the prior "end = next
+  // segment start" semantics doesn't produce 15-minute "segments" while
+  // new data isn't truncated shorter than the floor. Paired with the
+  // 20260821120000_highlights_segment_duration_clamps.sql migration.
+  'highlights.minSegmentDurationSeconds': 5,
+  'highlights.maxSegmentDurationSeconds': 60,
 } as const;
 
 /** A malformed/missing/out-of-range registry value must never reach the

@@ -76,6 +76,24 @@ const ENTITY_EXTRACTION_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
 ];
 
+// 2026-08-21: Highlights reconciliation pass — a separate, small LLM call
+// (Haiku 4.5) that verifies each digest takeaway is semantically grounded by
+// at least one mapped highlight. NOT merged into cascade.digest (which is
+// GPT-OSS-120B, the wrong model for a precision factual-grounding task — see
+// docs/research/2026-08-18-full-parity-final-scores.md: GPT-OSS-120B's factual
+// coverage stalls at 41-62% of Haiku 4.5's across all dimension bundles). NOT
+// aliased to cascade.analysis either — separate key for independent cost
+// attribution and future tuning. Per the "each helper function gets its own
+// cascade" standing directive (cascade.entityExtraction precedent).
+const HIGHLIGHTS_RECONCILIATION_CASCADE_FALLBACK: readonly CascadeItem[] = [
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
+  { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Vertex)', cost: 0.003, providerOrder: ['google-vertex'] },
+  { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Anthropic Direct)', cost: 0.003, providerOrder: ['anthropic'] },
+];
+
 const REASONING_CASCADE_FREE_FALLBACK: readonly CascadeItem[] = [
   { model: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
 ];
@@ -98,6 +116,7 @@ export const CASCADE_FALLBACKS = {
   analysis: ANALYSIS_CASCADE_FALLBACK,
   stance: STANCE_CASCADE_FALLBACK,
   entityExtraction: ENTITY_EXTRACTION_CASCADE_FALLBACK,
+  highlightsReconciliation: HIGHLIGHTS_RECONCILIATION_CASCADE_FALLBACK,
   reasoningFree: REASONING_CASCADE_FREE_FALLBACK,
   reasoningPro: REASONING_CASCADE_PRO_FALLBACK,
 } as const;
@@ -116,6 +135,7 @@ export const resolveDigestCascade = (): Promise<CascadeItem[]> => resolveCascade
 export const resolveAnalysisCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.analysis', ANALYSIS_CASCADE_FALLBACK);
 export const resolveStanceCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.stance', STANCE_CASCADE_FALLBACK);
 export const resolveEntityExtractionCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.entityExtraction', ENTITY_EXTRACTION_CASCADE_FALLBACK);
+export const resolveHighlightsReconciliationCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.highlightsReconciliation', HIGHLIGHTS_RECONCILIATION_CASCADE_FALLBACK);
 export const resolveReasoningCascade = (tier: 'free' | 'pro' | 'enterprise'): Promise<CascadeItem[]> =>
   tier === 'free'
     ? resolveCascade('cascade.reasoning.free', REASONING_CASCADE_FREE_FALLBACK)

@@ -14,6 +14,8 @@ interface Highlight {
   start: number;
   end: number;
   label: string;
+  takeawayIdx?: number | null;
+  verbatimExcerpt?: string | null;
 }
 
 interface HighlightsResponse {
@@ -135,7 +137,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     playingIdx,
     activeHighlight?.label ?? null,
     data?.segmentDurationSeconds ?? 10,
-    elapsedInSegmentSeconds
+    elapsedInSegmentSeconds,
+    activeHighlight?.verbatimExcerpt ?? null
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read

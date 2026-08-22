@@ -217,6 +217,8 @@ export interface AnalysisPersistencePort {
     start: number;
     end: number;
     label: string;
+    takeawayIdx: number | null;
+    verbatimExcerpt: string | null;
   }>>;
 
   /**

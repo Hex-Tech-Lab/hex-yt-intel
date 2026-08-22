@@ -89,7 +89,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findAnalysisByShareToken(token);
   }
 
-  findHighlightsForAnalysis(analysisId: string): Promise<Array<{ idx: number; start: number; end: number; label: string }>> {
+  findHighlightsForAnalysis(analysisId: string): Promise<Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }>> {
     return SupabaseAnalysisAdapter.findHighlightsForAnalysis(analysisId);
   }
 
@@ -114,6 +114,13 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     highlights: Array<{ idx: number; start: number; end: number; label: string }>;
   }): Promise<boolean> {
     return SupabaseAnalysisAdapter.saveHighlights(params);
+  }
+
+  saveReconciliation(params: {
+    analysisId: string;
+    reconciliation: unknown;
+  }): Promise<boolean> {
+    return SupabaseAnalysisAdapter.saveReconciliation(params);
   }
 
   async updateAnalysisResult(params: {
