@@ -85,10 +85,14 @@ export function parseHighlightsReconciliation(rawText: string, takeawaysCount: n
     const { takeawayIdx, grounded, backingHighlightIdx } = item as Record<string, unknown>;
     if (typeof takeawayIdx !== 'number' || !Number.isInteger(takeawayIdx)) continue;
     if (takeawayIdx < 0 || takeawayIdx >= takeawaysCount) continue;
-    if (seenIdx.has(takeawayIdx)) continue;
+    // Duplicate takeawayIdx is ambiguous (the LLM gave conflicting verdicts for
+    // the same takeaway) — reject the entire result as invalid rather than
+    // silently keeping the first entry, which would persist a non-deterministic
+    // grounding status.
+    if (seenIdx.has(takeawayIdx)) return { status: 'invalid' };
     if (typeof grounded !== 'boolean') continue;
     let parsedBackingIdx: number | null = null;
-    if (typeof backingHighlightIdx === 'number' && Number.isFinite(backingHighlightIdx)) {
+    if (typeof backingHighlightIdx === 'number' && Number.isInteger(backingHighlightIdx) && backingHighlightIdx >= 0) {
       parsedBackingIdx = backingHighlightIdx;
     }
     seenIdx.add(takeawayIdx);

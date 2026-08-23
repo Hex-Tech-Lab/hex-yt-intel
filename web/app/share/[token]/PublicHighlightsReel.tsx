@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
-import { fmtHighlightsDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK, sumHighlightDurations } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -77,8 +77,19 @@ export function PublicHighlightsReel({
     [ready]
   );
 
+  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
+  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
+
+  // Clamp each highlight's end to [start+minDur, start+maxDur] before passing to
+  // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
+  // (could be 120s+), which would produce multi-minute playback segments without this.
+  const clampedSegments = useMemo(
+    () => highlights.map((highlight) => ({ ...highlight, end: getClampedSegmentEnd(highlight, segmentDurationSeconds, minDur, maxDur) })),
+    [highlights, segmentDurationSeconds, minDur, maxDur],
+  );
+
   const { playingIdx, elapsedInSegmentSeconds, speed, start, stop: stopPlayback, jumpTo, setSpeed } = useSegmentPlayback({
-    segments: highlights,
+    segments: clampedSegments,
     contextLeadSeconds,
     segmentDurationSeconds,
     primitives,
@@ -110,8 +121,8 @@ export function PublicHighlightsReel({
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
-  const activeDuration = activeHighlight && Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start
-    ? Math.max(1, activeHighlight.end - activeHighlight.start)
+  const activeDuration = activeHighlight
+    ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur)
     : segmentDurationSeconds;
   const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
 
@@ -120,13 +131,8 @@ export function PublicHighlightsReel({
   // Sum each highlight's real clamped duration (fallback to
   // segmentDurationSeconds when end is null/invalid), so the display total
   // matches what actually plays (variable-duration advance on segment.end).
-  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
-  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
   const totalHighlightsSeconds = Math.min(
-    highlights.reduce((sum, highlight) => {
-      const dur = (Number.isFinite(highlight.end) && highlight.end > highlight.start) ? (highlight.end - highlight.start) : segmentDurationSeconds;
-      return sum + Math.min(maxDur, Math.max(minDur, dur));
-    }, 0),
+    sumHighlightDurations(highlights, segmentDurationSeconds, minDur, maxDur),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0

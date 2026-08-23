@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK, sumHighlightDurations } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -80,12 +80,22 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     [setSeekTo, setPlaybackRate]
   );
 
-  const segments = useMemo(() => data?.highlights ?? [], [data]);
+  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
+  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
+  const segDurFallback = data?.segmentDurationSeconds ?? 10;
+
+  // Clamp each highlight's end to [start+minDur, start+maxDur] before passing to
+  // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
+  // (could be 120s+), which would produce multi-minute playback segments without this.
+  const segments = useMemo(
+    () => (data?.highlights ?? []).map((highlight) => ({ ...highlight, end: getClampedSegmentEnd(highlight, segDurFallback, minDur, maxDur) })),
+    [data, segDurFallback, minDur, maxDur],
+  );
 
   const { playingIdx, elapsedInSegmentSeconds, speed, isPaused, start, stop, pause, resume, jumpTo, setSpeed } = useSegmentPlayback({
     segments,
     contextLeadSeconds: data?.contextLeadSeconds ?? 0,
-    segmentDurationSeconds: data?.segmentDurationSeconds ?? 10,
+    segmentDurationSeconds: segDurFallback,
     primitives,
   });
 
@@ -133,9 +143,9 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
-  const activeDuration = activeHighlight && Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start
-    ? Math.max(1, activeHighlight.end - activeHighlight.start)
-    : (data?.segmentDurationSeconds ?? 10);
+  const activeDuration = activeHighlight
+    ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur)
+    : segDurFallback;
   const { revealedText } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
@@ -163,13 +173,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   // Sum each highlight's real clamped duration (fallback to
   // segmentDurationSeconds when end is null/invalid), matching the
   // variable-duration playback advance on segment.end.
-  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
-  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
   const totalHighlightsSeconds = Math.min(
-    data.highlights.reduce((sum, highlight) => {
-      const dur = (Number.isFinite(highlight.end) && highlight.end > highlight.start) ? (highlight.end - highlight.start) : data.segmentDurationSeconds;
-      return sum + Math.min(maxDur, Math.max(minDur, dur));
-    }, 0),
+    sumHighlightDurations(data.highlights, segDurFallback, minDur, maxDur),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
