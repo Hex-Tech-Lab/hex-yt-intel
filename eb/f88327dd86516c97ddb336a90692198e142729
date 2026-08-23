@@ -1,0 +1,25 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  s_8e7f839e37c207::t_0060ea13d5c3a4 25-26
+  s_8e7f839e37c207::t_62067bf27d0748 85-86
+.memory/AGENT_LEDGER.md
+  s_8e7f839e37c207::t_2dc3d8269775b3 1276-1286
+  s_8e7f839e37c207::t_9661a651a78144 1287-1324
+web/app/api/analyses/highlights/route.ts
+  s_8e7f839e37c207::t_b3082ce4498fc6 63-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "ebf88327dd86516c97ddb336a90692198e142729",
+  "prompts": {},
+  "sessions": {
+    "s_8e7f839e37c207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c0d38e0b-4a01-450d-95e1-83e512d3cc6a",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
