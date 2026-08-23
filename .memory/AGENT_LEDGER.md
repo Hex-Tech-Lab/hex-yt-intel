@@ -1273,3 +1273,52 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
 [2026-08-23T14:30:00+03:00] [OC (opencode, highlights-consistency worktree)] [DONE] PR #267 Remediation COMPLETE. All phases A-D implemented. Gates: web tsc clean (0 errors), worker tsc clean (0 src/ errors), vitest 104 files / 1278 passed / 16 skipped (19 new tests), quality-engine --ci --compare exit 0 (no new issues), contract-auditor 0 critical (3 pre-existing warnings in wiki-builder.ts). Migration 20260821120100 verified NOT applied remotely (columns/functions absent) — edited in place for B1 NULL guard. Files changed (17 modified + 1 new test): highlights-reconciliation.ts (A1 var names + catch logging + B3 unique idx + B4 type dedupe), highlights-extraction.ts (B2 clamp-not-skip + takeawayIdx bound), ExecutiveDigestPorts.ts (B4 reconciliation type + B6 saveReconciliation typed), SupabaseAnalysisAdapter.ts (A2/B5 any removal + PostgREST error check + Sentry), SupabasePersistenceAdapter.ts (B6 return types + saveHighlights param), ChatPersistencePort.ts (B6 return types), highlights/route.ts (A3/B7 typed row + ReadableStream), ProcessChatMessageUseCase.ts (B8 false-grounding fix + verbatimExcerpt + groundingResult typed), GenerateExecutiveDigestUseCase.ts (B9 saveHighlights check + reconcile empty-valid + userId dropped + maxTokens formula), PublicHighlightsReel.tsx (B10 clamped durations + C2 ticker real duration), HighlightsScrubber.tsx (C2/C3 ticker + track width), useSegmentPlayback.ts (C1 advance on segment.end), useSegmentPlayback.test.ts (C4 updated + 3 new cases), useHighlightTicker.test.ts (D1 4 new excerpt tests), highlights-parser-reconciliation.test.ts (D2 NEW: 12 parser/reconciliation tests), migration SQL (B1 NULL guard), design-proposal.md (D3 table fix). Deviations: B3 backingHighlightIdx range-check against highlightsCount skipped (no clean way to thread highlightsCount without signature change risk — noted in dispatch as optional). No new migration files created (B11 deferred per dispatch). Not pushed — CC pushes after verification.
 
 [NOTE] [SINK: PR #267 Remediation] 2026-08-23 — Applied simplify fixes: extracted helper functions for active duration and sum of durations, removed unused import, fixed stale comment in HighlightsTrack.tsx. All gates passed: type-check clean, vitest 104/1278/16, quality-engine --ci --compare exit 0 (no new issues), contract-auditor 0 critical, 3 pre-existing warnings. PR is ready for merge.
+
+[2026-08-23T15:00:00+03:00] [CC (sink orchestrator)] [DONE] [SINK: PR #267 Remediation] Final verification + push complete. Two commits pushed to fix/highlights-chat-digest-consistency:
+- e4c3b1e3: OC (GLM 5.2) remediation Phases A-D (17 files: CI unblock, data integrity B1-B10, variable-duration playback C1-C4, tests D1-D3)
+- 2588e3c1: CC code-review P0/P1 fixes (5 files: unclamped playback/ticker for old DB rows, duplicate takeawayIdx rejection, backingHighlightIdx integer check, quality-engine var rename)
+Gates (independently re-verified by CC post-push):
+- web tsc --noEmit: 0 errors
+- vitest: 104 files / 1278 passed / 16 skipped
+- verify-quality-engine --ci --compare: exit 0 ("No new issues since baseline")
+- contract-auditor: 0 critical, 3 pre-existing warnings (wiki-builder.ts)
+- eslint: 5 pre-existing warnings (no new)
+Code-review findings applied: P0 unclamped playback for old DB rows (getClampedSegmentEnd), P1 duplicate takeawayIdx silent first-wins (reject as invalid), P1 backingHighlightIdx no integer check (Number.isInteger + >=0). Pushed to origin. CI will re-run on push.
+
+[2026-08-23T15:10:00+03:00] [CC (sink orchestrator)] [DONE] [SINK: PR #267 Remediation] FINAL — all review skills executed, all gates green, pushed.
+
+GATES (independently re-verified by CC, post all fixes):
+- web tsc --noEmit: 0 errors
+- vitest: 104 files / 1278 passed / 16 skipped
+- verify-quality-engine --ci --compare: exit 0 ("No new issues since baseline")
+- contract-auditor: 0 critical, 3 pre-existing warnings (wiki-builder.ts)
+- eslint: 5 pre-existing warnings (no new introduced)
+- next build: succeeded (NODE_OPTIONS=--max-old-space-size=4096 for WSL2 low-RAM)
+
+SKILLS EXECUTED (sequential, inline — subagents hit 402 credits limit):
+1. /code-review (high effort, 8 angles): 4 succeeded (A,B,E,F) + 4 final-completion. Findings applied:
+   - P0: Unclamped playback/ticker for old DB rows → FIXED (getClampedSegmentEnd clamp before useSegmentPlayback + getHighlightPlaybackDuration with [min,max])
+   - P1: Duplicate takeawayIdx silent first-wins → FIXED (reject as 'invalid')
+   - P1: backingHighlightIdx no integer check → FIXED (Number.isInteger + >= 0)
+   - P2: Admin-tuning mismatch (display hardcoded fallback, not registry) → FIXED (route returns min/maxSegmentDurationSeconds, Scrubber uses data?. values)
+2. /simplify (4 agents inline): Extracted getHighlightPlaybackDuration, sumHighlightDurations, getClampedSegmentEnd helpers; deduped activeDuration/reduce across both callers; fixed stale HighlightsTrack comment
+3. database-sentinel: PASS — both migrations correct (SECURITY INVOKER + REVOKE EXECUTE + search_path + NULL guard)
+4. react-best-practices: 2 efficiency findings (async-parallel for getAnalysisGrounding queries, server-after-nonblocking for reconciliation await) — both pre-existing patterns, follow-up not blocker
+5. review-duplication (code-review Angle D): 6 findings logged as P2 tech debt below
+6. /verify: Build succeeded, /share/[token] route compiled — runtime OOM prevented full drive (WSL2 low-RAM), deferred to CI preview deployment
+
+P2 TECH-DEBT (follow-up PR, tracked from review-duplication + code-review):
+- TD1: HighlightRow type defined in 2 places (route.ts:10 + SupabaseAnalysisAdapter.ts:625) — unify to shared type in highlights-settings.ts
+- TD2: interface Highlight defined in 3 places (HighlightsScrubber.tsx:12, PublicHighlightsReel.tsx:11, HighlightsTrack.tsx:34 as HighlightsTrackHighlight) — unify
+- TD3: clampHighlightDuration(dur, min, max, fallback) helper not extracted — Math.min/Math.max clamp duplicated in getHighlightPlaybackDuration + sumHighlightDurations + getClampedSegmentEnd
+- TD4: ReadableStream + TextEncoder boilerplate duplicated in highlights/route.ts + relations/route.ts — extract streamJson utility
+- TD5: getHighlightDurationForSum unused outside sumHighlightDurations — inline or remove
+- TD6: HighlightsTrack.tsx fill/tooltip still uses fixed segmentDurationSeconds (lines 249, 279) while playback uses clamped end — visual mismatch for long highlights (acknowledged in comment, deferred as display-only)
+
+COMMITS PUSHED:
+- d77f56f1: original PR (OC implementation)
+- e4c3b1e3: OC remediation Phases A-D (17 files)
+- 2588e3c1: CC code-review P0/P1 fixes (5 files: unclamped playback, duplicate takeawayIdx, backingHighlightIdx)
+- (this commit): CC code-review P2 fix (admin-tuning mismatch: route returns min/max, Scrubber uses registry values)
+
+PR: https://github.com/Hex-Tech-Lab/hex-yt-intel/pull/267

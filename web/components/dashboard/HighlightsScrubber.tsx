@@ -22,6 +22,8 @@ interface HighlightsResponse {
   highlights: Highlight[];
   segmentDurationSeconds: number;
   contextLeadSeconds: number;
+  minSegmentDurationSeconds?: number;
+  maxSegmentDurationSeconds?: number;
 }
 
 /**
@@ -80,8 +82,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     [setSeekTo, setPlaybackRate]
   );
 
-  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
-  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
+  const minDur = data?.minSegmentDurationSeconds ?? HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
+  const maxDur = data?.maxSegmentDurationSeconds ?? HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
   const segDurFallback = data?.segmentDurationSeconds ?? 10;
 
   // Clamp each highlight's end to [start+minDur, start+maxDur] before passing to
