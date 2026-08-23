@@ -1,0 +1,38 @@
+web/lib/utils/highlights-settings.ts
+  s_8e7f839e37c207::t_f11a8941753865 58,64-67,70-74,95-127
+  s_8e7f839e37c207::t_9f931ec36b1a48 59-63,68-69,75-94
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_8e7f839e37c207::t_e987992653cd18 135
+  s_8e7f839e37c207::t_7ad7f2d0df3074 124
+  s_8e7f839e37c207::t_e43b35d015bf11 80-86,88-90,92
+  s_8e7f839e37c207::t_05a5551dec9471 87
+  s_8e7f839e37c207::t_23f9c1a6ddcd60 125
+  s_8e7f839e37c207::t_94915776897ce3 6
+web/components/dashboard/HighlightsScrubber.tsx
+  s_8e7f839e37c207::t_fc93fb578e3c4f 7
+  s_8e7f839e37c207::t_a3bb1584888a2c 177
+  s_8e7f839e37c207::t_6eece2ba64ba44 147-148
+  s_8e7f839e37c207::t_6ad4093885aafc 146
+  s_8e7f839e37c207::t_e8e364180b388b 91
+  s_8e7f839e37c207::t_8381101360f6eb 83-90,92-93,98
+.memory/AGENT_LEDGER.md
+  s_8e7f839e37c207::t_a210962a4ffb2e 1274-1275
+web/lib/prompts/highlights-reconciliation.ts
+  s_8e7f839e37c207::t_9cdd5c26b49493 88-92,95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "2588e3c1212fc43e96b446feedfd8c41589bd80a",
+  "prompts": {},
+  "sessions": {
+    "s_8e7f839e37c207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c0d38e0b-4a01-450d-95e1-83e512d3cc6a",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
