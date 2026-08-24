@@ -111,6 +111,61 @@ export async function publishDigestTask(payload: DigestPayload): Promise<string>
   }
 }
 
+export interface HighlightsPayload {
+  analysisId: string;
+  userId: string;
+  /** Clean (un-archived) video_id -- the transcripts table is keyed by it
+   *  (ADR 012). Passed explicitly from the persist route (which already has
+   *  the clean id in scope) so the webhook doesn't need a separate row read
+   *  to resolve it, and so an archived analysis row's suffixed video_id can
+   *  never leak into a transcripts lookup (the bug that silently no-op'd
+   *  extraction for archived rows -- getTranscriptSegments strips the suffix
+   *  defensively too, defense-in-depth). */
+  videoId: string;
+}
+
+/**
+ * Publish a highlights-extraction task to QStash.
+ *
+ * RCA (2026-08-23): highlights extraction rode the digest-generation pass,
+ * which is (a) lazy/cached -- once a digest exists the use case returns early
+ * and NEVER re-runs extraction, so a first-run extraction failure (transcript
+ * not yet warm, LLM error) became permanent; and (b) coupled to digest
+ * success -- a digest parse/completion failure skipped extraction entirely.
+ * Result: only 2 of 216 analyses had highlights. This dedicated task fires at
+ * finalize (transcript guaranteed warm, ADR 012), independent of the digest,
+ * and ExtractHighlightsUseCase's skipIfPresent makes it idempotent against
+ * re-publish (re-persist, remediation re-run). Best-effort: a publish
+ * failure must never affect the persist response.
+ */
+export async function publishHighlightsTask(payload: HighlightsPayload): Promise<string> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is missing. Cannot publish QStash task safely.');
+    }
+    const webhookUrl = `${baseUrl}/api/webhooks/highlights`;
+    const result = await getQStashClient().publishJSON({
+      url: webhookUrl,
+      body: payload,
+      retries: 3,
+      delay: 0,
+    });
+
+    const messageId = typeof result === 'string' ? result : result.messageId;
+    console.log('[qstash] Highlights task published', { analysisId: payload.analysisId, messageId });
+    return messageId;
+  } catch (error) {
+    console.error('[qstash] Failed to publish highlights task', {
+      analysisId: payload.analysisId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Non-blocking: log but don't throw -- highlights are best-effort
+    // enrichment, not something worth failing the persist call over.
+    return 'unknown';
+  }
+}
+
 /**
  * Publish an embedding generation task to QStash
  * For future use: semantic search requires embeddings

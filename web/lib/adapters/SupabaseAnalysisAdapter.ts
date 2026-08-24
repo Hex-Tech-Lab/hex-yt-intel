@@ -831,6 +831,16 @@ export class SupabaseAnalysisAdapter {
   static async getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
     try {
       const service = getSupabaseServiceClient();
+      // Transcripts are stored under the CLEAN video_id (see upsertTranscript
+      // / persist route), but an archived analysis row's video_id carries an
+      // '_archived_<ts>' suffix (stripArchivedVideoIdSuffix). getAnalysisGrounding
+      // (line 566) and findAnalysisByShareToken (line 685) already strip it
+      // before their transcripts lookup -- this site historically did NOT,
+      // so a digest/highlights re-trigger on an archived row queried
+      // transcripts with the suffixed id and silently found nothing (real
+      // no-op path in the 2026-08-23 highlights RCA). Strip here too for
+      // consistency and defense-in-depth.
+      const cleanVideoId = stripArchivedVideoIdSuffix(videoId) ?? videoId;
       // Enforce the 72h retention boundary (ADR 012) at the read path itself,
       // not only via the purge cron's eventual row deletion -- a delayed
       // purge run must not let extraction read past the stated compliance
@@ -838,7 +848,7 @@ export class SupabaseAnalysisAdapter {
       const { data, error } = await service
         .from('transcripts')
         .select('segments')
-        .eq('video_id', videoId)
+        .eq('video_id', cleanVideoId)
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 

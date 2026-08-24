@@ -8,7 +8,7 @@ import { verifyContentSig } from '@/lib/stream-token';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
-import { publishValidationTask, publishDigestTask } from '@/lib/qstash-client';
+import { publishValidationTask, publishDigestTask, publishHighlightsTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
 import * as Sentry from '@sentry/nextjs';
@@ -780,6 +780,18 @@ export async function POST(request: NextRequest) {
               console.warn('[analyses/persist] Failed to publish digest task for chunks', { analysisId, error: String(e) });
             });
 
+            // Highlights extraction -- dedicated finalize trigger (RCA
+            // 2026-08-23: extraction previously rode the lazy/cached digest
+            // pass and was silently skipped once a digest existed, leaving
+            // only 2 of 216 analyses with highlights). Fires while the
+            // transcript is guaranteed warm (just upserted above, ADR 012),
+            // independent of whether the digest later succeeds. Idempotent
+            // (skipIfPresent) so a re-persist re-spends nothing. Best-effort.
+            await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task_chunks', analysisId } } });
+              console.warn('[analyses/persist] Failed to publish highlights task for chunks', { analysisId, error: String(e) });
+            });
+
             // Usage-log: analysis genuinely completed (chunked path). Purely
             // additive, fire-and-forget -- consumeQuota() itself never
             // throws (see PostgresBillingAdapter), and this .catch() is a
@@ -1078,6 +1090,14 @@ export async function POST(request: NextRequest) {
         await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish digest task', { analysisId, error: String(e) });
+        });
+
+        // Highlights extraction -- dedicated finalize trigger. See the
+        // chunk-path call site above for the full RCA. Same idempotent /
+        // best-effort shape as the digest task alongside it.
+        await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task', analysisId } } });
+          console.warn('[analyses/persist] Failed to publish highlights task', { analysisId, error: String(e) });
         });
 
         // Usage-log: analysis genuinely completed (non-chunked path). Same

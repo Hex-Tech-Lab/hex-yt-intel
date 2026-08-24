@@ -4,12 +4,6 @@ import {
   parseExecutiveDigest,
   type ExecutiveDigest,
 } from '@/lib/prompts/executive-digest';
-import {
-  buildHighlightsExtractionSystemPrompt,
-  buildHighlightsExtractionUserMessage,
-  parseHighlightsExtraction,
-} from '@/lib/prompts/highlights-extraction';
-import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type {
   TextCompletionPort,
   CompletionModel,
@@ -160,78 +154,16 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
     }
 
-    // Highlights extraction rides this same pass -- see execute()'s doc
-    // comment. Best-effort: a failure here must never break digest delivery,
-    // which is the primary feature. Skipped entirely once the transcript's
-    // 72h retention window (ADR 012) has closed -- there is no other source
-    // of real segment timing, so a missing transcript here is a real, expected
-    // outcome for an old/re-generated analysis, not an error to surface.
-    if (row.video_id) {
-      await this.extractHighlights({ analysisId, videoId: row.video_id, models }).catch((error) => {
-        console.warn(`[digest-usecase] Highlights extraction failed for ${analysisId}:`, error);
-      });
-    }
+    // Highlights extraction is now owned by a dedicated QStash task fired at
+    // persist finalize (web/app/api/webhooks/highlights) -- decoupled from this
+    // digest pass entirely. The digest used to ride extraction as a side
+    // effect, which caused the silent-no-op/data-loss RCA (2026-08-23):
+    // extraction was skipped once a digest was cached, and coupled to digest
+    // success. Keeping it OUT of the digest pass also avoids a doubled-spend
+    // race (both the highlights webhook and this digest path firing
+    // simultaneously, each passing skipIfPresent before either saved).
 
     return { type: 'success', digest, cached: false };
-  }
-
-  /** See execute()'s doc comment for why this rides the digest pass. */
-  private async extractHighlights(params: {
-    analysisId: string;
-    videoId: string;
-    models: readonly CompletionModel[];
-  }): Promise<void> {
-    // /simplify review (2026-08-20): these two awaits are independent (the
-    // registry fetch doesn't depend on segments) -- parallelized to save a
-    // round-trip on the common non-empty-segments path.
-    const [segments, resolvedHighlightsRegistry] = await Promise.all([
-      this.persistence.getTranscriptSegments(params.videoId),
-      // Registry-resolved, not hardcoded (2026-08-20 -- see
-      // 20260820120000_highlights_reel_uncap_settings.sql RCA). maxOutputTokens
-      // in particular used to be unset here, silently falling back to
-      // OpenRouterCompletionAdapter's DEFAULT_MAX_TOKENS=2000 -- too small for
-      // a dense video's full highlight set, truncating the response mid-array.
-      SupabaseSettingsAdapter.getRegistrySettings(
-        ['highlights.maxCount', 'highlights.maxOutputTokens'],
-        HIGHLIGHTS_REGISTRY_FALLBACK
-      ),
-    ]);
-    if (!segments || segments.length === 0) return;
-
-    // /simplify review (2026-08-20): this was the one of three highlights-
-    // settings call sites that DIDN'T route through clampHighlightsSetting
-    // (web/app/api/analyses/highlights/route.ts does) -- a bare `|| fallback`
-    // only guards falsy values, not a malformed/out-of-range registry value.
-    // Same bounds as the migration's own validation jsonb.
-    const maxCount = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxCount'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount'], 4, 80);
-    const maxOutputTokens = clampHighlightsSetting(resolvedHighlightsRegistry['highlights.maxOutputTokens'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens'], 500, 8000);
-
-    const completion = await this.completion.complete({
-      system: buildHighlightsExtractionSystemPrompt(maxCount),
-      user: buildHighlightsExtractionUserMessage(segments),
-      models: params.models,
-      maxTokens: maxOutputTokens,
-      analysisId: params.analysisId,
-    });
-
-    const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount);
-
-    // 'invalid' means the model response was unparseable -- a transient LLM
-    // failure, not a genuine "no highlights" finding. Must NOT touch any
-    // existing highlight set in that case (real data-loss bug caught in
-    // review: a bad response used to silently wipe a prior valid set via an
-    // empty-array save). Only 'ok' (structurally valid, empty or not) is
-    // ever persisted.
-    if (result.status === 'invalid') {
-      console.warn(`[digest-usecase] Highlights extraction unparseable for ${params.analysisId}; leaving existing set untouched`);
-      return;
-    }
-
-    await this.persistence.saveHighlights({
-      analysisId: params.analysisId,
-      highlights: result.highlights.map((highlight, idx) => ({ idx, start: highlight.start, end: highlight.end, label: highlight.label })),
-    });
   }
 }
 
