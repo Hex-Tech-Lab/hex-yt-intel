@@ -85,12 +85,17 @@ export function getClampedSegmentEnd(
   segmentDurationSeconds: number,
   minDur: number,
   maxDur: number,
+  nextStart?: number,
 ): number {
   const rawEnd = (Number.isFinite(highlight.end) && highlight.end > highlight.start)
     ? highlight.end
     : highlight.start + segmentDurationSeconds;
   const rawDuration = rawEnd - highlight.start;
-  const clampedDuration = Math.max(minDur, Math.min(maxDur, rawDuration));
+  let clampedDuration = Math.max(minDur, Math.min(maxDur, rawDuration));
+  // Prevent minimum duration clamp from causing overlap with the next highlight
+  if (nextStart !== undefined && highlight.start + clampedDuration > nextStart) {
+    clampedDuration = Math.max(0, nextStart - highlight.start);
+  }
   return highlight.start + clampedDuration;
 }
 

@@ -1,0 +1,281 @@
+{
+  "dims": [
+    2,
+    4,
+    6
+  ],
+  "results": [
+    {
+      "video_id": "FfdOoDB_fbE",
+      "lang": "en",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n| Field | Value |\\n|---|---|\\n| Title | How To Spy on Shopify Competitors & Steal Their Winning Products |\\n| Creator / Presenter | Speaker (unnamed) |\\n| Channel | ZIK Analytics |\\n| Publish Date & Time | 2025-12-16 (time not provided) |\\n| Duration | [Insufficient data in source transcript to fulfill this dimension] |\\n| Content Domain | E‑commerce / Shopify dropshipping |\\n\\n#### 2.2 Engagement & Virality Metrics\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\n- Predicted sentiment breakdown: [Insufficient data in source transcript to fulfill this dimension]\\n- Discussion quality: [Insufficient data in source transcript to fulfill this dimension]\\n- Community response signals: [Insufficient data in source transcript to fulfill this dimension]\"\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\n- Dominant tone: Energetic, confident, promotional.\\n- Emotional trajectory: Starts with excitement (“feel like a cheat code”), maintains high enthusiasm, peaks when revealing profit numbers, ends with a friendly call‑to‑action.\\n- Confidence level: High – speaker repeatedly asserts certainty (“you will know”, “this is the most fun part”).\\n- Energy shifts: Minor dips when explaining steps, spikes when showing revenue or profit margins.\\n\\n#### 4.2 Persuasion Strategy\\n- Primary mode: Demonstration + Social proof. The speaker showcases the Zik tool live, cites concrete revenue ($80k, $25k) and sales figures, and highlights large follower counts (138k on Instagram, 6.8 M views on a reel).\\n- Rhetorical techniques: Hook (“cheat code”), repetition of key benefits, authority appeal (mentioning the tool’s capability to pull hidden data), and scarcity (“skip the trial‑and‑error phase”).\\n- Hook architecture: Opening promise → Live demo → Real‑world examples → Call‑to‑action.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- Promotional vs. educational ratio: Heavily promotional; the majority of content promotes Zik Analytics and its features.\\n- Conflict of interest: Speaker is a representative of Zik Analytics, directly urging viewers to try the product.\\n- Recency bias: Emphasis on recent sales data (last 30 days) without historical context.\\n- Selection bias: Stores shown are high‑performing examples; lower‑performing competitors are not discussed.\"\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n| Dimension | Single‑Product Store (example) | Drop‑Shipping Store (catcurio.com) | Print‑On‑Demand Store (noblepawrade.com) |\\n|---|---|---|---|\\n| Revenue (last 30 days) | > $80,000 | > $25,000 | [Insufficient data in source transcript to fulfill this dimension] |\\n| Units Sold (last 30 days) | 1,958 | 947 | [Insufficient data in source transcript to fulfill this dimension] |\\n| Product Count | 1 (single product) | 488 | [Insufficient data in source transcript to fulfill this dimension] |\\n| Social Presence | 3 channels (Meta, Instagram, Pinterest) | 138,000 Instagram followers; 6.8 M reel views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Paid Ads | Meta & Pinterest | Meta | Meta (identified) |\\n| Store Age | 2021 | 2017 | [Insufficient data in source transcript to fulfill this dimension] |\\n| Profit Margin (example) | ~70 % (based on $12 cost vs $42.5 price) | Not disclosed | Not disclosed |\\n\\n#### 6.2 Scenario Analysis\\n- **Base Case**: A user adopts the workflow shown, selects a high‑margin product (e.g., $12 cost → $42.5 price) and replicates the store’s ad strategy. Expected outcome: similar revenue trajectory if traffic and conversion rates match the demonstrated store.\\n- **Optimistic Case**: The user also leverages the tool’s app insights to add complementary upsell apps, increasing average order value by 15 %. Revenue could exceed $100k in the first month.\\n- **Pessimistic Case**: The user fails to account for competition saturation; ad costs rise, reducing net margin to <30 %. Monthly profit falls below $10k.\\n- **Tail‑Risk**: Platform policy changes that restrict data scraping could render the tool ineffective, causing a sudden drop in actionable insights.\\n- **Key Assumptions**: Accurate data extraction by Zik, comparable audience size, and ability to replicate ad creatives.\\n- **Mitigation**: Diversify product sourcing, test multiple ad creatives, and maintain a backup analytics method.\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 12506,
+        "completion_tokens": 2140,
+        "total_tokens": 14646,
+        "cost": 0.0059821,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 7552,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0059821,
+          "upstream_inference_prompt_cost": 0.0043771,
+          "upstream_inference_completions_cost": 0.001605
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 827,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "vEC6e5dBi4Y",
+      "lang": "ar",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n| Field | Value |\\n|---|---|\\n| Title | فيلم ثمن الحرية - Thmn El Horeya (كامل - جودة عالية) |\\n| Creator / Presenter | Ahmed Hussien |\\n| Channel | Ahmed Hussien |\\n| Publish Date & Time | 2013-02-12 00:00:00 UTC |\\n| Duration | Unknown |\\n| Content Domain | Film / Drama |\\n\\n#### 2.2 Engagement & Virality Metrics\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\n- Predicted sentiment breakdown: [Insufficient data in source transcript to fulfill this dimension]\\n- Discussion quality: [Insufficient data in source transcript to fulfill this dimension]\\n- Community response signals: [Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 158,\n        \"keyTerms\": [\"فيلم\", \"ثمن الحرية\", \"Ahmed Hussien\", \"2013-02-12\", \"Film\", \"Drama\"],\n        \"confidence\": 0.85\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\n- **Dominant tone**: Urgent, fearful, angry, and desperate. The speaker repeatedly uses exclamations and commands (e.g., \\\"لا يمكن\\\", \\\"مستحيل\\\", \\\"قتلونا\\\") indicating high emotional intensity.\\n- **Emotional trajectory**: Starts with frustration about daily bombings, escalates to panic about a specific target (Ahmed Abdul Hafiz), and ends with a desperate plea for action.\\n- **Confidence level**: High – the transcript contains many emotionally charged words.\\n- **Energy shifts**: Frequent rapid shifts, reflecting a chaotic, high‑stress environment.\\n\\n#### 4.2 Persuasion Strategy\\n- **Primary mode**: Emotional appeal mixed with authority cues. The speaker invokes nationalistic anger against the English, references \\\"سعادة الباشا\\\" and \\\"الجنرال\\\" to lend weight.\\n- **Rhetorical techniques**: Repetition (\\\"لا يمكن\\\", \\\"مستحيل\\\"), imperative commands, vivid imagery of death and sacrifice, and appeals to collective responsibility.\\n- **Hook architecture**: Begins with a lament about daily violence, then zeroes in on a single target, creating a focal point for audience attention.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- **Promotional vs. educational**: Strongly promotional/propagandistic; no factual exposition, only rallying cries.\\n- **Conflicts of interest**: None explicit, but the narrative serves a nationalist agenda.\\n- **Biases**: Anti‑English bias, martyr‑complex bias, and a bias toward violent resolution. The speaker assumes the audience shares the same urgency and willingness to act.\\n- **Critical note**: No balanced perspective or evidence is presented; the content relies entirely on emotional manipulation.\",\n      \"metadata\": {\n        \"wordCount\": 226,\n        \"keyTerms\": [\"urgent\", \"fearful\", \"angry\", \"Ahmed Abdul Hafiz\", \"nationalist\", \"propaganda\"],\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n| **Dimension** | **Option A** | **Option B** | **Option C** |\\n|---|---|---|---|\\n| Performance metric | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] |\\n| Cost / investment | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] |\\n| Risk level | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] |\\n| Best for | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 6.2 Scenario Analysis\\n- **Base case**: No concrete data; the transcript does not outline measurable outcomes, so a baseline cannot be derived.\\n- **Optimistic case**: [Insufficient data in source transcript to fulfill this dimension]\\n- **Pessimistic case**: [Insufficient data in source transcript to fulfill this dimension]\\n- **Tail risk**: [Insufficient data in source transcript to fulfill this dimension]\\n- **Key assumptions**: The analysis assumes the speaker’s intent is to mobilize action, but no quantitative parameters are provided.\\n- **Conclusion**: Quantitative comparison and scenario modeling are not possible from the supplied transcript.\",\n      \"metadata\": {\n        \"wordCount\": 184,\n        \"keyTerms\": [\"comparison\", \"scenario\", \"risk\", \"performance\", \"cost\"],\n        \"confidence\": 0.8\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 16840,
+        "completion_tokens": 2021,
+        "total_tokens": 18861,
+        "cost": 0.00740975,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 16000,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00740975,
+          "upstream_inference_prompt_cost": 0.005894,
+          "upstream_inference_completions_cost": 0.00151575
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 666,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "wcgvQs_9Yx8",
+      "lang": "be",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n\\n| Field | Value |\\n|---|---|\\n| Title | Пільна! Хапун пад Расонамі |\\n| Creator / Presenter | Алес Залеўскі |\\n| Channel | N/A – channel name not provided |\\n| Publish Date & Time | N/A – not supplied in transcript |\\n| Duration | N/A – duration unknown |\\n| Content Domain | News / Politics (focus on Belarusian security & political repression) |\\n\\n#### 2.2 Engagement & Virality Metrics\\n\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age / upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\n\\nBased on the transcript’s heavy emphasis on repression, arrests, and economic decline, the likely audience sentiment is **negative / critical** toward the regime, with heightened concern about safety and political freedom. Emotional tone leans toward alarm and urgency.\",\n      \"metadata\": {\n        \"wordCount\": 191,\n        \"keyTerms\": [\"title\",\"creator\",\"channel\",\"engagement\",\"authority\",\"sentiment\"],\n        \"confidence\": 0.85\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\nThe speaker adopts a serious, urgent tone, alternating between factual reporting and emotive commentary. Energy spikes during calls to action (“прасі паставіць лайк”) and when describing arrests of children, conveying anxiety and outrage. Overall confidence is moderate; occasional sarcasm (“…матылі”) adds a critical edge.\\n\\n#### 4.2 Persuasion Strategy\\n- **Primary mode:** Emotional appeal (children arrests, “масавыя затрыманні”) combined with logical evidence (economic loss figures, policy statements).\\n- **Rhetorical techniques:** Repetition of “запуск”, use of direct quotes from officials, juxtaposition of official rhetoric vs on‑ground consequences, and occasional sarcasm to undermine authority.\\n- **Hook architecture:** Opens with a headline‑style claim (“Хапун пад Расонамі!”) to capture attention, then layers contextual data.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- **Promotional vs educational:** Predominantly educational/ investigative; no product promotion detected.\\n- **Conflicts of interest:** None explicit; the presenter aligns with opposition viewpoints.\\n- **Biases:** Strong anti‑regime bias, selection bias toward negative events, possible confirmation bias by emphasizing sources that support the narrative of repression.\",\n      \"metadata\": {\n        \"wordCount\": 176,\n        \"keyTerms\": [\"tone\",\"persuasion\",\"bias\",\"emotional\",\"logical\"],\n        \"confidence\": 0.88\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n\\n| Dimension | Official Government Narrative | Independent Analyst (Statkevich) | International Media |\\n|---|---|---|---|\\n| Performance metric (perceived stability) | High (claims of order) | Low (high arrests, economic loss) | Mixed (reports of unrest) |\\n| Cost / investment | State resources for security | No explicit cost, but highlights losses | Not applicable |\\n| Risk level | Low (official stance) | High (social unrest, economic decline) | High (regional instability) |\\n| Best for | Regime legitimacy | Opposition strategy | Global audience seeking balanced view |\\n\\n#### 6.2 Scenario Analysis\\n**Base case:** Continued repression, limited economic reform; Belarus remains a peripheral front with sporadic cross‑border incidents.\\n**Optimistic case:** International pressure leads to modest policy concessions, reduced arrests, and gradual economic stabilization.\\n**Pessimistic case:** Escalation of Russian‑backed military activity, widespread crackdowns, and severe economic contraction, potentially triggering refugee flows.\\n\\nAssumptions are drawn from the transcript’s references to arrests, economic figures, and geopolitical tensions.\",\n      \"metadata\": {\n        \"wordCount\": 179,\n        \"keyTerms\": [\"comparison\",\"scenario\",\"risk\",\"performance\",\"optimistic\"],\n        \"confidence\": 0.87\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 24340,
+        "completion_tokens": 2789,
+        "total_tokens": 27129,
+        "cost": 0.01061075,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 7552,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.01061075,
+          "upstream_inference_prompt_cost": 0.008519,
+          "upstream_inference_completions_cost": 0.00209175
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1691,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "sw22FMB_SWI",
+      "lang": "he",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"**2.1 Header Intelligence**\\n| Field | Value |\\n|---|---|\\n| Title | האלוף עוזי דיין |\\n| Creator / Presenter | אלוף עוזי דיין |\\n| Channel | [Insufficient data in source transcript to fulfill this dimension] |\\n| Publish Date & Time | [Insufficient data in source transcript to fulfill this dimension] |\\n| Duration | Unknown |\\n| Content Domain | Geopolitics / Middle East Conflict |\\n\\n**2.2 Engagement & Virality Metrics**\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n**2.3 Channel Authority Assessment**\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n**2.4 Audience Sentiment Prediction**\\nBased on the speaker’s language, the audience is likely to feel heightened concern about Iranian aggression, supportive of a strong Israeli/US response, and skeptical of diplomatic “understandings.” Sentiment is predominantly negative toward Iran and cautiously optimistic about US strategic options, with a strong nationalist undertone.\",\n      \"metadata\": {\n        \"wordCount\": 254,\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"**4.1 Sentiment & Tonal Profile**\\nThe speaker adopts a confrontational, urgent tone, alternating between analytical exposition and rhetorical exhortation. Energy spikes when describing Iranian actions and drops when urging strategic patience. Confidence is high, with frequent assertive statements (“we will succeed,” “they will continue”). Emotional charge leans toward anger and resolve.\\n\\n**4.2 Persuasion Strategy**\\nPrimary mode: Authority combined with logical argumentation. The speaker leverages his former position (אלוף, former deputy chief of staff) to establish credibility, then presents a series of cause‑effect claims about Iranian motives and US responses. Rhetorical techniques include repetition (“they will continue”), contrast (“good vs. bad agreements”), and appeals to national survival.\\n\\n**4.3 Bias Detection & Critical Assessment**\\n- Promotional vs. educational: Predominantly persuasive, aiming to rally support for a hardline stance rather than provide balanced analysis.\\n- Conflict of interest: The speaker is a former senior military official, which may bias toward militaristic solutions.\\n- Recency bias: Emphasis on recent US political cycles (Trump, upcoming elections) shapes the narrative.\\n- Confirmation bias: Selective citation of Iranian aggression without equal focus on US provocations.\\n- Overall bias: Pro‑Israeli, anti‑Iranian, favoring strategic escalation over diplomatic compromise.\",\n      \"metadata\": {\n        \"wordCount\": 226,\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"**6.1 Comparison Tables**\\n| Dimension | Iran Strategy | US Strategy |\\n|---|---|---|\\n| Motivation | Preserve regime survival, expand regional influence | Maintain global order, protect allies, domestic political considerations |\\n| Tactics | Proxy support (Hezbollah, militias), asymmetric attacks, diplomatic “understandings” | Economic sanctions, military posturing, selective engagement, diplomatic negotiations |\\n| Risk Tolerance | High – accepts civilian casualties, long‑term attrition | Moderate – balances escalation with political fallout |\\n| Desired Outcome | Regional dominance, deterrence against US actions | Containment of Iranian influence, stability of allies |\\n\\n**6.2 Scenario Analysis**\\n- **Base Case**: Continued low‑intensity exchanges; US maintains current pressure, Iran sustains proxy activities. Conflict remains localized with periodic spikes.\\n- **Optimistic**: US negotiates a durable framework that limits Iranian proxy actions, leading to reduced hostilities and economic relief for the region.\\n- **Pessimistic**: Escalation to direct US‑Iran confrontation, triggering broader regional war, heightened civilian casualties, and global oil market disruption.\\nEach scenario hinges on political will, external diplomatic pressure, and the willingness of regional actors to alter their alignments.\",\n      \"metadata\": {\n        \"wordCount\": 262,\n        \"confidence\": 0.9\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 13170,
+        "completion_tokens": 2784,
+        "total_tokens": 15954,
+        "cost": 0.0066975,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 12416,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0066975,
+          "upstream_inference_prompt_cost": 0.0046095,
+          "upstream_inference_completions_cost": 0.002088
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1694,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "9T8L73AidFY",
+      "lang": "ja",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"**2.1 Header Intelligence**\\n| Field | Value |\\n|---|---|\\n| Title | 【保守×革新から新旧へ】変容？日本の「対立軸」の現在地 先﨑彰容×藤田和也 2026/7/30放送＜後編＞【BSフジ プライムニュース】 |\\n| Creator / Presenter | 先﨑彰容, 藤田和也 |\\n| Channel | BSフジ プライムニュース |\\n| Publish Date & Time | 2026-07-30 00:00:00 UTC |\\n| Duration | Unknown |\\n| Content Domain | Politics / Security |\\n\\n**2.2 Engagement & Virality Metrics**\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n**2.3 Channel Authority Assessment**\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n**2.4 Audience Sentiment Prediction**\\n[Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 184,\n        \"keyTerms\": [\"title\",\"creator\",\"channel\",\"publish date\",\"duration\",\"content domain\",\"views\",\"likes\",\"comments\",\"engagement rate\",\"subscriber count\",\"channel age\",\"credibility score\"],\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"**4.1 Sentiment & Tonal Profile**\\nThe dialogue maintains a cautious, analytical tone, with speakers frequently qualifying statements (e.g., \\\"もし...なら\\\", \\\"可能...\\\", \\\"でも\\\"). Energy levels remain moderate, reflecting a round‑table discussion rather than emotive debate.\\n\\n**4.2 Persuasion Strategy**\\n- Primary mode: Logical/Authority – speakers cite official statements (小泉防衛大臣), historical references, and institutional roles.\\n- Rhetorical techniques: Question‑answer framing, appeal to national security, and contrast between conservative and reformist viewpoints.\\n- Hook architecture: Opening with a recent ministerial remark to anchor relevance.\\n\\n**4.3 Bias Detection & Critical Assessment**\\n- Potential bias toward pro‑defense perspectives, evident in repeated endorsement of discussing nuclear issues despite risks.\\n- Conflict of interest: Participants are policymakers (藤田, 先﨑) possibly defending institutional positions.\\n- Selection bias: Emphasis on nuclear and constitutional debates, less coverage of alternative security frameworks.\\n- No overt promotional content detected.\",\n      \"metadata\": {\n        \"wordCount\": 138,\n        \"keyTerms\": [\"sentiment\",\"tone\",\"persuasion\",\"logic\",\"authority\",\"bias\",\"conflict of interest\"],\n        \"confidence\": 0.85\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"**6.1 Comparison Tables**\\n| Position | Speaker | Main Argument | Timestamp |\\n|---|---|---|---|\\n| Pro‑discussion of nuclear policy | 小泉防衛大臣 (referenced) | Nuclear issue unavoidable, must be addressed. | N/A |\\n| Cautious endorsement of debate | 藤田和也 | Agrees with minister, stresses diplomatic nuance and need for strategic balance. | ~02:30 |\\n| Critical of superficial debate | 先﨑彰容 | Warns that careless statements can be exploited; advocates deeper strategic analysis. | ~04:15 |\\n\\n**6.2 Scenario Analysis**\\n- **Base case**: Japan continues limited public nuclear discourse, maintaining status‑quo defense posture.\\n- **Optimistic**: Constructive debate leads to clear policy roadmap, enhancing deterrence and alliance credibility.\\n- **Pessimistic**: Polarized debate stalls policy, increasing domestic uncertainty and external pressure.\\n- **Tail risk**: Unexpected regional escalation forces rapid nuclear armament decision, bypassing deliberative process.\",\n      \"metadata\": {\n        \"wordCount\": 152,\n        \"keyTerms\": [\"comparison\",\"positions\",\"nuclear policy\",\"scenario\",\"base case\",\"optimistic\",\"pessimistic\",\"tail risk\"],\n        \"confidence\": 0.85\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 20584,
+        "completion_tokens": 2985,
+        "total_tokens": 23569,
+        "cost": 0.00944315,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 19840,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00944315,
+          "upstream_inference_prompt_cost": 0.0072044,
+          "upstream_inference_completions_cost": 0.00223875
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1869,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "LTNVA2iP9YU",
+      "lang": "de",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n| Field | Value |\\n|---|---|\\n| Title | Unions‑Fraktionschef Frei sieht \\\"keinen Autoritätsverlust\\\" bei Bundeskanzler Merz | Was nun? |\\n| Creator / Presenter | Thorsten Frei (CDU) – interviewed by ZDFheute Nachrichten |\\n| Channel | ZDFheute Nachrichten |\\n| Publish Date & Time | 2026-07-29 00:00:00 UTC |\\n| Duration | Unknown |\\n| Content Domain | Politics / German Federal Politics |\\n\\n#### 2.2 Engagement & Virality Metrics\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\nBased on the interview tone, the audience is likely to perceive a **mixed sentiment**: confidence in the new Fraktionsvorsitzender’s mandate, concern over recent political turbulence, and cautious optimism about upcoming reforms. The transcript reflects both hopeful statements (“ich bin zuversichtlich…”) and acknowledgment of challenges (“große Herausforderungen”, “Unmut war gewaltig”).\",\n      \"metadata\": {\n        \"wordCount\": 221,\n        \"keyTerms\": [\"Thorsten Frei\", \"ZDFheute Nachrichten\", \"Bundeskanzler Merz\", \"CDU\", \"Fraktionsvorsitzender\"],\n        \"confidence\": 0.92\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\n- **Dominant tone**: measured optimism mixed with urgency.\\n- **Emotional trajectory**: starts with relief, moves to constructive criticism, ends with confident resolve.\\n- **Confidence level**: high when discussing internal party cohesion; moderate when addressing external challenges.\\n- **Energy shifts**: noticeable spikes when referencing “große Reformen” and “Sicherheitspolitik”.\\n\\n#### 4.2 Persuasion Strategy\\n- **Primary mode**: Authority & Logical reasoning – Frei repeatedly cites his position, election result (91.9 %), and institutional responsibilities.\\n- **Rhetorical techniques**: Repetition of “ich hoffe”, contrast between past turbulence and future stability, and appeal to collective responsibility (“wir müssen…”).\\n- **Hook architecture**: Opens with election result, then frames upcoming challenges as a call to action.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- **Promotional vs. educational**: Predominantly informational; no product promotion.\\n- **Potential bias**: Party‑centric bias – statements favor CDU/CSU perspective, downplay opposition criticism.\\n- **Conflict of interest**: None evident beyond political affiliation.\\n- **Selection bias**: Focuses on internal party dynamics, less on external opposition viewpoints.\\n- **Recency bias**: Emphasis on recent cabinet reshuffle and security incidents suggests a temporal focus on current events.\",\n      \"metadata\": {\n        \"wordCount\": 207,\n        \"keyTerms\": [\"optimism\", \"authority\", \"bias\", \"CDU\", \"political rhetoric\"],\n        \"confidence\": 0.94\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n| Dimension | CDU/CSU Position | SPD Position | Observations |\\n|---|---|---|---|\\n| Tax Reform | No tax increase (maintain current rates) | Pushes for more concessions | CDU emphasizes fiscal restraint while SPD seeks flexibility |\\n| Labor Market | Strong enforcement of existing rules (e.g., Kündigungsschutz) | Calls for softer measures | Contrast in approach to worker protections |\\n| Security Policy | Supports stricter preventive measures (e.g., Präventivhaft) | Emphasizes civil liberties | Divergent balance between security and rights |\\n\\n*Note: The transcript provides only CDU/CSU statements; SPD positions are inferred from interview references and thus marked as limited.*\\n\\n#### 6.2 Scenario Analysis\\n| Scenario | Base Case Assumptions | Optimistic Outcome | Pessimistic Outcome |\\n|---|---|---|---|\\n| Legislative Success | Cohesive Fraktion, moderate opposition | Rapid reform passage, improved economic indicators | Stalled reforms, increased public discontent |\\n| Security Measures | Effective preventive legislation | Reduced terrorist incidents, higher public safety perception | Over‑reach leading to civil liberty concerns, political backlash |\\n| Coalition Dynamics | Constructive dialogue with SPD | Strong bipartisan policies, stable government | Persistent deadlock, risk of early elections |\\n\\n*All scenarios are derived from the interview content; quantitative probabilities are not provided due to insufficient explicit data.*\",\n      \"metadata\": {\n        \"wordCount\": 254,\n        \"keyTerms\": [\"Tax Reform\", \"Labor Market\", \"Security Policy\", \"Scenario Analysis\"],\n        \"confidence\": 0.88\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 13389,
+        "completion_tokens": 1697,
+        "total_tokens": 15086,
+        "cost": 0.0059589,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 12544,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0059589,
+          "upstream_inference_prompt_cost": 0.00468615,
+          "upstream_inference_completions_cost": 0.00127275
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 428,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "gCU0n6H_MXo",
+      "lang": "fr",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n| Field | Value |\\n|---|---|\\n| Title | French Talks avec @FrenchmorningswithElisa – On a parlé de routines, régularité et progrès… |\\n| Creator / Presenter | Host (French Talks) and guest Elisa (French Mornings with Elisa) |\\n| Channel | Apprendre le French |\\n| Publish Date & Time | 2026-04-19 00:00:00 UTC |\\n| Duration | Unknown |\\n| Content Domain | Language Learning / Education |\\n\\n#### 2.2 Engagement & Virality Metrics\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1–10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\n- Predicted sentiment: [Insufficient data in source transcript to fulfill this dimension]\\n- Discussion quality: [Insufficient data in source transcript to fulfill this dimension]\\n- Community response signals: [Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 214,\n        \"keyTerms\": [\"French Talks\", \"Elisa\", \"language learning\", \"routine\"],\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\n- Dominant tone: Conversational, supportive, and motivational.\\n- Emotional trajectory: Starts upbeat, moves through reflective storytelling, and ends with encouraging calls to action.\\n- Confidence level: High throughout; speaker displays genuine enthusiasm.\\n- Energy shifts: Slight dip when discussing challenges, rises when offering practical tips.\\n\\n#### 4.2 Persuasion Strategy\\n- Primary mode: Authority combined with personal narrative (speaker shares own learning journey and teaching experience).\\n- Rhetorical techniques: Storytelling, social proof (mention of thousands of learners), scarcity (limited‑time launch), and reciprocity (free PDF offer).\\n- Hook architecture: Opening with a personal invitation, followed by credibility establishment, then problem‑solution framing around routine building.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- Promotional bias: Frequent mentions of Elisa’s own program and free resources, positioning them as solutions.\\n- Selection bias: Emphasis on intermediate‑advanced learners, downplaying beginner needs.\\n- Confirmation bias: Reiterates the belief that daily immersion is essential without presenting counter‑examples.\\n- Conflict of interest: Both hosts are content creators in the French‑learning niche, potentially influencing recommendations.\",\n      \"metadata\": {\n        \"wordCount\": 197,\n        \"keyTerms\": [\"tone\", \"persuasion\", \"bias\", \"motivation\"],\n        \"confidence\": 0.92\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n| Dimension | Daily Immersion (e.g., listening to podcasts) | Weekly Tutoring Sessions | Shadowing Technique |\\n|---|---|---|---|\\n| Performance metric | Improves listening comprehension gradually (qualitative) | Faster speaking confidence gains (qualitative) | Pronunciation accuracy improves (qualitative) |\\n| Time investment | 10‑20 min per day | 1 hour per week + self‑study | 15‑30 min per session, multiple times a week |\\n| Risk level | Low (habit formation) | Medium (dependency on tutor) | Medium (possible frustration without guidance) |\\n| Best for | Learners seeking consistent exposure | Learners needing structured feedback | Learners focusing on pronunciation |\\n\\n#### 6.2 Scenario Analysis\\n- **Base case**: Learner adopts a mixed routine (daily short immersion + weekly tutoring). Expected outcome: steady progress, balanced skill development.\\n- **Optimistic case**: Learner adds shadowing and integrates French into device settings, leading to accelerated fluency within 6 months.\\n- **Pessimistic case**: Learner relies solely on weekly tutoring, causing plateaus and possible regression during gaps.\\n- **Tail risk**: Over‑reliance on a single method (e.g., only shadowing) may lead to neglect of other competencies such as writing or grammar.\\n- **Key assumptions**: Learner has at least 30 min of free time daily and access to French media; motivation remains moderate to high.\",\n      \"metadata\": {\n        \"wordCount\": 221,\n        \"keyTerms\": [\"comparison\", \"scenario\", \"daily immersion\", \"shadowing\"],\n        \"confidence\": 0.88\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 17107,
+        "completion_tokens": 2283,
+        "total_tokens": 19390,
+        "cost": 0.0076997,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 16256,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0076997,
+          "upstream_inference_prompt_cost": 0.00598745,
+          "upstream_inference_completions_cost": 0.00171225
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1087,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "ctR1jrI42uc",
+      "lang": "zh",
+      "dims": [
+        2,
+        4,
+        6
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 2,\n      \"name\": \"Provenance, Metadata & Virality Profile\",\n      \"content\": \"#### 2.1 Header Intelligence\\n| Field | Value |\\n|---|---|\\n| Title | Chinese Podcast \\\\| Speak Chinese Better: What Pro Teachers Do & Practice Tips (CC SUB) |\\n| Creator / Presenter | Chloe Chinese Class – hosts 雯 and 丽蓉 (both >10 years teaching experience) |\\n| Channel | Chloe Chinese Class (URL not provided) |\\n| Publish Date & Time | 2026-01-19 (time not specified) |\\n| Duration | [Insufficient data in source transcript to fulfill this dimension] |\\n| Content Domain | Language Education / Chinese Learning |\\n\\n#### 2.2 Engagement & Virality Metrics\\n| Metric | Value |\\n|---|---|\\n| Views | [Insufficient data in source transcript to fulfill this dimension] |\\n| Likes | [Insufficient data in source transcript to fulfill this dimension] |\\n| Comments | [Insufficient data in source transcript to fulfill this dimension] |\\n| Engagement Rate | [Insufficient data in source transcript to fulfill this dimension] |\\n\\n#### 2.3 Channel Authority Assessment\\n- Subscriber count: [Insufficient data in source transcript to fulfill this dimension]\\n- Channel age: [Insufficient data in source transcript to fulfill this dimension]\\n- Upload cadence: [Insufficient data in source transcript to fulfill this dimension]\\n- Credibility score (1‑10): [Insufficient data in source transcript to fulfill this dimension]\\n\\n#### 2.4 Audience Sentiment Prediction\\n- Predicted sentiment breakdown: [Insufficient data in source transcript to fulfill this dimension]\\n- Discussion quality: [Insufficient data in source transcript to fulfill this dimension]\\n- Community response signals: [Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 182,\n        \"keyTerms\": [\"Chinese Podcast\", \"language education\", \"metadata\", \"engagement\", \"channel authority\"],\n        \"confidence\": 0.92\n      }\n    },\n    {\n      \"number\": 4,\n      \"name\": \"Psychological & Rhetorical Layer\",\n      \"content\": \"#### 4.1 Sentiment & Tonal Profile\\n- **Dominant tone**: Encouraging, supportive, conversational.\\n- **Emotional trajectory**: Starts with friendly greeting, moves through empathy (recognizing student anxiety), then motivational uplift (“open your mouth”), ending with hopeful call‑to‑action.\\n- **Confidence level**: High – speakers cite >10 years teaching experience.\\n- **Energy shifts**: Slight rise when sharing anecdotes, steady during instructional sections.\\n\\n#### 4.2 Persuasion Strategy\\n- **Primary mode**: Authority combined with storytelling. The hosts leverage their teaching credentials and personal anecdotes to build credibility.\\n- **Rhetorical techniques**: Repetition of the core mantra (“open your mouth”), contrast (students who speak vs. those who stay silent), and analogies (language learning as building a house).\\n- **Hook architecture**: Opening question about why students hesitate, followed by promise of a simple solution.\\n\\n#### 4.3 Bias Detection & Critical Assessment\\n- **Promotional vs. educational ratio**: Predominantly educational; no overt product placement detected.\\n- **Conflicts of interest**: None explicit; the speakers are independent teachers.\\n- **Biases**: Slight **confirmation bias** – emphasis on speaking practice may underplay other language skills (reading, listening). **Recency bias** appears when they reference recent personal experiences rather than broader research.\",\n      \"metadata\": {\n        \"wordCount\": 197,\n        \"keyTerms\": [\"tone\", \"persuasion\", \"bias\", \"authority\", \"storytelling\"],\n        \"confidence\": 0.94\n      }\n    },\n    {\n      \"number\": 6,\n      \"name\": \"Comparative & Quantitative Analysis\",\n      \"content\": \"#### 6.1 Comparison Tables\\n| **Teaching Method** | **Core Principle** | **Typical Use‑Case** | **Pros** | **Cons** |\\n|---|---|---|---|---|\\n| **Open‑Mouth Practice** | Speak as much as possible | Beginner to intermediate learners | Builds confidence, rapid fluency gains | May produce many errors, can be intimidating |\\n| **Full‑Sentence Drill** | Respond with complete sentences | Classroom settings, language partners | Reinforces grammar, improves syntax | Time‑consuming, requires teacher guidance |\\n| **Pronunciation Focus** | Isolate and correct tones/pinyin | Advanced learners with accent issues | Improves intelligibility | Over‑correction can lower confidence |\\n| **Contextual Vocabulary Use** | Embed new words in personal stories | Learners aiming for retention | Enhances memory, natural usage | Requires creativity, may stray off‑topic |\\n\\n#### 6.2 Scenario Analysis\\n- **Base Case**: Learners adopt a balanced mix of the four methods. Expected outcome – steady improvement in speaking confidence and accuracy over 3‑6 months.\\n- **Optimistic Case**: Learners heavily prioritize “Open‑Mouth Practice” while receiving regular corrective feedback. Outcome – rapid fluency boost, but risk of fossilized errors if feedback is insufficient.\\n- **Pessimistic Case**: Learners focus solely on pronunciation drills without ample speaking time. Outcome – clear articulation but limited conversational ability; possible stagnation.\\n- **Tail‑Risk**: Over‑emphasis on any single method leads to learner burnout or loss of motivation, especially for introverted students.\\n\\n**Key Insight**: The transcript stresses the importance of varied practice; a diversified approach mitigates the tail‑risk identified.\",\n      \"metadata\": {\n        \"wordCount\": 215,\n        \"keyTerms\": [\"teaching method\", \"comparison\", \"scenario analysis\", \"language practice\", \"risk\"],\n        \"confidence\": 0.93\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14317,
+        "completion_tokens": 1910,
+        "total_tokens": 16227,
+        "cost": 0.00644345,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 7552,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00644345,
+          "upstream_inference_prompt_cost": 0.00501095,
+          "upstream_inference_completions_cost": 0.0014325
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 602,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  ]
+}

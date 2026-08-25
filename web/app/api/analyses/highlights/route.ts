@@ -20,9 +20,6 @@ type HighlightRow = {
  * GET /api/analyses/highlights?analysisId=... — request-scoped client, so
  * RLS (owner-only select policy on analysis_highlights) does the ownership
  * check rather than a manual verifyOwnership call.
- *
- * Streams the JSON response per Law #3 (all analytical route handlers MUST
- * stream to extend connection lifetime).
  */
 export async function GET(request: NextRequest) {
   const parsed = z.object({ analysisId: z.string().uuid() }).safeParse({
@@ -54,7 +51,7 @@ export async function GET(request: NextRequest) {
     HIGHLIGHTS_REGISTRY_FALLBACK
   );
 
-  const body = JSON.stringify({
+  const payload = {
     highlights: (data ?? []).map((row: HighlightRow) => ({
       idx: row.idx,
       start: row.start_seconds,
@@ -67,20 +64,7 @@ export async function GET(request: NextRequest) {
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
     minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
     maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
-  });
+  };
 
-  const encoder = new TextEncoder();
-  let hasSettled = false;
-
-  const stream = new ReadableStream({
-    start(controller) {
-      if (!hasSettled) {
-        hasSettled = true;
-        controller.enqueue(encoder.encode(body));
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, { headers: { 'Content-Type': 'application/json' } });
+  return NextResponse.json(payload);
 }

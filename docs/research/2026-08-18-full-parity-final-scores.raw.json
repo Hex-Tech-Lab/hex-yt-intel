@@ -1,0 +1,417 @@
+{
+  "harness": "docs/research/parity-test-harness/judge.ts",
+  "judge_prompt_version": "1.0.0",
+  "run_at": "2026-08-18T13:27:33.626Z",
+  "total_judge_calls": 40,
+  "missing": [],
+  "results": {
+    "b110": {
+      "ja": {
+        "structural_completeness": 100,
+        "factual_coverage": 62,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "9T8L73AidFY"
+      },
+      "fr": {
+        "structural_completeness": 83,
+        "factual_coverage": 62,
+        "missing_subsections": [
+          "D10: 10.2 Domain-Specific Risk Disclosures"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "gCU0n6H_MXo"
+      },
+      "ar": {
+        "structural_completeness": 100,
+        "factual_coverage": 25,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "vEC6e5dBi4Y"
+      },
+      "he": {
+        "structural_completeness": 100,
+        "factual_coverage": 65,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "sw22FMB_SWI"
+      },
+      "be": {
+        "structural_completeness": 100,
+        "factual_coverage": 45,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "wcgvQs_9Yx8"
+      },
+      "zh": {
+        "structural_completeness": 100,
+        "factual_coverage": 78,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "ctR1jrI42uc"
+      },
+      "en": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "FfdOoDB_fbE"
+      },
+      "de": {
+        "structural_completeness": 83,
+        "factual_coverage": 62,
+        "missing_subsections": [
+          "D10: 10.2 Domain-Specific Risk Disclosures"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "LTNVA2iP9YU"
+      }
+    },
+    "b8": {
+      "be": {
+        "structural_completeness": 100,
+        "factual_coverage": 65,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "wcgvQs_9Yx8"
+      },
+      "de": {
+        "structural_completeness": 100,
+        "factual_coverage": 62,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "LTNVA2iP9YU"
+      },
+      "en": {
+        "structural_completeness": 100,
+        "factual_coverage": 62,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "FfdOoDB_fbE"
+      },
+      "ja": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "9T8L73AidFY"
+      },
+      "zh": {
+        "structural_completeness": 100,
+        "factual_coverage": 45,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "ctR1jrI42uc"
+      },
+      "ar": {
+        "structural_completeness": 100,
+        "factual_coverage": 35,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "vEC6e5dBi4Y"
+      },
+      "fr": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "gCU0n6H_MXo"
+      },
+      "he": {
+        "structural_completeness": 100,
+        "factual_coverage": 35,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "sw22FMB_SWI"
+      }
+    },
+    "b246": {
+      "he": {
+        "structural_completeness": 56,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "sw22FMB_SWI"
+      },
+      "ja": {
+        "structural_completeness": 56,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "9T8L73AidFY"
+      },
+      "de": {
+        "structural_completeness": 56,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "LTNVA2iP9YU"
+      },
+      "ar": {
+        "structural_completeness": 56,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.1 Header Intelligence",
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D4: 4.1 Sentiment & Tonal Profile",
+          "D4: 4.2 Persuasion Strategy",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "vEC6e5dBi4Y"
+      },
+      "fr": {
+        "structural_completeness": 44,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "gCU0n6H_MXo"
+      },
+      "en": {
+        "structural_completeness": 100,
+        "factual_coverage": 75,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "FfdOoDB_fbE"
+      },
+      "zh": {
+        "structural_completeness": 56,
+        "factual_coverage": 45,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D6: 6.1 Comparison Tables",
+          "D6: 6.2 Scenario Analysis"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "ctR1jrI42uc"
+      },
+      "be": {
+        "structural_completeness": 56,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D2: 2.3 Channel Authority Assessment",
+          "D2: 2.4 Audience Sentiment Prediction",
+          "D6: 6.1 Comparison Tables"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "wcgvQs_9Yx8"
+      }
+    },
+    "b57": {
+      "he": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "sw22FMB_SWI"
+      },
+      "fr": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "gCU0n6H_MXo"
+      },
+      "de": {
+        "structural_completeness": 60,
+        "factual_coverage": 45,
+        "missing_subsections": [
+          "D5: 5.1 Priority Insights Matrix",
+          "D7: 7.1 Implementation Systems"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "LTNVA2iP9YU"
+      },
+      "en": {
+        "structural_completeness": 100,
+        "factual_coverage": 78,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "FfdOoDB_fbE"
+      },
+      "ar": {
+        "structural_completeness": 100,
+        "factual_coverage": 5,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "vEC6e5dBi4Y"
+      },
+      "ja": {
+        "structural_completeness": 40,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D7: 7.1 Implementation Systems",
+          "D7: 7.2 Execution Sequencing & Dependencies"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "9T8L73AidFY"
+      },
+      "zh": {
+        "structural_completeness": 100,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "ctR1jrI42uc"
+      },
+      "be": {
+        "structural_completeness": 100,
+        "factual_coverage": 35,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "wcgvQs_9Yx8"
+      }
+    },
+    "b3911": {
+      "zh": {
+        "structural_completeness": 93,
+        "factual_coverage": 82,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "ctR1jrI42uc"
+      },
+      "fr": {
+        "structural_completeness": 87,
+        "factual_coverage": 72,
+        "missing_subsections": [
+          "D3: 3.3 Temporal Content Map & Arc Analysis",
+          "D9: 9.5 Contrarian Perspectives",
+          "D11: 11.2 Sponsorship & Brand Partnership CPM"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "gCU0n6H_MXo"
+      },
+      "de": {
+        "structural_completeness": 73,
+        "factual_coverage": 35,
+        "missing_subsections": [
+          "D3: 3.2 First Principles Deconstruction",
+          "D9: 9.4 Unfair Advantages (persona-keyed)",
+          "D11: 11.1 AdSense RPM & Display Revenue Potential",
+          "D11: 11.2 Sponsorship & Brand Partnership CPM",
+          "D11: 11.3 Lead Generation & Service Monetization Value"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "LTNVA2iP9YU"
+      },
+      "ja": {
+        "structural_completeness": 73,
+        "factual_coverage": 62,
+        "missing_subsections": [
+          "D3: 3.2 First Principles Deconstruction",
+          "D9: 9.4 Unfair Advantages (persona-keyed)",
+          "D9: 9.5 Contrarian Perspectives",
+          "D11: 11.1 AdSense RPM & Display Revenue Potential",
+          "D11: 11.2 Sponsorship & Brand Partnership CPM"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "9T8L73AidFY"
+      },
+      "he": {
+        "structural_completeness": 93,
+        "factual_coverage": 72,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "sw22FMB_SWI"
+      },
+      "en": {
+        "structural_completeness": 87,
+        "factual_coverage": 72,
+        "missing_subsections": [
+          "D3: 3.2 First Principles Deconstruction",
+          "D9: 9.2 Identified Gaps",
+          "D11: 11.1 AdSense RPM & Display Revenue Potential"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "FfdOoDB_fbE"
+      },
+      "ar": {
+        "structural_completeness": 47,
+        "factual_coverage": 15,
+        "missing_subsections": [
+          "D3: 3.1 Executive Overview",
+          "D3: 3.2 First Principles Deconstruction",
+          "D3: 3.3 Temporal Content Map & Arc Analysis",
+          "D9: 9.1 Trend Projections",
+          "D9: 9.3 Unconventional Tangents & Cross-Domain Applications",
+          "D9: 9.5 Contrarian Perspectives",
+          "D11: 11.1 AdSense RPM & Display Revenue Potential",
+          "D11: 11.2 Sponsorship & Brand Partnership CPM",
+          "D11: 11.3 Lead Generation & Service Monetization Value",
+          "D11: 11.4 Affiliate & E-Commerce Monetization",
+          "D11: 11.6 Monetization Risk & Sustainability Assessment"
+        ],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "vEC6e5dBi4Y"
+      },
+      "be": {
+        "structural_completeness": 93,
+        "factual_coverage": 85,
+        "missing_subsections": [],
+        "judge_prompt_version": "1.0.0",
+        "judge_model": "anthropic/claude-haiku-4.5",
+        "video_id": "wcgvQs_9Yx8"
+      }
+    }
+  }
+}

@@ -1,0 +1,272 @@
+{
+  "dims": [
+    5,
+    7
+  ],
+  "results": [
+    {
+      "video_id": "FfdOoDB_fbE",
+      "lang": "en",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"### 5.1 Priority Insights Matrix\\n\\n**Tier 1 – Breakthrough Insights**\\n\\n1. **Hidden Shopify Data Access** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Zik Analytics reveals sales numbers, revenue, apps, and ad channels that Shopify does not publicly share, enabling direct replication of winning strategies.\\n   - *Why this matters (Creator)*: Eliminates guesswork, accelerates product selection and marketing decisions.\\n   - *Evidence quality*: Strong – tool demonstration in video.\\n   - *Lens applied*: First Principles, Systems Thinking.\\n\\n2. **Margin Reveal via Item Finder** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: The tool matches store products to AliExpress listings, showing cost‑vs‑price (e.g., $12.92 cost vs $42.50 price → ~70% margin).\\n   - *Why this matters (Creator)*: Provides a clear profitability benchmark for dropshipping.\\n   - *Evidence quality*: Strong – concrete numbers shown.\\n   - *Lens applied*: Bayesian Updating.\\n\\n**Tier 2 – High‑Value Tactical Knowledge**\\n\\n1. **Storefinder Niche Filtering** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Users can input niche keywords (e.g., \\\"pet\\\") and filter by store type (drop‑shipping, POD) to locate high‑performing stores.\\n   - *Why this matters (Creator)*: Rapidly builds a pipeline of competitor stores for analysis.\\n   - *Evidence quality*: Moderate – demonstrated with examples.\\n   - *Lens applied*: Diffusion of Innovation.\\n\\n2. **Social‑Media Content Replication** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Reviewing a store’s Instagram reveals reels with millions of views (e.g., 6.8 M), which can be emulated to drive traffic.\\n   - *Why this matters (Creator)*: Leverages proven viral formats to shortcut audience growth.\\n   - *Evidence quality*: Moderate – specific view count cited.\\n   - *Lens applied*: Game Theory.\\n\\n### 5.2 Power Quotes Library\\n\\n1. \\\"We're literally pulling your data so that you can understand what works, copy proven strategies, and skip the whole trial and error phase that slows most sellers down.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n2. \\\"This means that the seller is selling the exact product for $42.50 working with around a 70% margin before operational costs.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n3. \\\"You can build your store based entirely on performance data, like saving time, saving money, and growing faster than your competitors who are still testing blindly.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n\\n### 5.3 Referenced Entities\\n\\n- **Zik Analytics** – Tool providing Shopify store insights. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Shopify** – E‑commerce platform being analyzed. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **AliExpress** – Supplier marketplace used for product sourcing. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Instagram** – Social platform where high‑view reels are examined. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Meta** – Advertising platform identified as a paid‑ads channel. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Store: selena.com** – Single‑product store example (crossbody clutch wallet). `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Store: catcurio.com** – Drop‑shipping store with $25k+ revenue. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Store: noblepawrade.com** – POD store using a product‑personalizer app. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **App: Printful product personalizer** – POD app highlighted. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **App: ReConvert post‑purchase upsell** – Mentioned as a revenue‑boosting app. `[Insufficient data in source transcript to fulfill this dimension]`\"\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"### 7.1 Implementation Systems\\n\\n**System: Shopify Store Spy via Zik Sales Tracker**\\n- *Prerequisite*: Access to Zik Analytics; store URL.\\n- *Steps*:\\n  1. Copy the target Shopify store URL.\\n  2. Paste into Zik Sales Tracker and click **Search**.\\n  3. Review generated dashboard: revenue, sales count, apps, ad channels, social profiles.\\n- *Success metrics*: Retrieval of revenue > $0, identification of at least one top‑selling product.\\n- *Common pitfalls*: New stores may show \\\"not tracked yet\\\" – data will populate after first scan.\\n- *Troubleshooting*: Re‑run after a few hours if initial scan returns empty.\\n- *Risk factors & mitigation*: Over‑reliance on tool accuracy – cross‑verify with public data where possible.\\n\\n**System: Product Sourcing via Item Finder**\\n- *Prerequisite*: Identified product from spy data; Item Finder access.\\n- *Steps*:\\n  1. Click **Item Finder** next to the product in the dashboard.\\n  2. Review AliExpress matches; note cost, shipping, and price.\\n  3. Calculate margin (e.g., $42.50 – $12.92 = $29.58 profit).\\n- *Success metrics*: Margin ≥ 50% for selected product.\\n- *Common pitfalls*: Supplier price changes, hidden fees.\\n- *Troubleshooting*: Order a sample to verify quality and shipping time.\\n- *Risk factors & mitigation*: Supplier reliability – use vetted suppliers and monitor reviews.\\n\\n**System: Store Discovery with Storefinder**\\n- *Prerequisite*: Zik tool, niche keyword.\\n- *Steps*:\\n  1. Open **Storefinder**.\\n  2. Enter niche (e.g., \\\"pet\\\").\\n  3. Select store type filter (drop‑shipping, POD, etc.).\\n  4. Click **Search** and review listed stores.\\n- *Success metrics*: At least 3 stores with > $10k monthly revenue identified.\\n- *Common pitfalls*: Irrelevant results due to broad keywords.\\n- *Troubleshooting*: Refine keyword or adjust filters.\\n- *Risk factors & mitigation*: Data freshness – re‑run periodically (every 2 weeks).\\n\\n**System: Social‑Media Content Replication**\\n- *Prerequisite*: Store’s Instagram handle.\\n- *Steps*:\\n  1. Open Instagram profile.\\n  2. Locate high‑engagement reels (e.g., 6.8 M views).\\n  3. Analyze content theme, format, and call‑to‑action.\\n  4. Produce similar reels for own brand.\\n- *Success metrics*: Reel view count ≥ 10% of competitor’s top reel within 30 days.\\n- *Common pitfalls*: Platform algorithm shifts.\\n- *Troubleshooting*: Test multiple creative angles; monitor engagement.\\n- *Risk factors & mitigation*: Copyright concerns – create original assets.\\n\\n**System: POD App Analysis**\\n- *Prerequisite*: Access to store’s app list via Sales Tracker.\\n- *Steps*:\\n  1. Click **Store Apps** in the dashboard.\\n  2. Identify POD‑related app (e.g., Printful product personalizer).\\n  3. Visit app page, review features, pricing, and integration steps.\\n  4. Implement same app in own Shopify store.\\n- *Success metrics*: Successful app installation and first sale within 2 weeks.\\n- *Common pitfalls*: Incompatible theme or plan restrictions.\\n- *Troubleshooting*: Consult app support or switch to compatible theme.\\n- *Risk factors & mitigation*: App cost vs ROI – run a small pilot before full rollout.\\n\\n### 7.2 Execution Sequencing & Dependencies\\n\\n1. **Store Discovery (System 3)** – foundational; provides candidate stores.\\n2. **Shopify Store Spy (System 1)** – depends on a store URL from step 1.\\n3. **Product Sourcing (System 2)** – requires product data uncovered in step 2.\\n4. **POD App Analysis (System 5)** – optional parallel path if the target store is POD; uses app data from step 2.\\n5. **Social‑Media Content Replication (System 4)** – can run after step 2 (once social handles are known) or concurrently with step 3.\\n\\n**Dependency Flow**: 3 → 1 → (2 ↔ 5) → 4. Quick‑win actions are product sourcing and social‑media replication; long‑horizon actions include full app integration and ongoing store monitoring.\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 12428,
+        "completion_tokens": 3952,
+        "total_tokens": 16380,
+        "cost": 0.0073138,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 11648,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0073138,
+          "upstream_inference_prompt_cost": 0.0043498,
+          "upstream_inference_completions_cost": 0.002964
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1892,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "vEC6e5dBi4Y",
+      "lang": "ar",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"[Insufficient data in source transcript to fulfill this dimension]\"\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"[Insufficient data in source transcript to fulfill this dimension]\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 16762,
+        "completion_tokens": 859,
+        "total_tokens": 17621,
+        "cost": 0.00651095,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 16000,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00651095,
+          "upstream_inference_prompt_cost": 0.0058667,
+          "upstream_inference_completions_cost": 0.00064425
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 756,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "wcgvQs_9Yx8",
+      "lang": "be",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"**5.1 Priority Insights Matrix**\\n\\n**Tier 1 – Breakthrough Insights**\\n1. **Mass Arrests of 350 People (including children)** `N/A`\\n- **Explanation**: The transcript reports a coordinated detention of roughly 350 individuals, many of whom are children of opposition figure Sviatlana Tsikhanouskaya, indicating a sharp escalation in state repression.\\n- **Why this matters (Creator)**: Highlights a high‑risk news hook that can drive audience engagement and attract sponsorship from human‑rights focused brands.\\n- **Evidence quality**: Moderate – based on speaker’s citation of Belarusian police reports and activist testimony.\\n- **Lens applied**: Systems Thinking.\\n\\n2. **Doubling Losses at Barysaw Lamp Factory** `N/A`\\n- **Explanation**: Forced‑labor policies and outdated technology caused the plant’s annual losses to rise from 2 M to 4 M RUB, illustrating inefficiency of top‑down economic directives.\\n- **Why this matters (Creator)**: Provides a concrete case study for content about economic mismanagement, useful for explainer videos.\\n- **Evidence quality**: Strong – speaker cites specific financial figures.\\n- **Lens applied**: First Principles.\\n\\n3. **Potential Belarusian Front in Russian War Strategy** `N/A`\\n- **Explanation**: Mikola Statkevich warns that Russia may open a “Belarusian front” to divert Ukrainian forces, citing military analysts and intelligence briefings.\\n- **Why this matters (Creator)**: Offers a geopolitical angle that can differentiate the channel in the crowded war‑coverage niche.\\n- **Evidence quality**: Moderate – relies on expert opinion rather than open‑source verification.\\n- **Lens applied**: Game Theory.\\n\\n**5.2 Power Quotes Library**\\n1. \\\"Лукашэнка заявіў, што беларусаў трэба прывучаць да дысцыпліны.\\\" `N/A`\\n   - *Context*: Discussing labor discipline as a solution to economic woes.\\n   - *Application*: Can be used to illustrate authoritarian rhetoric.\\n2. \\\"Мікалай Статкевіч пра папярэджанне пра адкрыццё 'беларускага' фронту.\\\" `N/A`\\n   - *Context*: Geopolitical risk assessment.\\n   - *Application*: Sets up a narrative about possible escalation.\\n3. \\\"Паводле Белпол, берасцейскі электралямпавы працуе на расейскую армію.\\\" `N/A`\\n   - *Context*: Linking domestic industry to war effort.\\n   - *Application*: Highlights the war economy angle.\\n\\n**5.3 Referenced Entities**\\n- Mikola Statkevich – `N/A` – political analyst and former political prisoner.\\n- Svetlana Tsikhanouskaya – `N/A` – opposition leader whose children were mentioned.\\n- Alexander Zalevski – `N/A` – host of the program.\\n- Alexander Lukashenko – `N/A` – President of Belarus.\\n- Belarusian Police (Belpol) – `N/A` – law‑enforcement agency reporting arrests.\\n- NATO – `N/A` – referenced in context of airspace violations.\\n- Poland – `N/A` – mentioned regarding border incidents.\\n\",\n      \"metadata\": {\n        \"wordCount\": 268,\n        \"keyTerms\": [\"mass arrests\", \"lamp factory\", \"Belarusian front\", \"Mikola Statkevich\", \"Lukashenko\", \"forced labor\"],\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"[Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 13,\n        \"keyTerms\": [],\n        \"confidence\": 0.9\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 24262,
+        "completion_tokens": 1968,
+        "total_tokens": 26230,
+        "cost": 0.0099677,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 23552,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0099677,
+          "upstream_inference_prompt_cost": 0.0084917,
+          "upstream_inference_completions_cost": 0.001476
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1069,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "sw22FMB_SWI",
+      "lang": "he",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"### 5.1 Priority Insights Matrix\\n\\n**Tier 1 – Breakthrough Insights**\\n\\n1. **Iran’s Strategic Patience vs. U.S. Tactical Aggression**\\n   - **Timestamp**: [Insufficient data in source transcript to fulfill this dimension]\\n   - **Explanation**: Dayan argues Iran tolerates prolonged conflict, absorbing U.S. strikes without escalating to full‑scale war, because its existential survival outweighs immediate casualties.\\n   - **Why this matters (Creator)**: Highlights a long‑term content angle—producing analysis that frames Iran as a resilient adversary, appealing to audiences seeking deep geopolitical narratives.\\n   - **Evidence quality**: Moderate – based on speaker’s strategic assessment, no external data cited.\\n   - **Lens applied**: Systems Thinking\\n\\n2. **U.S. Preference for “Bad” Agreements Over War**\\n   - **Timestamp**: [Insufficient data in source transcript to fulfill this dimension]\\n   - **Explanation**: The speaker claims the United States often opts for imperfect memoranda of understanding rather than direct military confrontation, seeking “beneficial quiet” in the Middle East.\\n   - **Why this matters (Creator)**: Provides a contrarian hook for content creators to critique U.S. foreign‑policy pragmatism.\\n   - **Evidence quality**: Anecdotal – speaker’s interpretation of diplomatic behavior.\\n   - **Lens applied**: First Principles\\n\\n**Tier 2 – High‑Value Tactical Knowledge**\\n\\n1. **U.S. Military Footprint in the Middle East**\\n   - **Timestamp**: [Insufficient data in source transcript to fulfill this dimension]\\n   - **Explanation**: Dayan notes roughly 800 U.S. bases worldwide, many located in the Middle East, creating numerous targets for Iranian action.\\n   - **Why this matters (Creator)**: Supplies factual scaffolding for videos explaining regional power dynamics.\\n   - **Evidence quality**: Low – figure presented without source.\\n   - **Lens applied**: Causal Inference\\n\\n2. **Alternative Land Route for Oil to Haifa**\\n   - **Timestamp**: [Insufficient data in source transcript to fulfill this dimension]\\n   - **Explanation**: Proposes constructing a land corridor from India/China through Israel (via Haifa) to bypass maritime chokepoints vulnerable to Iranian strikes.\\n   - **Why this matters (Creator)**: Offers a concrete policy‑proposal segment that can be visualized with maps.\\n   - **Evidence quality**: Speculative – speaker’s suggestion.\\n   - **Lens applied**: Systems Thinking\\n\\n### 5.2 Power Quotes Library\\n\\n1. \\\"Iran will always absorb the blows because they do not care about attacking their own civilians.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n2. \\\"The United States prefers a bad agreement to a just war.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n3. \\\"We hold the ground, we keep the enemy at bay, and we can slowly chip away at their tunnels.\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n\\n### 5.3 Referenced Entities\\n\\n- **אלוף עוזי דיין** – former Deputy Chief of Staff, primary speaker. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **United States** – referenced as strategic actor with many overseas bases. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Iran** – central antagonist described as patient and resilient. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Lebanon, Hamas, Hezbollah** – mentioned as regional actors affected by the conflict. `[Insufficient data in source transcript to fulfill this dimension]`\\n- **India / China** – cited as potential partners for alternative oil routes. `[Insufficient data in source transcript to fulfill this dimension]`\"\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"### 7.1 Implementation Systems\\n\\n**System: Alternative Land Corridor for Oil shipments**\\n- **Source section**: Dayan’s proposal for a land route from India/China to Haifa.\\n- **Difficulty**: High – requires multinational infrastructure coordination.\\n- **Time investment**: Multi‑year planning and construction.\\n- **Prerequisite knowledge**: Geopolitical logistics, regional trade agreements.\\n- **Step‑by‑step implementation**:\\n  1. Conduct feasibility study of overland routes through Israel, Jordan, and Syria. – `[Insufficient data in source transcript to fulfill this dimension]`\\n  2. Secure bilateral agreements with India, China, and Israeli authorities. – `[Insufficient data in source transcript to fulfill this dimension]`\\n  3. Build or upgrade rail/road infrastructure to handle bulk oil transport. – `[Insufficient data in source transcript to fulfill this dimension]`\\n  4. Establish security protocols to protect the corridor from Iranian interference. – `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Success metrics**: Volume of oil delivered via land route (barrels/day), reduction in maritime incident reports.\\n- **Common pitfalls**: Political opposition, security breaches, funding shortfalls.\\n- **Troubleshooting guide**: If security incidents rise, reroute through alternative neighboring states; if funding stalls, seek private‑sector partnerships.\\n- **Risk factors & mitigation**: Geopolitical volatility – mitigate via diversified routing; infrastructure sabotage – mitigate with hardened facilities and rapid‑response units.\\n\\n**System: Enhanced Defensive Posture in Lebanon**\\n- **Source section**: Dayan’s discussion of holding ground and managing tunnels.\\n- **Difficulty**: Medium.\\n- **Time investment**: 6‑12 months for tactical adjustments.\\n- **Prerequisite knowledge**: Military engineering, tunnel detection technology.\\n- **Step‑by‑step implementation**:\\n  1. Deploy additional surveillance drones along the Lebanon‑Israel border. – `[Insufficient data in source transcript to fulfill this dimension]`\\n  2. Increase artillery and anti‑tank units in key foothold villages. – `[Insufficient data in source transcript to fulfill this dimension]`\\n  3. Conduct systematic tunnel‑clearing operations using specialized teams. – `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Success metrics**: Number of tunnels neutralized, reduction in cross‑border incidents.\\n- **Common pitfalls**: Civilian collateral damage, intelligence gaps.\\n- **Troubleshooting guide**: If civilian casualties rise, shift to precision‑guided munitions; if intel gaps persist, integrate local informant networks.\\n- **Risk factors & mitigation**: Escalation to full‑scale war – mitigate by maintaining open diplomatic channels.\\n\\n### 7.2 Execution Sequencing & Dependencies\\n\\n1. **Secure diplomatic groundwork** for the land corridor (prerequisite for System 1).  \\n2. **Upgrade surveillance and detection** in Lebanon (enables System 2).  \\n3. **Launch tunnel‑clearing operations** once detection assets are in place.  \\n4. **Begin feasibility and funding phases** for the land corridor after initial diplomatic agreements.  \\n5. **Iterate security protocols** for both systems concurrently, ensuring risk mitigation before full deployment.\\n\\n**Quick‑win vs. Long‑horizon**: System 2 (defensive posture) is a quick‑win (6‑12 months); System 1 (land corridor) is long‑horizon (multi‑year).\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 13092,
+        "completion_tokens": 2658,
+        "total_tokens": 15750,
+        "cost": 0.0065757,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 7552,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0065757,
+          "upstream_inference_prompt_cost": 0.0045822,
+          "upstream_inference_completions_cost": 0.0019935
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 963,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "9T8L73AidFY",
+      "lang": "ja",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"CORE INTELLIGENCE EXTRACTION\",\n      \"content\": \"### 5.1 Priority Insights Matrix\\n**Tier 1 – Breakthrough Insights**\\n1. **核保有議論の必要性と国防再考**\\n   - *Why this matters*: Highlights a strategic shift from reliance on US nuclear umbrella to autonomous deterrence, a gap for Japanese policymakers.\\n   - *Evidence quality*: Moderate – speaker cites Chinese missile stockpiles and domestic debate.\\n   - *Lens applied*: First Principles.\\n2. **憲法解釈が防衛政策実装を阻害**\\n   - *Why this matters*: Shows legal ambiguity as a lever that slows capability development, relevant for reform advocates.\\n   - *Evidence quality*: Strong – references historical interpretations and current legislative constraints.\\n   - *Lens applied*: Systems Thinking.\\n**Tier 2 – High‑Value Tactical Knowledge**\\n1. **議論の場を広げる必要性**\\n   - *How to apply*: Encourage public forums (TV, online) to surface nuclear policy options; anticipate pushback.\\n2. **日米防衛協定の再評価**\\n   - *How to apply*: Analyze treaty clauses (e.g., Article 5) to identify leverage points for Japan‑led initiatives.\\n\\n### 5.2 Power Quotes Library\\n1. \\\"核の議論も多分なくやってくのが必要なんかなと思います。\\\" – (Speaker, discussion on nuclear policy)\\n2. \\\"日本は社会であるためにも国家でなければならない。\\\" – (Speaker, on national identity and defense)\\n3. \\\"防衛省の任務は何なんだとで言われる時に…戦争を起こさないことと平和を守ること。\\\" – (Speaker, defining defense mission)\\n4. \\\"清水行太郎は核兵器を持つべきだと言ったが、リベラルから保守へ変化したわけではない。\\\" – (Speaker, on ideological shift)\\n\\n### 5.3 Referenced Entities\\n- **先崎彰容** – Co‑host, policy analyst.\\n- **藤田和也** – Co‑host, former defense official.\\n- **小泉防衛大臣** – Mentioned for nuclear comment.\\n- **桜井義子** – Host of the 17th‑day net program.\\n- **清水行太郎** – Historian/scholar cited for ideological analysis.\\n- **中国外務省** – Cited reacting to Japanese statements.\\n- **米軍** – Referenced regarding nuclear deployment.\\n- **日本自衛隊** – Discussed in context of constitutional limits.\\n- **日本政府** – Implicit authority on defense policy.\\n- **米国** – Mentioned as ally and nuclear umbrella provider.\\n\",\n      \"metadata\": {\n        \"wordCount\": 342,\n        \"keyTerms\": [\"核保有\", \"憲法解釈\", \"防衛政策\", \"日米協定\", \"国家アイデンティティ\"],\n        \"confidence\": 0.92\n      }\n    },\n    {\n      \"number\": 7,\n      \"name\": \"IMPLEMENTATION SYSTEMS & WORKFLOWS\",\n      \"content\": \"[Insufficient data in source transcript to fulfill this dimension]\",\n      \"metadata\": {\n        \"wordCount\": 17,\n        \"keyTerms\": [],\n        \"confidence\": 0.99\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 20506,
+        "completion_tokens": 1563,
+        "total_tokens": 22069,
+        "cost": 0.00834935,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 19840,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00834935,
+          "upstream_inference_prompt_cost": 0.0071771,
+          "upstream_inference_completions_cost": 0.00117225
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 752,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "LTNVA2iP9YU",
+      "lang": "de",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"#### 5.1 Priority Insights Matrix\\n\\n**Tier 1 – Breakthrough Insights**\\n\\n1. **No Authority Loss for Chancellor Merz** `[Insufficient data...]`\\n   - Explanation: Frei asserts he sees no loss of authority for Chancellor Merz despite internal party tensions.\\n   - Why this matters (Creator): Highlights a political stability signal that content creators covering German politics can leverage for timely analysis.\\n   - Evidence quality: Moderate (direct speaker statement).\\n   - Lens applied: First Principles.\\n\\n2. **Constructive Criticism as Party Strength** `[Insufficient data...]`\\n   - Explanation: Frei emphasizes that honest, critical debate within the Union faction is essential and not a sign of weakness.\\n   - Why this matters (Creator): Shows a communication strategy that can be modeled for audience engagement.\\n   - Evidence quality: Strong (speaker explicitly mentions).\\n   - Lens applied: Systems Thinking.\\n\\n3. **Economic Growth Stagnation Requires Reform** `[Insufficient data...]`\\n   - Explanation: Frei notes cumulative economic growth of 0.0% over seven years, urging reforms for competitiveness.\\n   - Why this matters (Creator): Provides a macro‑economic context for content focusing on German policy impacts.\\n   - Evidence quality: Strong (quantitative claim in interview).\\n   - Lens applied: Bayesian Updating.\\n\\n**Tier 2 – High‑Value Tactical Knowledge**\\n\\n1. **Maintain Close Contact with 207 Colleagues** `[Insufficient data...]`\\n   - Application: Regular one‑on‑one meetings to ensure cohesion.\\n2. **Fast Communication Within Faction** `[Insufficient data...]`\\n   - Application: Use rapid internal messaging to align positions before parliamentary votes.\\n\\n#### 5.2 Power Quotes Library\\n\\n1. **\\\"Ich freue mich vor allen Dingen über diesen Vertrauensbeweis.\\\"** `[Insufficient data...]`\\n   - Context: Expressing relief at election result.\\n   - Application: Illustrates confidence messaging.\\n2. **\\\"Wir müssen die Themen konzentrieren, denn mit Nabelschau ist noch niemand weitergekommen.\\\"** `[Insufficient data...]`\\n   - Context: Call for focus on reforms.\\n   - Application: Emphasizes strategic focus.\\n\\n#### 5.3 Referenced Entities\\n\\n- **Thorsten Frei** – CDU politician, newly elected Union faction chair. `[Insufficient data...]`\\n- **SPD** – Opposition party referenced in coalition talks. `[Insufficient data...]`\\n- **Bundeskanzler Merz** – Chancellor referenced. `[Insufficient data...]`\\n- **Jens Spahn** – Former predecessor, mentioned. `[Insufficient data...]`\"\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"#### 7.1 Implementation Systems\\n\\n**System: Faction Cohesion Management**\\n- Source: Interview statements about close contact and constructive debate.\\n- Difficulty: Medium\\n- Time Investment: Ongoing (daily/weekly)\\n- Prerequisite Knowledge: Understanding of parliamentary group dynamics.\\n\\n**Step-by-step implementation**\\n1. Schedule regular briefings with all 207 faction members. – Parameters: 30‑minute slots, weekly.\\n2. Establish a rapid‑response communication channel (e.g., encrypted group chat). – Parameters: real‑time updates, priority tagging.\\n3. Conduct quarterly constructive‑criticism workshops to surface concerns. – Parameters: facilitator, anonymous input.\\n4. Align policy positions before coalition negotiations using a shared agenda document. – Parameters: version control, stakeholder sign‑off.\\n\\n**Success metrics**\\n- Attendance rate ≥ 90 %\\n- Reduction in public dissent statements by 30 %\\n- Faster policy alignment (decision lag ≤ 48 h)\\n\\n**Common pitfalls**\\n- Over‑centralization of communication leading to bottlenecks.\\n- Ignoring minority viewpoints causing hidden dissent.\\n\\n**Troubleshooting guide**\\n- If attendance drops, introduce incentive mechanisms.\\n- If dissent spikes, reopen anonymous feedback loop.\\n\\n**Risk factors & mitigation**\\n- Risk: Political burnout – Mitigation: Rotate briefing responsibilities.\\n- Risk: Information leakage – Mitigation: Use secure channels.\\n\\n#### 7.2 Execution Sequencing & Dependencies\\n\\n1. **Prerequisite:** Establish communication infrastructure (Step 2) before scheduling briefings.\\n2. **Quick‑win:** Weekly briefings (Step 1) to build trust immediately.\\n3. **Long‑horizon:** Quarterly workshops (Step 3) and policy alignment (Step 4) for sustained cohesion.\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 13311,
+        "completion_tokens": 2629,
+        "total_tokens": 15940,
+        "cost": 0.0066306,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 12544,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0066306,
+          "upstream_inference_prompt_cost": 0.00465885,
+          "upstream_inference_completions_cost": 0.00197175
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1579,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "gCU0n6H_MXo",
+      "lang": "fr",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"[Insufficient data in source transcript to fulfill this dimension]\"\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"### 7.1 Implementation Systems\\n\\n**System: Daily French Immersion Routine**\\n- Source: conversation (no timestamp)\\n- Difficulty: Easy\\n- Time Investment: ~15‑30 min per day\\n- Prerequisite Knowledge: Basic French comprehension\\n\\n**Step-by-step implementation**\\n1. Change device language settings (phone, computer, apps) to French. — 5 min\\n2. Curate French playlists on YouTube/Spotify for background listening. — 10 min\\n3. Allocate a daily “French slot” (e.g., while cooking, cleaning) to listen to podcasts or read short articles. — 10‑15 min\\n4. Speak aloud about daily activities in French (self‑talk). — 5 min\\n5. Record yourself and compare to native shadowing examples. — 5 min\\n\\n**Success metrics**: Consistent daily exposure (≥5 days/week), increased vocabulary recall, ability to describe routine activities in French.\\n\\n**Common pitfalls**: Skipping days, relying solely on passive listening, neglecting speaking practice.\\n\\n**Troubleshooting guide**: If motivation drops, pair French content with a personal passion (makeup, yoga) as suggested.\\n\\n**Risk factors & mitigation**: Burnout from over‑scheduling – keep sessions short and integrate into existing habits.\\n\\n### 7.2 Execution Sequencing & Dependencies\\n- **Prerequisite**: Change language settings before building playlists.\\n- **Quick‑win**: Start with self‑talk while performing a routine task.\\n- **Mid‑term**: Build playlists and schedule daily listening.\\n- **Long‑horizon**: Incorporate shadowing and recording for pronunciation refinement.\"\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 17029,
+        "completion_tokens": 1708,
+        "total_tokens": 18737,
+        "cost": 0.00724115,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 16256,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00724115,
+          "upstream_inference_prompt_cost": 0.00596015,
+          "upstream_inference_completions_cost": 0.001281
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1249,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "video_id": "ctR1jrI42uc",
+      "lang": "zh",
+      "dims": [
+        5,
+        7
+      ],
+      "gen_text": "{\n  \"schemaVersion\": \"2.0\",\n  \"dimensions\": [\n    {\n      \"number\": 5,\n      \"name\": \"Core Intelligence Extraction\",\n      \"content\": \"#### 5.1 Priority Insights Matrix\\n\\n**Tier 1 – Breakthrough Insights**\\n\\n1. **Opening Your Mouth Is the Core Lever** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Both hosts assert that the single most effective habit for speaking Chinese better is simply to start speaking, regardless of accuracy.\\n   - *Why this matters*: For the Creator persona, this insight reveals a low‑cost, high‑impact content hook – videos that challenge learners to “just speak” can capture large audiences.\\n   - *Evidence quality*: Strong – repeated verbatim by both speakers.\\n   - *Lens applied*: First Principles.\\n\\n2. **Confidence Trumps Vocabulary Size** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Shyness, fear of being laughed at, and lack of self‑confidence are repeatedly cited as primary barriers, more so than limited word knowledge.\\n   - *Why this matters*: Indie Makers can design confidence‑building tools (e.g., gamified speaking prompts) that differentiate from vocabulary‑only apps.\\n   - *Evidence quality*: Moderate – anecdotal examples from multiple students.\\n   - *Lens applied*: Systems Thinking.\\n\\n3. **Over‑Correcting Pronunciation Damages Motivation** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Explanation*: Constant correction of tone or sounds erodes learner confidence; focus first on fluency, then fine‑tune pronunciation later.\\n   - *Why this matters*: Consultants can advise language schools to restructure curricula, reducing churn.\\n   - *Evidence quality*: Strong – direct speaker testimony.\\n   - *Lens applied*: Causal Inference.\\n\\n**Tier 2 – High‑Value Tactical Knowledge**\\n\\n1. **Require Full‑Sentence Answers** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *How to apply*: Teachers ask questions that cannot be answered with a single word; students must construct a complete sentence, reinforcing syntax.\\n   - *When to use*: In any classroom setting, especially early stages.\\n   - *Expected outcome*: Improved word‑order accuracy.\\n\\n2. **Pre‑Topic Vocabulary Review Before Partner Talk** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *How to apply*: Before a language‑partner session, learners list key terms for the chosen topic and rehearse them.\\n   - *When to use*: Before real‑world conversations (e.g., taxi driver chat).\\n   - *Expected outcome*: Higher lexical recall during spontaneous speech.\\n\\n3. **Repeated Short Passage Practice Over Months** `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *How to apply*: Select a short paragraph, practice its pronunciation and intonation daily for weeks, then expand.\\n   - *When to use*: For advanced learners aiming at near‑native fluency.\\n   - *Expected outcome*: Noticeable reduction in tonal errors.\\n\\n#### 5.2 Power Quotes Library\\n\\n1. \\\"真正的成功秘诀就是简单地‘打开你的嘴’并说话！\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Context*: Opening statement of the podcast.\\n   - *Application*: Use as a tagline for motivational language‑learning content.\\n\\n2. \\\"不要害怕被别人笑话，也不要因为怕错就不敢开口说。\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Context*: Discussing student fear of ridicule.\\n   - *Application*: Core message for confidence‑building modules.\\n\\n3. \\\"发音准确很重要，但如果已经学了很久一直纠音，会打击学生的自信。\\\" `[Insufficient data in source transcript to fulfill this dimension]`\\n   - *Context*: Warning against over‑correction.\\n   - *Application*: Curriculum design principle.\\n\\n#### 5.3 Referenced Entities\\n\\n- **People**: 雯 (host), 丽蓉 (co‑host) `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Concepts**: Confidence, Pronunciation, Full‑Sentence Practice, Language Partner `[Insufficient data in source transcript to fulfill this dimension]`\\n- **Tools/Frameworks**: HSK exams, 儿童读物 (children's books) `[Insufficient data in source transcript to fulfill this dimension]`\",\n      \"metadata\": {\n        \"wordCount\": 352,\n        \"keyTerms\": [\"confidence\", \"full sentence\", \"pronunciation\", \"language partner\", \"practice\"],\n        \"confidence\": 0.92\n      }\n    },\n    {\n      \"number\": 7,\n      \"name\": \"Implementation Systems & Workflows\",\n      \"content\": \"#### 7.1 Implementation Systems\\n\\n**System: Confidence‑Building Speaking System**\\n- *Source section*: Discussion on fear of being laughed at and the need to “open your mouth”.\\n- *Difficulty*: Easy – requires minimal resources.\\n- *Prerequisite knowledge*: Basic phrasebook.\\n- **Step‑by‑step implementation**:\\n  1. Identify a low‑stakes speaking scenario (e.g., ordering coffee). `[Insufficient data in source transcript to fulfill this dimension]`\\n  2. Practice the target phrase aloud 5 times, recording each attempt. `[Insufficient data in source transcript to fulfill this dimension]`\\n  3. Review the recording, note only major intelligibility issues (ignore minor tone errors). `[Insufficient data in source transcript to fulfill this dimension]`\\n  4. Repeat daily, gradually increasing phrase complexity.\\n- **Success metrics**: Number of speaking attempts per week; self‑reported anxiety score (1‑10) decreasing by ≥2 points after 2 weeks.\\n- **Common pitfalls**: Over‑focus on perfection; learner stops after a mistake.\\n- **Troubleshooting guide**: If anxiety spikes, revert to a single‑word greeting before progressing.\\n- **Risk factors & mitigation**: Social embarrassment – mitigate by practicing with supportive peers or in private.\\n\\n**System: Full‑Sentence Practice System**\\n- *Source section*: Emphasis on requiring complete sentences rather than single words.\\n- *Difficulty*: Medium – needs teacher prompting.\\n- *Prerequisite knowledge*: Learner knows basic vocabulary.\\n- **Step‑by‑step implementation**:\\n  1. Teacher poses a question that cannot be answered with one word (e.g., “你喜欢吃什么中国菜？”). `[Insufficient data in source transcript to fulfill this dimension]`\\n  2. Learner constructs a full sentence using known words.\\n  3. Teacher provides feedback focused on word order, not pronunciation.\\n  4. Repeat with varied topics (food, weather, travel).\\n- **Success metrics**: Percentage of answers that are full sentences; accuracy of syntactic order (>80%).\\n- **Common pitfalls**: Learner reverts to single‑word answers.\\n- **Troubleshooting guide**: Prompt with “请用完整句子回答”。\\n- **Risk factors & mitigation**: Frustration – mitigate by allowing short pauses for thinking.\\n\\n**System: Structured Language‑Partner Practice**\\n- *Source section*: Advice on finding Chinese friends, taxi driver chats, and topic‑based partner work.\\n- *Difficulty*: Medium – requires partner coordination.\\n- *Prerequisite knowledge*: Access to a native speaker or fellow learner.\\n- **Step‑by‑step implementation**:\\n  1. Choose a concrete topic (e.g., weather, food). `[Insufficient data in source transcript to fulfill this dimension]`\\n  2. Review relevant vocabulary together for 5 minutes.\\n  3. Conduct a 10‑minute conversation, focusing on speaking fluently; limit corrections to major errors.\\n  4. After conversation, partner gives a brief summary of strengths and one area for improvement.\\n- **Success metrics**: Number of topics covered per week; fluency rating (1‑10) improvement.\\n- **Common pitfalls**: Partner over‑corrects, causing learner anxiety.\\n- **Troubleshooting guide**: Set ground rules: “Only correct if the meaning is unclear.”\\n- **Risk factors & mitigation**: Cultural misunderstandings – mitigate by establishing polite inquiry norms.\\n\\n#### 7.2 Execution Sequencing & Dependencies\\n\\n1. **Start with Confidence‑Building Speaking System** – establishes low‑risk speaking habit; prerequisite for all other systems.\\n2. **Proceed to Full‑Sentence Practice System** – builds on confidence, adds syntactic structure.\\n3. **Implement Structured Language‑Partner Practice** – leverages the skills from the first two systems for real‑world interaction.\\n\\n*Quick‑win*: Confidence system can be launched within a day.\\n*Long‑horizon*: Language‑partner system may require scheduling and partner recruitment, typically 1‑2 weeks to set up.\\n\\nOverall, the workflow moves from internal confidence to controlled sentence construction, culminating in external conversational practice, ensuring progressive skill scaffolding.\",\n      \"metadata\": {\n        \"wordCount\": 376,\n        \"keyTerms\": [\"confidence\", \"full sentence\", \"language partner\", \"implementation\", \"workflow\"],\n        \"confidence\": 0.91\n      }\n    }\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14239,
+        "completion_tokens": 3471,
+        "total_tokens": 17710,
+        "cost": 0.0075869,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 13568,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0075869,
+          "upstream_inference_prompt_cost": 0.00498365,
+          "upstream_inference_completions_cost": 0.00260325
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1401,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  ]
+}

@@ -63,8 +63,10 @@ export interface DigestPersistencePort {
     *  analysis (e.g. a digest re-gen) -- replaces the prior set. */
   saveHighlights(params: {
     analysisId: string;
-    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string }>;
+    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string | null }>;
   }): Promise<boolean>;
+
+  findHighlightsForAnalysis(analysisId: string): Promise<Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }>>;
 
   /** Save the reconciliation result as a targeted jsonb field update on
     *  the existing executive_digest row (NOT a full saveExecutiveDigest —
@@ -96,6 +98,6 @@ export interface StoredExecutiveDigest extends ExecutiveDigest {
   generatedAt: string;
   /** Reconciliation result from the post-extraction LLM pass (2026-08-21,
    *  §2.B.6). null/undefined when the reconciliation call failed or hasn't
-   *  been run yet — display logic treats null as "all takeaways grounded". */
+   *  been run yet — display logic treats null as "unverified". */
   reconciliation?: ReconciliationResult | null;
 }

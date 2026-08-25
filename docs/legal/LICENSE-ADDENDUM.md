@@ -2,7 +2,7 @@
 Last Updated: 2026-06-10
 
 This Addendum applies to all source code, workflows, prompts,
-documentation, and assets contained in this repository.
+documentation, and assets contained in this body of work.
 
 This Addendum supplements the GNU AGPL‑3.0 License and overrides
 any conflicting interpretation.
@@ -43,7 +43,7 @@ any conflicting interpretation.
 
 6. ATTRIBUTION REQUIRED
    - Any reuse, fork, or derivative MUST include:
-       a) Clear attribution to "Hex-Tech-Lab"
+       a) Clear attribution to "Kelly BAKRI, Hex-Tech-Lab"
        b) A link to the original repository
        c) A copy of this Addendum
 

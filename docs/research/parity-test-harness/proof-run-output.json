@@ -1,0 +1,31 @@
+{
+  "harness": "docs/research/parity-test-harness/judge.ts",
+  "judge_prompt_version": "1.0.0",
+  "round_file": "docs/research/2026-08-18-round10-results/round_b110_r1_guardrail.json",
+  "ground_truth_file": "docs/research/2026-08-18-round10-results/haiku_new_videos.json",
+  "dims": [
+    1,
+    10
+  ],
+  "run_at": "2026-08-18T13:13:43.605Z",
+  "results": {
+    "fr": {
+      "structural_completeness": 83,
+      "factual_coverage": 62,
+      "missing_subsections": [
+        "D10: 10.2 Domain-Specific Risk Disclosures"
+      ],
+      "judge_prompt_version": "1.0.0",
+      "judge_model": "anthropic/claude-haiku-4.5",
+      "video_id": "gCU0n6H_MXo"
+    },
+    "zh": {
+      "structural_completeness": 100,
+      "factual_coverage": 78,
+      "missing_subsections": [],
+      "judge_prompt_version": "1.0.0",
+      "judge_model": "anthropic/claude-haiku-4.5",
+      "video_id": "ctR1jrI42uc"
+    }
+  }
+}

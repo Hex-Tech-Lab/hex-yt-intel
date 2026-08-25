@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK, sumHighlightDurations } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -90,7 +90,11 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
   // (could be 120s+), which would produce multi-minute playback segments without this.
   const segments = useMemo(
-    () => (data?.highlights ?? []).map((highlight) => ({ ...highlight, end: getClampedSegmentEnd(highlight, segDurFallback, minDur, maxDur) })),
+    () => (data?.highlights ?? []).map((highlight, idx) => {
+      const highlights = data!.highlights;
+      const nextStart = idx < highlights.length - 1 ? highlights[idx + 1]?.start : undefined;
+      return { ...highlight, end: getClampedSegmentEnd(highlight, segDurFallback, minDur, maxDur, nextStart) };
+    }),
     [data, segDurFallback, minDur, maxDur],
   );
 
@@ -179,7 +183,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   // segmentDurationSeconds when end is null/invalid), matching the
   // variable-duration playback advance on segment.end.
   const totalHighlightsSeconds = Math.min(
-    sumHighlightDurations(data.highlights, segDurFallback, minDur, maxDur),
+    segments.reduce((sum, seg) => sum + (seg.end > seg.start ? seg.end - seg.start : segDurFallback), 0),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
@@ -220,7 +224,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <HighlightsTrack
-            highlights={data.highlights}
+            highlights={segments}
             activeIndex={playingIdx}
             onSelect={jumpTo}
             videoDurationSeconds={videoDurationSeconds}

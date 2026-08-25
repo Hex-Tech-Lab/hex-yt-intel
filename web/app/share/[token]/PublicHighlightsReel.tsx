@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK, sumHighlightDurations } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -88,7 +88,10 @@ export function PublicHighlightsReel({
   // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
   // (could be 120s+), which would produce multi-minute playback segments without this.
   const clampedSegments = useMemo(
-    () => highlights.map((highlight) => ({ ...highlight, end: getClampedSegmentEnd(highlight, segmentDurationSeconds, minDur, maxDur) })),
+    () => highlights.map((highlight, idx) => {
+      const nextStart = idx < highlights.length - 1 ? highlights[idx + 1]?.start : undefined;
+      return { ...highlight, end: getClampedSegmentEnd(highlight, segmentDurationSeconds, minDur, maxDur, nextStart) };
+    }),
     [highlights, segmentDurationSeconds, minDur, maxDur],
   );
 
@@ -126,8 +129,8 @@ export function PublicHighlightsReel({
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
   const activeDuration = activeHighlight
-    ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur)
-    : segmentDurationSeconds;
+    ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur) + contextLeadSeconds
+    : segmentDurationSeconds + contextLeadSeconds;
   const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
 
   if (highlights.length === 0) return null;
@@ -136,7 +139,7 @@ export function PublicHighlightsReel({
   // segmentDurationSeconds when end is null/invalid), so the display total
   // matches what actually plays (variable-duration advance on segment.end).
   const totalHighlightsSeconds = Math.min(
-    sumHighlightDurations(highlights, segmentDurationSeconds, minDur, maxDur),
+    clampedSegments.reduce((sum, seg) => sum + (seg.end > seg.start ? seg.end - seg.start : segmentDurationSeconds), 0),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
@@ -159,7 +162,7 @@ export function PublicHighlightsReel({
       </div>
 
       <HighlightsTrack
-        highlights={highlights}
+        highlights={clampedSegments}
         activeIndex={playingIdx}
         onSelect={jumpTo}
         videoDurationSeconds={videoDurationSeconds}

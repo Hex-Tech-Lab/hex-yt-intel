@@ -16,12 +16,9 @@ export type { ReconciledTakeaway, ReconciliationResult };
 export function buildHighlightsReconciliationSystemPrompt(): string {
   return `You are a fact-checking assistant for video analysis. You are given:
 1. A list of key takeaways from an executive summary of a video.
-2. A list of timestamped highlights extracted from that video's transcript,
-   each mapped to a takeaway index (or null if standalone — not mapped to
-   any takeaway).
+2. A list of timestamped highlights extracted from that video's transcript.
 
-For each takeaway, determine whether at least one mapped highlight (one with
-the same takeawayIdx) semantically supports the takeaway's claim — not just
+For each takeaway, find the highlight that best semantically supports its claim — not just
 that the highlight mentions similar words, but that the highlight's content
 actually demonstrates or grounds the takeaway's claim.
 
@@ -29,16 +26,9 @@ Return a JSON array where each element is:
 {"takeawayIdx": <number>, "grounded": <boolean>, "backingHighlightIdx": <number|null>}
 
 Rules:
-- "grounded": true if at least one highlight with that takeawayIdx genuinely
-  supports the takeaway's claim.
-- "grounded": false if no mapped highlight supports it (the highlight may
-  have the wrong takeawayIdx, or the takeaway may be ungrounded in the
-  transcript).
-- "backingHighlightIdx": the idx of the strongest supporting highlight, or
-  null if grounded is false.
-- If a takeaway has no mapped highlights at all (all highlights have
-  takeawayIdx: null or map to other takeaways), set grounded: false and
-  backingHighlightIdx: null.
+- "grounded": true if you found a highlight that genuinely supports the takeaway's claim.
+- "grounded": false if no highlight supports it (the takeaway may be ungrounded in the transcript).
+- "backingHighlightIdx": the idx of the strongest supporting highlight, or null if grounded is false.
 - Return exactly one entry per takeaway, in takeaway-index order (0-indexed).`;
 }
 
@@ -51,10 +41,10 @@ export function buildHighlightsReconciliationUserMessage(
     .join('\n');
 
   const highlightsBlock = highlights
-    .map((highlight, index) => `[idx=${index}, ${highlight.start}–${highlight.end}] ${highlight.label} (takeawayIdx: ${highlight.takeawayIdx ?? 'null'})`)
+    .map((highlight, index) => `[idx=${index}, ${highlight.start}–${highlight.end}] ${highlight.label}`)
     .join('\n');
 
-  return `--- KEY TAKEAWAYS ---\n${takeawaysBlock}\n\n--- HIGHLIGHTS (with takeawayIdx mappings) ---\n${highlightsBlock}\n\nFor each takeaway (1-indexed above, 0-indexed in output), determine if it is grounded by at least one highlight.`;
+  return `--- KEY TAKEAWAYS ---\n${takeawaysBlock}\n\n--- HIGHLIGHTS ---\n${highlightsBlock}\n\nFor each takeaway (1-indexed above, 0-indexed in output), determine if it is grounded by at least one highlight.`;
 }
 
 /** 'invalid' (couldn't parse) is distinct from 'ok' — same pattern as

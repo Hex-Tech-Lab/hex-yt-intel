@@ -238,7 +238,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
             const segLeftPct = pctFor(activeHighlight.start, 100, 0);
-            const activeDur = (Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start)
+            const activeDur = activeHighlight.end > activeHighlight.start
               ? activeHighlight.end - activeHighlight.start
               : segmentDurationSeconds;
             const segWidthPct = Math.max(
@@ -261,7 +261,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             return (
               <Tooltip
                 key={highlight.idx}
-                content={`${highlight.label} (${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.start + segmentDurationSeconds)})`}
+                content={`${highlight.label} (${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end > highlight.start ? highlight.end : highlight.start + segmentDurationSeconds)})`}
                 placement="above"
               >
                 {/* Real accessibility fix (automated review on PR #266): the
@@ -303,7 +303,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             <span
               aria-hidden="true"
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-3.5 border-r-2 border-t-2 border-b-2 border-[var(--accent-a70)] z-10"
-              style={{ left: `${pctFor(activeHighlight.start + segmentDurationSeconds, 99)}%` }}
+              style={{ left: `${pctFor(activeHighlight.end > activeHighlight.start ? activeHighlight.end : activeHighlight.start + segmentDurationSeconds, 99)}%` }}
             />
           )}
         </div>

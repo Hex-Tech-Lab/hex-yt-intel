@@ -974,7 +974,8 @@ export class SupabaseAnalysisAdapter {
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
-      if (error || !data?.segments || !Array.isArray(data.segments)) return null;
+      if (error) throw error;
+      if (!data?.segments || !Array.isArray(data.segments)) return null;
 
       const seenStarts = new Set<number>();
       return (data.segments as unknown[])
@@ -989,7 +990,7 @@ export class SupabaseAnalysisAdapter {
     } catch (error: unknown) {
       console.warn('[SupabaseAnalysisAdapter] getTranscriptSegments failed:', error instanceof Error ? error.message : String(error));
       Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' } });
-      return null;
+      throw error;
     }
   }
 

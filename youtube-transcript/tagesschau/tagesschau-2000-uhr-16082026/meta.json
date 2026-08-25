@@ -1,0 +1,59 @@
+{
+  "videoId": "lvZdZx1xjGM",
+  "title": "tagesschau 20:00 Uhr, 16.08.2026",
+  "channel": "tagesschau",
+  "channelId": "UC5NOEUbkLheQcaaRldYW5GA",
+  "description": "Die 20-Uhr-Ausgabe im Livestream und früher auf Abruf: ARD Nachrichten: alle Videos der tagesschau und https://tagesschau.de \n\n0:00 Guten Abend!\n0:20 Schwierige Löscharbeiten im Hohen Venn in Belgien\n3:49 SPD-Bundesminister legen Hitze-Aktionsplan vor\n6:02 Mehrere Hitzewellen lösen in Italien höchste Warnstufen aus\n7:51 Reportage über die Arbeit von Forensikern in der Ukraine\n10:24 Ergebnisse der Leichtathletik-EM\n12:43 Ergebnisse der Reit-WM\n13:55 Das Wetter \n\nHinweis:\nDie Beiträge zum Sport dürfen aus rechtlichen Gründen nicht auf tagesschau.de gezeigt werden. \n\nKorrektur:\nIn der Tagesschau 20 Uhr vom 16.08.26 haben wir in der Moderation zum Waldbrand in der Eifel eine Karte mit den Örtlichkeiten im deutsch-belgischen Grenzgebiet gezeigt. Dabei klang der Ortsteil Gey wie „Grey“. Das haben wir nachträglich geändert.",
+  "duration": 914,
+  "publishDate": "2026-08-16",
+  "url": "https://www.youtube.com/watch?v=lvZdZx1xjGM",
+  "coverImage": "imgs/cover.jpg",
+  "thumbnailUrl": "https://i.ytimg.com/vi/lvZdZx1xjGM/maxresdefault.jpg",
+  "language": {
+    "code": "de",
+    "name": "German",
+    "isGenerated": false
+  },
+  "chapters": [
+    {
+      "title": "Guten Abend!",
+      "start": 0,
+      "end": 20
+    },
+    {
+      "title": "Schwierige Löscharbeiten im Hohen Venn in Belgien",
+      "start": 20,
+      "end": 229
+    },
+    {
+      "title": "SPD-Bundesminister legen Hitze-Aktionsplan vor",
+      "start": 229,
+      "end": 362
+    },
+    {
+      "title": "Mehrere Hitzewellen lösen in Italien höchste Warnstufen aus",
+      "start": 362,
+      "end": 471
+    },
+    {
+      "title": "Reportage über die Arbeit von Forensikern in der Ukraine",
+      "start": 471,
+      "end": 624
+    },
+    {
+      "title": "Ergebnisse der Leichtathletik-EM",
+      "start": 624,
+      "end": 763
+    },
+    {
+      "title": "Ergebnisse der Reit-WM",
+      "start": 763,
+      "end": 835
+    },
+    {
+      "title": "Das Wetter",
+      "start": 835,
+      "end": 914
+    }
+  ]
+}

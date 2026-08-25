@@ -1,0 +1,718 @@
+[
+  {
+    "id": "TC001",
+    "title": "Submit a YouTube video for live analysis",
+    "description": "This verifies that an authenticated user can submit a YouTube URL in the dashboard and receive a completed analysis with the expected report outputs.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Paste a valid YouTube URL into the video URL field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the analysis request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify completed analysis results are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the executive digest and entity exploration outputs are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Sign in and reach the dashboard",
+    "description": "A visitor can complete sign-in and land in the authenticated dashboard ready to start analysis.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/signin"
+      },
+      {
+        "type": "action",
+        "description": "Click the sign-in with Google control"
+      },
+      {
+        "type": "action",
+        "description": "Complete authentication with valid credentials"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Start a grounded chat from a completed analysis",
+    "description": "This verifies that a user can ask a question in chat after analysis completion and receive a grounded reply based on the video content.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Paste a valid YouTube URL into the video URL field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the analysis request"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat panel"
+      },
+      {
+        "type": "action",
+        "description": "Type a question about the analyzed video into the chat field"
+      },
+      {
+        "type": "action",
+        "description": "Send the chat message"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grounded chat reply is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the conversation history includes the new question"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Reuse a previously analyzed video from cache",
+    "description": "This verifies that submitting a previously analyzed YouTube URL returns an existing completed analysis without blocking the user from reviewing results.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Paste a previously analyzed valid YouTube URL into the video URL field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the analysis request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify completed analysis results are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the existing analysis output is returned for review"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Search saved analyses and reopen a result",
+    "description": "A member can find a previously generated analysis in saved history and reopen it from the result list.",
+    "category": "Saved Analyses Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analyses/saved"
+      },
+      {
+        "type": "action",
+        "description": "Review the saved analysis list"
+      },
+      {
+        "type": "action",
+        "description": "Search analyses by keyword"
+      },
+      {
+        "type": "action",
+        "description": "Open a matching analysis to revisit the results"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis results are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Complete a subscription upgrade and see the updated plan",
+    "description": "A subscriber can review billing details, complete an upgrade, and return to see the updated subscription state.",
+    "category": "Billing and Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /billing"
+      },
+      {
+        "type": "action",
+        "description": "Review the current plan and usage details"
+      },
+      {
+        "type": "action",
+        "description": "Choose an upgrade path"
+      },
+      {
+        "type": "action",
+        "description": "Complete the checkout flow"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the subscription state is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Open a shared analysis without signing in",
+    "description": "A visitor can open a valid public share link and view the analysis content in read-only mode.",
+    "category": "Shared Analysis Public View",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a valid shared analysis link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the shared analysis content is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the view is read-only"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Keep streamed results while reopening the analysis workspace",
+    "description": "This verifies that a completed analysis remains available when the user reopens the dashboard workspace after the initial run.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Paste a valid YouTube URL into the video URL field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the analysis request"
+      },
+      {
+        "type": "action",
+        "description": "Open the analysis workspace again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the completed analysis results are still displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the streamed analysis output was preserved"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Search for a prior analysis and reopen it",
+    "description": "A member can use search to locate a past analysis and open it for review.",
+    "category": "Saved Analyses Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Search for a prior analysis"
+      },
+      {
+        "type": "action",
+        "description": "Select a matching result"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis results are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "View the shared report details",
+    "description": "A visitor can read the shared analysis report content and see that the page presents the analysis summary.",
+    "category": "Shared Analysis Public View",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a valid shared analysis link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis report content is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis summary is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Review a saved analysis from the library",
+    "description": "This verifies that a member can open the saved analyses page and view previously stored analyses for reuse.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analyses/saved"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify saved analyses are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one saved analysis can be opened for review"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Cancel a subscription and confirm the status changes",
+    "description": "A subscriber can start a cancellation from billing, confirm it, and see the subscription status update.",
+    "category": "Billing and Subscription Management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /billing"
+      },
+      {
+        "type": "action",
+        "description": "Review the subscription details"
+      },
+      {
+        "type": "action",
+        "description": "Choose to cancel the subscription"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the cancellation request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the subscription status is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "View a shared analysis without signing in",
+    "description": "This verifies that a public shared analysis link opens a read-only view of the analysis for any visitor.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a valid shared analysis link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the shared analysis view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis is read-only"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "See a public shared analysis without authentication prompts",
+    "description": "A visitor opening a valid shared link can view the analysis without being asked to sign in.",
+    "category": "Shared Analysis Public View",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a valid shared analysis link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the shared analysis page is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sign-in prompt is not shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Search for a previously analyzed video",
+    "description": "This verifies that a user can search existing analyses and open a matching result from the search page.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Enter a query for a known analyzed video into the search field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the search"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify matching analysis results are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a matching result can be opened"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Join the waitlist with a valid email",
+    "description": "A visitor can submit the waitlist form with a valid email and receive a confirmation message.",
+    "category": "Waitlist Signup",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /waitlist"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid email address into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a waitlist confirmation message is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "Accept a new waitlist signup after entering details",
+    "description": "A visitor can enter their email on the waitlist page, submit it, and see that the signup was accepted.",
+    "category": "Waitlist Signup",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /waitlist"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid email address into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the signup confirmation is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "Remove a saved analysis from history",
+    "description": "A member can delete a saved analysis and see it disappear from the saved list.",
+    "category": "Saved Analyses Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analyses/saved"
+      },
+      {
+        "type": "action",
+        "description": "Review the saved analysis list"
+      },
+      {
+        "type": "action",
+        "description": "Delete a saved analysis"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the analysis is no longer shown in the list"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Review pricing plans before upgrading",
+    "description": "A visitor can open the pricing page and compare the available plans and feature differences.",
+    "category": "Marketing and Product Information Pages",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pricing"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify pricing plans are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify plan feature differences are visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "Block analysis submission when the URL is not a YouTube link",
+    "description": "This verifies that the dashboard rejects invalid video URLs and shows a validation error instead of starting analysis.",
+    "category": "Video Analysis Submission",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Paste a non-YouTube URL into the video URL field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the analysis request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no analysis results are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC021",
+    "title": "Show validation for an invalid waitlist email",
+    "description": "A visitor entering an invalid email on the waitlist page sees a validation error and cannot complete signup.",
+    "category": "Waitlist Signup",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /waitlist"
+      },
+      {
+        "type": "action",
+        "description": "Fill in an invalid email address into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an email validation error is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Learn about the company on the founders page",
+    "description": "A visitor can open the founders page and review the product background information.",
+    "category": "Marketing and Product Information Pages",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /founders"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify founders information is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify product background content is visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC023",
+    "title": "Handle a failed sign-in attempt",
+    "description": "A visitor who cannot complete sign-in is shown the authentication error page.",
+    "category": "Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /auth/signin"
+      },
+      {
+        "type": "action",
+        "description": "Click the sign-in with Google control"
+      },
+      {
+        "type": "action",
+        "description": "Cancel or fail the sign-in attempt"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an authentication error page is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC024",
+    "title": "Read the privacy policy before using the app",
+    "description": "A visitor can open the privacy policy page and view the legal data-handling information.",
+    "category": "Marketing and Product Information Pages",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /privacy-policy"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify privacy policy content is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify legal data-handling information is visible"
+      }
+    ],
+    "priority": "Low"
+  }
+]

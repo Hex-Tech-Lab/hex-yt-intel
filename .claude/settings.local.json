@@ -1,7 +1,6 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(git add *)"
-    ]
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline-sub.sh"
   }
 }

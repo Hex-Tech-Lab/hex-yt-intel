@@ -156,12 +156,19 @@ export class GenerateExecutiveDigestUseCase {
 
     // Highlights extraction is now owned by a dedicated QStash task fired at
     // persist finalize (web/app/api/webhooks/highlights) -- decoupled from this
-    // digest pass entirely. The digest used to ride extraction as a side
-    // effect, which caused the silent-no-op/data-loss RCA (2026-08-23):
-    // extraction was skipped once a digest was cached, and coupled to digest
-    // success. Keeping it OUT of the digest pass also avoids a doubled-spend
-    // race (both the highlights webhook and this digest path firing
-    // simultaneously, each passing skipIfPresent before either saved).
+    // digest pass entirely.
+    // However, reconciliation MUST happen when both exist. Since the digest
+    // is generated here, we can asynchronously attempt reconciliation now.
+    if (parsed.takeaways && parsed.takeaways.length > 0) {
+      import('./ReconcileHighlightsUseCase').then(({ ReconcileHighlightsUseCase }) => {
+        new ReconcileHighlightsUseCase(this.persistence, this.completion).execute({
+          analysisId,
+          userId,
+          takeaways: parsed.takeaways!,
+          models,
+        });
+      });
+    }
 
     return { type: 'success', digest, cached: false };
   }

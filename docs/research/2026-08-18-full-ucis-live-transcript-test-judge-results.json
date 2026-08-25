@@ -1,0 +1,74 @@
+[
+  {
+    "key": "UF8uR6Z6KLc::B1_Apex",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 65,
+      "notes": "B captures core facts (three stories, Jobs' biography, aphorism) but lacks A's granular timestamp anchors, persona tier2A/B detail, and specific cognitive lens depth; B also adds unsupported summary sections not in A's schema."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.01971,
+    "oss_cost": 0.00493205
+  },
+  {
+    "key": "UF8uR6Z6KLc::B2_KG",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 45,
+      "notes": "Output B captures core entities but misses critical details (calligraphy, pancreatic cancer specifics, intuition/heart theme, cross-domain bridges); Output A provides richer semantic relations, temporal anchors, and narrative arc analysis; B truncates final edge and lacks 8.2/8.3 sections entirely."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.039146,
+    "oss_cost": 0.0060994
+  },
+  {
+    "key": "UF8uR6Z6KLc::B4_Impl",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 65,
+      "notes": "B captures core facts (dots, love/firing, mortality, key quotes) but with less granular detail, specificity, and contextual depth; B also includes dimension 10 (risk/credibility) that A lacks, but A's dimension 7 is truncated in both, making direct comparison difficult on completeness."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.028811,
+    "oss_cost": 0.00641135
+  },
+  {
+    "key": "iG9CE55wbtY::B1_Apex",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 45,
+      "notes": "B captures core facts (anecdotes, thesis, hierarchy claim) but omits key details (timestamps, emotional arc structure, authority-signaling mechanics); A provides 5 ranked deliverables with source anchors while B provides 5 but with vague/missing timestamps and less granular tactical guidance."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.022517,
+    "oss_cost": 0.00535785
+  },
+  {
+    "key": "iG9CE55wbtY::B2_KG",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 65,
+      "notes": "B captures key entities and relationships but lacks depth on critical concepts (industrialism, kinesthetic intelligence, mistake-making, academic inflation) and omits important semantic bridges; A provides richer contextual content and more nuanced argument mapping."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.037763,
+    "oss_cost": 0.0064982
+  },
+  {
+    "key": "iG9CE55wbtY::B4_Impl",
+    "verdict": {
+      "factual_coverage": 72,
+      "structural_completeness": 65,
+      "notes": "B captures core facts (creativity suppression, mistakes, industrial-era design, Gillian Lynne case) but omits specific timestamps, several key entities (Picasso, Rachel Carson, Andrew Lloyd Webber), detailed quote attributions, and the 'human ecology' concept; A is more comprehensive and precise."
+    },
+    "haiku_finish": "stop",
+    "oss_finish": "stop",
+    "haiku_cost": 0.039758,
+    "oss_cost": 0.0060984
+  }
+]
