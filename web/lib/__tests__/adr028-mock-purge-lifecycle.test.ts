@@ -46,6 +46,7 @@ describe('ADR 028: Mock Purge Lifecycle Simulation', () => {
         savedAnchors = params.anchors;
         return true;
       }),
+      resolveAnchorByHammingDistance: vi.fn().mockImplementation(() => Promise.resolve([])),
       queryTemporalSubgraph: vi.fn().mockImplementation(async () => {
         return savedAnchors.map((a, i) => ({
           ...a,

@@ -1,5 +1,6 @@
 import type { TemporalKnowledgePort, TemporalAnchor, TemporalSubgraphNode } from '@/lib/ports/TemporalKnowledgePort';
 import { getSupabaseServiceClient } from '@/lib/supabase';
+import { hammingDistance } from '@/lib/utils/simhash';
 import * as Sentry from '@sentry/nextjs';
 
 export class SupabaseTemporalGraphAdapter implements TemporalKnowledgePort {
@@ -28,6 +29,53 @@ export class SupabaseTemporalGraphAdapter implements TemporalKnowledgePort {
     } catch (error) {
       Sentry.captureException(error, { tags: { method: 'storeSimHashAnchors' } });
       return false;
+    }
+  }
+
+  async resolveAnchorByHammingDistance(params: {
+    analysisId: string;
+    queryHash: bigint;
+    maxDistance?: number;
+  }): Promise<TemporalAnchor[]> {
+    try {
+      const service = getSupabaseServiceClient();
+      // Fetch all anchors for this analysis
+      const { data, error } = await service
+        .from('analysis_simhash_anchors')
+        .select('*')
+        .eq('analysis_id', params.analysisId);
+        
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+      
+      const maxDist = params.maxDistance ?? 12;
+      const results: { anchor: TemporalAnchor, dist: number }[] = [];
+      
+      for (const row of data) {
+        const anchorHash = BigInt.asUintN(64, BigInt(row.simhash_64));
+        const dist = hammingDistance(params.queryHash, anchorHash);
+        if (dist <= maxDist) {
+          results.push({
+            anchor: {
+              id: row.id,
+              analysisId: params.analysisId,
+              windowStart: row.window_start,
+              windowEnd: row.window_end,
+              simhash64: anchorHash,
+              salientClaim: row.salient_claim,
+              verbatimAnchor: row.verbatim_anchor
+            },
+            dist
+          });
+        }
+      }
+      
+      // Sort by best match (lowest distance)
+      results.sort((resultA, resultB) => resultA.dist - resultB.dist);
+      return results.map(result => result.anchor);
+    } catch (error) {
+      Sentry.captureException(error, { tags: { method: 'resolveAnchorByHammingDistance' } });
+      return [];
     }
   }
 

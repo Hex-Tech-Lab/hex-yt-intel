@@ -18,6 +18,12 @@ export interface TemporalKnowledgePort {
     anchors: Omit<TemporalAnchor, 'id' | 'analysisId'>[];
   }): Promise<boolean>;
 
+  resolveAnchorByHammingDistance(params: {
+    analysisId: string;
+    queryHash: bigint;
+    maxDistance?: number;
+  }): Promise<TemporalAnchor[]>;
+
   queryTemporalSubgraph(params: {
     analysisId: string;
   }): Promise<TemporalSubgraphNode[]>;

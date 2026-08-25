@@ -5,6 +5,7 @@ vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: vi.fn(() => ({
     from: vi.fn(() => ({
       insert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
       select: vi.fn(() => ({
         eq: vi.fn().mockResolvedValue({
           data: [
@@ -60,10 +61,10 @@ describe('SupabaseTemporalGraphAdapter', () => {
   it('resolves anchor by hamming distance', async () => {
     const res = await adapter.resolveAnchorByHammingDistance({
       analysisId: 'ana-1',
-      targetSimHash: 1234567890n,
+      queryHash: 1234567890n,
       maxDistance: 5
     });
     expect(res).not.toBeNull();
-    expect(res!.id).toBe('anc-1');
+    expect(res[0]!.id).toBe('anc-1');
   });
 });
