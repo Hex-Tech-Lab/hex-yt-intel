@@ -27,3 +27,34 @@ export interface BillingProvider {
   getInvoices?(customerId: string): Promise<any[]>;
   cancelSubscription?(subscriptionId: string): Promise<boolean>;
 }
+
+export type PlanTier = 'free' | 'founder' | 'pro';
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing';
+
+export interface WebhookPayload {
+  event_id: string;
+  event_type: 'subscription.created' | 'subscription.updated' | 'subscription.canceled';
+  occurred_at: string;
+  data: {
+    id: string;
+    customer_id: string;
+    status: SubscriptionStatus;
+    custom_data?: {
+      user_id?: string;
+    };
+    current_billing_period?: {
+      starts_at: string;
+      ends_at: string;
+    };
+    items?: Array<{
+      price?: {
+        custom_data?: {
+          plan_tier?: PlanTier;
+        };
+      };
+    }>;
+    scheduled_change?: {
+      action: 'cancel';
+    } | null;
+  };
+}
