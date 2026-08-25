@@ -1,3 +1,4 @@
+import { parseJsonArray } from '@/lib/utils/json-parser';
 /**
  * Highlights reconciliation (2026-08-21) — a post-extraction LLM call that
  * verifies each digest takeaway is semantically grounded by at least one
@@ -60,16 +61,9 @@ export function parseHighlightsReconciliation(
   takeawaysCount: number,
   highlightsCount?: number
 ): ReconciliationParseResult {
-  const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return { status: 'invalid' };
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(jsonMatch[0]);
-  } catch (parseError) {
-    console.warn('[highlights-reconciliation] model response matched a JSON-array shape but failed to parse:', parseError instanceof Error ? parseError.message : String(parseError));
-    return { status: 'invalid' };
-  }
+  const parseResult = parseJsonArray(rawText, 'highlights-reconciliation');
+  if (parseResult.status === 'invalid') return { status: 'invalid' };
+  const raw = parseResult.data;
   if (!Array.isArray(raw)) return { status: 'invalid' };
 
   const out: ReconciledTakeaway[] = [];

@@ -1,3 +1,4 @@
+import type { HighlightData } from '@/lib/types/highlights';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { PersonaId } from '@/lib/prompts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
@@ -212,14 +213,7 @@ export interface AnalysisPersistencePort {
    * single analysisId, never a table-wide query, since analysis_highlights'
    * RLS policy is owner-only and public share viewers have no session.
    */
-  findHighlightsForAnalysis(analysisId: string): Promise<Array<{
-    idx: number;
-    start: number;
-    end: number;
-    label: string;
-    takeawayIdx: number | null;
-    verbatimExcerpt: string | null;
-  }>>;
+  findHighlightsForAnalysis(analysisId: string): Promise<HighlightData[]>;
 
   /**
    * Update validation report and status.

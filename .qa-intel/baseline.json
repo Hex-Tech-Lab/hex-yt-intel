@@ -870,13 +870,6 @@
   {
     "file": "web/lib/api-client.ts",
     "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/lib/api-client.ts",
-    "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
@@ -1087,6 +1080,13 @@
   {
     "file": "web/lib/utils/format.tsx",
     "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/utils/format.tsx",
+    "severity": "low",
     "title": "Code Quality: Unclear variable name 'p'",
     "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' → 'question', 'error', etc.)."
@@ -1216,6 +1216,27 @@
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call '/^(\\d{1,3})[.?!]?$/.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/utils/entity-time-seek.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/utils/entity-time-seek.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/utils/entity-time-seek.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   },
   {
     "file": "web/lib/utils/entity-time-seek.ts",
@@ -1470,10 +1491,17 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'r' → 'question', 'error', etc.)."
   },
   {
+    "file": "web/lib/usecases/ReconcileHighlightsUseCase.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
     "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (514 lines).",
+    "why": "File exceeds 500 lines (552 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -2047,7 +2075,7 @@
     "file": "web/lib/services/dimension-remediation.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (653 lines).",
+    "why": "File exceeds 500 lines (747 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -2119,13 +2147,6 @@
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/lib/services/dimension-remediation.ts",
-    "severity": "medium",
-    "title": "Workflow: Missing finally block for I/O",
-    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
-    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
     "file": "web/lib/services/dimension-remediation.ts",
@@ -2369,7 +2390,7 @@
     "file": "web/lib/prompts/ucis-v5.3.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (602 lines).",
+    "why": "File exceeds 500 lines (672 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -2992,7 +3013,7 @@
     "file": "web/lib/admin-logs/fetchers.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (516 lines).",
+    "why": "File exceeds 500 lines (599 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -3113,13 +3134,6 @@
     "title": "Code Quality: Unclear variable name 'r'",
     "why": "Single-letter variable 'r' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'r' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/lib/admin-logs/fetchers.ts",
-    "severity": "medium",
-    "title": "Workflow: Missing finally block for I/O",
-    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
-    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
     "file": "web/lib/admin-logs/fetchers.ts",
@@ -3412,7 +3426,7 @@
     "file": "web/lib/adapters/SupabasePersistenceAdapter.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (522 lines).",
+    "why": "File exceeds 500 lines (562 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -3559,7 +3573,7 @@
     "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (811 lines).",
+    "why": "File exceeds 500 lines (1088 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -3603,6 +3617,41 @@
     "title": "Code Quality: Unclear variable name 'd'",
     "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'h'",
+    "why": "Single-letter variable 'h' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'h' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'h'",
+    "why": "Single-letter variable 'h' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'h' → 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SettingsModelAdapter.ts",
@@ -5169,7 +5218,7 @@
     "file": "web/hooks/useSSEStream.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (553 lines).",
+    "why": "File exceeds 500 lines (598 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -5227,6 +5276,27 @@
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
@@ -5461,13 +5531,6 @@
   },
   {
     "file": "web/hooks/useAuxElementStatus.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 's'",
-    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/hooks/useAuxElementStatus.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
@@ -5554,7 +5617,7 @@
     "file": "web/components/templates/console/WordCloud.tsx",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (617 lines).",
+    "why": "File exceeds 500 lines (747 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -5563,13 +5626,6 @@
     "title": "Code Quality: Import ordering violated",
     "why": "Import '@/lib/design/entity-colors' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
     "fix": "Reorganize imports to follow the correct order groups."
-  },
-  {
-    "file": "web/components/templates/console/WordCloud.tsx",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
@@ -5649,11 +5705,46 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
   },
   {
-    "file": "web/components/templates/console/WordCloud.tsx",
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
     "severity": "low",
-    "title": "Code Quality: Unclear variable name 'w'",
-    "why": "Single-letter variable 'w' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'w' → 'question', 'error', etc.)."
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/VideoPlayerCard.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/VideoPlayerCard.tsx",
@@ -6408,7 +6499,7 @@
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (820 lines).",
+    "why": "File exceeds 500 lines (819 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -6685,6 +6776,13 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' → 'question', 'error', etc.)."
   },
   {
+    "file": "web/components/dashboard/ShareButton.tsx",
+    "severity": "medium",
+    "title": "Accessibility: Toast notification missing role/aria-live",
+    "why": "showToast() renders a notification but the container lacks role='alert' or aria-live='polite'. Screen readers won't announce the toast.",
+    "fix": "Add role='alert' aria-live='assertive' (for errors) or role='status' aria-live='polite' (for info) to the toast container element."
+  },
+  {
     "file": "web/components/dashboard/SelectedDimensionReadout.tsx",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
@@ -6730,7 +6828,7 @@
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (695 lines).",
+    "why": "File exceeds 500 lines (853 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -6834,6 +6932,27 @@
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/containers/DashboardContainer.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/containers/DashboardContainer.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'n'",
+    "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/containers/DashboardContainer.tsx",
+    "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
@@ -6909,13 +7028,6 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
   },
   {
-    "file": "web/components/containers/dashboard/SettingsPanel.tsx",
-    "severity": "medium",
-    "title": "Workflow: Missing finally block for I/O",
-    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
-    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
-  },
-  {
     "file": "web/components/containers/dashboard/ExpandedPanelOverlay.tsx",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
@@ -6977,6 +7089,13 @@
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/billing/pricing-table-client.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'p'",
+    "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' → 'question', 'error', etc.)."
   },
   {
     "file": "web/components/billing/pricing-table-client.tsx",
@@ -7143,7 +7262,7 @@
     "file": "web/app/settings/logs/LogsViewerClient.tsx",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (562 lines).",
+    "why": "File exceeds 500 lines (626 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -7378,6 +7497,34 @@
     "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
   },
   {
+    "file": "web/app/auth/signin/form.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/auth/signin/form.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/auth/signin/form.tsx",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import 'next/navigation' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/app/auth/signin/form.tsx",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
     "file": "web/app/auth/callback/route.ts",
     "severity": "medium",
     "title": "Observability: Catch block without error logging",
@@ -7456,20 +7603,6 @@
   },
   {
     "file": "web/app/api/webhooks/upstash-snapshot-poll/route.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/app/api/webhooks/upstash-snapshot-poll/route.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/app/api/webhooks/upstash-snapshot-poll/route.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
     "why": "Import '@sentry/nextjs' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
@@ -7532,6 +7665,13 @@
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
+    "file": "web/app/api/webhooks/highlights/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/nextjs' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
     "file": "web/app/api/webhooks/ffmpeg-enrich/route.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
@@ -7588,6 +7728,20 @@
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
+    "file": "web/app/api/waitlist/route.ts",
+    "severity": "high",
+    "title": "Data Integrity: DB operation without validation",
+    "why": "Data is inserted/updated into database without schema validation. Invalid data could corrupt database state.",
+    "fix": "Add schema validation before DB operation: const validated = MySchema.parse(data); db.insert(validated);"
+  },
+  {
+    "file": "web/app/api/waitlist/route.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
     "file": "web/app/api/usage/summary/route.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
@@ -7621,6 +7775,20 @@
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/test-auth/login/route.test.ts",
+    "severity": "medium",
+    "title": "Code Quality: Redundant 'async' keyword (no await found)",
+    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
+    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
+  },
+  {
+    "file": "web/app/api/test-auth/login/route.test.ts",
+    "severity": "medium",
+    "title": "Code Quality: Redundant 'async' keyword (no await found)",
+    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
+    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
     "file": "web/app/api/stripe/webhook/route.ts",
@@ -7847,13 +8015,6 @@
     "fix": "Add schema validation before DB operation: const validated = MySchema.parse(data); db.insert(validated);"
   },
   {
-    "file": "web/app/api/billing/checkout/route.ts",
-    "severity": "low",
-    "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/nextjs' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
-    "fix": "Reorganize imports to follow the correct order groups."
-  },
-  {
     "file": "web/app/api/analyses/route.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
@@ -7864,7 +8025,7 @@
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (1000 lines).",
+    "why": "File exceeds 500 lines (1146 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -7894,6 +8055,13 @@
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
   },
   {
     "file": "web/app/api/analyses/persist/route.ts",
@@ -7940,6 +8108,20 @@
   {
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
@@ -7996,6 +8178,13 @@
   {
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
@@ -8055,6 +8244,27 @@
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
   },
   {
     "file": "web/app/api/analyses/persist/route.ts",
@@ -9292,7 +9502,7 @@
     "file": "worker/src/services/LLMCascade.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (598 lines).",
+    "why": "File exceeds 500 lines (650 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -9621,7 +9831,7 @@
     "file": "worker/src/routes/analysis.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
-    "why": "File exceeds 500 lines (1104 lines).",
+    "why": "File exceeds 500 lines (1227 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
@@ -9709,6 +9919,13 @@
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
+    "file": "worker/src/routes/analysis.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
     "file": "worker/src/queue-consumers/comments-tier3.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
@@ -9728,6 +9945,13 @@
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/middleware/cors.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
   },
   {
     "file": "worker/src/middleware/cors.ts",
@@ -9990,69 +10214,6 @@
   },
   {
     "file": "worker/src/__tests__/adaptive-options.test.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "high",
-    "title": "Error: Empty catch block swallows error silently",
-    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
-    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "high",
-    "title": "Error: Empty catch block swallows error silently",
-    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
-    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "high",
-    "title": "Error: Empty catch block swallows error silently",
-    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
-    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/__tests__/TranscriptExtractor.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",

@@ -1,3 +1,4 @@
+import { parseJsonArray } from '@/lib/utils/json-parser';
 /**
  * Highlights extraction -- timestamped keypoints for the auto-scrubber
  * (docs/private/2026-08-13_1539_v2_HIGHLIGHTS_REEL_SHARE_WORKFLOW_SPEC.md).
@@ -80,16 +81,9 @@ export function parseHighlightsExtraction(
   maxSegmentDurationSeconds: number,
   takeawaysCount: number = 0
 ): HighlightsExtractionResult {
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return { status: 'invalid' };
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(jsonMatch[0]);
-  } catch (parseError) {
-    console.warn('[highlights-extraction] model response matched a JSON-array shape but failed to parse:', parseError);
-    return { status: 'invalid' };
-  }
+  const parseResult = parseJsonArray(text, 'highlights-extraction');
+  if (parseResult.status === 'invalid') return { status: 'invalid' };
+  const raw = parseResult.data;
   if (!Array.isArray(raw)) return { status: 'invalid' };
 
   const seenStarts = new Set<number>();

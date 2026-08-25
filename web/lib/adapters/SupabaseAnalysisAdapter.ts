@@ -1,3 +1,4 @@
+import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
 import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
@@ -524,22 +525,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  static async getAnalysisGrounding(params: {
-    analysisId: string;
-    userId?: string;
-  }): Promise<{
-    title: string;
-    channelTitle: string | null;
-    description: string | null;
-    analysisMarkdown: string | null;
-    status: string;
-    transcript?: string | null;
-    videoMetadata?: Record<string, unknown> | null;
-    channelMetadata?: Record<string, unknown> | null;
-    executiveDigest?: StoredExecutiveDigest | null;
-    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
-    highlights?: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null;
-  } | null> {
+  static async getAnalysisGrounding(params: { analysisId: string; userId?: string }): Promise<AnalysisGroundingData | null> {
     try {
       const service = getSupabaseServiceClient();
       let query = service
@@ -745,14 +731,7 @@ export class SupabaseAnalysisAdapter {
    * analysis_highlights' RLS policy is owner-only and grants nothing to
    * anon/authenticated (migrations 20260813222218 / ...222233).
    */
-  static async findHighlightsForAnalysis(analysisId: string): Promise<Array<{
-    idx: number;
-    start: number;
-    end: number;
-    label: string;
-    takeawayIdx: number | null;
-    verbatimExcerpt: string | null;
-  }>> {
+  static async findHighlightsForAnalysis(analysisId: string): Promise<HighlightData[]> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service

@@ -1,4 +1,5 @@
 'use client';
+import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core';
@@ -135,16 +136,7 @@ export function PublicHighlightsReel({
 
   if (highlights.length === 0) return null;
 
-  // Sum each highlight's real clamped duration (fallback to
-  // segmentDurationSeconds when end is null/invalid), so the display total
-  // matches what actually plays (variable-duration advance on segment.end).
-  const totalHighlightsSeconds = Math.min(
-    clampedSegments.reduce((sum, seg) => sum + (seg.end > seg.start ? seg.end - seg.start : segmentDurationSeconds), 0),
-    videoDurationSeconds ?? Infinity
-  );
-  const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
-    ? Math.min(100, Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100))
-    : null;
+  const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(clampedSegments, segmentDurationSeconds, videoDurationSeconds);
 
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">

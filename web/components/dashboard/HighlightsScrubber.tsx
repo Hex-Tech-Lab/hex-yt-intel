@@ -1,4 +1,5 @@
 'use client';
+import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
@@ -199,16 +200,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     return null; // Silent failure if we exhausted retries and still got none
   }
 
-  // Sum each highlight's real clamped duration (fallback to
-  // segmentDurationSeconds when end is null/invalid), matching the
-  // variable-duration playback advance on segment.end.
-  const totalHighlightsSeconds = Math.min(
-    segments.reduce((sum, seg) => sum + ((seg.end ?? 0) > (seg.start ?? 0) ? (seg.end ?? 0) - (seg.start ?? 0) : segDurFallback), 0),
-    videoDurationSeconds ?? Infinity
-  );
-  const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
-    ? Math.min(100, Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100))
-    : null;
+  const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(segments, segDurFallback, videoDurationSeconds);
 
   return (
     <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">

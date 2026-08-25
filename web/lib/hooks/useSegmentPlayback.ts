@@ -275,3 +275,19 @@ export function useSegmentPlayback({
 
   return { playingIdx, elapsedInSegmentSeconds, speed, isReady, isPaused, start, stop, pause, resume, jumpTo, setSpeed };
 }
+
+
+export function calculateHighlightsCompression(
+  clampedSegments: Array<{ start: number; end: number }>,
+  segmentDurationSeconds: number,
+  videoDurationSeconds: number | null | undefined
+) {
+  const totalHighlightsSeconds = Math.min(
+    clampedSegments.reduce((sum, seg) => sum + (seg.end > seg.start ? seg.end - seg.start : segmentDurationSeconds), 0),
+    videoDurationSeconds ?? Infinity
+  );
+  const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
+    ? Math.min(100, Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100))
+    : null;
+  return { totalHighlightsSeconds, compressionPct };
+}

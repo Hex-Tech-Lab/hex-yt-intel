@@ -431,53 +431,22 @@ describe('useSegmentPlayback', () => {
     expect(result.current.playingIdx).toBeNull();
   });
 
-  it('falls back to segmentDurationSeconds when segment.end is null (legacy data)', () => {
-    const legacySegments = [{ start: 10, end: NaN }];
+  it.each([
+    { desc: 'segment.end is null (legacy data)', segments: [{ start: 10, end: NaN }], time: 13, expectedIdx: null },
+    { desc: 'end < start (invalid data)', segments: [{ start: 10, end: 5 }], time: 13, expectedIdx: null }
+  ])('falls back to segmentDurationSeconds when $desc', ({ segments, time, expectedIdx }) => {
     const fake = makeFakePrimitives(0);
     const { result } = renderHook(() =>
       useSegmentPlayback({
-        segments: legacySegments,
+        segments,
         contextLeadSeconds: 2,
         segmentDurationSeconds: 5,
         primitives: fake.primitives,
       })
     );
-    act(() => {
-      result.current.start(); // seeks to 8
-    });
-    act(() => {
-      vi.advanceTimersByTime(250); // settle
-    });
-    // end is NaN (not Number.isFinite), so fallback: leadIn + segmentDurationSeconds = 8 + 5 = 13
-    act(() => {
-      fake.setTime(13);
-      vi.advanceTimersByTime(250);
-    });
-    expect(result.current.playingIdx).toBeNull(); // advanced past last segment
-  });
-
-  it('falls back to segmentDurationSeconds when end < start (invalid data)', () => {
-    const invalidSegments = [{ start: 10, end: 5 }];
-    const fake = makeFakePrimitives(0);
-    const { result } = renderHook(() =>
-      useSegmentPlayback({
-        segments: invalidSegments,
-        contextLeadSeconds: 2,
-        segmentDurationSeconds: 5,
-        primitives: fake.primitives,
-      })
-    );
-    act(() => {
-      result.current.start(); // seeks to 8
-    });
-    act(() => {
-      vi.advanceTimersByTime(250); // settle
-    });
-    // end (5) is not > start (10), so fallback: leadIn + segmentDurationSeconds = 8 + 5 = 13
-    act(() => {
-      fake.setTime(13);
-      vi.advanceTimersByTime(250);
-    });
-    expect(result.current.playingIdx).toBeNull(); // advanced past last segment
+    act(() => { result.current.start(); });
+    act(() => { vi.advanceTimersByTime(250); });
+    act(() => { fake.setTime(time); vi.advanceTimersByTime(250); });
+    expect(result.current.playingIdx).toBe(expectedIdx);
   });
 });

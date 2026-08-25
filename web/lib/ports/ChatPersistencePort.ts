@@ -1,3 +1,4 @@
+import type { AnalysisGroundingData } from '@/lib/types/highlights';
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 
 export interface ChatPersistencePort {
@@ -47,29 +48,7 @@ export interface ChatPersistencePort {
     parentId: string;
   }): Promise<ChatMessage | null>;
 
-  getAnalysisGrounding(params: {
-    analysisId: string;
-    /** When provided, the analysis must belong to this user or null is returned. */
-    userId?: string;
-  }): Promise<{
-    title: string;
-    channelTitle: string | null;
-    description: string | null;
-    analysisMarkdown: string | null;
-    status: string;
-    transcript?: string | null;
-    videoMetadata?: Record<string, unknown> | null;
-    channelMetadata?: Record<string, unknown> | null;
-    executiveDigest?: {
-      snapshot?: string;
-      overview?: string;
-      takeaways?: string[];
-      detailedSummary?: string;
-      reconciliation?: { takeaways: Array<{ idx: number; grounded: boolean; backingHighlightIdx: number | null }> } | null;
-    } | null;
-    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
-    highlights?: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null;
-  } | null>;
+  getAnalysisGrounding(params: { analysisId: string; userId?: string }): Promise<AnalysisGroundingData | null>;
 
   /**
    * Verify if the user owns the chat conversation and select optional fields.
