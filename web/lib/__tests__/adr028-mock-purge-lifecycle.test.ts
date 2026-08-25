@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
+
+import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
 import { ExtractHighlightsUseCase } from '@/lib/usecases/ExtractHighlightsUseCase';
 import { ProcessChatMessageUseCase } from '@/lib/usecases/ProcessChatMessageUseCase';
-import type { HighlightsPersistencePort } from '@/lib/usecases/ExtractHighlightsUseCase';
+
+import type { ChatPersistencePort, CryptographicTokenPort, ModelResolutionPort } from '@/lib/ports/ChatPorts';
 import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
-import type { ChatPersistencePort, ModelResolutionPort, CryptographicTokenPort } from '@/lib/ports/ChatPorts';
-import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
+import type { HighlightsPersistencePort } from '@/lib/usecases/ExtractHighlightsUseCase';
 
 describe('ADR 028: Mock Purge Lifecycle Simulation', () => {
   it('maintains grounded citations and temporal resolution after raw transcript purge', async () => {
@@ -22,9 +24,9 @@ describe('ADR 028: Mock Purge Lifecycle Simulation', () => {
         { start: 30, text: 'This is the middle.' },
         { start: 60, text: 'This is the end.' }
       ]),
-      saveHighlights: vi.fn().mockImplementation(async (params) => {
+      saveHighlights: vi.fn().mockImplementation((params) => {
         savedHighlights = params.highlights;
-        return true;
+        return Promise.resolve(true);
       }),
       findHighlightsForAnalysis: vi.fn().mockResolvedValue([])
     };
@@ -88,7 +90,7 @@ describe('ADR 028: Mock Purge Lifecycle Simulation', () => {
     const chatPersistence: ChatPersistencePort = {
       getConversation: vi.fn().mockResolvedValue({ id: 'conv-1', userId: 'user-1', analysisId: 'ana-123' }),
       getMessages: vi.fn().mockResolvedValue([]),
-      createMessage: vi.fn().mockImplementation(async (params) => ({ id: 'msg-1', ...params })),
+      createMessage: vi.fn().mockImplementation((params) => Promise.resolve({ id: 'msg-1', ...params })),
       getAnalysisGrounding: vi.fn().mockImplementation(async () => ({
         status: 'completed',
         title: 'Test Video',

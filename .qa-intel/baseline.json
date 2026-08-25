@@ -1701,6 +1701,20 @@
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
+    "file": "web/lib/usecases/ExtractHighlightsUseCase.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/usecases/ExtractHighlightsUseCase.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 's'",
+    "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+  },
+  {
     "file": "web/lib/usecases/DeduplicateGraphUseCase.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
@@ -4669,56 +4683,49 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "medium",
     "title": "Code Quality: Redundant 'async' keyword (no await found)",
     "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
     "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "medium",
     "title": "Code Quality: Redundant 'async' keyword (no await found)",
     "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
     "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "medium",
     "title": "Code Quality: Redundant 'async' keyword (no await found)",
     "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
     "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "medium",
     "title": "Code Quality: Redundant 'async' keyword (no await found)",
     "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
     "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "medium",
     "title": "Code Quality: Redundant 'async' keyword (no await found)",
     "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
     "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
-    "severity": "medium",
-    "title": "Code Quality: Redundant 'async' keyword (no await found)",
-    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
-    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
-  },
-  {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
     "why": "Import '@/lib/services/KnowledgeHistoryService' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
-    "file": "web/lib/__tests__/adr028-72h-purge-lifecycle.test.ts",
+    "file": "web/lib/__tests__/adr028-mock-purge-lifecycle.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
