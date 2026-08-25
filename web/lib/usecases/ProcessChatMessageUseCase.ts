@@ -1,3 +1,4 @@
+import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
 import type {
   ChatPersistencePort,
   ModelResolutionPort,
@@ -75,7 +76,8 @@ export class ProcessChatMessageUseCase {
     private chatPersistence: ChatPersistencePort,
     private modelResolution: ModelResolutionPort,
     private tokenCrypto: CryptographicTokenPort,
-    private knowledgeHistory: KnowledgeHistoryService
+    private knowledgeHistory: KnowledgeHistoryService,
+    public temporalGraph?: TemporalKnowledgePort
   ) {}
 
   async execute(params: ProcessChatMessageUseCaseParams): Promise<ProcessChatMessageResult> {

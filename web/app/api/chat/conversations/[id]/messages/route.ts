@@ -1,3 +1,4 @@
+import { SupabaseTemporalGraphAdapter } from '@/lib/adapters/SupabaseTemporalGraphAdapter';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -106,7 +107,8 @@ export async function POST(
       persistenceAdapter,
       modelAdapter,
       tokenAdapter,
-      knowledgeService
+      knowledgeService,
+      new SupabaseTemporalGraphAdapter()
     );
 
     const result = await useCase.execute({

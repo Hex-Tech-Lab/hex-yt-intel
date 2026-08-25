@@ -1,3 +1,5 @@
+import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
+import { computeSimHash64 } from '@/lib/utils/simhash';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
   buildHighlightsExtractionSystemPrompt,
@@ -77,7 +79,8 @@ export interface ExtractHighlightsParams {
 export class ExtractHighlightsUseCase {
   constructor(
     private persistence: HighlightsPersistencePort,
-    private completion: TextCompletionPort
+    private completion: TextCompletionPort,
+    private temporalGraph?: TemporalKnowledgePort
   ) {}
 
   async execute(params: ExtractHighlightsParams): Promise<void> {
@@ -199,5 +202,23 @@ export class ExtractHighlightsUseCase {
         verbatimExcerpt: buildVerbatimExcerpt(highlight.start, highlight.end, segments),
       })),
     });
+
+    if (this.temporalGraph && segments.length > 0) {
+      const anchors = [];
+      const windowSize = 30;
+      const maxTime = segments[segments.length - 1]?.start || 0;
+      for (let windowStart = 0; windowStart <= maxTime; windowStart += windowSize) {
+        const windowEnd = windowStart + windowSize;
+        const windowSegments = segments.filter(s => s.start >= windowStart && s.start < windowEnd);
+        if (windowSegments.length > 0) {
+          const tokens = windowSegments.map(s => s.text).join(' ').split(/\s+/).filter(Boolean);
+          const simhash64 = computeSimHash64(tokens);
+          anchors.push({ windowStart, windowEnd, simhash64, salientClaim: null, verbatimAnchor: null });
+        }
+      }
+      if (anchors.length > 0) {
+        await this.temporalGraph.storeSimHashAnchors({ analysisId, anchors });
+      }
+    }
   }
 }
