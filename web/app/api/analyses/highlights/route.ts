@@ -33,41 +33,67 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await getSupabaseClientWithAuth();
-  const { data, error } = await supabase
-    .from('analysis_highlights')
-    .select('idx, start_seconds, end_seconds, label, verbatim_excerpt, takeaway_idx')
-    .eq('analysis_id', parsed.data.analysisId)
-    .order('idx', { ascending: true });
-
-  if (error) {
-    console.error('[analyses/highlights] query failed:', error.message);
-    return NextResponse.json({ error: 'Failed to load highlights' }, { status: 500 });
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const settings = await SupabaseSettingsAdapter.getRegistrySettings(
-    Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK),
-    HIGHLIGHTS_REGISTRY_FALLBACK
-  );
+  const encoder = new TextEncoder();
+  let hasSettled = false;
 
-  const body = JSON.stringify({
-    highlights: (data ?? []).map((row: HighlightRow) => ({
-      idx: row.idx,
-      start: row.start_seconds,
-      end: row.end_seconds,
-      label: row.label,
-      verbatimExcerpt: row.verbatim_excerpt ?? null,
-      takeawayIdx: row.takeaway_idx ?? null,
-    })),
-    segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
-    contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
-    minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
-    maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
-  });
   const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(body));
-      controller.close();
+    async start(controller) {
+      try {
+        const { data, error } = await supabase
+          .from('analysis_highlights')
+          .select('idx, start_seconds, end_seconds, label, verbatim_excerpt, takeaway_idx')
+          .eq('analysis_id', parsed.data.analysisId)
+          .order('idx', { ascending: true });
+
+        if (error) {
+          console.error('[analyses/highlights] query failed:', error.message);
+          if (!hasSettled) {
+            hasSettled = true;
+            controller.enqueue(encoder.encode(JSON.stringify({ error: 'Failed to load highlights' })));
+            controller.close();
+          }
+          return;
+        }
+
+        const settings = await SupabaseSettingsAdapter.getRegistrySettings(
+          Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK),
+          HIGHLIGHTS_REGISTRY_FALLBACK
+        );
+
+        const body = JSON.stringify({
+          highlights: (data ?? []).map((row: HighlightRow) => ({
+            idx: row.idx,
+            start: row.start_seconds,
+            end: row.end_seconds,
+            label: row.label,
+            verbatimExcerpt: row.verbatim_excerpt ?? null,
+            takeawayIdx: row.takeaway_idx ?? null,
+          })),
+          segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
+          contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
+          minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
+          maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
+        });
+
+        if (!hasSettled) {
+          hasSettled = true;
+          controller.enqueue(encoder.encode(body));
+          controller.close();
+        }
+      } catch (streamError) {
+        console.error('[analyses/highlights] unhandled stream error:', streamError instanceof Error ? streamError.message : String(streamError));
+        if (!hasSettled) {
+          hasSettled = true;
+          controller.error(streamError);
+        }
+      }
     },
   });
+
   return new Response(stream, { headers: { 'Content-Type': 'application/json' } });
 }

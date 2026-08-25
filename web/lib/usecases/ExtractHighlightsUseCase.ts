@@ -4,6 +4,7 @@ import {
   buildHighlightsExtractionUserMessage,
   parseHighlightsExtraction,
 } from '@/lib/prompts/highlights-extraction';
+import { buildVerbatimExcerpt } from '@/lib/prompts/highlights-reconciliation';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
 
@@ -26,7 +27,7 @@ export interface HighlightsPersistencePort {
    *  exist (idempotent replace). */
   saveHighlights(params: {
     analysisId: string;
-    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string }>;
   }): Promise<boolean>;
 
   /** Existing highlights for one analysis, ordered by idx. Used by the
@@ -48,6 +49,8 @@ export interface ExtractHighlightsParams {
    *  re-run must not re-spend on an analysis that already has a valid set.
    *  Pass false only for an explicit force-re-extract. */
   skipIfPresent?: boolean;
+  /** Optional executive digest key takeaways to map highlights against. */
+  takeaways?: string[];
 }
 
 /**
@@ -78,7 +81,7 @@ export class ExtractHighlightsUseCase {
   ) {}
 
   async execute(params: ExtractHighlightsParams): Promise<void> {
-    const { analysisId, videoId, models, skipIfPresent = true } = params;
+    const { analysisId, videoId, models, skipIfPresent = true, takeaways = [] } = params;
 
     if (skipIfPresent) {
       // A read failure here must not block a fresh extraction attempt --
@@ -146,7 +149,7 @@ export class ExtractHighlightsUseCase {
 
     const completion = await this.completion.complete({
       system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
-      user: buildHighlightsExtractionUserMessage(segments),
+      user: buildHighlightsExtractionUserMessage(segments, takeaways),
       models,
       maxTokens: maxOutputTokens,
       analysisId,
@@ -159,7 +162,7 @@ export class ExtractHighlightsUseCase {
       maxCount,
       minSegmentDuration,
       maxSegmentDuration,
-      0
+      takeaways.length
     );
 
     // 'invalid' means the model response was unparseable -- a transient LLM
@@ -192,6 +195,8 @@ export class ExtractHighlightsUseCase {
         start: highlight.start,
         end: highlight.end,
         label: highlight.label,
+        takeawayIdx: highlight.takeawayIdx ?? null,
+        verbatimExcerpt: buildVerbatimExcerpt(highlight.start, highlight.end, segments),
       })),
     });
   }

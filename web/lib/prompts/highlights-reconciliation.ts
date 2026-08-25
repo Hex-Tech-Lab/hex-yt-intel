@@ -65,7 +65,11 @@ export type ReconciliationParseResult =
   | { status: 'invalid' }
   | { status: 'ok'; reconciliation: ReconciliationResult };
 
-export function parseHighlightsReconciliation(rawText: string, takeawaysCount: number): ReconciliationParseResult {
+export function parseHighlightsReconciliation(
+  rawText: string,
+  takeawaysCount: number,
+  highlightsCount?: number
+): ReconciliationParseResult {
   const jsonMatch = rawText.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return { status: 'invalid' };
 
@@ -92,8 +96,18 @@ export function parseHighlightsReconciliation(rawText: string, takeawaysCount: n
     if (seenIdx.has(takeawayIdx)) return { status: 'invalid' };
     if (typeof grounded !== 'boolean') continue;
     let parsedBackingIdx: number | null = null;
-    if (typeof backingHighlightIdx === 'number' && Number.isInteger(backingHighlightIdx) && backingHighlightIdx >= 0) {
-      parsedBackingIdx = backingHighlightIdx;
+    if (grounded) {
+      if (typeof backingHighlightIdx === 'number' && Number.isInteger(backingHighlightIdx) && backingHighlightIdx >= 0) {
+        if (highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) {
+          return { status: 'invalid' };
+        }
+        parsedBackingIdx = backingHighlightIdx;
+      }
+    } else {
+      // Must be null if grounded is false
+      if (backingHighlightIdx !== null && backingHighlightIdx !== undefined) {
+        return { status: 'invalid' };
+      }
     }
     seenIdx.add(takeawayIdx);
     out.push({ idx: takeawayIdx, grounded, backingHighlightIdx: parsedBackingIdx });

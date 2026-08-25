@@ -179,6 +179,28 @@ describe('parseHighlightsReconciliation uniqueness/range validation (B3)', () =>
     );
     expect(result.status).toBe('invalid');
   });
+
+  it('rejects backingHighlightIdx >= highlightsCount when highlightsCount is provided', () => {
+    const result = parseHighlightsReconciliation(
+      JSON.stringify([
+        { takeawayIdx: 0, grounded: true, backingHighlightIdx: 5 }, // highlight index 5 >= highlightsCount 3
+      ]),
+      1,
+      3
+    );
+    expect(result.status).toBe('invalid');
+  });
+
+  it('rejects non-null backingHighlightIdx when grounded is false', () => {
+    const result = parseHighlightsReconciliation(
+      JSON.stringify([
+        { takeawayIdx: 0, grounded: false, backingHighlightIdx: 0 }, // must be null if not grounded
+      ]),
+      1,
+      3
+    );
+    expect(result.status).toBe('invalid');
+  });
 });
 
 /**

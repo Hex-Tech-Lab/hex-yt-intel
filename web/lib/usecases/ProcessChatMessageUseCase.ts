@@ -362,23 +362,20 @@ export class ProcessChatMessageUseCase {
     // 11-dimension body, since it's the highest-level synthesis of the video.
     const digest = groundingData.executiveDigest;
     // Annotate each takeaway with its grounded status from the reconciliation
-    // pass (§2.B.6 Step 5, 2026-08-21). A absent/null reconciliation means
-    // all takeaways are treated as grounded (fail-open — old rows, or
-    // reconciliation call failed). The `grounded` flag is used by the LLM to
-    // know which claims have real transcript backing vs. which were produced
-    // by the digest LLM alone.
+    // pass (§2.B.6 Step 5, 2026-08-21). When reconciliation is absent/null (old
+    // rows or reconciliation call failed/unavailable), takeaways are labeled
+    // [unverified] so the LLM is explicitly instructed not to treat them as
+    // verified quotes or proven transcript claims.
     const reconciliation = digest?.reconciliation ?? null;
     const executiveDigestSection = digest
       ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string, i: number) => {
-        const rec = reconciliation?.takeaways?.[i];
-        // Fail-open applies ONLY when reconciliation is absent (old rows /
-        // failed call). When reconciliation EXISTS but this takeaway is
-        // missing from it, the takeaway must be ungrounded, NOT silently
-        // grounded — otherwise the LLM treats an unverified claim as
-        // transcript-backed (false grounding).
-        const grounded = reconciliation === null ? true : (rec?.grounded ?? false);
-        const backing = grounded && rec?.backingHighlightIdx != null ? ` (backed by highlight #${rec.backingHighlightIdx})` : '';
-        return `- [${grounded ? 'grounded' : 'ungrounded'}] ${t}${backing}`;
+        if (reconciliation === null) {
+          return `- [unverified] ${t}`;
+        }
+        const rec = reconciliation.takeaways?.[i];
+        const isGrounded = rec?.grounded === true;
+        const backing = isGrounded && rec?.backingHighlightIdx != null ? ` (backed by highlight #${rec.backingHighlightIdx})` : '';
+        return `- [${isGrounded ? 'grounded' : 'ungrounded'}] ${t}${backing}`;
       }).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
       : '';
 

@@ -384,7 +384,7 @@ export class SupabaseAnalysisAdapter {
           return statusMap[reportStatus] ?? 'incomplete';
         })(),
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserHistory' },
         extra: { userId: params.userId },
@@ -412,7 +412,7 @@ export class SupabaseAnalysisAdapter {
       }
 
       return ((data as RawHistoryOverviewRow[]) || []).map(mapHistoryOverviewRow);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserHistoryOverview' },
         extra: { userId: params.userId },
@@ -455,7 +455,7 @@ export class SupabaseAnalysisAdapter {
       if (error) handlerMap.ERROR();
       if (!data) return handlerMap.NO_DATA();
       return handlerMap.SUCCESS();
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisById' },
         extra: { userId: params.userId, analysisId: params.analysisId },
@@ -515,7 +515,7 @@ export class SupabaseAnalysisAdapter {
         createdAt: row.created_at,
         channelTitle: row.channel_title,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisForPersist' },
         extra: { analysisId: params.analysisId, videoId: params.videoId },
@@ -678,7 +678,7 @@ export class SupabaseAnalysisAdapter {
         comments: resolvedComments,
         highlights,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisGrounding' },
         extra: { analysisId: params.analysisId },
@@ -728,7 +728,7 @@ export class SupabaseAnalysisAdapter {
         videoId: stripArchivedVideoIdSuffix(data.video_id) ?? null,
         videoDurationSeconds,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisByShareToken' },
         extra: { token: '[REDACTED]' },
@@ -774,7 +774,7 @@ export class SupabaseAnalysisAdapter {
         verbatimExcerpt: h.verbatim_excerpt ?? null,
         takeawayIdx: h.takeaway_idx ?? null,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findHighlightsForAnalysis' },
         extra: { analysisId },
@@ -797,7 +797,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return !!data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'verifyAnalysisExists' },
         extra: { analysisId },
@@ -817,7 +817,7 @@ export class SupabaseAnalysisAdapter {
 
       if (error) throw error;
       return (data as { user_id: string } | null)?.user_id ?? null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisOwner' },
         extra: { analysisId },
@@ -844,7 +844,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return data?.analysis_markdown || null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisMarkdownInternal' },
         extra: { analysisId },
@@ -878,7 +878,7 @@ export class SupabaseAnalysisAdapter {
         console.error('[SupabaseAnalysisAdapter] updateValidationReport failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'updateValidationReport' },
         extra: { analysisId: params.analysisId },
@@ -906,7 +906,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'verifyOwnership' },
         extra: { analysisId: params.analysisId, userId: params.userId },
@@ -939,7 +939,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return Boolean(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'saveExecutiveDigest' },
         extra: { analysisId: params.analysisId, userId: params.userId },
@@ -974,8 +974,18 @@ export class SupabaseAnalysisAdapter {
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
-      if (error || !data?.segments) return null;
-      return data.segments as Array<{ start: number; text: string }>;
+      if (error || !data?.segments || !Array.isArray(data.segments)) return null;
+
+      const seenStarts = new Set<number>();
+      return (data.segments as unknown[])
+        .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string' && Number.isFinite(s.start) && s.start >= 0 && s.text.trim().length > 0)
+        .map((s: any) => ({ start: s.start as number, text: s.text.trim() as string }))
+        .filter((s) => {
+          if (seenStarts.has(s.start)) return false;
+          seenStarts.add(s.start);
+          return true;
+        })
+        .sort((left, right) => left.start - right.start);
     } catch (error: unknown) {
       console.warn('[SupabaseAnalysisAdapter] getTranscriptSegments failed:', error instanceof Error ? error.message : String(error));
       Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' } });
@@ -1012,7 +1022,7 @@ export class SupabaseAnalysisAdapter {
       });
       if (error) throw error;
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, { tags: { method: 'saveHighlights' }, extra: { analysisId: params.analysisId } });
       return false;
     }
@@ -1038,7 +1048,7 @@ export class SupabaseAnalysisAdapter {
       });
       if (error) throw error;
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, { tags: { method: 'saveReconciliation' }, extra: { analysisId: params.analysisId } });
       return false;
     }

@@ -35,12 +35,16 @@ export function PublicHighlightsReel({
   segmentDurationSeconds,
   contextLeadSeconds,
   videoDurationSeconds,
+  minSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'],
+  maxSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'],
 }: {
   videoId: string;
   highlights: Highlight[];
   segmentDurationSeconds: number;
   contextLeadSeconds: number;
   videoDurationSeconds: number | null;
+  minSegmentDurationSeconds?: number;
+  maxSegmentDurationSeconds?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerAdapter | null>(null);
@@ -77,8 +81,8 @@ export function PublicHighlightsReel({
     [ready]
   );
 
-  const minDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'];
-  const maxDur = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'];
+  const minDur = minSegmentDurationSeconds;
+  const maxDur = maxSegmentDurationSeconds;
 
   // Clamp each highlight's end to [start+minDur, start+maxDur] before passing to
   // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
