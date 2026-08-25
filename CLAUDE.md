@@ -155,6 +155,27 @@ Implementation, exact output format, and per-tool detection logic: `scripts/calc
 
 See `docs/LESSONS_LEARNED.md` line 102 for the original formula rationale.
 
+---
+
+## 7. CODING STANDARDS & GOVERNANCE (Hex-Lite & DDD-Lite Enforced)
+
+All agents MUST adhere to the 4 core Karpathy engineering tenets, strictly bound by the repository's Hex-Lite and DDD-Lite architectural boundaries:
+
+1. **Think Before Coding**:
+   - Surface assumptions explicitly; clarify ambiguities instead of guessing.
+   - Check `.memory/AGENT_LEDGER.md` and `.memory/ADRS.md` to prevent collisions and align with architectural decisions.
+   - Map blast radius before writing code.
+2. **Simplicity First (Hex-Lite & DDD-Lite)**:
+   - Build minimum viable logic; zero speculative abstraction layers or unused indirections.
+   - Never confuse simplicity with architecture abandonment: strictly preserve existing Ports, Adapters, Domain boundaries, and Separation of Concerns (SoC).
+   - Domain models hold business logic; adapters hold infrastructure code; route handlers remain ultra-thin dispatchers.
+3. **Surgical Diffs**:
+   - Modify ONLY target lines/files. Zero drive-by formatting, zero unsolicited refactors, strict blast-radius isolation.
+4. **Goal-Driven Verification**:
+   - Define empirical pass criteria; execute negative-control checks, vitest unit suites, strict type checks (`tsc --noEmit`), and `qa-intel:baseline` before closing tasks.
+
+---
+
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 

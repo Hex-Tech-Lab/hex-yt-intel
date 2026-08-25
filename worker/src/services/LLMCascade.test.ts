@@ -34,7 +34,7 @@ describe('LLMCascade.streamCascade', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'model/a', name: 'Model A' }]);
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'model/a', name: 'Model A' }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
     const deltas: string[] = [];
     const statuses: string[] = [];
 
@@ -66,10 +66,7 @@ describe('LLMCascade.streamCascade', () => {
       .mockResolvedValueOnce(sseResponse(['data: {"choices":[{"delta":{"content":"recovered"}}]}', 'data: [DONE]']));
     vi.stubGlobal('fetch', fetchMock);
 
-    const cascade = new LLMCascade('test-api-key', undefined, [
-      { model: 'model/a', name: 'Model A' },
-      { model: 'model/b', name: 'Model B' },
-    ]);
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'model/a', name: 'Model A' }, { model: 'model/b', name: 'Model B' }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
     const statuses: string[] = [];
 
     const result = await cascade.streamCascade('sys', () => {}, (status) => statuses.push(status.stage));
@@ -96,13 +93,7 @@ describe('LLMCascade.streamCascade', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const cascade = new LLMCascade('test-api-key', undefined, [
-      {
-        model: 'anthropic/claude-haiku-4.5',
-        name: 'Claude Haiku 4.5 (Azure)',
-        providerOrder: ['azure'],
-      },
-    ]);
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', providerOrder: ['azure'] }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
 
     await cascade.streamCascade('sys', () => {}, () => {});
 
@@ -113,22 +104,10 @@ describe('LLMCascade.streamCascade', () => {
     expect(body.provider).toEqual({ order: ['azure'], allow_fallbacks: false });
   });
 
-  it('falls back to the hardcoded default provider order (including azure) when a claude-haiku-4.5 tier has no providerOrder at all', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const cascade = new LLMCascade('test-api-key', undefined, [
-      { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (no providerOrder)' },
-    ]);
-
-    await cascade.streamCascade('sys', () => {}, () => {});
-
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const body = JSON.parse(init.body as string);
-    expect(body.provider.allow_fallbacks).toBe(false);
-    expect(body.provider.order).toContain('azure');
-    expect(body.provider.order).toEqual(['google-vertex', 'azure', 'anthropic', 'amazon-bedrock']);
+  it('fails closed when a claude-haiku-4.5 tier has no providerOrder at all', async () => {
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (no providerOrder)' }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
+    
+    // Attempting to stream should throw because buildRequestProvider fails
+    await expect(cascade.streamCascade('sys', vi.fn())).rejects.toThrow('LLMCascade SSOT Violation: Haiku 4.5 requested without explicit providerOrder from Settings Registry');
   });
 });

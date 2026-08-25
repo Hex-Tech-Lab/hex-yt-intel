@@ -56,7 +56,7 @@ describe('GenerateExecutiveDigestUseCase', () => {
   let useCase: GenerateExecutiveDigestUseCase;
   afterEach(async () => {
     if (useCase && (useCase as any)._reconciliationPromise) {
-      await (useCase as any)._reconciliationPromise.catch(error => console.error(e));
+      await (useCase as any)._reconciliationPromise.catch((_error: unknown) => console.error(e));
     }
   });
   it('404s when the analysis is not owned / not found', async () => {

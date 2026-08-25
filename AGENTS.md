@@ -27,7 +27,17 @@ All commands run from repo root via `pnpm --filter`:
 
 ---
 
-## 2. CODE STYLE GUIDELINES
+## 2. CODE STYLE GUIDELINES & GOVERNANCE (Hex-Lite & DDD-Lite Enforced)
+
+All agents MUST adhere to the 4 core Karpathy engineering tenets, strictly bound by Hex-Lite and DDD-Lite boundaries:
+
+1. **Think Before Coding**: Surface assumptions explicitly; check `.memory/AGENT_LEDGER.md` and `.memory/ADRS.md` to prevent collisions, and map blast radius before writing code.
+2. **Simplicity First (Hex-Lite & DDD-Lite)**:
+   - Build minimum viable logic; zero speculative abstraction layers or unused indirections.
+   - Never confuse simplicity with architecture abandonment: strictly preserve existing Ports, Adapters, Domain boundaries, and Separation of Concerns (SoC).
+   - Domain models hold business logic; adapters hold infrastructure code; route handlers remain ultra-thin dispatchers.
+3. **Surgical Diffs**: Modify ONLY target lines/files. Zero drive-by formatting, zero unsolicited refactors, strict blast-radius isolation.
+4. **Goal-Driven Verification**: Define empirical pass criteria; execute negative-control checks, vitest unit suites, strict type checks (`tsc --noEmit`), and `qa-intel:baseline` before closing tasks.
 
 ### Imports (order — grouped with blank lines)
 1. Framework / lib (`react`, `next/server`, Zustand, `@sentry/nextjs`)

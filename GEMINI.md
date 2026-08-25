@@ -216,6 +216,17 @@ Instead of full-blown clean architecture, we use a streamlined version:
 - **Domain Services (`/services`)**: Core domain logic that doesn't fit a single entity. 
   - **CRITICAL ARCHITECTURAL RULE**: Components in `worker/src/services/` (e.g., `ReasoningEngine`, `PromptBuilder`, `LLMCascade`, `ValidationService`) are **Domain Services**. They are NOT adapters and MUST NOT be moved to `/adapters/` or renamed with an `Adapter` suffix. While they may interact with external APIs (like OpenRouter), the *logic* of the reasoning cascade or prompt building is core to our domain. Thus, `LLMCascade` implements `LLMCascadePort` but its orchestrator rightly lives in `/services/`. Only pure database/infrastructure connectors (like `UpstashCacheAdapter`) belong in `/adapters/`.
 
+### 9.3 CODING STANDARDS & GOVERNANCE (Hex-Lite & DDD-Lite Enforced)
+All agents MUST adhere to the 4 core Karpathy engineering tenets, strictly bound by Hex-Lite and DDD-Lite boundaries:
+
+1. **Think Before Coding**: Surface assumptions explicitly; check `.memory/AGENT_LEDGER.md` and `.memory/ADRS.md` to prevent collisions, and map blast radius before writing code.
+2. **Simplicity First (Hex-Lite & DDD-Lite)**:
+   - Build minimum viable logic; zero speculative abstraction layers or unused indirections.
+   - Never confuse simplicity with architecture abandonment: strictly preserve existing Ports, Adapters, Domain boundaries, and Separation of Concerns (SoC).
+   - Domain models hold business logic; adapters hold infrastructure code; route handlers remain ultra-thin dispatchers.
+3. **Surgical Diffs**: Modify ONLY target lines/files. Zero drive-by formatting, zero unsolicited refactors, strict blast-radius isolation.
+4. **Goal-Driven Verification**: Define empirical pass criteria; execute negative-control checks, vitest unit suites, strict type checks (`tsc --noEmit`), and `qa-intel:baseline` before closing tasks.
+
 ## 10. AUTONOMOUS WORKFLOW
 - **Standing Instruction**: No man in the middle. I am the sole agent, the user is the orchestrator. I act autonomously, manage all tasks, and execute all work without needing intermediate approval unless critically underspecified.
 - **Set Agent Protocol**: Always follow the set agent protocol without me reminding. Inform others and get updates from others before and after every task and during with every subtask.

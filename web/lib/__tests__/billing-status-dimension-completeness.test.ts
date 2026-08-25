@@ -204,7 +204,7 @@ describe('cache-write gate — billingStatus controls caching, not isStitchedVal
   it('CACHE: isStitchedValid=false + billingStatus="failed" → should NOT cache (incomplete)', () => {
     const payload = makeStitchedPayload(TOTAL_DIMENSIONS - 3); // 3 dimensions missing
     const { billingStatus } = buildDimensionStatus(payload);
-    const isStitchedValid = false;
+    const _isStitchedValid = false;
 
     // Old gate: if (isStitchedValid) → false ✗ (skipped — correct for this case)
     // New gate: if (billingStatus === 'completed') → false ✗ (skipped — still correct)

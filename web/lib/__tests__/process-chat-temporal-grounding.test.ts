@@ -69,7 +69,7 @@ describe('ProcessChatMessageUseCase - Temporal Grounding', () => {
     });
     
     // Check that the returned streaming text or grounding includes the verbatim anchor
-    const call = (chatPersistence.createMessage as any).mock.calls.find((callArgs: any) => callArgs[0].role === 'user');
+    const _call = (chatPersistence.createMessage as any).mock.calls.find((callArgs: any) => callArgs[0].role === 'user');
     expect(JSON.stringify(result)).toContain('This is the exact matched anchor text.');
     expect(JSON.stringify(result)).toContain('TEMPORAL GRAPH (Semantic Matches)');
   });

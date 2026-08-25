@@ -17,15 +17,7 @@ import { translateModelId } from './model-id-translator';
 //   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
-import { CASCADE_FALLBACKS } from '../../../web/lib/config/cascade';
 
-// Deploy-time snapshot only -- the worker has no DB access (ADR 005), so this
-// is never the live source of truth. Real per-request values come from the
-// `cascade` field on StreamRequest (full CascadeItem[], registry-resolved
-// server-side via resolveAnalysisCascade), forwarded by CreateAnalysisUseCase.
-// `models` (flat id array, positionally matched below) is the older/signed
-// fallback for stale clients that haven't picked up the `cascade` field yet.
-const MODEL_CHAIN = CASCADE_FALLBACKS.analysis;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
@@ -37,28 +29,15 @@ const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 // the pre-testing value. Registry-driven now (analysis.maxOutputTokens.haiku/
 // .default) per the standing no-hardcoded-tunables directive -- these are
 // ONLY the fallback for a stale client that didn't forward maxOutputTokens.
-const MAX_TOKENS_FALLBACK = { haiku: 8192, default: 16000 };
 
 // Fallback only, for a stale client that didn't forward llmCascadeTimeoutMs
 // -- see CreateAnalysisUseCase's resolution of analysis.llmCascade.timeoutMs
 // and this file's timeoutMs doc comment on streamCascade's callLLMStream
 // call for the full RCA (was hardcoded to 120000, falsely assumed a 90s
 // Cloudflare Worker platform ceiling that does not actually exist).
-const LLM_TIMEOUT_MS_FALLBACK = 240000;
 // Fallback only, for a stale client that didn't forward
 // llmCascadeHandshakeTimeoutMs (analysis.llmCascade.handshakeTimeoutMs).
-const LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK = 15000;
 
-// Defensive fallback ONLY, used when a claude-haiku-4.5 tier arrives with no
-// providerOrder at all (e.g. a stale/legacy `models`-only request that
-// doesn't resolve to a MODEL_CHAIN entry). The real per-request order comes
-// from the `cascade` field's per-tier `providerOrder` (see constructor),
-// forwarded end-to-end from web/lib/config/cascade.ts's ANALYSIS_CASCADE_FALLBACK
-// / the `cascade.analysis` Settings Registry key -- this literal must be kept
-// in sync with that SSOT's provider set (issue #241: this array previously
-// omitted 'azure' entirely and silently drifted out of sync since the SSOT
-// was never wired to reach this file until the `cascade` field was added).
-const HAIKU_PROVIDER_ORDER_FALLBACK = ['google-vertex', 'azure', 'anthropic', 'amazon-bedrock'];
 
 /**
  * Builds the OpenRouter `provider` request field. Extracted (real
@@ -71,12 +50,15 @@ function buildRequestProvider(
   providerOrder: string[] | undefined
 ): { order: string[]; allow_fallbacks: false } | undefined {
   if (isHaiku45) {
+    if (!providerOrder || providerOrder.length === 0) {
+      throw new Error('LLMCascade SSOT Violation: Haiku 4.5 requested without explicit providerOrder from Settings Registry');
+    }
     return {
-      order: providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK,
+      order: providerOrder,
       allow_fallbacks: false,
     };
   }
-  return providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined;
+  return providerOrder && providerOrder.length > 0 ? { order: providerOrder, allow_fallbacks: false } : undefined;
 }
 
 export class LLMCascade implements LLMCascadePort {
@@ -106,32 +88,17 @@ export class LLMCascade implements LLMCascadePort {
     llmHandshakeTimeoutMs?: number
   ) {
     this.apiKey = apiKey;
-    this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs ?? LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK;
-    this.maxTokens = maxOutputTokens ?? MAX_TOKENS_FALLBACK;
+    if (!llmHandshakeTimeoutMs) throw new Error('LLMCascade SSOT Violation: Missing llmHandshakeTimeoutMs from Settings Registry');
+    this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs;
+    if (!maxOutputTokens) throw new Error('LLMCascade SSOT Violation: Missing maxOutputTokens from Settings Registry');
+    this.maxTokens = maxOutputTokens;
     this.userId = userId;
-    this.llmTimeoutMs = llmTimeoutMs ?? LLM_TIMEOUT_MS_FALLBACK;
-    if (cascade && cascade.length > 0) {
-      // Preferred path: full registry-resolved tiers, providerOrder included
-      // directly -- correct even when multiple tiers share one model id
-      // across different providers (e.g. Haiku 4.5 on Vertex/Anthropic/Azure),
-      // which the `models`-only path below can't distinguish once MODEL_CHAIN
-      // drifts from what was actually resolved server-side.
-      this.chain = cascade;
-    } else if (models && models.length > 0) {
-      this.chain = models.map((model, idx) => {
-        if (MODEL_CHAIN[idx] && MODEL_CHAIN[idx].model === model) {
-          return MODEL_CHAIN[idx];
-        }
-        const matched = MODEL_CHAIN.find((item) => item.model === model);
-        return {
-          model,
-          name: matched?.name ?? model,
-          providerOrder: matched?.providerOrder,
-        };
-      });
-    } else {
-      this.chain = MODEL_CHAIN;
+    if (!llmTimeoutMs) throw new Error('LLMCascade SSOT Violation: Missing llmTimeoutMs from Settings Registry');
+    this.llmTimeoutMs = llmTimeoutMs;
+    if (!cascade || cascade.length === 0) {
+      throw new Error('LLMCascade SSOT Violation: Missing cascade configuration from Settings Registry');
     }
+    this.chain = cascade;
   }
 
   /**
@@ -279,7 +246,7 @@ export class LLMCascade implements LLMCascadePort {
     model: string,
     systemPrompt: string,
     onDelta: (text: string) => void,
-    timeoutMs = LLM_TIMEOUT_MS_FALLBACK,
+    timeoutMs: number,
     signal?: AbortSignal,
     providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; generationId?: string }> {
