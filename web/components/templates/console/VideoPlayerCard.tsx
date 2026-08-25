@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -14,6 +14,7 @@ export function VideoPlayerCard() {
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
   const isPlayingRef = useRef(false);
+  const isMountingRef = useRef(false);
   // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
   // this component's own poll loop below writes currentPlaybackSeconds to
   // this same store 4x/sec while playing, but never reads it reactively;
@@ -62,15 +63,13 @@ export function VideoPlayerCard() {
   // click-gated version: the real IFrame API (www-widgetapi.js,
   // player_embed_es6 base.js, www-player.css) is a meaningful chunk of
   // network/JS weight, hence idle-time not immediate-on-mount.
-  const mountPlayer = () => {
+  const mountPlayer = useCallback(() => {
     if (!containerRef.current) return;
+    if (playerRef.current || isMountingRef.current) return; // Strict guard
+    isMountingRef.current = true;
 
     let cancelled = false;
 
-    if (playerRef.current) {
-      playerRef.current.destroy();
-      playerRef.current = null;
-    }
     setReady(false);
     setPlaybackError(null);
     setFallbackSeek(null);
@@ -118,19 +117,9 @@ export function VideoPlayerCard() {
       onPause: () => {
         if (cancelled) return;
         setPlaying(false);
-        // Capture one final accurate reading at the moment of pause -- the
-        // poll loop below only runs while isPlaying, so without this the
-        // store would keep whatever value the last ~250ms-old poll tick
-        // happened to catch. Does NOT cover scrubbing the native player's
-        // seek bar while it's already paused (no such event exists on this
-        // adapter) -- accepted limitation, narrow case, not fixed here.
         const currentTime = adapter.getCurrentTime?.() ?? null;
         if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
       },
-      // YouTube's IFrame API state machine goes PLAYING -> ENDED, not
-      // PLAYING -> PAUSED -- without this, isPlaying never flips false on
-      // video end, so the playback-position poll loop below (gated on
-      // isPlaying) would run indefinitely after the video finishes.
       onEnded: () => {
         if (!cancelled) setPlaying(false);
       },
@@ -143,11 +132,12 @@ export function VideoPlayerCard() {
       if (playerRef.current === adapter) {
         playerRef.current = null;
       }
+      isMountingRef.current = false;
       videoIdRef.current = null;
       setReady(false);
       setPlaybackError(null);
     };
-  };
+  }, [videoId, setPlaying, setCurrentPlaybackSeconds]);
 
   useEffect(() => {
     if (!mounted || !videoId || !containerRef.current) return;
@@ -156,10 +146,6 @@ export function VideoPlayerCard() {
     let cleanupMount: (() => void) | undefined;
     let disposed = false;
 
-    // requestIdleCallback isn't implemented in Safari -- setTimeout(…, 1) is
-    // the standard fallback used for this exact gap elsewhere in the web
-    // platform ecosystem; it still yields to the current paint/interaction
-    // first, just without idle's "only when truly free" guarantee.
     const schedule =
       typeof window.requestIdleCallback === 'function'
         ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 2000 })
@@ -177,11 +163,6 @@ export function VideoPlayerCard() {
       if (idleHandle !== null) cancelSchedule(idleHandle);
       cleanupMount?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mountPlayer is
-    // redefined every render (closes over videoId/setPlaying/etc, all
-    // already covered by this effect's own deps) but is not itself a
-    // reactive value this effect should re-run on; including it would
-    // destroy and re-mount the player on every unrelated render.
   }, [mounted, videoId, setPlaying, retryNonce, mountPlayer]);
 
   // A click (or a transcript timestamp arriving while still on the facade)
