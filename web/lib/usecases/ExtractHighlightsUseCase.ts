@@ -1,3 +1,5 @@
+import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
+import { computeSimHash64 } from '@/lib/utils/simhash';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
   buildHighlightsExtractionSystemPrompt,
@@ -77,7 +79,8 @@ export interface ExtractHighlightsParams {
 export class ExtractHighlightsUseCase {
   constructor(
     private persistence: HighlightsPersistencePort,
-    private completion: TextCompletionPort
+    private completion: TextCompletionPort,
+    private temporalGraph?: TemporalKnowledgePort
   ) {}
 
   async execute(params: ExtractHighlightsParams): Promise<void> {
@@ -186,6 +189,38 @@ export class ExtractHighlightsUseCase {
     // above protects against, extended here to the empty-but-valid case.
     // Skipping the save leaves the table as-is (existing set, or empty for a
     // first run with nothing noteworthy) -- correct in both cases.
+    if (this.temporalGraph && segments.length > 0) {
+      const anchors = [];
+      const windowSize = 30;
+      const maxTime = Math.max(...segments.map((s) => s.start));
+      for (let windowStart = 0; windowStart <= maxTime; windowStart += windowSize) {
+        const windowEnd = windowStart + windowSize;
+        const windowSegments = segments.filter(
+          (s) => s.start >= windowStart && s.start < windowEnd
+        );
+        if (windowSegments.length > 0) {
+          const rawText = windowSegments.map((s) => s.text).join(' ');
+          const tokens = rawText.split(/\s+/).filter(Boolean);
+          const simhash64 = computeSimHash64(tokens);
+          const verbatimAnchor = rawText.slice(0, 200);
+          
+          anchors.push({ 
+            windowStart, 
+            windowEnd, 
+            simhash64, 
+            salientClaim: null, 
+            verbatimAnchor 
+          });
+        }
+      }
+      if (anchors.length > 0) {
+        const success = await this.temporalGraph.storeSimHashAnchors({ analysisId, anchors });
+        if (!success) {
+          throw new Error('Failed to persist temporal simhash anchors');
+        }
+      }
+    }
+
     if (result.highlights.length === 0) return;
 
     await this.persistence.saveHighlights({

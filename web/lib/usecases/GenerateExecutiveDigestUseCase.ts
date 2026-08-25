@@ -160,14 +160,16 @@ export class GenerateExecutiveDigestUseCase {
     // However, reconciliation MUST happen when both exist. Since the digest
     // is generated here, we can asynchronously attempt reconciliation now.
     if (parsed.takeaways && parsed.takeaways.length > 0) {
-      import('./ReconcileHighlightsUseCase').then(({ ReconcileHighlightsUseCase }) => {
-        new ReconcileHighlightsUseCase(this.persistence, this.completion).execute({
+      const promise = import('./ReconcileHighlightsUseCase').then(({ ReconcileHighlightsUseCase }) => {
+        return new ReconcileHighlightsUseCase(this.persistence, this.completion).execute({
           analysisId,
           userId,
           takeaways: parsed.takeaways!,
           models,
         });
       });
+      // Expose for test teardown synchronization
+      (this as any)._reconciliationPromise = promise;
     }
 
     return { type: 'success', digest, cached: false };

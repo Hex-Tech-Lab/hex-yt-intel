@@ -53,6 +53,12 @@ const makeDeps = (opts: { row: Row; completion?: string; completionThrows?: bool
 const baseParams = { analysisId: 'an-1', userId: 'user-1', models: [{ model: 'test/model' }] as const };
 
 describe('GenerateExecutiveDigestUseCase', () => {
+  let useCase: GenerateExecutiveDigestUseCase;
+  afterEach(async () => {
+    if (useCase && (useCase as any)._reconciliationPromise) {
+      await (useCase as any)._reconciliationPromise.catch(error => console.error(e));
+    }
+  });
   it('404s when the analysis is not owned / not found', async () => {
     const { useCase, getCompletionCalls } = makeDeps({ row: null });
     const res = await useCase.execute(baseParams);
