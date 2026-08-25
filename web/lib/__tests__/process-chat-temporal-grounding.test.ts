@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ProcessChatMessageUseCase } from '../usecases/ProcessChatMessageUseCase';
+import { ProcessChatMessageUseCase } from '@/lib/usecases/ProcessChatMessageUseCase';
 import type { ChatPersistencePort, ModelResolutionPort, CryptographicTokenPort } from '@/lib/ports/ChatPorts';
 import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
 import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
@@ -39,7 +39,6 @@ describe('ProcessChatMessageUseCase - Temporal Grounding', () => {
       queryTemporalSubgraph: vi.fn().mockResolvedValue([
         { id: 'node-1', windowStart: 30, windowEnd: 60, simhash64: 123n, salientClaim: 'Test claim', verbatimAnchor: null }
       ]),
-      resolveAnchorByHammingDistance: vi.fn().mockResolvedValue(null)
     };
 
     const useCase = new ProcessChatMessageUseCase(

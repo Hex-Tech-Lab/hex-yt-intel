@@ -13,7 +13,7 @@ import { join } from 'node:path';
 describe('digest.maxOutputTokens fallback stays in sync with the registry default', () => {
   it('DIGEST_MAX_TOKENS_FALLBACK matches the real migration default_value', () => {
     const useCaseSource = readFileSync(
-      join(__dirname, '../usecases/GenerateExecutiveDigestUseCase.ts'),
+      join(__dirname, '@/lib/usecases/GenerateExecutiveDigestUseCase.ts'),
       'utf8'
     );
     const fallbackMatch = useCaseSource.match(/DIGEST_MAX_TOKENS_FALLBACK\s*=\s*(\d+)/);

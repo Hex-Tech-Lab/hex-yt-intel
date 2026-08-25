@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ExtractHighlightsUseCase } from '../usecases/ExtractHighlightsUseCase';
-import { ProcessChatMessageUseCase } from '../usecases/ProcessChatMessageUseCase';
-import type { HighlightsPersistencePort } from '../usecases/ExtractHighlightsUseCase';
+import { ExtractHighlightsUseCase } from '@/lib/usecases/ExtractHighlightsUseCase';
+import { ProcessChatMessageUseCase } from '@/lib/usecases/ProcessChatMessageUseCase';
+import type { HighlightsPersistencePort } from '@/lib/usecases/ExtractHighlightsUseCase';
 import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
 import type { ChatPersistencePort, ModelResolutionPort, CryptographicTokenPort } from '@/lib/ports/ChatPorts';
 import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
 
-describe('ADR 028: 72-Hour Purge Lifecycle Simulation', () => {
+describe('ADR 028: Mock Purge Lifecycle Simulation', () => {
   it('maintains grounded citations and temporal resolution after raw transcript purge', async () => {
     // Shared Memory State for simulation
     let savedHighlights: any[] = [];
@@ -52,9 +52,7 @@ describe('ADR 028: 72-Hour Purge Lifecycle Simulation', () => {
           salientClaim: a.salientClaim || `Claim ${i}`
         }));
       }),
-      resolveAnchorByHammingDistance: vi.fn().mockImplementation(async () => {
-        return savedAnchors[0];
-      })
+      
     };
 
     const extractUseCase = new ExtractHighlightsUseCase(
@@ -108,7 +106,7 @@ describe('ADR 028: 72-Hour Purge Lifecycle Simulation', () => {
     };
 
     const tokenCrypto: CryptographicTokenPort = {
-      signChatToken: vi.fn().mockResolvedValue('token')
+      signChatToken: vi.fn().mockResolvedValue({ sig: 'token', exp: 12345 })
     };
 
     const knowledgeHistory = new KnowledgeHistoryService({

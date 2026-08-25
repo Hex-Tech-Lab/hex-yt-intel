@@ -189,6 +189,38 @@ export class ExtractHighlightsUseCase {
     // above protects against, extended here to the empty-but-valid case.
     // Skipping the save leaves the table as-is (existing set, or empty for a
     // first run with nothing noteworthy) -- correct in both cases.
+    if (this.temporalGraph && segments.length > 0) {
+      const anchors = [];
+      const windowSize = 30;
+      const maxTime = Math.max(...segments.map((s) => s.start));
+      for (let windowStart = 0; windowStart <= maxTime; windowStart += windowSize) {
+        const windowEnd = windowStart + windowSize;
+        const windowSegments = segments.filter(
+          (s) => s.start >= windowStart && s.start < windowEnd
+        );
+        if (windowSegments.length > 0) {
+          const rawText = windowSegments.map((s) => s.text).join(' ');
+          const tokens = rawText.split(/\s+/).filter(Boolean);
+          const simhash64 = computeSimHash64(tokens);
+          const verbatimAnchor = rawText.slice(0, 200);
+          
+          anchors.push({ 
+            windowStart, 
+            windowEnd, 
+            simhash64, 
+            salientClaim: null, 
+            verbatimAnchor 
+          });
+        }
+      }
+      if (anchors.length > 0) {
+        const success = await this.temporalGraph.storeSimHashAnchors({ analysisId, anchors });
+        if (!success) {
+          throw new Error('Failed to persist temporal simhash anchors');
+        }
+      }
+    }
+
     if (result.highlights.length === 0) return;
 
     await this.persistence.saveHighlights({
@@ -202,23 +234,5 @@ export class ExtractHighlightsUseCase {
         verbatimExcerpt: buildVerbatimExcerpt(highlight.start, highlight.end, segments),
       })),
     });
-
-    if (this.temporalGraph && segments.length > 0) {
-      const anchors = [];
-      const windowSize = 30;
-      const maxTime = segments[segments.length - 1]?.start || 0;
-      for (let windowStart = 0; windowStart <= maxTime; windowStart += windowSize) {
-        const windowEnd = windowStart + windowSize;
-        const windowSegments = segments.filter(s => s.start >= windowStart && s.start < windowEnd);
-        if (windowSegments.length > 0) {
-          const tokens = windowSegments.map(s => s.text).join(' ').split(/\s+/).filter(Boolean);
-          const simhash64 = computeSimHash64(tokens);
-          anchors.push({ windowStart, windowEnd, simhash64, salientClaim: null, verbatimAnchor: null });
-        }
-      }
-      if (anchors.length > 0) {
-        await this.temporalGraph.storeSimHashAnchors({ analysisId, anchors });
-      }
-    }
   }
 }

@@ -20,12 +20,5 @@ export interface TemporalKnowledgePort {
 
   queryTemporalSubgraph(params: {
     analysisId: string;
-    entityFilter?: string[];
   }): Promise<TemporalSubgraphNode[]>;
-
-  resolveAnchorByHammingDistance(params: {
-    analysisId: string;
-    targetSimHash: bigint;
-    maxDistance: number;
-  }): Promise<TemporalAnchor | null>;
 }

@@ -8,13 +8,14 @@ CREATE TABLE analysis_simhash_anchors (
     simhash_64 BIGINT NOT NULL,
     salient_claim TEXT,
     verbatim_anchor TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT analysis_simhash_anchors_analysis_id_window_start_key UNIQUE (analysis_id, window_start)
 );
 
 CREATE INDEX idx_analysis_simhash_anchors_analysis_id_window_start 
 ON analysis_simhash_anchors (analysis_id, window_start);
 
-CREATE OR REPLACE FUNCTION get_temporal_subgraph(p_analysis_id UUID, p_entity_filter TEXT[])
+CREATE OR REPLACE FUNCTION get_temporal_subgraph(p_analysis_id UUID)
 RETURNS TABLE(
     anchor_id UUID,
     window_start INTEGER,
@@ -26,8 +27,18 @@ RETURNS TABLE(
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
+    -- Enforce ownership mapping
+    IF NOT EXISTS (
+        SELECT 1 FROM analyses a 
+        WHERE a.id = p_analysis_id 
+          AND (a.user_id = auth.uid() OR auth.uid() IS NULL) -- Allow service role or owner
+    ) THEN
+        RAISE EXCEPTION 'Unauthorized';
+    END IF;
+
     RETURN QUERY
     WITH RECURSIVE subgraph AS (
         -- Base Case: Anchor nodes for this analysis
@@ -45,8 +56,6 @@ BEGIN
         UNION ALL
         
         -- Recursive Step (Mocked temporal/entity relations bounded traversal)
-        -- Since true entity tables are not fully specified, we simulate the recursion
-        -- on adjacent temporal nodes.
         SELECT 
             a.id, 
             a.window_start, 
@@ -60,7 +69,11 @@ BEGIN
                                AND (a.window_start >= sg.window_end AND a.window_start < sg.window_end + 30)
         WHERE sg.depth < 3  -- ROE bound on traversal depth
     )
-    SELECT * FROM subgraph
+    SELECT DISTINCT ON (anchor_id) * FROM subgraph
+    ORDER BY anchor_id, depth ASC
     LIMIT 24; -- ROE bound <=24 nodes
 END;
 $$;
+
+REVOKE ALL ON FUNCTION get_temporal_subgraph(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_temporal_subgraph(UUID) TO authenticated, service_role;

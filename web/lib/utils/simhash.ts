@@ -28,11 +28,11 @@ export function computeSimHash64(tokens: string[]): bigint {
     }
   }
   
-  return finalHash;
+  return BigInt.asUintN(64, finalHash);
 }
 
 export function hammingDistance(a: bigint, b: bigint): number {
-  let xor = a ^ b;
+  let xor = BigInt.asUintN(64, a ^ b);
   let dist = 0;
   while (xor > 0n) {
     dist += Number(xor & 1n);

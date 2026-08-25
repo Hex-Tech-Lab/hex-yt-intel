@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ExtractHighlightsUseCase } from '../usecases/ExtractHighlightsUseCase';
-import type { HighlightsPersistencePort } from '../usecases/ExtractHighlightsUseCase';
+import { ExtractHighlightsUseCase } from '@/lib/usecases/ExtractHighlightsUseCase';
+import type { HighlightsPersistencePort } from '@/lib/usecases/ExtractHighlightsUseCase';
 import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
 import type { TextCompletionPort } from '@/lib/ports/ExecutiveDigestPorts';
 
@@ -27,7 +27,6 @@ describe('ExtractHighlightsUseCase - SimHash Anchors', () => {
     const mockTemporalGraph: TemporalKnowledgePort = {
       storeSimHashAnchors: vi.fn().mockResolvedValue(true),
       queryTemporalSubgraph: vi.fn().mockResolvedValue([]),
-      resolveAnchorByHammingDistance: vi.fn().mockResolvedValue(null)
     };
 
     const useCase = new ExtractHighlightsUseCase(mockPersistence, mockCompletion, mockTemporalGraph);

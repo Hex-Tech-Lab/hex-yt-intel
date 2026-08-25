@@ -24,3 +24,20 @@ describe('SimHash Hamming Distance Matcher', () => {
     expect(cosSim).toBeLessThan(0.85);
   });
 });
+
+  it('correctly handles DB round-trips for hashes with bit 63 set (Postgres negative BIGINT)', () => {
+    // A hash with bit 63 set. Unsigned it's huge, signed it's negative.
+    const unsignedHash = 0b1000000000000000000000000000000000000000000000000000000000000001n;
+    
+    // Adapter converts to signed string for DB
+    const dbString = BigInt.asIntN(64, unsignedHash).toString();
+    expect(dbString.startsWith('-')).toBe(true);
+    
+    // Postgres returns the string, adapter converts back to unsigned
+    const backToUnsigned = BigInt.asUintN(64, BigInt(dbString));
+    expect(backToUnsigned).toBe(unsignedHash);
+    
+    // Ensure hamming distance works for two high-bit hashes
+    const hash2 = 0b1000000000000000000000000000000000000000000000000000000000000011n;
+    expect(hammingDistance(unsignedHash, hash2)).toBe(1);
+  });
