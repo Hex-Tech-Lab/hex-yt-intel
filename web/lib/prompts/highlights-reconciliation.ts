@@ -80,7 +80,7 @@ export function parseHighlightsReconciliation(
     if (seenIdx.has(takeawayIdx)) return { status: 'invalid' };
     if (typeof grounded !== 'boolean') return { status: 'invalid' };
     if (grounded && (typeof backingHighlightIdx !== 'number' || !Number.isInteger(backingHighlightIdx) || backingHighlightIdx < 0)) return { status: 'invalid' };
-    if (grounded && highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) return { status: 'invalid' };
+    if (grounded && highlightsCount !== undefined && (backingHighlightIdx as number) >= highlightsCount) return { status: 'invalid' };
     if (!grounded && backingHighlightIdx != null) return { status: 'invalid' };
     
     seenIdx.add(takeawayIdx);

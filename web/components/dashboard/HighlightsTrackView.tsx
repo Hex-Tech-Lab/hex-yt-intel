@@ -1,9 +1,9 @@
 import { HighlightsTrack } from './HighlightsTrack';
 
 export interface HighlightsTrackViewProps {
-  highlights: Array<{ start: number; end: number }>;
+  highlights: any[];
   playingIdx: number | null;
-  videoDurationSeconds: number | null | undefined;
+  videoDurationSeconds: number | null;
   segmentDurationSeconds: number;
   onJumpTo: (idx: number) => void;
   headerControls?: React.ReactNode;
