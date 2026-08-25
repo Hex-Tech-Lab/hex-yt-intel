@@ -254,9 +254,9 @@ export function useSegmentPlayback({
 
       setElapsedInSegmentSeconds(Math.max(0, currentTime - leadIn));
 
-      // Variable-duration: advance when playback reaches the segment's real
-      // end. Fall back to the fixed segmentDurationSeconds only when the
-      // segment has no usable end (legacy/null data).
+      // Advance at the segment's actual end time, not a fixed duration, so the
+      // ticker and playback duration align exactly with the segment's span.
+      // Total duration from leadIn is (segment.end - segment.start) + contextLead.
       const segmentEnd = (Number.isFinite(segment.end) && segment.end > segment.start)
         ? segment.end
         : leadIn + segmentDurationRef.current;

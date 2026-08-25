@@ -122,6 +122,9 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
         const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
         if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
         const json: HighlightsResponse = await res.json();
+        if (!json || !Array.isArray(json.highlights)) {
+          throw new Error('Invalid response format: expected highlights array');
+        }
         setData(json);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
@@ -146,7 +149,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
   const activeDuration = activeHighlight
-    ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur)
+    ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur) + (data?.contextLeadSeconds ?? 0)
     : segDurFallback;
   const { revealedText } = useHighlightTicker(
     playingIdx,
