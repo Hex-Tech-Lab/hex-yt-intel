@@ -79,3 +79,37 @@ describe('previewWords', () => {
     expect(previewWords('one two three', 8)).toBe('one two three');
   });
 });
+
+// --- D1: verbatimExcerpt excerpt-selection regression tests (2026-08-23) ---
+describe('useHighlightTicker verbatimExcerpt override', () => {
+  it('non-empty verbatimExcerpt overrides label for the reveal text', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'short label', 10, 0, 'the actual transcript words here')
+    );
+    // Uses verbatimExcerpt, not label — first word is "the", not "short"
+    expect(result.current.revealedText).toBe('the...');
+    expect(result.current.totalWords).toBe(5);
+  });
+
+  it('null verbatimExcerpt falls back to label', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'fallback label words', 10, 0, null)
+    );
+    expect(result.current.revealedText).toBe('fallback...');
+    expect(result.current.totalWords).toBe(3);
+  });
+
+  it('empty string verbatimExcerpt falls back to label', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'fallback label words', 10, 0, '')
+    );
+    expect(result.current.revealedText).toBe('fallback...');
+  });
+
+  it('null elapsedSeconds returns empty reveal even with verbatimExcerpt', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'label here', 10, null, 'verbatim excerpt text')
+    );
+    expect(result.current.revealedText).toBe('');
+  });
+});

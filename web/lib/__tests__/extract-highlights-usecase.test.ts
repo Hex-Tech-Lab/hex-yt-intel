@@ -136,8 +136,8 @@ describe('ExtractHighlightsUseCase', () => {
     expect(persistence.saveHighlights).toHaveBeenCalledWith({
       analysisId: 'an-1',
       highlights: [
-        { idx: 0, start: 10, end: 20, label: 'First claim moment' },
-        { idx: 1, start: 20, end: 30, label: 'The reveal' },
+        { idx: 0, start: 10, end: 20, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim' },
+        { idx: 1, start: 20, end: 30, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Reveal' },
       ],
     });
   });
@@ -170,7 +170,12 @@ describe('ExtractHighlightsUseCase', () => {
     expect(call.system).toContain(String(HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount']));
     expect(call.maxTokens).toBe(HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens']);
     expect(SupabaseSettingsAdapter.getRegistrySettings).toHaveBeenCalledWith(
-      ['highlights.maxCount', 'highlights.maxOutputTokens'],
+      [
+        'highlights.maxCount',
+        'highlights.maxOutputTokens',
+        'highlights.minSegmentDurationSeconds',
+        'highlights.maxSegmentDurationSeconds',
+      ],
       HIGHLIGHTS_REGISTRY_FALLBACK
     );
   });

@@ -10,6 +10,7 @@ import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService'
 import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
 import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
+import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
@@ -154,7 +155,7 @@ export class ProcessChatMessageUseCase {
     }
 
     // 4. Create user message (if needed) and fetch grounding in parallel to minimize latency
-    let groundingResult: any = null;
+    let groundingResult: Awaited<ReturnType<ChatPersistencePort['getAnalysisGrounding']>> = null;
     if (!userRow) {
       try {
         const [createdMsg, ground] = await Promise.all([
@@ -293,6 +294,12 @@ export class ProcessChatMessageUseCase {
     }
 
     // 8b. Grounding retrieval — markdown is guaranteed non-empty past the gate.
+    // The gate above returned early when groundingResult was null or had no
+    // analysisMarkdown, so we can safely narrow to non-null here.
+    if (!groundingResult) {
+      return { type: 'error', code: 'ERR_NO_GROUNDING', status: 404, message: 'No grounding data available' };
+    }
+    const groundingData = groundingResult;
     //
     // CONTEXT AVAILABILITY vs. SOURCE WEIGHTING (2026-07-23 redesign):
     // A prior pass conflated these into one "70/30 ratio" by hard-slicing each
@@ -330,11 +337,11 @@ export class ProcessChatMessageUseCase {
     // model ever drops below 128K tokens.
     const GROUNDING_CONTEXT_BUDGET_CHARS = 350_000;
 
-    const description = groundingResult.description;
+    const description = groundingData.description;
     const descriptionSection = description
       ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
       : '';
-    const channelSuffix = groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : '';
+    const channelSuffix = groundingData.channelTitle ? ` by ${groundingData.channelTitle}` : '';
     // Video/channel metadata come from the worker's ingestion + channel-scrape calls
     // (validation_report.metadata / .channelMeta) -- surfaced as raw JSON blocks
     // rather than hand-picked fields since their shape varies by source (YouTube
@@ -342,33 +349,64 @@ export class ProcessChatMessageUseCase {
     // Included in full: channelMeta is already capped at 20KB where it's
     // persisted (worker + persist route), and videoMetadata is a small,
     // bounded field set -- no second, smaller cap needed here.
-    const videoMetadataSection = groundingResult.videoMetadata
-      ? `\n\n--- VIDEO METADATA ---\n${JSON.stringify(groundingResult.videoMetadata, null, 2)}\n`
+    const videoMetadataSection = groundingData.videoMetadata
+      ? `\n\n--- VIDEO METADATA ---\n${JSON.stringify(groundingData.videoMetadata, null, 2)}\n`
       : '';
-    const channelMetadataSection = groundingResult.channelMetadata
-      ? `\n\n--- CHANNEL METADATA ---\n${JSON.stringify(groundingResult.channelMetadata, null, 2)}\n`
+    const channelMetadataSection = groundingData.channelMetadata
+      ? `\n\n--- CHANNEL METADATA ---\n${JSON.stringify(groundingData.channelMetadata, null, 2)}\n`
       : '';
     // Dimension 0 (Snapshot/Overview/Key Takeaways/Detailed Summary) was
     // generated and shown in the product's Executive Summary panel, but
     // getAnalysisGrounding never selected `executive_digest` at all -- chat
     // only ever saw dimensions 1-11. Surfaced explicitly, ahead of the
     // 11-dimension body, since it's the highest-level synthesis of the video.
-    const digest = groundingResult.executiveDigest;
+    const digest = groundingData.executiveDigest;
+    // Annotate each takeaway with its grounded status from the reconciliation
+    // pass (§2.B.6 Step 5, 2026-08-21). When reconciliation is absent/null (old
+    // rows or reconciliation call failed/unavailable), takeaways are labeled
+    // [unverified] so the LLM is explicitly instructed not to treat them as
+    // verified quotes or proven transcript claims.
+    const reconciliation = digest?.reconciliation ?? null;
     const executiveDigestSection = digest
-      ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string) => `- ${t}`).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
+      ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string, i: number) => {
+        if (reconciliation === null) {
+          return `- [unverified] ${t}`;
+        }
+        const rec = reconciliation.takeaways?.[i];
+        const isGrounded = rec?.grounded === true;
+        const backing = isGrounded && rec?.backingHighlightIdx != null ? ` (backed by highlight #${rec.backingHighlightIdx})` : '';
+        return `- [${isGrounded ? 'grounded' : 'ungrounded'}] ${t}${backing}`;
+      }).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
+      : '';
+
+    // Highlights reel section (§2.B.3, 2026-08-21): timestamped key moments
+    // with takeaway mappings from the reconciliation pass. Inserted between
+    // the executive digest and top-comments sections so the LLM knows the
+    // exact highlights shown in the Reel including which takeaway each backs.
+    const highlightsData = groundingData.highlights;
+    const highlightsSection = highlightsData && highlightsData.length > 0
+      ? `\n\n--- HIGHLIGHTS REEL (timestamped key moments) ---\n${highlightsData.map((highlight: { idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }) => {
+        const takeawayLabel = highlight.takeawayIdx !== null ? ` (takeaway ${highlight.takeawayIdx + 1})` : '';
+        const rawExcerpt = highlight.verbatimExcerpt?.trim();
+        const boundedExcerpt = rawExcerpt && rawExcerpt.length > 200
+          ? `${rawExcerpt.slice(0, 197)}...`
+          : rawExcerpt;
+        const excerpt = boundedExcerpt ? ` | excerpt: "${boundedExcerpt}"` : '';
+        return `[${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end)}] ${highlight.label}${takeawayLabel}${excerpt}`;
+      }).join('\n')}\n`
       : '';
 
     // Top relevance-ordered comments (author/date/like-count metadata included so
     // the model can answer "who said X" / "when" questions, not just quote text).
     // Already capped at 20KB where persisted (worker + persist route), same as
     // channelMeta -- no second cap needed here.
-    const comments = groundingResult.comments;
+    const comments = groundingData.comments;
     // Real population size, so the Vault-approved sample-size-honesty caveat
     // (prompt.chat_grounding.instructions, 2026-07-25) has an actual number to
     // cite instead of describing the sample with no context for how partial it
     // is. Sourced from videoMetadata.commentCount (the raw YouTube API total
     // ingested at analysis time), NOT comments.length (the sampled subset).
-    const totalCommentCount = Number(groundingResult.videoMetadata?.commentCount) || 0;
+    const totalCommentCount = Number(groundingData.videoMetadata?.commentCount) || 0;
     const commentsSection = comments && comments.length > 0
       ? `\n\n--- TOP COMMENTS (sample of ${comments.length}${totalCommentCount > comments.length ? ` out of ${totalCommentCount} total` : ''}; author, date, likes) ---\n${comments.map((c: { author: string; publishedAt: string; likeCount: number; text: string }) => `[${c.author}, ${c.publishedAt}, ${c.likeCount} likes]: ${c.text}`).join('\n')}\n`
       : `\n\n--- COMMENTS ---\nNo YouTube comment text was ingested or available for this video (total comment count reported by YouTube API: ${totalCommentCount}).\n`;
@@ -399,8 +437,8 @@ export class ProcessChatMessageUseCase {
     const leadInSeconds = Number(leadInLimits['chat.transcriptRange.leadInSeconds'])
       || CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK;
 
-    const requestedRange = groundingResult.transcript
-      ? extractRequestedTranscriptRange(groundingResult.transcript, finalContent, leadInSeconds)
+    const requestedRange = groundingData.transcript
+      ? extractRequestedTranscriptRange(groundingData.transcript, finalContent, leadInSeconds)
       : null;
     // Numbered with an explicit, checkable count: an open-ended "relay all of
     // it" instruction was confirmed insufficient on repeated live tests (the
@@ -423,11 +461,11 @@ export class ProcessChatMessageUseCase {
     // as it has to be, not by an arbitrary amount unrelated to its own length.
     const fixedSectionsLength =
       descriptionSection.length + videoMetadataSection.length + channelMetadataSection.length
-      + executiveDigestSection.length + commentsSection.length + analysisSection.length
+      + executiveDigestSection.length + highlightsSection.length + commentsSection.length + analysisSection.length
       + requestedRangeSection.length;
     const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
-    const transcriptSection = groundingResult.transcript
-      ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, transcriptBudget)}`
+    const transcriptSection = groundingData.transcript
+      ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingData.transcript.slice(0, transcriptBudget)}`
       : '';
 
     // Grounding constrains the SOURCE, never the APPLICATION. The universe of
@@ -444,7 +482,7 @@ export class ProcessChatMessageUseCase {
     // source for anything requiring exact wording, direct quotes, or a specific
     // timestamp, and must be used for those regardless of what the analysis says.
     const groundingInstructions = await getChatGroundingInstructions();
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. ${groundingInstructions}${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
+    let grounding = `You are the creative analyst for the YouTube video "${groundingData.title}"${channelSuffix}. ${groundingInstructions}${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${highlightsSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);

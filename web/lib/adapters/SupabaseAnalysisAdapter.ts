@@ -384,7 +384,7 @@ export class SupabaseAnalysisAdapter {
           return statusMap[reportStatus] ?? 'incomplete';
         })(),
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserHistory' },
         extra: { userId: params.userId },
@@ -412,7 +412,7 @@ export class SupabaseAnalysisAdapter {
       }
 
       return ((data as RawHistoryOverviewRow[]) || []).map(mapHistoryOverviewRow);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserHistoryOverview' },
         extra: { userId: params.userId },
@@ -455,7 +455,7 @@ export class SupabaseAnalysisAdapter {
       if (error) handlerMap.ERROR();
       if (!data) return handlerMap.NO_DATA();
       return handlerMap.SUCCESS();
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisById' },
         extra: { userId: params.userId, analysisId: params.analysisId },
@@ -515,7 +515,7 @@ export class SupabaseAnalysisAdapter {
         createdAt: row.created_at,
         channelTitle: row.channel_title,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisForPersist' },
         extra: { analysisId: params.analysisId, videoId: params.videoId },
@@ -538,6 +538,7 @@ export class SupabaseAnalysisAdapter {
     channelMetadata?: Record<string, unknown> | null;
     executiveDigest?: StoredExecutiveDigest | null;
     comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
+    highlights?: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
@@ -617,6 +618,47 @@ export class SupabaseAnalysisAdapter {
         (payload && Array.isArray((payload as any).comments) ? (payload as any).comments : null) ||
         null;
 
+      // Highlights reel data (§2.B.3, 2026-08-21): timestamped key moments
+      // and takeaway mappings from analysis_highlights. Fetched so chat
+      // grounding can annotate which takeaway each highlight backs and display
+      // verbatim transcript excerpts instead of LLM-synthesized labels.
+      type HighlightRow = {
+        idx: number;
+        start_seconds: number;
+        end_seconds: number;
+        label: string;
+        takeaway_idx: number | null;
+        verbatim_excerpt: string | null;
+      };
+      let highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }> | null = null;
+      try {
+        const { data: hlData, error: hlQueryError } = await service
+          .from('analysis_highlights')
+          .select('idx, start_seconds, end_seconds, label, takeaway_idx, verbatim_excerpt')
+          .eq('analysis_id', params.analysisId)
+          .order('idx', { ascending: true });
+        if (hlQueryError) throw hlQueryError;
+        if (hlData && hlData.length > 0) {
+          highlights = (hlData as HighlightRow[]).map((row) => ({
+            idx: row.idx,
+            start: row.start_seconds,
+            end: row.end_seconds,
+            label: row.label,
+            takeawayIdx: row.takeaway_idx ?? null,
+            verbatimExcerpt: row.verbatim_excerpt ?? null,
+          }));
+        }
+      } catch (hlError: unknown) {
+        // Highlights are best-effort — a read failure on analysis_highlights
+        // must never abort the entire grounding fetch (the digest + transcript
+        // + dimensions are the core source; highlights are supplementary).
+        // PostgREST resolves { data, error }, it does NOT reject — so without
+        // the explicit error check above, a query failure would silently drop
+        // the HIGHLIGHTS REEL section with zero Sentry visibility.
+        console.warn('[SupabaseAnalysisAdapter] analysis_highlights query failed:', hlError instanceof Error ? hlError.message : String(hlError));
+        Sentry.captureException(hlError, { tags: { method: 'getAnalysisGrounding.highlights' }, extra: { analysisId: params.analysisId } });
+      }
+
       const rawDigest = (data as any).executive_digest;
       const hasDigestContent = rawDigest && typeof rawDigest === 'object'
         && (typeof rawDigest.snapshot === 'string' && rawDigest.snapshot.length > 0
@@ -634,8 +676,9 @@ export class SupabaseAnalysisAdapter {
         channelMetadata: resolvedChannelMetadata,
         executiveDigest: hasDigestContent ? (rawDigest as StoredExecutiveDigest) : null,
         comments: resolvedComments,
+        highlights,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisGrounding' },
         extra: { analysisId: params.analysisId },
@@ -685,7 +728,7 @@ export class SupabaseAnalysisAdapter {
         videoId: stripArchivedVideoIdSuffix(data.video_id) ?? null,
         videoDurationSeconds,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisByShareToken' },
         extra: { token: '[REDACTED]' },
@@ -707,12 +750,14 @@ export class SupabaseAnalysisAdapter {
     start: number;
     end: number;
     label: string;
+    takeawayIdx: number | null;
+    verbatimExcerpt: string | null;
   }>> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analysis_highlights')
-        .select('idx, start_seconds, end_seconds, label')
+        .select('idx, start_seconds, end_seconds, label, verbatim_excerpt, takeaway_idx')
         .eq('analysis_id', analysisId)
         .order('idx', { ascending: true });
 
@@ -721,10 +766,87 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
 
-      return (data ?? []).map((h) => ({ idx: h.idx, start: h.start_seconds, end: h.end_seconds, label: h.label }));
-    } catch (error: any) {
+      return (data ?? []).map((h) => ({
+        idx: h.idx,
+        start: h.start_seconds,
+        end: h.end_seconds,
+        label: h.label,
+        verbatimExcerpt: h.verbatim_excerpt ?? null,
+        takeawayIdx: h.takeaway_idx ?? null,
+      }));
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findHighlightsForAnalysis' },
+        extra: { analysisId },
+      });
+      throw error;
+    }
+  }
+
+  static async verifyAnalysisExists(analysisId: string): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('id')
+        .eq('id', analysisId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] verifyAnalysisExists failed:', error.message);
+        throw error;
+      }
+      return !!data;
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'verifyAnalysisExists' },
+        extra: { analysisId },
+      });
+      throw error;
+    }
+  }
+
+  static async getAnalysisOwner(analysisId: string): Promise<string | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('user_id')
+        .eq('id', analysisId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as { user_id: string } | null)?.user_id ?? null;
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'getAnalysisOwner' },
+        extra: { analysisId },
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch analysis markdown directly, bypassing user_id ownership check.
+   * Internal S2S use only (e.g. QStash embedding poll webhook).
+   */
+  static async getAnalysisMarkdownInternal(analysisId: string): Promise<string | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('analysis_markdown')
+        .eq('id', analysisId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] getAnalysisMarkdownInternal failed:', error.message);
+        throw error;
+      }
+      return data?.analysis_markdown || null;
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'getAnalysisMarkdownInternal' },
         extra: { analysisId },
       });
       throw error;
@@ -756,7 +878,7 @@ export class SupabaseAnalysisAdapter {
         console.error('[SupabaseAnalysisAdapter] updateValidationReport failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'updateValidationReport' },
         extra: { analysisId: params.analysisId },
@@ -784,7 +906,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'verifyOwnership' },
         extra: { analysisId: params.analysisId, userId: params.userId },
@@ -817,7 +939,7 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
       return Boolean(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'saveExecutiveDigest' },
         extra: { analysisId: params.analysisId, userId: params.userId },
@@ -844,7 +966,7 @@ export class SupabaseAnalysisAdapter {
       // Enforce the 72h retention boundary (ADR 012) at the read path itself,
       // not only via the purge cron's eventual row deletion -- a delayed
       // purge run must not let extraction read past the stated compliance
-      // window, even briefly.
+      // window. Returns null if expired or missing.
       const { data, error } = await service
         .from('transcripts')
         .select('segments')
@@ -852,47 +974,82 @@ export class SupabaseAnalysisAdapter {
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data?.segments || !Array.isArray(data.segments)) return null;
+      if (error || !data?.segments || !Array.isArray(data.segments)) return null;
 
       const seenStarts = new Set<number>();
-      return data.segments
+      return (data.segments as unknown[])
         .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string' && Number.isFinite(s.start) && s.start >= 0 && s.text.trim().length > 0)
-        .map((s: any) => ({ start: s.start, text: s.text.trim() }))
-        // Dedupe by start (keep first) and sort -- feeding the highlights
-        // extraction LLM call unordered or duplicate-start segments would
-        // corrupt the [start] text ordering it relies on to pick real
-        // timestamps.
+        .map((s: any) => ({ start: s.start as number, text: s.text.trim() as string }))
         .filter((s) => {
           if (seenStarts.has(s.start)) return false;
           seenStarts.add(s.start);
           return true;
         })
         .sort((left, right) => left.start - right.start);
-    } catch (error: any) {
-      Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' }, extra: { videoId } });
+    } catch (error: unknown) {
+      console.warn('[SupabaseAnalysisAdapter] getTranscriptSegments failed:', error instanceof Error ? error.message : String(error));
+      Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' } });
       return null;
     }
   }
 
-  /** Atomic replace via RPC (migration 20260813230239) -- a plain app-level
-   *  delete-then-insert could leave an analysis with no highlights at all if
+  /** Atomic whole-set replacement of an analysis's highlights.
+   *  Delegates to the `replace_analysis_highlights` RPC so the delete-and-insert
+   *  runs atomically inside Postgres -- prevents the partial-state race where
    *  the insert failed after the delete succeeded (real P0 finding, review
    *  of PR #233). The RPC's plpgsql body is one implicit transaction. */
   static async saveHighlights(params: {
     analysisId: string;
-    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+    highlights: Array<{ idx: number; start: number; end: number; label: string; takeawayIdx?: number | null; verbatimExcerpt?: string }>;
   }): Promise<boolean> {
     try {
       const service = getSupabaseServiceClient();
+      // Map camelCase TypeScript fields to the snake_case keys the RPC's
+      // jsonb_array_elements reads (elem->>'takeaway_idx', elem->>'verbatim_excerpt').
+      // Without this mapping, the camelCase keys would silently produce NULL for both
+      // columns — a real data-loss bug caught in E2E verification.
+      const p_highlights = params.highlights.map((h) => ({
+        idx: h.idx,
+        start: h.start,
+        end: h.end,
+        label: h.label,
+        takeaway_idx: h.takeawayIdx ?? null,
+        verbatim_excerpt: h.verbatimExcerpt ?? null,
+      }));
       const { error } = await service.rpc('replace_analysis_highlights', {
         p_analysis_id: params.analysisId,
-        p_highlights: params.highlights,
+        p_highlights,
       });
       if (error) throw error;
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, { tags: { method: 'saveHighlights' }, extra: { analysisId: params.analysisId } });
+      return false;
+    }
+  }
+
+  /**
+   * Atomic targeted jsonb sub-field update on executive_digest.reconciliation
+   * only (2026-08-21, §2.B.6). Does NOT clobber snapshot/overview/takeaways/
+   * detailedSummary written concurrently by saveExecutiveDigest — the
+   * reconciliation pass runs after extractHighlights, which can race a
+   * concurrent re-gen. Uses the set_executive_digest_reconciliation RPC for
+   * an atomic jsonb_set at the SQL level (no read-modify-write race).
+   */
+  static async saveReconciliation(params: {
+    analysisId: string;
+    reconciliation: unknown;
+  }): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service.rpc('set_executive_digest_reconciliation', {
+        p_analysis_id: params.analysisId,
+        p_reconciliation: params.reconciliation,
+      });
+      if (error) throw error;
+      return true;
+    } catch (error: unknown) {
+      Sentry.captureException(error, { tags: { method: 'saveReconciliation' }, extra: { analysisId: params.analysisId } });
       return false;
     }
   }

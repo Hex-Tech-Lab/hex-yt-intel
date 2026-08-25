@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Button, Banner, TextInput } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export default function SignInForm({ showTestAuth = false }: { showTestAuth?: boolean }) {
   const [error, setError] = useState<string | null>(null);
@@ -11,13 +12,22 @@ export default function SignInForm({ showTestAuth = false }: { showTestAuth?: bo
   const [testEmail, setTestEmail] = useState('');
   const [testPassword, setTestPassword] = useState('');
 
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const nextTarget = useMemo(() => {
     if (typeof window === 'undefined') return '/dashboard';
     const searchParams = new URLSearchParams(window.location.search);
     const next = searchParams.get('next');
-    return next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      try {
+        const url = new URL(next, window.location.origin);
+        return url.pathname + url.search + url.hash;
+      } catch {
+        // ignore invalid URL
+      }
+    }
+    return '/dashboard';
   }, []);
 
   const callbackUrl = useMemo(() => {
@@ -57,7 +67,7 @@ export default function SignInForm({ showTestAuth = false }: { showTestAuth?: bo
         setError(error.message);
         return;
       }
-      window.location.href = nextTarget;
+      router.push(nextTarget);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {

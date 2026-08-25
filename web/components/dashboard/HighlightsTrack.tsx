@@ -36,6 +36,12 @@ export interface HighlightsTrackHighlight {
   start: number;
   end: number;
   label: string;
+  /** 0-indexed mapping to the digest's takeaway array (2026-08-21, §2.B.2).
+   *  null for standalone highlights not mapped to any takeaway. */
+  takeawayIdx?: number | null;
+  /** Verbatim transcript excerpt between start-end (2026-08-21, §2.C).
+   *  null/undefined for old rows that predate this column. */
+  verbatimExcerpt?: string | null;
 }
 
 export interface HighlightsTrackProps {
@@ -232,29 +238,14 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
             const segLeftPct = pctFor(activeHighlight.start, 100, 0);
-            // Real fix (live report, 2026-08-21): activeHighlight.end is
-            // contractually "the start of the next selected segment," not
-            // a genuinely short highlight-worthy span -- using it directly
-            // rendered this fill spanning nearly the whole gap to the next
-            // highlight (the reported "94% of video duration" symptom).
-            // segmentDurationSeconds (the same fixed duration
-            // useSegmentPlayback.ts actually advances by) now drives the
-            // fill width instead, matching what actually plays.
+            const activeDur = (Number.isFinite(activeHighlight.end) && activeHighlight.end > activeHighlight.start)
+              ? activeHighlight.end - activeHighlight.start
+              : segmentDurationSeconds;
             const segWidthPct = Math.max(
               1,
-              Math.min(100 - segLeftPct, (segmentDurationSeconds / maxTime) * 100)
+              Math.min(100 - segLeftPct, (activeDur / maxTime) * 100)
             );
             return (
-              // Real fix (live report, 2026-08-20): the active-segment fill
-              // was accent-a15 (15% opacity) on a 4px-tall bar -- too faint
-              // to read as a segment at all ("the segment is missing").
-              // Stronger fill + a real top/bottom border, taller than the
-              // base line so it visually reads as its own band, not just
-              // more line. Stays in the single-accent cyan family
-              // (web/app/globals.css has no secondary/warning/success
-              // palette anywhere in this app -- introducing a new hue here
-              // would be the first departure from that system, not a
-              // deliberate second color) -- intensity, not hue, was the gap.
               <div
                 className="absolute top-1/2 -translate-y-1/2 h-3 bg-[var(--accent-a30)] border-y border-[var(--accent-a70)]"
                 style={{ left: `${segLeftPct}%`, width: `${segWidthPct}%` }}
