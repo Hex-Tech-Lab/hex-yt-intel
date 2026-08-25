@@ -5,6 +5,17 @@
  * and persists a parsed digest on the happy path. No real model or DB — the
  * completion and persistence ports are faked.
  */
+import { vi } from 'vitest';
+vi.mock('@/lib/usecases/ReconcileHighlightsUseCase', () => ({
+  ReconcileHighlightsUseCase: vi.fn().mockImplementation(function() { return {
+    execute: vi.fn().mockResolvedValue({ success: true, reconciledHighlights: [] })
+  }; })
+}));
+vi.mock('@/lib/prompts/highlights-reconciliation', () => ({
+  parseJsonArray: vi.fn().mockReturnValue([]),
+  highlightsReconciliationPrompt: vi.fn().mockReturnValue('')
+}));
+
 import { GenerateExecutiveDigestUseCase } from '@/lib/usecases/GenerateExecutiveDigestUseCase';
 
 const VALID_COMPLETION = [
@@ -53,12 +64,6 @@ const makeDeps = (opts: { row: Row; completion?: string; completionThrows?: bool
 const baseParams = { analysisId: 'an-1', userId: 'user-1', models: [{ model: 'test/model' }] as const };
 
 describe('GenerateExecutiveDigestUseCase', () => {
-  let useCase: GenerateExecutiveDigestUseCase;
-  afterEach(async () => {
-    if (useCase && (useCase as any)._reconciliationPromise) {
-      await (useCase as any)._reconciliationPromise.catch((_error: unknown) => console.error(e));
-    }
-  });
   it('404s when the analysis is not owned / not found', async () => {
     const { useCase, getCompletionCalls } = makeDeps({ row: null });
     const res = await useCase.execute(baseParams);

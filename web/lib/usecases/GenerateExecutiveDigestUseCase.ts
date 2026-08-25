@@ -12,6 +12,7 @@ import type {
 } from '@/lib/ports/ExecutiveDigestPorts';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { ReconcileHighlightsUseCase } from './ReconcileHighlightsUseCase';
 
 const MAX_DIGEST_PAYLOAD_BYTES = 100_000;
 
@@ -160,16 +161,16 @@ export class GenerateExecutiveDigestUseCase {
     // However, reconciliation MUST happen when both exist. Since the digest
     // is generated here, we can asynchronously attempt reconciliation now.
     if (parsed.takeaways && parsed.takeaways.length > 0) {
-      const promise = import('./ReconcileHighlightsUseCase').then(({ ReconcileHighlightsUseCase }) => {
-        return new ReconcileHighlightsUseCase(this.persistence, this.completion).execute({
+      // Execute reconciliation immediately rather than dynamic import.
+      // We don't await this to keep digest generation fast, but static import prevents teardown race.
+      new ReconcileHighlightsUseCase(this.persistence, this.completion)
+        .execute({
           analysisId,
           userId,
           takeaways: parsed.takeaways!,
           models,
-        });
-      });
-      // Expose for test teardown synchronization
-      (this as any)._reconciliationPromise = promise;
+        })
+        .catch(err => console.error('[digest-usecase] reconciliation async failed:', err));
     }
 
     return { type: 'success', digest, cached: false };
