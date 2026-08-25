@@ -105,8 +105,8 @@ export const CheckoutSchema = z.object({
   // "pro"/"month" for a request that actually meant something else -- see
   // ADR/Cubic P0 finding 2026-08-18: the yearly toggle previously changed
   // display only and never reached checkout at all.
-  plan: z.enum(['light', 'pro', 'max']).describe('Selected pricing tier'),
-  interval: z.enum(['month', 'year']).describe('Selected billing interval'),
+  plan: z.enum(['light', 'pro', 'max', 'founder', 'founder_tier_a']).describe('Selected pricing tier'),
+  interval: z.enum(['month', 'year', 'once']).describe('Selected billing interval'),
 }).refine(
   (data) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');

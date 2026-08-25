@@ -27,8 +27,8 @@ import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
  */
 function resolveCheckoutPriceId(
   providerType: 'paddle' | 'stripe' | 'lemonsqueezy',
-  plan: 'light' | 'pro' | 'max',
-  interval: 'month' | 'year'
+  plan: 'light' | 'pro' | 'max' | 'founder' | 'founder_tier_a',
+  interval: 'month' | 'year' | 'once'
 ): Promise<string | null> {
   // The registry's PriceProviderId union (paddle/stripe/dodo/creem) doesn't
   // include lemonsqueezy -- it was never part of the real MoR shortlist
