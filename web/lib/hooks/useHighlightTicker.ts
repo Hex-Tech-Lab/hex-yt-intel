@@ -12,6 +12,13 @@
  * per-segment "script" field distinct from the label the reel already uses
  * for its counter text. Documented here rather than silently assumed.
  *
+ * The optional `verbatimExcerpt` param (2026-08-21, §2.C.3) overrides
+ * `label` when provided and non-empty -- new analyses store a verbatim
+ * transcript excerpt (extracted from the raw transcript segments at
+ * generation time, zero additional LLM cost), and the ticker now reveals
+ * actual transcript words instead of the LLM-synthesized paraphrase.
+ * Falls back to `label` gracefully for old rows where the column is null.
+ *
  * `playingIdx` is the caller's source of truth for which segment is
  * currently active; `elapsedSeconds` (new 2026-08-20, shared-hook
  * extraction) is the caller's source of truth for how far into that
@@ -29,9 +36,11 @@ export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
   segmentDurationSeconds: number,
-  elapsedSeconds: number | null
+  elapsedSeconds: number | null,
+  verbatimExcerpt?: string | null,
 ): { revealedText: string; totalWords: number } {
-  const words = label ? label.split(/\s+/).filter(Boolean) : [];
+  const text = verbatimExcerpt || label;
+  const words = text ? text.split(/\s+/).filter(Boolean) : [];
   const totalWords = words.length;
 
   if (playingIdx === null || totalWords === 0 || elapsedSeconds === null) {

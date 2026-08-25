@@ -50,10 +50,9 @@ export interface UseSegmentPlaybackOptions {
   /** Seconds to play before each segment's `start` so playback doesn't open
    *  mid-sentence (highlights.contextLeadSeconds, Settings Registry). */
   contextLeadSeconds: number;
-  /** Fallback per-segment duration when a segment has no real end (kept for
-   *  parity with the pre-extraction display-total fallback in both callers,
-   *  not used for the advance clamp itself -- the clamp always uses each
-   *  segment's own end). */
+  /** Fallback per-segment duration when a segment has no usable real end
+   *  (legacy/null data). When a segment does have a valid `end > start`,
+   *  playback advances at that real end, not this fixed value. */
   segmentDurationSeconds: number;
   primitives: SegmentPlaybackPrimitives;
   /** Poll cadence in ms for the media-time-clamping watcher. Matches
@@ -255,13 +254,12 @@ export function useSegmentPlayback({
 
       setElapsedInSegmentSeconds(Math.max(0, currentTime - leadIn));
 
-      // Fixed segmentDurationSeconds (Settings Registry value, same for
-      // every segment), not each segment's own (end - start) span -- this
-      // matches both original implementations' advance clamp exactly. The
-      // per-highlight (end - start) span is a display-total concern only
-      // (still computed by each caller from its own `segments` data), not
-      // the playback-advance boundary.
-      const segmentEnd = leadIn + segmentDurationRef.current;
+      // Variable-duration: advance when playback reaches the segment's real
+      // end. Fall back to the fixed segmentDurationSeconds only when the
+      // segment has no usable end (legacy/null data).
+      const segmentEnd = (Number.isFinite(segment.end) && segment.end > segment.start)
+        ? segment.end
+        : leadIn + segmentDurationRef.current;
       if (currentTime >= segmentEnd - ADVANCE_LEAD_SECONDS) {
         playFrom(idx + 1);
       }

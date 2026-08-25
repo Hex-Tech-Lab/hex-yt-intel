@@ -170,7 +170,12 @@ describe('ExtractHighlightsUseCase', () => {
     expect(call.system).toContain(String(HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount']));
     expect(call.maxTokens).toBe(HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxOutputTokens']);
     expect(SupabaseSettingsAdapter.getRegistrySettings).toHaveBeenCalledWith(
-      ['highlights.maxCount', 'highlights.maxOutputTokens'],
+      [
+        'highlights.maxCount',
+        'highlights.maxOutputTokens',
+        'highlights.minSegmentDurationSeconds',
+        'highlights.maxSegmentDurationSeconds',
+      ],
       HIGHLIGHTS_REGISTRY_FALLBACK
     );
   });

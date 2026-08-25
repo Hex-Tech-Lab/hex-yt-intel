@@ -1,3 +1,4 @@
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
   buildHighlightsExtractionSystemPrompt,
   buildHighlightsExtractionUserMessage,
@@ -5,7 +6,6 @@ import {
 } from '@/lib/prompts/highlights-extraction';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
-import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 
 /**
  * The persistence slice highlights extraction needs. A structural subset of
@@ -55,7 +55,7 @@ export interface ExtractHighlightsParams {
  * persist them to `analysis_highlights`.
  *
  * PRIMARY path: invoked from the analysis-finalize path
- * (`web/app/api/analyses/persist/route.ts`), where the transcript has JUST
+ * (analyses persist route), where the transcript has JUST
  * been upserted and is guaranteed within the 72h retention window (ADR 012).
  *
  * Fallback path: also invoked from `GenerateExecutiveDigestUseCase` (which
@@ -87,8 +87,8 @@ export class ExtractHighlightsUseCase {
       try {
         const existing = await this.persistence.findHighlightsForAnalysis(analysisId);
         if (existing.length > 0) return;
-      } catch {
-        // best-effort: proceed to extraction
+      } catch (readError) {
+        console.warn('[extract-highlights] Existing highlights read check failed, proceeding to extraction:', readError);
       }
     }
 
@@ -99,7 +99,12 @@ export class ExtractHighlightsUseCase {
     const [segments, resolvedRegistry] = await Promise.all([
       this.persistence.getTranscriptSegments(videoId),
       SupabaseSettingsAdapter.getRegistrySettings(
-        ['highlights.maxCount', 'highlights.maxOutputTokens'],
+        [
+          'highlights.maxCount',
+          'highlights.maxOutputTokens',
+          'highlights.minSegmentDurationSeconds',
+          'highlights.maxSegmentDurationSeconds',
+        ],
         HIGHLIGHTS_REGISTRY_FALLBACK
       ),
     ]);
@@ -126,9 +131,21 @@ export class ExtractHighlightsUseCase {
       500,
       8000
     );
+    const minSegmentDuration = clampHighlightsSetting(
+      resolvedRegistry['highlights.minSegmentDurationSeconds'],
+      HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'],
+      1,
+      30
+    );
+    const maxSegmentDuration = clampHighlightsSetting(
+      resolvedRegistry['highlights.maxSegmentDurationSeconds'],
+      HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'],
+      10,
+      300
+    );
 
     const completion = await this.completion.complete({
-      system: buildHighlightsExtractionSystemPrompt(maxCount),
+      system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
       user: buildHighlightsExtractionUserMessage(segments),
       models,
       maxTokens: maxOutputTokens,
@@ -136,7 +153,14 @@ export class ExtractHighlightsUseCase {
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const result = parseHighlightsExtraction(completion.text, validStarts, maxCount);
+    const result = parseHighlightsExtraction(
+      completion.text,
+      validStarts,
+      maxCount,
+      minSegmentDuration,
+      maxSegmentDuration,
+      0
+    );
 
     // 'invalid' means the model response was unparseable -- a transient LLM
     // failure, not a genuine "no highlights" finding. Must NOT touch any
