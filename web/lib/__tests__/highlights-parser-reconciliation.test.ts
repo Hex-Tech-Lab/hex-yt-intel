@@ -201,6 +201,17 @@ describe('parseHighlightsReconciliation uniqueness/range validation (B3)', () =>
     );
     expect(result.status).toBe('invalid');
   });
+
+  it('rejects null backingHighlightIdx when grounded is true', () => {
+    const result = parseHighlightsReconciliation(
+      JSON.stringify([
+        { takeawayIdx: 0, grounded: true, backingHighlightIdx: null }, // must have a valid highlight index if grounded
+      ]),
+      1,
+      3
+    );
+    expect(result.status).toBe('invalid');
+  });
 });
 
 /**

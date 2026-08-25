@@ -51,7 +51,7 @@ export const MOCK_DEFAULTS: Partial<Record<EnvVar, string>> = {
   STRIPE_WEBHOOK_SECRET: 'whsec_mock_stripe_webhook',
   UPSTASH_VECTOR_REST_URL: 'https://rested-ferret-38816-eu1-vector.upstash.io',
   UPSTASH_VECTOR_REST_TOKEN: 'mock-vector-token',
-  // STREAM_HMAC_SECRET intentionally omitted — fail-closed if missing in production
+  STREAM_HMAC_SECRET: 'mock-stream-hmac-secret-min-32-chars-test',
   NEXT_PUBLIC_WORKER_URL: 'https://yt-intel.hex-tech-lab.workers.dev',
   CLOUDFLARE_WORKER_URL: 'https://yt-intel.hex-tech-lab.workers.dev',
 };

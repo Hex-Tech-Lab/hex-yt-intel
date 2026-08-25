@@ -97,12 +97,13 @@ export function parseHighlightsReconciliation(
     if (typeof grounded !== 'boolean') continue;
     let parsedBackingIdx: number | null = null;
     if (grounded) {
-      if (typeof backingHighlightIdx === 'number' && Number.isInteger(backingHighlightIdx) && backingHighlightIdx >= 0) {
-        if (highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) {
-          return { status: 'invalid' };
-        }
-        parsedBackingIdx = backingHighlightIdx;
+      if (typeof backingHighlightIdx !== 'number' || !Number.isInteger(backingHighlightIdx) || backingHighlightIdx < 0) {
+        return { status: 'invalid' };
       }
+      if (highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) {
+        return { status: 'invalid' };
+      }
+      parsedBackingIdx = backingHighlightIdx;
     } else {
       // Must be null if grounded is false
       if (backingHighlightIdx !== null && backingHighlightIdx !== undefined) {

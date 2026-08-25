@@ -387,7 +387,11 @@ export class ProcessChatMessageUseCase {
     const highlightsSection = highlightsData && highlightsData.length > 0
       ? `\n\n--- HIGHLIGHTS REEL (timestamped key moments) ---\n${highlightsData.map((highlight: { idx: number; start: number; end: number; label: string; takeawayIdx: number | null; verbatimExcerpt: string | null }) => {
         const takeawayLabel = highlight.takeawayIdx !== null ? ` (takeaway ${highlight.takeawayIdx + 1})` : '';
-        const excerpt = highlight.verbatimExcerpt ? ` | excerpt: "${highlight.verbatimExcerpt}"` : '';
+        const rawExcerpt = highlight.verbatimExcerpt?.trim();
+        const boundedExcerpt = rawExcerpt && rawExcerpt.length > 200
+          ? `${rawExcerpt.slice(0, 197)}...`
+          : rawExcerpt;
+        const excerpt = boundedExcerpt ? ` | excerpt: "${boundedExcerpt}"` : '';
         return `[${formatTimestamp(highlight.start)}–${formatTimestamp(highlight.end)}] ${highlight.label}${takeawayLabel}${excerpt}`;
       }).join('\n')}\n`
       : '';
