@@ -1,3 +1,4 @@
+import { normalizeTranscriptSegments } from '@/lib/utils/transcript-normalizer';
 import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
@@ -954,18 +955,7 @@ export class SupabaseAnalysisAdapter {
         .maybeSingle();
 
       if (error) throw error;
-      if (!data?.segments || !Array.isArray(data.segments)) return null;
-
-      const seenStarts = new Set<number>();
-      return (data.segments as unknown[])
-        .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string' && Number.isFinite(s.start) && s.start >= 0 && s.text.trim().length > 0)
-        .map((s: any) => ({ start: s.start as number, text: s.text.trim() as string }))
-        .filter((s) => {
-          if (seenStarts.has(s.start)) return false;
-          seenStarts.add(s.start);
-          return true;
-        })
-        .sort((left, right) => left.start - right.start);
+      return normalizeTranscriptSegments(data?.segments);
     } catch (error: unknown) {
       console.warn('[SupabaseAnalysisAdapter] getTranscriptSegments failed:', error instanceof Error ? error.message : String(error));
       Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' } });

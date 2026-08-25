@@ -78,24 +78,13 @@ export function parseHighlightsReconciliation(
     // silently keeping the first entry, which would persist a non-deterministic
     // grounding status.
     if (seenIdx.has(takeawayIdx)) return { status: 'invalid' };
-    if (typeof grounded !== 'boolean') continue;
-    let parsedBackingIdx: number | null = null;
-    if (grounded) {
-      if (typeof backingHighlightIdx !== 'number' || !Number.isInteger(backingHighlightIdx) || backingHighlightIdx < 0) {
-        return { status: 'invalid' };
-      }
-      if (highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) {
-        return { status: 'invalid' };
-      }
-      parsedBackingIdx = backingHighlightIdx;
-    } else {
-      // Must be null if grounded is false
-      if (backingHighlightIdx !== null && backingHighlightIdx !== undefined) {
-        return { status: 'invalid' };
-      }
-    }
+    if (typeof grounded !== 'boolean') return { status: 'invalid' };
+    if (grounded && (typeof backingHighlightIdx !== 'number' || !Number.isInteger(backingHighlightIdx) || backingHighlightIdx < 0)) return { status: 'invalid' };
+    if (grounded && highlightsCount !== undefined && backingHighlightIdx >= highlightsCount) return { status: 'invalid' };
+    if (!grounded && backingHighlightIdx != null) return { status: 'invalid' };
+    
     seenIdx.add(takeawayIdx);
-    out.push({ idx: takeawayIdx, grounded, backingHighlightIdx: parsedBackingIdx });
+    out.push({ idx: takeawayIdx, grounded, backingHighlightIdx: grounded ? (backingHighlightIdx as number) : null });
   }
 
   if (out.length !== takeawaysCount) return { status: 'invalid' };
