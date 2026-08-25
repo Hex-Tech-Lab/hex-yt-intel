@@ -22,17 +22,33 @@ type HighlightRow = {
  * check rather than a manual verifyOwnership call.
  */
 export async function GET(request: NextRequest) {
-  const parsed = z.object({ analysisId: z.string().uuid() }).safeParse({
-    analysisId: request.nextUrl.searchParams.get('analysisId'),
-  });
+  const analysisId = request.nextUrl.searchParams.get('analysisId');
+  const publicToken = request.nextUrl.searchParams.get('publicToken');
+  const parsed = z.object({ analysisId: z.string().uuid() }).safeParse({ analysisId });
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid analysisId' }, { status: 400 });
   }
 
   const supabase = await getSupabaseClientWithAuth();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  if (publicToken) {
+    // Check if valid public token
+    const { data: analysis, error: pErr } = await supabase
+      .from('analyses')
+      .select('id')
+      .eq('id', parsed.data.analysisId)
+      .eq('share_token', publicToken)
+      .single();
+      
+    if (pErr || !analysis) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  } else {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // RLS handles owner check
   }
 
   const { data, error } = await supabase

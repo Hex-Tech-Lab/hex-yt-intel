@@ -84,7 +84,7 @@ describe('useChapters remount/reset behavior', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const { unmount } = renderHook(() => useChapters('vid1'));
+    const { unmount: _unmount } = renderHook(() => useChapters('vid1'));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // Let the first fetch complete with confirmed data.
     await act(() => {
@@ -108,6 +108,7 @@ describe('useChapters remount/reset behavior', () => {
     await vi.waitFor(() => {
       expect(useChaptersStore.getState().entries['vid1']?.status).toBe('loading');
     });
+    // The initial call (vid1), plus this new remount.
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     unmount2();

@@ -182,7 +182,7 @@ export function VideoPlayerCard() {
     // already covered by this effect's own deps) but is not itself a
     // reactive value this effect should re-run on; including it would
     // destroy and re-mount the player on every unrelated render.
-  }, [mounted, videoId, setPlaying, retryNonce]);
+  }, [mounted, videoId, setPlaying, retryNonce, mountPlayer]);
 
   // A click (or a transcript timestamp arriving while still on the facade)
   // reveals the already-mounting/mounted player -- it does NOT trigger a

@@ -488,7 +488,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       ctx.restore();
     });
-  }, [isWordSelected, size]);
+  }, [isWordSelected, size, wordsLayout]);
 
   // react-best-practices self-review finding (2026-08-02): the entrance
   // animation effect below used to list `drawCanvas` directly in its deps.

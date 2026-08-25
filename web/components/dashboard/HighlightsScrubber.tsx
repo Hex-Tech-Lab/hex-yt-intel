@@ -123,11 +123,25 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       setError(null);
       setLoading(true);
       try {
-        const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-        const json: HighlightsResponse = await res.json();
-        if (!json || !Array.isArray(json.highlights)) {
-          throw new Error('Invalid response format: expected highlights array');
+        let json: HighlightsResponse | null = null;
+        let attempts = 0;
+        const maxAttempts = 4;
+        
+        while (attempts < maxAttempts) {
+          const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
+          if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
+          json = await res.json();
+          if (!json || !Array.isArray(json.highlights)) {
+            throw new Error('Invalid response format: expected highlights array');
+          }
+          if (json.highlights.length > 0) break;
+          // Highlights empty: QStash extraction might still be running.
+          // Wait 2s and retry (up to 4 times).
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 2000));
+            if (controller.signal.aborted) return;
+          }
         }
         setData(json);
       } catch (err) {
@@ -146,9 +160,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     return () => {
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop is stable
-    // (useSegmentPlayback's own useCallback with an empty dep array).
-  }, [analysisId]);
+  }, [analysisId, stop]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
@@ -176,14 +188,22 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   };
 
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
-  if (loading || !data) return <Spinner size="sm" />;
-  if (data.highlights.length === 0) return null;
+  if (loading || !data) {
+    return (
+      <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)] h-[100px] items-center justify-center">
+        <Spinner size="sm" />
+      </Card>
+    );
+  }
+  if (data.highlights.length === 0) {
+    return null; // Silent failure if we exhausted retries and still got none
+  }
 
   // Sum each highlight's real clamped duration (fallback to
   // segmentDurationSeconds when end is null/invalid), matching the
   // variable-duration playback advance on segment.end.
   const totalHighlightsSeconds = Math.min(
-    segments.reduce((sum, seg) => sum + (seg.end > seg.start ? seg.end - seg.start : segDurFallback), 0),
+    segments.reduce((sum, seg) => sum + ((seg.end ?? 0) > (seg.start ?? 0) ? (seg.end ?? 0) - (seg.start ?? 0) : segDurFallback), 0),
     videoDurationSeconds ?? Infinity
   );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
