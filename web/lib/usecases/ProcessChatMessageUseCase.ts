@@ -466,9 +466,16 @@ export class ProcessChatMessageUseCase {
       + executiveDigestSection.length + highlightsSection.length + commentsSection.length + analysisSection.length
       + requestedRangeSection.length;
     const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
-    const transcriptSection = groundingData.transcript
-      ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingData.transcript.slice(0, transcriptBudget)}`
-      : '';
+    let transcriptSection = '';
+    if (groundingData.transcript) {
+      transcriptSection = `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingData.transcript.slice(0, transcriptBudget)}`;
+    } else if (this.temporalGraph && conv.analysisId) {
+      const subgraph = await this.temporalGraph.queryTemporalSubgraph({ analysisId: conv.analysisId });
+      if (subgraph.length > 0) {
+        const anchors = subgraph.map(n => `[${n.windowStart}s-${n.windowEnd}s] ${n.salientClaim || n.verbatimAnchor || `Temporal segment ${n.simhash64}`}`).join('\n');
+        transcriptSection = `\n\n--- TEMPORAL GRAPH (Fallback) ---\n${anchors.slice(0, transcriptBudget)}`;
+      }
+    }
 
     // Grounding constrains the SOURCE, never the APPLICATION. The universe of
     // facts is this one video's analysis — but the user (our primary persona is
