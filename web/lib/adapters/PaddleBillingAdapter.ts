@@ -1,15 +1,16 @@
+import * as Sentry from '@sentry/nextjs';
 import * as crypto from 'crypto';
 import { BillingPort } from '../ports/BillingPort';
-import { WebhookPayload } from '../types/billing';
 import { getSupabaseServiceClient } from '../supabase';
-import * as Sentry from '@sentry/nextjs';
+import { paddle } from '../paddle';
+import type { PlanTier, WebhookPayload } from '../types/billing';
 
 export class PaddleBillingAdapter implements BillingPort {
   verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
     try {
       const parts = signatureHeader.split(';');
-      const tsPart = parts.find((p: string) => p.startsWith('ts='));
-      const h1Part = parts.find((p: string) => p.startsWith('h1='));
+      const tsPart = parts.find((part: string) => part.startsWith('ts='));
+      const h1Part = parts.find((part: string) => part.startsWith('h1='));
 
       if (!tsPart || !h1Part) return false;
 
@@ -28,7 +29,8 @@ export class PaddleBillingAdapter implements BillingPort {
 
       if (expectedBuffer.length !== receivedBuffer.length) return false;
       return crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
-    } catch (_e) {
+    } catch (verifyError: unknown) {
+      console.error('[PaddleBillingAdapter] verifySignature error:', verifyError);
       return false;
     }
   }
@@ -79,10 +81,53 @@ export class PaddleBillingAdapter implements BillingPort {
       }
 
       return { success: true };
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      Sentry.captureException(e instanceof Error ? e : new Error(errorMsg), { tags: { operation: 'paddle-process-event' } });
+    } catch (processError) {
+      const errorMsg = processError instanceof Error ? processError.message : String(processError);
+      console.error('[PaddleBillingAdapter] processSubscriptionEvent error:', processError);
+      Sentry.captureException(processError instanceof Error ? processError : new Error(errorMsg), { tags: { operation: 'paddle-process-event' } });
       return { success: false, error: errorMsg };
+    }
+  }
+
+  async createCheckoutSession(userId: string, email: string, planTier: PlanTier): Promise<{ checkoutUrl: string }> {
+    if (planTier === 'free') {
+      throw new Error('Cannot create checkout session for free tier');
+    }
+    if (planTier !== 'founder' && planTier !== 'pro') {
+      throw new Error(`Invalid plan tier: ${String(planTier)}`);
+    }
+
+    let priceId = '';
+    if (planTier === 'pro') {
+      priceId = process.env.PADDLE_PRO_PRICE_ID || '';
+      if (!priceId) {
+        throw new Error('Paddle Pro price ID is not configured (PADDLE_PRO_PRICE_ID missing)');
+      }
+    } else if (planTier === 'founder') {
+      priceId = process.env.PADDLE_FOUNDER_PRICE_ID || process.env.PADDLE_PRO_PRICE_ID || '';
+      if (!priceId) {
+        throw new Error('Paddle Founder price ID is not configured (PADDLE_FOUNDER_PRICE_ID missing)');
+      }
+    }
+
+    try {
+      const transaction = await paddle.transactions.create({
+        items: [{ priceId, quantity: 1 }],
+        customData: {
+          userId,
+          planTier,
+        },
+      });
+
+      const checkoutUrl = (transaction as any).checkout?.url || `https://checkout.paddle.com/checkout/tx_${transaction.id}`;
+      return { checkoutUrl };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error instanceof Error ? error : new Error(errorMsg), {
+        tags: { operation: 'paddle-create-checkout-session' },
+        extra: { userId, email, planTier },
+      });
+      throw new Error(`Paddle checkout creation failed: ${errorMsg}`);
     }
   }
 }

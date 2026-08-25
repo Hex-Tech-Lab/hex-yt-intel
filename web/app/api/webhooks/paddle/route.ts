@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
 
     const result = await useCase.execute(rawBody, signatureHeader, secret);
     return NextResponse.json({ message: result.message }, { status: result.status });
-  } catch (_e) {
+  } catch (routeError: unknown) {
+    console.error('[/api/webhooks/paddle] Error:', routeError);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

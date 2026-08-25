@@ -1,7 +1,7 @@
+import * as crypto from 'crypto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PaddleBillingAdapter } from '../PaddleBillingAdapter';
 import { ProcessPaddleWebhookUseCase } from '../../usecases/ProcessPaddleWebhookUseCase';
-import * as crypto from 'crypto';
 
 // Mock Supabase
 const mockUpsert = vi.fn();

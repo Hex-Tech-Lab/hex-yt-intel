@@ -25,8 +25,9 @@ export class ProcessPaddleWebhookUseCase {
         return { success: false, status: 400, message: result.error || 'Failed to process' };
       }
       return { success: true, status: 200, message: 'Processed' };
-    } catch (e) {
-      return { success: false, status: 400, message: e instanceof Error ? e.message : String(e) };
+    } catch (parseError: unknown) {
+      console.error('[ProcessPaddleWebhookUseCase] Error processing webhook event:', parseError);
+      return { success: false, status: 400, message: parseError instanceof Error ? parseError.message : String(parseError) };
     }
   }
 }
