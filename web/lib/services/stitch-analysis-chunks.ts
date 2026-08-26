@@ -200,14 +200,15 @@ export function stitchChunksIntoPayload(
   };
   // Pass 1: Tally raw entity mention frequency across all chunks by canonical key
   const frequencyMap = new Map<string, number>();
-  const firstOccurrenceMap = new Map<string, any>();
+  const firstOccurrenceMap = new Map<string, Record<string, unknown>>();
   const idToCanonicalMap = new Map<string, string>(); // Original ID -> canonical key
 
   for (const node of stitchedNodes) {
     if (node && typeof node === "object" && "id" in node) {
-      const origId = String((node as any).id);
+      const nodeRecord = node as Record<string, unknown>;
+      const origId = String(nodeRecord.id);
       const id = origId.toLowerCase().trim();
-      const label = "label" in node ? String((node as any).label).toLowerCase().trim() : id;
+      const label = "label" in nodeRecord ? String(nodeRecord.label).toLowerCase().trim() : id;
       const canonical = id || label;
       
       idToCanonicalMap.set(origId, canonical);
@@ -251,14 +252,15 @@ export function stitchChunksIntoPayload(
 
   for (const edge of stitchedEdges) {
     if (edge && typeof edge === "object") {
-      if ("source" in edge) {
-        (edge as any).source = getReconciledId(String((edge as any).source));
+      const edgeRecord = edge as Record<string, unknown>;
+      if ("source" in edgeRecord) {
+        edgeRecord.source = getReconciledId(String(edgeRecord.source));
       }
-      if ("target" in edge) {
-        (edge as any).target = getReconciledId(String((edge as any).target));
+      if ("target" in edgeRecord) {
+        edgeRecord.target = getReconciledId(String(edgeRecord.target));
       }
-      if ("strength" in edge) {
-        (edge as any).strength = normalizeToTenScale((edge as any).strength);
+      if ("strength" in edgeRecord) {
+        edgeRecord.strength = normalizeToTenScale(edgeRecord.strength);
       }
     }
   }
