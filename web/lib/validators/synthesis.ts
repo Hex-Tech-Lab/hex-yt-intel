@@ -99,6 +99,11 @@ export const KGNodeSchema = z
       "study",
       "trend",
       "metric",
+      "Person",
+      "Organization",
+      "Location",
+      "Event",
+      "Object",
     ]),
   })
   .strict();

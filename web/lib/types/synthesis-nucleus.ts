@@ -160,7 +160,8 @@ export interface KGNodeV2 {
   polarity: number;
   keyTerms: string[];
   entityType: 'person' | 'concept' | 'framework' | 'tool' |
-              'organization' | 'study' | 'trend' | 'metric';
+              'organization' | 'study' | 'trend' | 'metric' |
+              'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
 }
 
 /**
