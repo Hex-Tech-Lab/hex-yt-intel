@@ -1,67 +1,121 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useCallback, useEffect, useRef, startTransition, ViewTransition } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
-import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
-import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
-import { TopBar } from '@/components/templates/console/TopBar';
-import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
-import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
-import type { Dimension } from '@/components/templates/console/DimensionAccordion';
-import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
-import { useTotalDimensions, useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
-import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
-import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
-import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
-import { ChatDock } from '@/components/templates/console/ChatDock';
-import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
-import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
-import { HighlightsScrubber } from '@/components/dashboard/HighlightsScrubber';
-import { ShareButton } from '@/components/dashboard/ShareButton';
-import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
-import { useVideoStore } from '@/store/useVideoStore';
-import { useStreamReattach } from '@/hooks/useStreamReattach';
-import { isStackedLayout } from '@/hooks/useIsStackedLayout';
-import { parseTimestamp } from '@/components/TimestampLink';
-import { findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
-import { findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek-cross-dimension';
-import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
-import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
-import { useAnalysisStateStore } from '@/lib/stores/analysis-state-store';
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  startTransition,
+  ViewTransition,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { DashboardLayout } from "@/components/templates/console/DashboardLayout";
+import { Sidebar, SidebarItem } from "@/components/templates/console/Sidebar";
+import { TopBar } from "@/components/templates/console/TopBar";
+import { AnalysisHero } from "@/components/templates/console/AnalysisHero";
+import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
+import type { Dimension } from "@/components/templates/console/DimensionAccordion";
+import { DimensionAccordion } from "@/components/dashboard/DimensionAccordion";
+import {
+  useTotalDimensions,
+  useSynthesisConfig,
+} from "@/lib/config/synthesis-with-settings";
+import { VisualizationPanel } from "@/components/dashboard/VisualizationPanel";
+import { AnalysisHistory } from "@/components/templates/console/AnalysisHistory";
+import { IntelligencePanel } from "@/components/templates/console/IntelligencePanel";
+import { ChatDock } from "@/components/templates/console/ChatDock";
+import { RightPanelAccordion } from "@/components/dashboard/RightPanelAccordion";
+import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
+import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
+import { ShareButton } from "@/components/dashboard/ShareButton";
+import {
+  Icon,
+  StatusBadge,
+  ChapterChip,
+} from "@/components/templates/_shared/primitives";
+import { useVideoStore } from "@/store/useVideoStore";
+import { useStreamReattach } from "@/hooks/useStreamReattach";
+import { isStackedLayout } from "@/hooks/useIsStackedLayout";
+import { parseTimestamp } from "@/components/TimestampLink";
+import {
+  findNearestEntityMention,
+  getRankedMentionsForEntity,
+} from "@/lib/utils/entity-time-seek";
+import { findNearestEntityMentionAcrossDimensions } from "@/lib/utils/entity-time-seek-cross-dimension";
+import { EntityMentionTimeline } from "@/components/templates/console/EntityMentionTimeline";
+import { useAnalysisDimensionsStore } from "@/lib/stores/analysis-dimensions-store";
+import { useAnalysisStateStore } from "@/lib/stores/analysis-state-store";
 
 // Lazy load visualization components to reduce initial bundle size
-const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
-const WordCloud = dynamic(() => import('@/components/templates/console/WordCloud').then(mod => ({ default: mod.WordCloud })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
-const MindMap = dynamic(() => import('@/components/templates/console/MindMap').then(mod => ({ default: mod.MindMap })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
-import { useAnalysisStore } from '@/store/useAnalysisStore';
-import { useUIStore } from '@/store/useUIStore';
-import { useInputStore } from '@/store/useInputStore';
-import { useSSEStream } from '@/hooks/useSSEStream';
-import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
-import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
-import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
-import { useChapters } from '@/hooks/useChapters';
-import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
-import { extractVideoId } from '@/lib/youtube';
-import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
-import { UsageTab } from '@/components/templates/console/UsageTab';
-import { SettingsContentPane, SETTINGS_TREE, type SettingsSubmenuKey } from '@/components/containers/dashboard/SettingsPanel';
-import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
-import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
-import { useRelations } from '@/hooks/useRelations';
-import type { ConsoleProfile } from '@/lib/services/console-profile';
-import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
-import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
-import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
-import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
-import { SidebarFooter } from './dashboard/SidebarFooter';
-import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
-import { copyPanelContent, exportPanelContent, type PanelId } from '@/lib/dashboard/export';
-import { parseUcisDimensionNumbers } from '@/lib/utils/count-ucis-dimensions';
-import { Avatar } from '@astryxdesign/core';
+const KnowledgeGraphCanvas = dynamic(
+  () =>
+    import("@/components/templates/console/KnowledgeGraphCanvas").then(
+      (mod) => ({ default: mod.KnowledgeGraphCanvas }),
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
+  },
+);
+const WordCloud = dynamic(
+  () =>
+    import("@/components/templates/console/WordCloud").then((mod) => ({
+      default: mod.WordCloud,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
+  },
+);
+const MindMap = dynamic(
+  () =>
+    import("@/components/templates/console/MindMap").then((mod) => ({
+      default: mod.MindMap,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
+  },
+);
+import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useAnalysisStore } from "@/store/useAnalysisStore";
+import { useUIStore } from "@/store/useUIStore";
+import { useInputStore } from "@/store/useInputStore";
+import { useSSEStream } from "@/hooks/useSSEStream";
+import { useEagerVideoMetadata } from "@/hooks/useEagerVideoMetadata";
+import { useAutoRestoreAnalysis } from "@/hooks/useAutoRestoreAnalysis";
+import { useExecutiveDigest } from "@/hooks/useExecutiveDigest";
+import { useChapters } from "@/hooks/useChapters";
+import { useAuxElementStatus } from "@/hooks/useAuxElementStatus";
+import { extractVideoId } from "@/lib/youtube";
+import { useExistingAnalysisCheck } from "@/hooks/useExistingAnalysisCheck";
+import { UsageTab } from "@/components/templates/console/UsageTab";
+import {
+  SettingsContentPane,
+  SETTINGS_TREE,
+  type SettingsSubmenuKey,
+} from "@/components/containers/dashboard/SettingsPanel";
+import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
+import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
+import { useRelations } from "@/hooks/useRelations";
+import type { ConsoleProfile } from "@/lib/services/console-profile";
+import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
+import { ProcessingLog } from "@/components/templates/console/ProcessingLog";
+import { DimensionDrawer } from "@/components/templates/console/DimensionDrawer";
+import { ConsoleTabSwitcher } from "./dashboard/ConsoleTabSwitcher";
+import { SidebarFooter } from "./dashboard/SidebarFooter";
+import { ExpandedPanelOverlay } from "./dashboard/ExpandedPanelOverlay";
+import {
+  copyPanelContent,
+  exportPanelContent,
+  type PanelId,
+} from "@/lib/dashboard/export";
+import { parseUcisDimensionNumbers } from "@/lib/utils/count-ucis-dimensions";
+import { Avatar } from "@astryxdesign/core";
 
 // See /docs/ui/dashboard-container.md
 
@@ -70,26 +124,26 @@ export interface DashboardContainerProps {
 }
 
 function cleanDimensionContent(raw: string): string {
-  if (!raw) return '';
+  if (!raw) return "";
   let content = raw.trim();
 
   // Strip markdown code fences without regex
-  if (content.startsWith('```')) {
+  if (content.startsWith("```")) {
     const lines = content.split(/\r?\n/);
     lines.shift();
-    if (lines.length > 0 && lines[lines.length - 1]?.trim() === '```') {
+    if (lines.length > 0 && lines[lines.length - 1]?.trim() === "```") {
       lines.pop();
     }
-    content = lines.join('\n').trim();
+    content = lines.join("\n").trim();
   }
 
   // Strip leading dimension headers (e.g., "### DIMENSION 1") with explicit pattern
   const lines = content.split(/\r?\n/);
   if (lines[0]) {
     const firstLine = lines[0].trim().toUpperCase();
-    if (firstLine.startsWith('#') && /\bDIMENSION\s+\d+/.test(firstLine)) {
+    if (firstLine.startsWith("#") && /\bDIMENSION\s+\d+/.test(firstLine)) {
       lines.shift();
-      content = lines.join('\n');
+      content = lines.join("\n");
     }
   }
 
@@ -105,6 +159,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // component only ever reads pendingNav/clearPendingNav reactively; the
   // other useVideoStore usages below already correctly use .getState()
   // (a snapshot, not a subscription).
+  const viewMode = useConsoleViewStore((s) => s.viewMode);
   const pendingNav = useVideoStore((s) => s.pendingNav);
   const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
@@ -128,7 +183,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
   const { dimensionConfigs } = useSynthesisConfig();
 
-  const showLog = status !== 'idle' && terminalLines.length > 0;
+  const showLog = status !== "idle" && terminalLines.length > 0;
 
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
@@ -144,7 +199,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // threads them into findEntityTimestamp. Empty during the fetch window —
   // findEntityTimestamp falls through to regex, which is the correct degraded
   // behavior.
-  const { chapters, status: chaptersStatus } = useChapters(videoMetadata?.videoId || nucleusAnalysis?.videoId || null);
+  const { chapters, status: chaptersStatus } = useChapters(
+    videoMetadata?.videoId || nucleusAnalysis?.videoId || null,
+  );
 
   useEffect(() => {
     setUserRole(profile.role);
@@ -155,7 +212,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, []);
 
   useAutoRestoreAnalysis(url);
-  useStreamReattach(nucleusAnalysis?.id ?? analysis?.id ?? null, status, isLiveStreaming);
+  useStreamReattach(
+    nucleusAnalysis?.id ?? analysis?.id ?? null,
+    status,
+    isLiveStreaming,
+  );
 
   // Memoized so the client instance (and therefore `handleSignOut`'s identity)
   // stays stable across renders — createClient() otherwise builds a new
@@ -164,7 +225,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const router = useRouter();
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    router.push("/");
   }, [supabase, router]);
 
   // Track if we've ever had a video and sync input URL box
@@ -174,108 +235,157 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       hasHadVideoRef.current = true;
       const currentInputId = extractVideoId(useInputStore.getState().url);
       if (!useInputStore.getState().url || currentInputId !== activeVideoId) {
-        useInputStore.getState().setUrl(`https://www.youtube.com/watch?v=${activeVideoId}`);
+        useInputStore
+          .getState()
+          .setUrl(`https://www.youtube.com/watch?v=${activeVideoId}`);
       }
     }
   }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
 
   const { graph } = useKnowledgeGraph(nucleusAnalysis?.id);
-  const { insights, loading: insightsLoading } = useRelations(nucleusAnalysis?.id ?? null, status === 'complete');
-  const [search, setSearch] = useState('');
+  const { insights, loading: insightsLoading } = useRelations(
+    nucleusAnalysis?.id ?? null,
+    status === "complete",
+  );
+  const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
   // switch via in-page `activeNav` state (not a route change), so the layout's
   // close-on-route-change effect never fires for them — we close it explicitly.
   const setMobileNav = useUIStore((s) => s.setMobileNav);
-  const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
+  const [activeNav, setActiveNav] = useState<
+    "console" | "history" | "settings"
+  >("console");
   // Settings is a collapsible node WITHIN the left nav (not a separate
   // route/shell) -- collapsed by default, and its expand/collapse state is
   // independent of which submenu leaf is currently rendered in the central
   // panel (collapsing after selecting a leaf must not clear the content).
   const [settingsExpanded, setSettingsExpanded] = useState(false);
-  const [activeSettingsLeaf, setActiveSettingsLeaf] = useState<SettingsSubmenuKey>('overview');
+  const [activeSettingsLeaf, setActiveSettingsLeaf] =
+    useState<SettingsSubmenuKey>("overview");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
-  const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
+  const [selectedDimensionKey, setSelectedDimensionKey] = useState<
+    string | null
+  >(null);
+  const [consoleTab, setConsoleTab] = useState<"synthesis" | "graph">(
+    "synthesis",
+  );
 
   const [expandedPanel, setExpandedPanel] = useState<{
-    id: 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map';
-    mode: 'vertical' | 'left' | 'diagonal';
+    id: "insights" | "knowledge-graph" | "word-cloud" | "mind-map";
+    mode: "vertical" | "left" | "diagonal";
   } | null>(null);
 
-  const handleCopy = useCallback((id: string) => {
-    copyPanelContent(id as PanelId, { graph, insights });
-  }, [graph, insights]);
+  const handleCopy = useCallback(
+    (id: string) => {
+      copyPanelContent(id as PanelId, { graph, insights });
+    },
+    [graph, insights],
+  );
 
-  const handlePanelExport = useCallback((id: string) => {
-    exportPanelContent(id as PanelId, { insights, title: nucleusAnalysis?.title });
-  }, [nucleusAnalysis?.title, insights]);
+  const handlePanelExport = useCallback(
+    (id: string) => {
+      exportPanelContent(id as PanelId, {
+        insights,
+        title: nucleusAnalysis?.title,
+      });
+    },
+    [nucleusAnalysis?.title, insights],
+  );
 
-  const handleSelectNode = useCallback((id: string | null) => {
-    startTransition(() => setSelectedNodeId(id));
-    if (!id) return;
+  const handleSelectNode = useCallback(
+    (id: string | null) => {
+      startTransition(() => setSelectedNodeId(id));
+      if (!id) return;
 
-    const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
-    if (entityTimeSeekEnabled && graph.nodes) {
-      const node = graph.nodes.find((n) => n.id === id);
-      if (node) {
-        const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension);
-        const dimContent = dim?.content;
-        // Gap 3: pass parsed chapters (from transcript_chapters via
-        // useChapters) so findEntityTimestamp prefers a real chapter boundary
-        // when the content timestamp falls inside one.
-        let timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
-        // Cross-dimension fallback (live-reported 2026-08-08; RCA + fix in
-        // ADR entity-seek notes and entity-time-seek.ts's
-        // findNearestEntityMentionAcrossDimensions doc comment): node.dimension
-        // frequently defaults to a dimension with no inline timestamps at all
-        // (e.g. a structured KG-summary dimension), so the assigned
-        // dimension's own content is often the wrong place to search. Search
-        // every OTHER populated dimension too, requiring the label to
-        // actually appear in a candidate's content (not the degraded
-        // "first timestamp found" fallback) and ranking all accepted
-        // mentions together by nearest-to-playhead -- not first-dimension-
-        // scanned-wins.
-        if (!timestamp) {
-          const allDimensions = Object.values(useAnalysisStateStore.getState().analysis?.dimensions ?? {})
-            .filter((otherDim) => otherDim.number !== node.dimension)
-            .map((otherDim) => ({ dimensionNumber: otherDim.number, content: otherDim.content }));
-          timestamp = findNearestEntityMentionAcrossDimensions(node, allDimensions, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
-        }
-        if (timestamp) {
-          const secs = parseTimestamp(timestamp);
-          if (secs >= 0) setSeekTo(secs);
-        } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
-          // Race condition: dimension not yet streamed into store. This
-          // retry path only makes sense mid-generation -- for a completed/
-          // restored analysis (isStreaming === false) NOTHING streams again,
-          // so subscribing here would wait the full 15s for a dimension that
-          // can never arrive, producing a silent no-op seek with zero
-          // feedback (real regression found investigating the nav-away/back
-          // entity-seek report, 2026-08-07: `node.dimension` was undefined
-          // for API-sourced graph nodes -- see useKnowledgeGraph.ts fix in
-          // the same commit -- so `dim` was always undefined for those nodes,
-          // and this branch fired every time with no way to ever resolve).
-          // Subscribe and retry once when the dimension arrives. If the
-          // dimension never streams in (permanently missing, or the user
-          // navigates away before it does), the subscription would otherwise
-          // never unsubscribe -- cap it with a timeout so it can't leak.
-          const timeoutId = setTimeout(() => unsub(), 15_000);
-          const unsub = useAnalysisDimensionsStore.subscribe((state) => {
-            const retryDim = state.getDimension(node.dimension);
-            if (!retryDim) return;
-            clearTimeout(timeoutId);
-            unsub();
-            const retryContent = retryDim.content;
-            const retryTs = findNearestEntityMention(node, retryContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
-            if (retryTs) {
-              const secs = parseTimestamp(retryTs);
-              if (secs >= 0) setSeekTo(secs);
-            }
-          });
+      const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
+      if (entityTimeSeekEnabled && graph.nodes) {
+        const node = graph.nodes.find((n) => n.id === id);
+        if (node) {
+          const dim = useAnalysisDimensionsStore
+            .getState()
+            .getDimension(node.dimension);
+          const dimContent = dim?.content;
+          // Gap 3: pass parsed chapters (from transcript_chapters via
+          // useChapters) so findEntityTimestamp prefers a real chapter boundary
+          // when the content timestamp falls inside one.
+          let timestamp =
+            findNearestEntityMention(
+              node,
+              dimContent,
+              chapters,
+              useVideoStore.getState().currentPlaybackSeconds ?? null,
+            )?.timestamp ?? null;
+          // Cross-dimension fallback (live-reported 2026-08-08; RCA + fix in
+          // ADR entity-seek notes and entity-time-seek.ts's
+          // findNearestEntityMentionAcrossDimensions doc comment): node.dimension
+          // frequently defaults to a dimension with no inline timestamps at all
+          // (e.g. a structured KG-summary dimension), so the assigned
+          // dimension's own content is often the wrong place to search. Search
+          // every OTHER populated dimension too, requiring the label to
+          // actually appear in a candidate's content (not the degraded
+          // "first timestamp found" fallback) and ranking all accepted
+          // mentions together by nearest-to-playhead -- not first-dimension-
+          // scanned-wins.
+          if (!timestamp) {
+            const allDimensions = Object.values(
+              useAnalysisStateStore.getState().analysis?.dimensions ?? {},
+            )
+              .filter((otherDim) => otherDim.number !== node.dimension)
+              .map((otherDim) => ({
+                dimensionNumber: otherDim.number,
+                content: otherDim.content,
+              }));
+            timestamp =
+              findNearestEntityMentionAcrossDimensions(
+                node,
+                allDimensions,
+                chapters,
+                useVideoStore.getState().currentPlaybackSeconds ?? null,
+              )?.timestamp ?? null;
+          }
+          if (timestamp) {
+            const secs = parseTimestamp(timestamp);
+            if (secs >= 0) setSeekTo(secs);
+          } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
+            // Race condition: dimension not yet streamed into store. This
+            // retry path only makes sense mid-generation -- for a completed/
+            // restored analysis (isStreaming === false) NOTHING streams again,
+            // so subscribing here would wait the full 15s for a dimension that
+            // can never arrive, producing a silent no-op seek with zero
+            // feedback (real regression found investigating the nav-away/back
+            // entity-seek report, 2026-08-07: `node.dimension` was undefined
+            // for API-sourced graph nodes -- see useKnowledgeGraph.ts fix in
+            // the same commit -- so `dim` was always undefined for those nodes,
+            // and this branch fired every time with no way to ever resolve).
+            // Subscribe and retry once when the dimension arrives. If the
+            // dimension never streams in (permanently missing, or the user
+            // navigates away before it does), the subscription would otherwise
+            // never unsubscribe -- cap it with a timeout so it can't leak.
+            const timeoutId = setTimeout(() => unsub(), 15_000);
+            const unsub = useAnalysisDimensionsStore.subscribe((state) => {
+              const retryDim = state.getDimension(node.dimension);
+              if (!retryDim) return;
+              clearTimeout(timeoutId);
+              unsub();
+              const retryContent = retryDim.content;
+              const retryTs =
+                findNearestEntityMention(
+                  node,
+                  retryContent,
+                  chapters,
+                  useVideoStore.getState().currentPlaybackSeconds ?? null,
+                )?.timestamp ?? null;
+              if (retryTs) {
+                const secs = parseTimestamp(retryTs);
+                if (secs >= 0) setSeekTo(secs);
+              }
+            });
+          }
         }
       }
-    }
-  }, [graph.nodes, chapters]);
+    },
+    [graph.nodes, chapters],
+  );
 
   // Cubic review, PR #224: this previously read
   // useAnalysisDimensionsStore.getState().getDimension(...) imperatively
@@ -292,10 +402,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // timelineEntityData) on every dimension's streaming update, not just the
   // currently-selected entity's dimension. Resolve the selected node first,
   // then subscribe to only that one dimension's content string.
-  const selectedGraphNode = selectedNodeId && graph.nodes ? graph.nodes.find((n) => n.id === selectedNodeId) : null;
+  const selectedGraphNode =
+    selectedNodeId && graph.nodes
+      ? graph.nodes.find((n) => n.id === selectedNodeId)
+      : null;
   const selectedNodeDimension = selectedGraphNode?.dimension ?? 1;
   const selectedDimensionContent = useAnalysisStateStore((state) =>
-    selectedNodeId ? state.analysis?.dimensions?.[selectedNodeDimension]?.content : undefined,
+    selectedNodeId
+      ? state.analysis?.dimensions?.[selectedNodeDimension]?.content
+      : undefined,
   );
 
   // Derived timeline mentions for selected entity (ADR 025 UI)
@@ -317,89 +432,156 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       entityLabel: selectedGraphNode.label || selectedNodeId,
       mentions: index.mentions,
     };
-  }, [selectedNodeId, selectedGraphNode, chapters, videoMetadata?.duration, selectedDimensionContent]);
+  }, [
+    selectedNodeId,
+    selectedGraphNode,
+    chapters,
+    videoMetadata?.duration,
+    selectedDimensionContent,
+  ]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
     startTransition(() => {
-      setExpandedPanel(prev => prev?.id === id && prev?.mode === mode ? null : { id: id as 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map', mode: mode as 'vertical' | 'left' | 'diagonal' });
+      setExpandedPanel((prev) =>
+        prev?.id === id && prev?.mode === mode
+          ? null
+          : {
+              id: id as
+                | "insights"
+                | "knowledge-graph"
+                | "word-cloud"
+                | "mind-map",
+              mode: mode as "vertical" | "left" | "diagonal",
+            },
+      );
     });
   }, []);
 
-  const rightPanelItems = useMemo(() => [
-    {
-      id: 'insights',
-      title: 'Insights',
-      defaultOpen: true,
-      content: () => (
-        <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} insights={insights} insightsLoading={insightsLoading} />
-      ),
-      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
-        if (action === 'copy') handleCopy('insights');
-        else if (action === 'export') handlePanelExport('insights');
-        else handleExpandPanel('insights', action);
-      }
-    },
-    {
-      id: 'knowledge-graph',
-      title: 'Knowledge Graph',
-      content: () => (
-        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact />
-      ),
-      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
-        if (action === 'copy') handleCopy('knowledge-graph');
-        else if (action === 'export') handlePanelExport('knowledge-graph');
-        else handleExpandPanel('knowledge-graph', action);
-      }
-    },
-    {
-      id: 'word-cloud',
-      title: 'Word Cloud',
-      defaultOpen: true,
-      content: () => (
-        <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
-      ),
-      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
-        if (action === 'copy') handleCopy('word-cloud');
-        else if (action === 'export') handlePanelExport('word-cloud');
-        else handleExpandPanel('word-cloud', action);
-      }
-    },
-    {
-      id: 'mind-map',
-      title: 'Mind Map',
-      content: () => (
-        <MindMap graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
-      ),
-      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
-        if (action === 'copy') handleCopy('mind-map');
-        else if (action === 'export') handlePanelExport('mind-map');
-        else handleExpandPanel('mind-map', action);
-      }
-    }
-  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport, handleExpandPanel, handleSelectNode]);
-
-
+  const rightPanelItems = useMemo(
+    () =>
+      viewMode === "simple"
+        ? []
+        : [
+            {
+              id: "insights",
+              title: "Insights",
+              defaultOpen: true,
+              content: () => (
+                <IntelligencePanel
+                  graph={graph}
+                  selectedId={selectedNodeId}
+                  onSelect={handleSelectNode}
+                  insights={insights}
+                  insightsLoading={insightsLoading}
+                />
+              ),
+              onAction: (
+                action: "vertical" | "left" | "diagonal" | "copy" | "export",
+              ) => {
+                if (action === "copy") handleCopy("insights");
+                else if (action === "export") handlePanelExport("insights");
+                else handleExpandPanel("insights", action);
+              },
+            },
+            {
+              id: "knowledge-graph",
+              title: "Knowledge Graph",
+              content: () => (
+                <KnowledgeGraphCanvas
+                  graph={graph}
+                  selectedId={selectedNodeId}
+                  onSelect={handleSelectNode}
+                  onFocus={(id) => startTransition(() => setSelectedNodeId(id))}
+                  compact
+                />
+              ),
+              onAction: (
+                action: "vertical" | "left" | "diagonal" | "copy" | "export",
+              ) => {
+                if (action === "copy") handleCopy("knowledge-graph");
+                else if (action === "export")
+                  handlePanelExport("knowledge-graph");
+                else handleExpandPanel("knowledge-graph", action);
+              },
+            },
+            {
+              id: "word-cloud",
+              title: "Word Cloud",
+              defaultOpen: true,
+              content: () => (
+                <WordCloud
+                  graph={graph}
+                  selectedId={selectedNodeId}
+                  onSelect={handleSelectNode}
+                />
+              ),
+              onAction: (
+                action: "vertical" | "left" | "diagonal" | "copy" | "export",
+              ) => {
+                if (action === "copy") handleCopy("word-cloud");
+                else if (action === "export") handlePanelExport("word-cloud");
+                else handleExpandPanel("word-cloud", action);
+              },
+            },
+            {
+              id: "mind-map",
+              title: "Mind Map",
+              content: () => (
+                <MindMap
+                  graph={graph}
+                  selectedId={selectedNodeId}
+                  onSelect={handleSelectNode}
+                />
+              ),
+              onAction: (
+                action: "vertical" | "left" | "diagonal" | "copy" | "export",
+              ) => {
+                if (action === "copy") handleCopy("mind-map");
+                else if (action === "export") handlePanelExport("mind-map");
+                else handleExpandPanel("mind-map", action);
+              },
+            },
+          ],
+    [
+      viewMode,
+      graph,
+      selectedNodeId,
+      insights,
+      insightsLoading,
+      handleCopy,
+      handlePanelExport,
+      handleExpandPanel,
+      handleSelectNode,
+    ],
+  );
 
   useEffect(() => {
-    if (activeNav !== 'console') {
+    if (activeNav !== "console") {
       setSelectedDimensionKey(null);
     }
   }, [activeNav]);
 
-  const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
+  const tierLabel =
+    profile.tier === "pro"
+      ? "Pro"
+      : profile.tier === "free"
+        ? "Free"
+        : profile.tier;
   const quotaLabel =
     profile.monthlyLimit === null
       ? `${profile.analysesUsed} analyses · Unlimited`
       : `${profile.analysesUsed} / ${profile.monthlyLimit} monthly analyses`;
-  const historyBadge = analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
+  const historyBadge =
+    analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
   // Astryx <Avatar> derives initials from `name` by first-lettering each
   // whitespace-separated word; a raw email (no space) would collapse to a
   // single letter. Reconstruct a two-word string so it reproduces
   // profile.initials exactly instead of re-deriving (and mangling) it.
-  const accountAvatarName = profile.initials.length >= 2
-    ? `${profile.initials[0]} ${profile.initials.slice(1)}`
-    : profile.initials;
+  const accountAvatarName =
+    profile.initials.length >= 2
+      ? `${profile.initials[0]} ${profile.initials.slice(1)}`
+      : profile.initials;
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
@@ -413,8 +595,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // TOTAL_DIMENSIONS whenever currentStatus === 'complete', which showed 11/11
   // for analyses with billing_status: 'failed').
   const partialInfo = useMemo(() => {
-    if (status !== 'complete' || !analysis?.analysis_markdown) return null;
-    const presentNumbers = parseUcisDimensionNumbers(analysis.analysis_markdown);
+    if (status !== "complete" || !analysis?.analysis_markdown) return null;
+    const presentNumbers = parseUcisDimensionNumbers(
+      analysis.analysis_markdown,
+    );
     const presentCount = presentNumbers.length;
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
     const present = new Set(presentNumbers);
@@ -430,14 +614,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // re-opening it returns the stored digest without re-spending. Also generated for
   // partial analyses so Synthesis Console is accessible for re-analysis.
   const analysisId = nucleusAnalysis?.id ?? null;
-  const { digest, digestLoading, mappedDigestData } = useExecutiveDigest(analysisId, status);
+  const { digest, digestLoading, mappedDigestData } = useExecutiveDigest(
+    analysisId,
+    status,
+  );
   const auxStatus = useAuxElementStatus(analysisId, status);
 
   const getUserTimezone = (): string => {
     try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     } catch {
-      return 'UTC';
+      return "UTC";
     }
   };
 
@@ -455,51 +642,74 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, [url, startAnalysis]);
 
-  const handleExport = useCallback((format: 'pdf' | 'markdown') => {
-    if (!nucleusAnalysis?.id) return;
-    if (format === 'pdf') {
-      window.open(`/api/analyses/${nucleusAnalysis.id}/export?format=pdf&scope=full`, '_blank');
-    } else {
-      const content = analysis?.analysis_markdown || '';
-      const blob = new Blob([content], { type: 'text/markdown' });
-      const downloadUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = downloadUrl;
-      anchor.download = `${nucleusAnalysis.title || 'synthesis'}.md`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(downloadUrl);
-      // Fire-and-forget: the Blob download above has no server round-trip,
-      // so without this the admin User Activity dashboard can never see a
-      // markdown download (only PDF export logs server-side directly).
-      fetch(`/api/analyses/${nucleusAnalysis.id}/download-event`, { method: 'POST' }).catch(() => {});
-    }
-  }, [nucleusAnalysis?.id, nucleusAnalysis?.title, analysis?.analysis_markdown]);
-
-  const sidebarItems: SidebarItem[] = useMemo(() => [
-    { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
-    { key: 'atlas', label: 'The Atlas', icon: 'solar:globus-linear' },
-    { key: 'history', label: 'Analysis History', icon: 'solar:folder-with-files-linear', badge: historyBadge },
-    {
-      key: 'settings',
-      label: 'Settings',
-      icon: 'solar:settings-linear',
-      submenu: [
-        { key: 'overview', label: 'Overview', icon: 'solar:home-2-linear' },
-        ...SETTINGS_TREE.map((item) => ({
-          key: item.key,
-          label: item.label,
-          icon: item.icon,
-          category: item.category,
-        })),
-      ],
+  const handleExport = useCallback(
+    (format: "pdf" | "markdown") => {
+      if (!nucleusAnalysis?.id) return;
+      if (format === "pdf") {
+        window.open(
+          `/api/analyses/${nucleusAnalysis.id}/export?format=pdf&scope=full`,
+          "_blank",
+        );
+      } else {
+        const content = analysis?.analysis_markdown || "";
+        const blob = new Blob([content], { type: "text/markdown" });
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = `${nucleusAnalysis.title || "synthesis"}.md`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(downloadUrl);
+        // Fire-and-forget: the Blob download above has no server round-trip,
+        // so without this the admin User Activity dashboard can never see a
+        // markdown download (only PDF export logs server-side directly).
+        fetch(`/api/analyses/${nucleusAnalysis.id}/download-event`, {
+          method: "POST",
+        }).catch(() => {});
+      }
     },
-  ], [historyBadge]);
+    [nucleusAnalysis?.id, nucleusAnalysis?.title, analysis?.analysis_markdown],
+  );
+
+  const sidebarItems: SidebarItem[] = useMemo(
+    () => [
+      {
+        key: "console",
+        label: "Synthesis Console",
+        icon: "solar:graph-up-linear",
+      },
+      { key: "atlas", label: "The Atlas", icon: "solar:globus-linear" },
+      {
+        key: "history",
+        label: "Analysis History",
+        icon: "solar:folder-with-files-linear",
+        badge: historyBadge,
+      },
+      {
+        key: "settings",
+        label: "Settings",
+        icon: "solar:settings-linear",
+        submenu: [
+          { key: "overview", label: "Overview", icon: "solar:home-2-linear" },
+          ...SETTINGS_TREE.map((item) => ({
+            key: item.key,
+            label: item.label,
+            icon: item.icon,
+            category: item.category,
+          })),
+        ],
+      },
+    ],
+    [historyBadge],
+  );
 
   const dimensions: Dimension[] = useMemo(() => {
     // If projection isn't ready but we're analyzing, show all dimensions as idle/streaming skeletons
-    if (!nucleusProjection && (status === 'analyzing' || status === 'downloading')) {
+    if (
+      !nucleusProjection &&
+      (status === "analyzing" || status === "downloading")
+    ) {
       return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => {
         const num = i + 1;
         const cfg = dimensionConfigs[num];
@@ -507,8 +717,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           key: `dim-skeleton-${num}`,
           label: cfg?.label || `Dimension ${num}`,
           icon: cfg?.icon || "solar:bolt-linear",
-          status: i === 0 ? 'streaming' : 'idle',
-          content: '',
+          status: i === 0 ? "streaming" : "idle",
+          content: "",
           span: (cfg?.span || 1) as 1 | 2 | 3,
         };
       });
@@ -520,19 +730,25 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     const receivedList: number[] = [];
     if (Array.isArray(rawReceived)) {
       for (const valItem of rawReceived) {
-        if (typeof valItem === 'number') receivedList.push(valItem);
+        if (typeof valItem === "number") receivedList.push(valItem);
       }
     }
 
-    const visibleDimensionNumbers = nucleusProjection.visibleDimensions.map(d => d.number);
+    const visibleDimensionNumbers = nucleusProjection.visibleDimensions.map(
+      (d) => d.number,
+    );
     const visibleReceivedList: number[] = [];
     for (const numItem of receivedList) {
-      if (visibleDimensionNumbers.includes(numItem)) visibleReceivedList.push(numItem);
+      if (visibleDimensionNumbers.includes(numItem))
+        visibleReceivedList.push(numItem);
     }
-    const lastVisibleReceived = visibleReceivedList.length > 0 ? visibleReceivedList[visibleReceivedList.length - 1] : null;
+    const lastVisibleReceived =
+      visibleReceivedList.length > 0
+        ? visibleReceivedList[visibleReceivedList.length - 1]
+        : null;
 
     return nucleusProjection.visibleDimensions.map((dim) => {
-      let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
+      let dimStatus: "idle" | "streaming" | "done" | "error" = "idle";
 
       const isReceived = receivedList.includes(dim.number);
       // A restored analysis is 'complete' but its streaming.dimensionsReceived is
@@ -540,23 +756,28 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       // isReceived greyed out every restored dimension — including the ones that
       // actually have content. Treat a dimension with real content as done so
       // partial restores show their created dimensions as expandable.
-      const hasContent = typeof dim.content === 'string' && dim.content.trim().length > 0;
+      const hasContent =
+        typeof dim.content === "string" && dim.content.trim().length > 0;
 
-      if (status === 'complete') {
-        dimStatus = (isReceived || hasContent) ? 'done' : 'idle';
-      } else if (status === 'analyzing' || status === 'downloading') {
+      if (status === "complete") {
+        dimStatus = isReceived || hasContent ? "done" : "idle";
+      } else if (status === "analyzing" || status === "downloading") {
         if (!isReceived) {
-          dimStatus = 'idle';
+          dimStatus = "idle";
         } else if (dim.number === lastVisibleReceived) {
-          dimStatus = 'streaming';
+          dimStatus = "streaming";
         } else {
-          dimStatus = 'done';
+          dimStatus = "done";
         }
-      } else if (status === 'error') {
-        dimStatus = 'error';
+      } else if (status === "error") {
+        dimStatus = "error";
       }
 
-      const cfg = dimensionConfigs[dim.number] || (dimensionConfigs as any)[String(dim.number)];
+      const dimensionMap = dimensionConfigs as Record<
+        number | string,
+        (typeof dimensionConfigs)[number] | undefined
+      >;
+      const cfg = dimensionMap[dim.number] || dimensionMap[String(dim.number)];
 
       return {
         key: `dim-${dim.number}`,
@@ -567,11 +788,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (cfg?.span || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleusProjection, status, nucleusAnalysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS, dimensionConfigs]);
+  }, [
+    nucleusProjection,
+    status,
+    nucleusAnalysis?.streaming.dimensionsReceived,
+    TOTAL_DIMENSIONS,
+    dimensionConfigs,
+  ]);
 
   const selectedDimension = useMemo(() => {
     if (!selectedDimensionKey) return null;
-    return dimensions.find(d => d.key === selectedDimensionKey) || null;
+    return dimensions.find((d) => d.key === selectedDimensionKey) || null;
   }, [selectedDimensionKey, dimensions]);
 
   const drawerDimensionData = useMemo(() => {
@@ -579,23 +806,26 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     return {
       label: selectedDimension.label,
       content: selectedDimension.content,
-      icon: selectedDimension.icon
+      icon: selectedDimension.icon,
     };
   }, [selectedDimension]);
 
-  const handleSidebarNavigate = useCallback((key: string) => {
-    // Dismiss the mobile/tablet drawer on any selection (iPad: the
-    // in-page view switch below is not a route change, so the layout
-    // won't auto-close it).
-    setMobileNav(false);
-    if (key === 'atlas') {
-      router.push('/atlas');
-    } else {
-      startTransition(() => {
-        setActiveNav(key as 'console' | 'history' | 'settings');
-      });
-    }
-  }, [setMobileNav, router]);
+  const handleSidebarNavigate = useCallback(
+    (key: string) => {
+      // Dismiss the mobile/tablet drawer on any selection (iPad: the
+      // in-page view switch below is not a route change, so the layout
+      // won't auto-close it).
+      setMobileNav(false);
+      if (key === "atlas") {
+        router.push("/atlas");
+      } else {
+        startTransition(() => {
+          setActiveNav(key as "console" | "history" | "settings");
+        });
+      }
+    },
+    [setMobileNav, router],
+  );
 
   // Settings header click: toggle the inline disclosure only. This does NOT
   // navigate -- expanding/collapsing the submenu list must not change
@@ -606,13 +836,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Clicking a Settings submenu leaf is the only thing that actually swaps
   // the central panel into the Settings content for that leaf.
-  const handleNavigateSettingsLeaf = useCallback((_parentKey: string, leafKey: string) => {
-    setMobileNav(false);
-    startTransition(() => {
-      setActiveNav('settings');
-      setActiveSettingsLeaf(leafKey as SettingsSubmenuKey);
-    });
-  }, [setMobileNav]);
+  const handleNavigateSettingsLeaf = useCallback(
+    (_parentKey: string, leafKey: string) => {
+      setMobileNav(false);
+      startTransition(() => {
+        setActiveNav("settings");
+        setActiveSettingsLeaf(leafKey as SettingsSubmenuKey);
+      });
+    },
+    [setMobileNav],
+  );
 
   const handleCloseDimensionDrawer = useCallback(() => {
     startTransition(() => setSelectedDimensionKey(null));
@@ -637,73 +870,104 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             onNavigate={handleSidebarNavigate}
             expandedKeys={{ settings: settingsExpanded }}
             onToggleSubmenu={handleToggleSettingsSubmenu}
-            activeSubKey={activeNav === 'settings' ? activeSettingsLeaf : null}
+            activeSubKey={activeNav === "settings" ? activeSettingsLeaf : null}
             onNavigateSub={handleNavigateSettingsLeaf}
-            footer={<SidebarFooter profile={profile} onSignOut={handleSignOut} />}
+            footer={
+              <SidebarFooter profile={profile} onSignOut={handleSignOut} />
+            }
           >
             {showLog && (
-              <ProcessingLog status={status === 'analyzing' || status === 'downloading' || status === 'parsing' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
+              <ProcessingLog
+                status={
+                  status === "analyzing" ||
+                  status === "downloading" ||
+                  status === "parsing"
+                    ? "streaming"
+                    : status === "complete"
+                      ? "done"
+                      : status === "error"
+                        ? "error"
+                        : "idle"
+                }
+              />
             )}
           </Sidebar>
         }
-      topbar={
-        <TopBar
-          search={search}
-          onSearchChange={handleSearchChange}
-          onSearchSubmit={handleSearchSubmit}
-          onExport={handleExport}
-          tier={tierLabel}
-          hasRightPanel={rightPanelItems.length > 0}
-          account={<Avatar name={accountAvatarName} alt={profile.email} size={32} />}
-        />
-      }
-      rightPanel={
-        <AnimatePresence mode="wait">
-          {rightPanelItems.length > 0 && (
-            <motion.div
-              key="right-panel"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 20, opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="h-full overflow-y-auto"
-            >
-              <RightPanelAccordion items={rightPanelItems} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      }
-      dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
-    >
-      <ViewTransition enter="slide-in-up" exit="fade-out" default="none">
-        <div key={activeNav}>
-          {activeNav === 'console' ? (
-            <div className="flex flex-col gap-1.5 pb-2">
-              <AnalysisHero
-                url={mounted ? url : ''}
-                status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-                onUrlChange={setUrl}
-                onAnalyze={handleAnalyze}
-                onReanalyze={handleReanalyze}
-                onCancel={stopAnalysis}
-                error={error?.message}
-                quota={quotaLabel}
-                isRepeat={status === 'complete' || hasExistingAnalysis}
-              />
+        topbar={
+          <TopBar
+            search={search}
+            onSearchChange={handleSearchChange}
+            onSearchSubmit={handleSearchSubmit}
+            onExport={handleExport}
+            tier={tierLabel}
+            hasRightPanel={rightPanelItems.length > 0}
+            account={
+              <Avatar name={accountAvatarName} alt={profile.email} size={32} />
+            }
+          />
+        }
+        rightPanel={
+          <AnimatePresence mode="wait">
+            {rightPanelItems.length > 0 && (
+              <motion.div
+                key="right-panel"
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 20, opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full overflow-y-auto"
+              >
+                <RightPanelAccordion items={rightPanelItems} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        }
+        dock={
+          <ChatDock
+            analysisId={nucleusAnalysis?.id ?? null}
+            analysisTitle={videoMetadata?.title}
+          />
+        }
+      >
+        <ViewTransition enter="slide-in-up" exit="fade-out" default="none">
+          <div key={activeNav}>
+            {activeNav === "console" ? (
+              <div className="flex flex-col gap-1.5 pb-2">
+                <AnalysisHero
+                  url={mounted ? url : ""}
+                  status={
+                    status === "analyzing" || status === "downloading"
+                      ? "streaming"
+                      : status === "complete"
+                        ? "done"
+                        : status === "error"
+                          ? "error"
+                          : "idle"
+                  }
+                  onUrlChange={setUrl}
+                  onAnalyze={handleAnalyze}
+                  onReanalyze={handleReanalyze}
+                  onCancel={stopAnalysis}
+                  error={error?.message}
+                  quota={quotaLabel}
+                  isRepeat={status === "complete" || hasExistingAnalysis}
+                />
 
-              {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
-                <div className="flex flex-col gap-1">
-                  <VideoPlayerCard />
-                  {timelineEntityData && (
-                    <EntityMentionTimeline
-                      entityId={timelineEntityData.entityId}
-                      entityLabel={timelineEntityData.entityLabel}
-                      mentions={timelineEntityData.mentions}
-                      videoDuration={videoMetadata?.duration ?? null}
-                      onClose={() => setSelectedNodeId(null)}
-                    />
-                  )}
-                  {/* Repositioned 2026-08-20 (live report): was rendered far
+                {(hasHadVideoRef.current ||
+                  videoMetadata ||
+                  nucleusAnalysis?.videoId) && (
+                  <div className="flex flex-col gap-1">
+                    <VideoPlayerCard />
+                    {viewMode === "pro" && timelineEntityData && (
+                      <EntityMentionTimeline
+                        entityId={timelineEntityData.entityId}
+                        entityLabel={timelineEntityData.entityLabel}
+                        mentions={timelineEntityData.mentions}
+                        videoDuration={videoMetadata?.duration ?? null}
+                        onClose={() => setSelectedNodeId(null)}
+                      />
+                    )}
+                    {/* Repositioned 2026-08-20 (live report): was rendered far
                       below, under Executive Summary/Video Intelligence
                       Context, disconnected from the player it controls.
                       Moved directly under the video (and its own entity
@@ -727,126 +991,215 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       possibly-null -- the component's own display logic
                       already handles that (see its
                       `videoDurationSeconds ? ... : ''` duration line). */}
-                  {status === 'complete' && analysisId && (
-                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
-                  )}
-                  {videoMetadata && (
-                    <BentoMetadata
-                      title={videoMetadata.title}
-                      channelTitle={videoMetadata.channelTitle}
-                      viewCount={videoMetadata.viewCount}
-                      likeCount={videoMetadata.likeCount}
-                      duration={videoMetadata.duration || 0}
-                      publishedAt={videoMetadata.publishedAt}
-                      description={videoMetadata.description}
-                    />
-                  )}
-                </div>
-              )}
-
-              {status !== 'idle' && (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={(t) => startTransition(() => setConsoleTab(t))} />
-                    {status === 'complete' && analysisId && <ShareButton analysisId={analysisId} />}
+                    {status === "complete" && analysisId && (
+                      <HighlightsScrubber
+                        analysisId={analysisId}
+                        videoDurationSeconds={videoMetadata?.duration ?? null}
+                      />
+                    )}
+                    {videoMetadata && (
+                      <BentoMetadata
+                        title={videoMetadata.title}
+                        channelTitle={videoMetadata.channelTitle}
+                        viewCount={videoMetadata.viewCount}
+                        likeCount={videoMetadata.likeCount}
+                        duration={videoMetadata.duration || 0}
+                        publishedAt={videoMetadata.publishedAt}
+                        description={videoMetadata.description}
+                      />
+                    )}
                   </div>
+                )}
 
-                  {consoleTab === 'synthesis' ? (
-                    <>
-                      {status === 'complete' && (digest || digestLoading) && (
-                        <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
-                      )}
-                      {partialInfo && (
-                        <div
-                          role="status"
-                          className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
-                        >
-                          <Icon icon="solar:danger-triangle-linear" size={16} className="text-[var(--warn)] flex-shrink-0" />
-                          <div>
-                            <span className="font-mono font-bold text-[var(--warn)]">Partial analysis warning</span>
-                            {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                            <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
-                            {' Use Re-analyze to attempt the rest.'}
-                          </div>
+                {status !== "idle" && (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      {viewMode === "pro" ? (
+                        <ConsoleTabSwitcher
+                          activeTab={consoleTab}
+                          hasGraph={graph.nodes.length > 0}
+                          onTabChange={(t) =>
+                            startTransition(() => setConsoleTab(t))
+                          }
+                        />
+                      ) : (
+                        <div className="text-[var(--ink-secondary)] font-mono text-xs font-semibold py-1">
+                          SYNTHESIS OVERVIEW
                         </div>
                       )}
-                      {status === 'complete' && auxStatus && (
-                        <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
-                          <StatusBadge status={digest ? 'done' : 'idle'} label="Digest" tooltip="Executive summary digest generated from analysis" />
-                          <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="Description" tooltip="YouTube video description ingested" />
-                          <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="Channel Meta" tooltip="Channel metadata and statistics enriched" />
-                          <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="Comments" tooltip="Top audience comments sampled and analyzed" />
-                          <ChapterChip
-                            hasChapters={
-                              chaptersStatus === 'loaded' ? chapters.length > 0 : null
-                            }
+                      {status === "complete" && analysisId && (
+                        <ShareButton analysisId={analysisId} />
+                      )}
+                    </div>
+
+                    {viewMode === "simple" ? (
+                      <>
+                        {status === "complete" && (digest || digestLoading) && (
+                          <ExecutiveSummary
+                            data={mappedDigestData}
+                            loading={digestLoading}
                           />
-                        </div>
-                      )}
-                      {/* PersonaSelector removed from runtime per LLM Council Round 1 (2026-08-12):
+                        )}
+                        {status === "complete" && graph.nodes.length > 0 && (
+                          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 h-[400px]">
+                            <WordCloud
+                              graph={graph}
+                              selectedId={selectedNodeId}
+                              onSelect={handleSelectNode}
+                            />
+                          </div>
+                        )}
+                      </>
+                    ) : consoleTab === "synthesis" ? (
+                      <>
+                        {status === "complete" && (digest || digestLoading) && (
+                          <ExecutiveSummary
+                            data={mappedDigestData}
+                            loading={digestLoading}
+                          />
+                        )}
+                        {partialInfo && (
+                          <div
+                            role="status"
+                            className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
+                          >
+                            <Icon
+                              icon="solar:danger-triangle-linear"
+                              size={16}
+                              className="text-[var(--warn)] flex-shrink-0"
+                            />
+                            <div>
+                              <span className="font-mono font-bold text-[var(--warn)]">
+                                Partial analysis warning
+                              </span>
+                              {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
+                              <span className="text-[var(--ink-muted)]">
+                                Missing: {partialInfo.missing.join(", ")}.
+                              </span>
+                              {" Use Re-analyze to attempt the rest."}
+                            </div>
+                          </div>
+                        )}
+                        {status === "complete" && auxStatus && (
+                          <div
+                            className="flex flex-wrap gap-2"
+                            role="status"
+                            aria-label="Auxiliary data status"
+                          >
+                            <StatusBadge
+                              status={digest ? "done" : "idle"}
+                              label="Digest"
+                              tooltip="Executive summary digest generated from analysis"
+                            />
+                            <StatusBadge
+                              status={auxStatus.description ? "done" : "idle"}
+                              label="Description"
+                              tooltip="YouTube video description ingested"
+                            />
+                            <StatusBadge
+                              status={auxStatus.channelMeta ? "done" : "idle"}
+                              label="Channel Meta"
+                              tooltip="Channel metadata and statistics enriched"
+                            />
+                            <StatusBadge
+                              status={auxStatus.comments ? "done" : "idle"}
+                              label="Comments"
+                              tooltip="Top audience comments sampled and analyzed"
+                            />
+                            <ChapterChip
+                              hasChapters={
+                                chaptersStatus === "loaded"
+                                  ? chapters.length > 0
+                                  : null
+                              }
+                            />
+                          </div>
+                        )}
+                        {/* PersonaSelector removed from runtime per LLM Council Round 1 (2026-08-12):
                           persona is a marketing/design lens, not a user-facing picker. Defaults
                           to the apex 'creator' view (all 11 dimensions) instead.
                           See docs/private/council/2026-08-12_1500_v1_round1_full_transcript.md */}
-                      <DimensionAccordion
-                        dimensions={dimensions}
-                        selectedDimensionKey={selectedDimensionKey}
-                        onSelectDimension={(k) => startTransition(() => setSelectedDimensionKey(k))}
-                        status={status}
+                        <DimensionAccordion
+                          dimensions={dimensions}
+                          selectedDimensionKey={selectedDimensionKey}
+                          onSelectDimension={(k) =>
+                            startTransition(() => setSelectedDimensionKey(k))
+                          }
+                          status={status}
+                        />
+                      </>
+                    ) : (
+                      <VisualizationPanel
+                        graph={graph}
+                        selectedNodeId={selectedNodeId}
+                        onSelectNode={handleSelectNode}
+                        onFocusNode={(id) =>
+                          startTransition(() => setSelectedNodeId(id))
+                        }
                       />
-                    </>
-                  ) : (
-                    <VisualizationPanel
-                      graph={graph}
-                      selectedNodeId={selectedNodeId}
-                      onSelectNode={handleSelectNode}
-                      onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
-                    />
-                  )}
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (activeNav as string) === "history" ? (
+              <AnalysisHistory
+                onSelectAnalysis={() =>
+                  startTransition(() => setActiveNav("console"))
+                }
+              />
+            ) : (activeNav as string) === "settings" ? (
+              <SettingsContentPane
+                activeKey={activeSettingsLeaf}
+                onNavigate={setActiveSettingsLeaf}
+              />
+            ) : (
+              <UsageTab />
+            )}
+          </div>
+        </ViewTransition>
+      </DashboardLayout>
 
-                </div>
-              )}
-            </div>
-          ) : (activeNav as string) === 'history' ? (
-            <AnalysisHistory onSelectAnalysis={() => startTransition(() => setActiveNav('console'))} />
-          ) : (activeNav as string) === 'settings' ? (
-            <SettingsContentPane
-              activeKey={activeSettingsLeaf}
-              onNavigate={setActiveSettingsLeaf}
+      {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
+      <DimensionDrawer
+        dimension={drawerDimensionData}
+        onClose={handleCloseDimensionDrawer}
+      />
+
+      {expandedPanel &&
+        (() => {
+          const activeItem = rightPanelItems.find(
+            (item) => item.id === expandedPanel.id,
+          );
+          if (!activeItem) return null;
+
+          return (
+            <ExpandedPanelOverlay
+              panelId={expandedPanel.id}
+              mode={expandedPanel.mode}
+              title={activeItem.title}
+              graph={graph}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={handleSelectNode}
+              onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
+              onCopy={handleCopy}
+              onExport={handlePanelExport}
+              onModeChange={(id, mode) =>
+                startTransition(() =>
+                  setExpandedPanel({
+                    id: id as
+                      | "insights"
+                      | "knowledge-graph"
+                      | "word-cloud"
+                      | "mind-map",
+                    mode,
+                  }),
+                )
+              }
+              onClose={() => setExpandedPanel(null)}
+              content={activeItem.content}
             />
-          ) : (
-            <UsageTab />
-          )}
-        </div>
-      </ViewTransition>
-    </DashboardLayout>
-
-    {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
-    <DimensionDrawer
-      dimension={drawerDimensionData}
-      onClose={handleCloseDimensionDrawer}
-    />
-
-    {expandedPanel && (() => {
-      const activeItem = rightPanelItems.find(item => item.id === expandedPanel.id);
-      if (!activeItem) return null;
-
-      return (
-        <ExpandedPanelOverlay
-          panelId={expandedPanel.id}
-          mode={expandedPanel.mode}
-          title={activeItem.title}
-          graph={graph}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={handleSelectNode}
-          onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
-          onCopy={handleCopy}
-          onExport={handlePanelExport}
-          onModeChange={(id, mode) => startTransition(() => setExpandedPanel({ id: id as 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map', mode }))}
-          onClose={() => setExpandedPanel(null)}
-          content={activeItem.content}
-        />
-      );
-    })()}
+          );
+        })()}
     </div>
   );
 }

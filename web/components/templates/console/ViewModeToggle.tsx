@@ -1,0 +1,67 @@
+"use client";
+
+import { useState } from "react";
+import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useEntitlements } from "@/lib/hooks/useEntitlements";
+import { PricingModal } from "@/components/billing/PricingModal";
+import { Icon } from "@/components/templates/_shared/primitives";
+
+export function ViewModeToggle() {
+  const viewMode = useConsoleViewStore((store) => store.viewMode);
+  const setViewMode = useConsoleViewStore((store) => store.setViewMode);
+  const { isFounder, isPro, isLoading } = useEntitlements();
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+
+  const isProEntitled = isFounder || isPro;
+
+  const handleToggle = (mode: "simple" | "pro") => {
+    if (mode === "pro" && !isProEntitled && !isLoading) {
+      setPricingModalOpen(true);
+      return;
+    }
+    setViewMode(mode);
+  };
+
+  return (
+    <>
+      <div className="flex bg-[var(--surface)] border border-[var(--line-strong)] rounded-lg p-0.5">
+        <button
+          onClick={() => handleToggle("simple")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            viewMode === "simple"
+              ? "bg-[var(--surface-raised)] text-[var(--ink)] shadow-sm"
+              : "text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--line-faint)]"
+          }`}
+          aria-pressed={viewMode === "simple"}
+        >
+          <Icon icon="solar:document-text-linear" size={14} />
+          Simple
+        </button>
+        <button
+          onClick={() => handleToggle("pro")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            viewMode === "pro"
+              ? "bg-[var(--surface-raised)] text-[var(--ink)] shadow-sm"
+              : "text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--line-faint)]"
+          }`}
+          aria-pressed={viewMode === "pro"}
+        >
+          <Icon icon="solar:graph-up-linear" size={14} />
+          Pro
+          {!isProEntitled && !isLoading && (
+            <Icon
+              icon="solar:lock-password-linear"
+              size={12}
+              className="text-[var(--ink-muted)] ml-0.5"
+            />
+          )}
+        </button>
+      </div>
+
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+      />
+    </>
+  );
+}
