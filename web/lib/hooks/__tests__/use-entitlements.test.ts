@@ -1,7 +1,17 @@
 /** @vitest-environment jsdom */
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEntitlements, clearEntitlementsCache } from '../useEntitlements';
+
+
+vi.mock('@/lib/supabase', () => ({
+  getSupabaseClient: () => ({
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'test-user-123' } } } }),
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    }
+  })
+}));
 
 describe('useEntitlements hook', () => {
   beforeEach(() => {

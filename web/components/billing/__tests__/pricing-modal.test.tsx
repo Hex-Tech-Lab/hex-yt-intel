@@ -52,7 +52,7 @@ describe('PricingModal component', () => {
     
     // There are two buttons, one is the close (icon) and one is the primary action. We'll click the one with the text.
     const upgradeButtons = screen.getAllByRole('button', { name: /Upgrade to Founder/i });
-    const upgradeButton = upgradeButtons.find(b => b.textContent?.includes('Upgrade to Founder'));
+    const upgradeButton = upgradeButtons.find(btn => btn.textContent?.includes('Upgrade to Founder'));
     
     fireEvent.click(upgradeButton!);
 
@@ -73,7 +73,7 @@ describe('PricingModal component', () => {
     render(<PricingModal isOpen={true} onClose={() => {}} />);
     
     const upgradeButtons = screen.getAllByRole('button', { name: /Upgrade to Founder/i });
-    const upgradeButton = upgradeButtons.find(b => b.textContent?.includes('Upgrade to Founder'));
+    const upgradeButton = upgradeButtons.find(btn => btn.textContent?.includes('Upgrade to Founder'));
     
     fireEvent.click(upgradeButton!);
 

@@ -51,10 +51,12 @@ export class PaddleBillingAdapter implements BillingPort {
         return { success: false, error: 'Missing user_id in custom_data' };
       }
 
-      let planTier = 'free';
-      if (data.items && data.items.length > 0) {
+      // Authoritative plan tier from subscription custom data (or fallback to item price custom data)
+      let planTier = data.custom_data?.plan_tier || data.custom_data?.planTier;
+      if (!planTier && data.items && data.items.length > 0) {
         planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
       }
+      if (!planTier) planTier = 'free';
 
       const cancelAtPeriodEnd = data.scheduled_change?.action === 'cancel' || false;
 
@@ -85,6 +87,64 @@ export class PaddleBillingAdapter implements BillingPort {
       const errorMsg = processError instanceof Error ? processError.message : String(processError);
       console.error('[PaddleBillingAdapter] processSubscriptionEvent error:', processError);
       Sentry.captureException(processError instanceof Error ? processError : new Error(errorMsg), { tags: { operation: 'paddle-process-event' } });
+      return { success: false, error: errorMsg };
+    }
+  }
+
+
+  async processTransactionEvent(payload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (payload.event_type !== 'transaction.completed') {
+        return { success: true };
+      }
+      
+      const supabase = getSupabaseServiceClient();
+      const { data } = payload;
+      const userId = data.custom_data?.user_id || data.custom_data?.userId;
+      
+      if (!userId) {
+        return { success: false, error: 'Missing user_id in transaction custom_data' };
+      }
+
+      // Read authoritatively from transaction custom data
+      let planTier = data.custom_data?.plan_tier || data.custom_data?.planTier;
+      if (!planTier && data.items && data.items.length > 0) {
+        planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
+      }
+      
+      if (!planTier || planTier === 'free') {
+        return { success: true }; // Not a founder tier or special one-time
+      }
+
+      // Insert or update user_subscriptions for this one-time purchase
+      // (Using transaction ID as subscription ID for one-time provisioning)
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .upsert(
+          {
+            user_id: userId,
+            paddle_customer_id: data.customer_id,
+            paddle_subscription_id: 'tx_' + data.id,
+            plan_tier: planTier,
+            status: 'active',
+            current_period_start: new Date().toISOString(),
+            current_period_end: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(), // effectively lifetime
+            cancel_at_period_end: false,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'paddle_subscription_id' }
+        );
+
+      if (error) {
+        Sentry.captureException(new Error(error.message), { tags: { operation: 'paddle-upsert-tx' } });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (processError) {
+      const errorMsg = processError instanceof Error ? processError.message : String(processError);
+      console.error('[PaddleBillingAdapter] processTransactionEvent error:', processError);
+      Sentry.captureException(processError instanceof Error ? processError : new Error(errorMsg), { tags: { operation: 'paddle-process-tx-event' } });
       return { success: false, error: errorMsg };
     }
   }

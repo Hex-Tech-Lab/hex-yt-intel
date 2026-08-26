@@ -15,12 +15,14 @@ export class ProcessPaddleWebhookUseCase {
     try {
       const payload = this.billingAdapter.parseWebhookEvent(rawBody);
       
-      // We only care about subscription events
-      if (!payload.event_type.startsWith('subscription.')) {
+      let result: { success: boolean; error?: string } = { success: true };
+      if (payload.event_type.startsWith('subscription.')) {
+        result = await this.billingAdapter.processSubscriptionEvent(payload);
+      } else if (payload.event_type.startsWith('transaction.')) {
+        result = await this.billingAdapter.processTransactionEvent(payload);
+      } else {
         return { success: true, status: 200, message: 'Event ignored' };
       }
-
-      const result = await this.billingAdapter.processSubscriptionEvent(payload);
       if (!result.success) {
         return { success: false, status: 400, message: result.error || 'Failed to process' };
       }

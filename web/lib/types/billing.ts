@@ -33,14 +33,14 @@ export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'paused' |
 
 export interface WebhookPayload {
   event_id: string;
-  event_type: 'subscription.created' | 'subscription.updated' | 'subscription.canceled';
+  event_type: 'subscription.created' | 'subscription.updated' | 'subscription.canceled' | 'transaction.completed';
   occurred_at: string;
   data: {
     id: string;
     customer_id: string;
     status: SubscriptionStatus;
     custom_data?: {
-      user_id?: string;
+      user_id?: string; [key: string]: any;
     };
     current_billing_period?: {
       starts_at: string;

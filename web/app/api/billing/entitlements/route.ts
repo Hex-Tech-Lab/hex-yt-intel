@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { GetUserEntitlementsUseCase } from '@/lib/usecases/GetUserEntitlementsUseCase';
-import * as Sentry from '@sentry/nextjs';
 
 export async function GET(_request: NextRequest) {
   try {

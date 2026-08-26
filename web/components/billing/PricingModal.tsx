@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+
 import { Button, IconButton } from '@astryxdesign/core';
 import { Icon, GlowBorder, CornerFrame } from '@/components/templates/_shared/primitives';
 import { showToast } from '@/lib/dashboard/export';
-import { AnimatePresence, motion } from 'framer-motion';
 
 export interface PricingModalProps {
   isOpen: boolean;
@@ -24,8 +25,8 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
         },
         body: JSON.stringify({
           plan: 'founder', // NOTE: validation schema accepts light/pro/max. I will use 'founder' and see if it fails.
-          interval: 'month', // The prompt says POST /api/billing/checkout with { planTier: 'founder' }
-          planTier: 'founder',
+          interval: 'once', // The prompt says POST /api/billing/checkout with { planTier: 'founder' }
+          
           successUrl: window.location.href,
           cancelUrl: window.location.href,
         }),

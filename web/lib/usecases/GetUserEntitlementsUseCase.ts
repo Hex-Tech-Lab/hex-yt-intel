@@ -1,5 +1,7 @@
-import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
+
+import { getSupabaseServiceClient } from '@/lib/supabase';
+
 import type { PlanTier, SubscriptionStatus } from '@/lib/types/billing';
 
 export interface EntitlementState {
