@@ -18,20 +18,47 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Create stable mock functions outside
-const mockClearSeek = vi.fn();
-const mockSetPlaying = vi.fn();
-const mockSetCurrentPlaybackSeconds = vi.fn();
+const { mockClearSeek, mockSetPlaying, mockSetCurrentPlaybackSeconds, setupVideoStoreMock, mockPlay, mockPause, mockSeekTo, mockDestroy, mockMount, setupPlayerMock } = vi.hoisted(() => {
+  const mockClearSeek = vi.fn();
+  const mockSetPlaying = vi.fn();
+  const mockSetCurrentPlaybackSeconds = vi.fn();
+
+  const setupVideoStoreMock = (overrides = {}) => {
+    return (selector: any) => selector({
+      isPlaying: false,
+      seekTo: null,
+      clearSeek: mockClearSeek,
+      setPlaying: mockSetPlaying,
+      setCurrentPlaybackSeconds: mockSetCurrentPlaybackSeconds,
+      playbackRate: 1,
+      ...overrides,
+    });
+  };
+
+  const mockPlay = vi.fn();
+  const mockPause = vi.fn();
+  const mockSeekTo = vi.fn();
+  const mockDestroy = vi.fn();
+  const mockMount = vi.fn((container, videoId, options) => {
+    options.onReady?.();
+  });
+
+  const setupPlayerMock = () => {
+    return class {
+      mount = mockMount;
+      play = mockPlay;
+      pause = mockPause;
+      seekTo = mockSeekTo;
+      destroy = mockDestroy;
+      getCurrentTime = vi.fn();
+    };
+  };
+
+  return { mockClearSeek, mockSetPlaying, mockSetCurrentPlaybackSeconds, setupVideoStoreMock, mockPlay, mockPause, mockSeekTo, mockDestroy, mockMount, setupPlayerMock };
+});
 
 vi.mock('@/store/useVideoStore', () => ({
-  useVideoStore: Object.assign(vi.fn((selector) => selector({
-    isPlaying: false,
-    seekTo: null,
-    clearSeek: mockClearSeek,
-    setPlaying: mockSetPlaying,
-    setCurrentPlaybackSeconds: mockSetCurrentPlaybackSeconds,
-    playbackRate: 1,
-  })), {
+  useVideoStore: Object.assign(vi.fn(setupVideoStoreMock()), {
     getState: vi.fn(() => ({
       entityTimeSeekEnabled: false,
       setSeekTo: vi.fn(),
@@ -50,24 +77,9 @@ vi.mock('@/lib/stores/synthesis-nucleus-store', () => ({
   useSynthesisNucleus: vi.fn(() => 'test1234')
 }));
 
-const mockPlay = vi.fn();
-const mockPause = vi.fn();
-const mockSeekTo = vi.fn();
-const mockDestroy = vi.fn();
-const mockMount = vi.fn((container, videoId, options) => {
-  options.onReady?.();
-});
-
 vi.mock('@/lib/adapters/YouTubePlayerAdapter', () => {
   return {
-    YouTubePlayerAdapter: class {
-      mount = mockMount;
-      play = mockPlay;
-      pause = mockPause;
-      seekTo = mockSeekTo;
-      destroy = mockDestroy;
-      getCurrentTime = vi.fn();
-    }
+    YouTubePlayerAdapter: setupPlayerMock()
   };
 });
 
@@ -110,13 +122,9 @@ describe('VideoPlayerCard Lifecycle (P0 Hotfix)', () => {
     const { useVideoStore } = await import('@/store/useVideoStore');
     const useVideoStoreMock = useVideoStore as any;
     
-    useVideoStoreMock.mockImplementation((selector: any) => selector({
+    useVideoStoreMock.mockImplementation(setupVideoStoreMock({
       isPlaying: true,
       seekTo: 120,
-      clearSeek: mockClearSeek,
-      setPlaying: mockSetPlaying,
-      setCurrentPlaybackSeconds: mockSetCurrentPlaybackSeconds,
-      playbackRate: 1,
     }));
     
     rerender(<VideoPlayerCard />);

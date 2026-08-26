@@ -31,7 +31,7 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
  * ID out from under it.
  */
 
-export type PriceTier = 'light' | 'pro' | 'max' | 'free' | 'founder_tier_a' | 'founder_tier_b';
+export type PriceTier = 'light' | 'pro' | 'max' | 'free' | 'founder' | 'founder_tier_a' | 'founder_tier_b';
 export type PriceInterval = 'month' | 'year' | 'once';
 /**
  * Provider identifiers the registry understands. Broader than
@@ -120,6 +120,7 @@ export const PRICE_IDS_FALLBACK: PriceIdRegistry = {
   free: {
     once: emptyProviderMap(),
   },
+  founder: { once: { ...emptyProviderMap(), paddle: 'pri_founder_123' } },
   founder_tier_a: {
     // Placeholder internal key -- real marketing display name pending a
     // separate naming task (see task dispatch note). Price $49 one-time per

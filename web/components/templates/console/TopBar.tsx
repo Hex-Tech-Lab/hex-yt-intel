@@ -4,6 +4,8 @@ import { memo, ReactNode, useState } from 'react';
 import { IconButton, Badge, Avatar, Button } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useUIStore } from '@/store/useUIStore';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import { PricingModal } from '@/components/billing/PricingModal';
 
 export interface TopBarProps {
   search: string;
@@ -18,6 +20,8 @@ export interface TopBarProps {
 function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, account, hasRightPanel }: TopBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const setMobileNav = useUIStore((s) => s.setMobileNav);
+  const { isFounder, isLoading: entitlementsLoading } = useEntitlements();
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const setMobileRight = useUIStore((s) => s.setMobileRight);
 
   return (
@@ -110,6 +114,19 @@ function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, ac
             icon={<Icon icon="solar:crown-minimalistic-linear" size={12} />}
           />
         </span>
+      )}
+      {!entitlementsLoading && !isFounder && (
+        <>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setPricingModalOpen(true)}
+            label="Upgrade"
+            icon={<Icon icon="solar:crown-star-linear" size={14} />}
+            className="hidden sm:flex bg-[var(--accent)] text-white border-none hover:opacity-90 shadow-lg"
+          />
+          <PricingModal isOpen={pricingModalOpen} onClose={() => setPricingModalOpen(false)} />
+        </>
       )}
 
       {account || <Avatar size={32} alt="Account" />}

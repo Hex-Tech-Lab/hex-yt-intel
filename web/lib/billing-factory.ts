@@ -13,9 +13,8 @@ const PaddleProvider: BillingProvider = {
         items: [{ priceId: options.priceId, quantity: 1 }],
         customData: { userId: options.userId },
       });
-      // Paddle checkout URLs are typically generated via the JS SDK or a specific link
-      // For now we return the ID which the frontend can use to open the checkout
-      return { url: null, id: transaction.id };
+      const url = (transaction as any).checkout?.url || `https://checkout.paddle.com/checkout/tx_${transaction.id}`;
+      return { url, id: transaction.id };
     } catch (error) {
       console.error('[BillingFactory] Paddle checkout failed:', error);
       return { url: null, id: null };
