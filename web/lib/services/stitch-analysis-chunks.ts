@@ -12,13 +12,22 @@
  * behind tonight's KG-schema and persona-id incidents; this module exists
  * specifically to not repeat that mistake here.
  */
-import { UCISPayloadV2Schema, KGNodeSchema, KGEdgeSchema } from '@/lib/validators/synthesis';
-import { normalizeEntityType } from '@/lib/design/entity-taxonomy';
-import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
-import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import type { DimensionStatus, BillingStatus, ValidationReportStatus } from '@/lib/types/validation-report';
-import * as Sentry from '@sentry/nextjs';
+import {
+  UCISPayloadV2Schema,
+  KGNodeSchema,
+  KGEdgeSchema,
+} from "@/lib/validators/synthesis";
+import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
+import type { UCISPayloadV2 } from "@/lib/types/synthesis-nucleus";
+import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
+import { normalizeNodeWeight } from "../../../worker/src/services/GraphExtractor";
+import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
+import type {
+  DimensionStatus,
+  BillingStatus,
+  ValidationReportStatus,
+} from "@/lib/types/validation-report";
+import * as Sentry from "@sentry/nextjs";
 
 export interface StitchResult {
   payload: UCISPayloadV2 | undefined;
@@ -31,24 +40,24 @@ export interface StitchResult {
  * Only uses dimensions that actually made it into the stitched content.
  */
 export function extractDimensionStatus(
-  stitchedPayload: UCISPayloadV2 | null | undefined
+  stitchedPayload: UCISPayloadV2 | null | undefined,
 ): DimensionStatus[] {
   const dimensionStatus: DimensionStatus[] = [];
   const stitchedDimensions = stitchedPayload?.dimensions || [];
-  const stitchedSet = new Set(stitchedDimensions.map(d => d.number));
+  const stitchedSet = new Set(stitchedDimensions.map((d) => d.number));
 
   for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
     if (stitchedSet.has(i)) {
       dimensionStatus.push({
         dimension: i,
-        status: 'done',
+        status: "done",
         completedAt: new Date().toISOString(),
       });
     } else {
       dimensionStatus.push({
         dimension: i,
-        status: 'timeout',
-        error: 'Dimension not available in analysis',
+        status: "timeout",
+        error: "Dimension not available in analysis",
       });
     }
   }
@@ -62,7 +71,7 @@ export function extractDimensionStatus(
  * Billing rule (single source of truth): ONLY chargeable if 100% complete.
  */
 export function buildDimensionStatus(
-  stitchedPayload: UCISPayloadV2 | null | undefined
+  stitchedPayload: UCISPayloadV2 | null | undefined,
 ): {
   dimensionStatus: DimensionStatus[];
   validationStatus: ValidationReportStatus;
@@ -70,12 +79,19 @@ export function buildDimensionStatus(
   completeness: number;
 } {
   const dimensionStatus = extractDimensionStatus(stitchedPayload);
-  const completedCount = dimensionStatus.filter(d => d.status === 'done').length;
+  const completedCount = dimensionStatus.filter(
+    (d) => d.status === "done",
+  ).length;
   const completeness = completedCount / TOTAL_DIMENSIONS;
 
-  const billingStatus: BillingStatus = completedCount === TOTAL_DIMENSIONS ? 'completed' : 'failed';
+  const billingStatus: BillingStatus =
+    completedCount === TOTAL_DIMENSIONS ? "completed" : "failed";
   const validationStatus: ValidationReportStatus =
-    completedCount === TOTAL_DIMENSIONS ? 'done' : completedCount > 0 ? 'partial' : 'failed';
+    completedCount === TOTAL_DIMENSIONS
+      ? "done"
+      : completedCount > 0
+        ? "partial"
+        : "failed";
 
   return { dimensionStatus, validationStatus, billingStatus, completeness };
 }
@@ -97,9 +113,9 @@ export function buildDimensionStatus(
  */
 export function resolveBillingStatus(
   cancelled: boolean,
-  billingStatus: BillingStatus
+  billingStatus: BillingStatus,
 ): BillingStatus {
-  return cancelled ? 'cancelled' : billingStatus;
+  return cancelled ? "cancelled" : billingStatus;
 }
 
 /**
@@ -109,7 +125,7 @@ export function resolveBillingStatus(
 export function stitchChunksIntoPayload(
   chunkMap: Map<number, any>,
   resolvedTotal: number,
-  extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any }
+  extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any },
 ): StitchResult {
   const stitchedDimensions: any[] = [];
   let stitchedPersona: any = null;
@@ -133,27 +149,35 @@ export function stitchChunksIntoPayload(
     if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
       stitchedMonetization = chunkPayload.monetizationVerdict;
     }
-    if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
+    if (
+      chunkPayload.knowledgeGraph &&
+      Array.isArray(chunkPayload.knowledgeGraph.nodes)
+    ) {
       // Normalize to POLE+O at the write boundary -- see entity-taxonomy.ts.
       // All other node fields pass through unchanged; only entityType (the
       // field color/UI code reads) is overwritten to the canonical value.
-      stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes.map((node: any) => ({
-        ...node,
-        entityType: normalizeEntityType(node.entityType ?? node.type),
-      })));
+      stitchedNodes.push(
+        ...chunkPayload.knowledgeGraph.nodes.map((node: any) => ({
+          ...node,
+          entityType: normalizeEntityType(node.entityType ?? node.type),
+        })),
+      );
     }
-    if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
+    if (
+      chunkPayload.knowledgeGraph &&
+      Array.isArray(chunkPayload.knowledgeGraph.edges)
+    ) {
       stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);
     }
   }
 
   // Only stitch if we have dimensions to work with
   if (stitchedDimensions.length === 0) {
-    return { payload: undefined, markdown: '', validationPassed: false };
+    return { payload: undefined, markdown: "", validationPassed: false };
   }
 
   const cleanDimensions = stitchedDimensions
-    .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
+    .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
     .sort((a, b) => a.number - b.number);
 
   // Normalize KG node.weight / edge.strength scale before validation.
@@ -169,19 +193,48 @@ export function stitchChunksIntoPayload(
   // expressed on a different unit), so an entire otherwise-complete 11/11
   // analysis never fails validation over a KG cosmetic-scale slip.
   const normalizeToTenScale = (value: unknown): number => {
-    const n = typeof value === 'number' ? value : Number(value);
+    const n = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(n)) return 5; // schema default-ish midpoint, never invalid
     const scaled = n > 0 && n <= 1 ? n * 10 : n;
     return Math.min(10, Math.max(1, scaled));
   };
+  // Calculate frequency of each node based on its ID or label
+  const frequencyMap = new Map<string, number>();
   for (const node of stitchedNodes) {
-    if (node && typeof node === 'object' && 'weight' in node) {
-      (node as { weight: number }).weight = normalizeToTenScale((node as { weight: unknown }).weight);
+    if (node && typeof node === "object" && "label" in node) {
+      const label = String((node as any).label)
+        .toLowerCase()
+        .trim();
+      frequencyMap.set(label, (frequencyMap.get(label) || 0) + 1);
+    }
+  }
+
+  for (const node of stitchedNodes) {
+    if (node && typeof node === "object" && "weight" in node) {
+      const label = String((node as any).label)
+        .toLowerCase()
+        .trim();
+      const f = frequencyMap.get(label) || 1;
+
+      // Original relevance from prompt is 1-10.
+      const rawWeight =
+        typeof (node as any).weight === "number"
+          ? (node as any).weight
+          : Number((node as any).weight);
+      const sRelevance = !Number.isFinite(rawWeight)
+        ? 0.5
+        : rawWeight > 1
+          ? rawWeight / 10.0
+          : rawWeight;
+
+      (node as { weight: number }).weight = normalizeNodeWeight(f, sRelevance);
     }
   }
   for (const edge of stitchedEdges) {
-    if (edge && typeof edge === 'object' && 'strength' in edge) {
-      (edge as { strength: number }).strength = normalizeToTenScale((edge as { strength: unknown }).strength);
+    if (edge && typeof edge === "object" && "strength" in edge) {
+      (edge as { strength: number }).strength = normalizeToTenScale(
+        (edge as { strength: unknown }).strength,
+      );
     }
   }
 
@@ -199,12 +252,18 @@ export function stitchChunksIntoPayload(
   // result over a KG cosmetic slip" philosophy as the weight-normalization
   // fix above -- filter the individually-invalid entries out rather than
   // reject everything.
-  const validNodes = stitchedNodes.filter((node) => KGNodeSchema.safeParse(node).success);
+  const validNodes = stitchedNodes.filter(
+    (node) => KGNodeSchema.safeParse(node).success,
+  );
   const droppedNodeCount = stitchedNodes.length - validNodes.length;
   if (droppedNodeCount > 0) {
-    console.warn(`[stitch-analysis-chunks] Dropped ${droppedNodeCount} malformed KG node(s) before validation`);
+    console.warn(
+      `[stitch-analysis-chunks] Dropped ${droppedNodeCount} malformed KG node(s) before validation`,
+    );
   }
-  const validNodeIds = new Set(validNodes.map((n) => (n as { id: unknown }).id));
+  const validNodeIds = new Set(
+    validNodes.map((n) => (n as { id: unknown }).id),
+  );
   const validEdges = stitchedEdges.filter((edge) => {
     if (!KGEdgeSchema.safeParse(edge).success) return false;
     const e = edge as { source?: unknown; target?: unknown };
@@ -213,7 +272,9 @@ export function stitchChunksIntoPayload(
   });
   const droppedEdgeCount = stitchedEdges.length - validEdges.length;
   if (droppedEdgeCount > 0) {
-    console.warn(`[stitch-analysis-chunks] Dropped ${droppedEdgeCount} malformed/dangling KG edge(s) before validation`);
+    console.warn(
+      `[stitch-analysis-chunks] Dropped ${droppedEdgeCount} malformed/dangling KG edge(s) before validation`,
+    );
   }
   stitchedNodes = validNodes;
   stitchedEdges = validEdges;
@@ -228,36 +289,41 @@ export function stitchChunksIntoPayload(
   // Map known alternate spellings to the canonical id rather than reject the
   // whole analysis over a label variant the model uses interchangeably.
   const PERSONA_ID_ALIASES: Record<string, string> = {
-    content_creator: 'creator',
-    contentcreator: 'creator',
-    indie_maker: 'indieMaker',
-    indiemaker: 'indieMaker',
-    product_manager: 'productManager',
-    productmanager: 'productManager',
+    content_creator: "creator",
+    contentcreator: "creator",
+    indie_maker: "indieMaker",
+    indiemaker: "indieMaker",
+    product_manager: "productManager",
+    productmanager: "productManager",
   };
   const normalizePersonaId = (id: unknown): unknown =>
-    typeof id === 'string' && PERSONA_ID_ALIASES[id] ? PERSONA_ID_ALIASES[id] : id;
-  if (stitchedPersona && typeof stitchedPersona === 'object') {
-    for (const slot of ['primary', 'secondary', 'tertiary'] as const) {
+    typeof id === "string" && PERSONA_ID_ALIASES[id]
+      ? PERSONA_ID_ALIASES[id]
+      : id;
+  if (stitchedPersona && typeof stitchedPersona === "object") {
+    for (const slot of ["primary", "secondary", "tertiary"] as const) {
       const entry = (stitchedPersona as Record<string, unknown>)[slot];
-      if (entry && typeof entry === 'object' && 'id' in entry) {
-        (entry as { id: unknown }).id = normalizePersonaId((entry as { id: unknown }).id);
+      if (entry && typeof entry === "object" && "id" in entry) {
+        (entry as { id: unknown }).id = normalizePersonaId(
+          (entry as { id: unknown }).id,
+        );
       }
     }
   }
 
   const stitchedPayload: UCISPayloadV2 = {
-    schemaVersion: '2.0',
+    schemaVersion: "2.0",
     persona: stitchedPersona || {
-      primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
-      cognitiveLenses: ['default'],
-      selectionRationale: 'Fallback persona — no persona data received from analysis chunks'
+      primary: { id: "consultant", label: "Consultant", weight: 1.0 },
+      cognitiveLenses: ["default"],
+      selectionRationale:
+        "Fallback persona — no persona data received from analysis chunks",
     },
     dimensions: cleanDimensions,
     knowledgeGraph: {
       nodes: stitchedNodes,
       edges: stitchedEdges,
-      rootId: stitchedNodes[0]?.id || null
+      rootId: stitchedNodes[0]?.id || null,
     },
     classification: stitchedClassification || {
       authoritative: false,
@@ -265,11 +331,17 @@ export function stitchChunksIntoPayload(
       knowledgeGraphReady: false,
       safe: true,
       personaOptimised: false,
-      recommendation: 'conditional'
+      recommendation: "conditional",
     },
-    ...(stitchedMonetization ? { monetizationVerdict: stitchedMonetization } : {}),
-    ...(extraMetadata?.videoMetadata ? { videoMetadata: extraMetadata.videoMetadata } : {}),
-    ...(extraMetadata?.channelMeta ? { channelMeta: extraMetadata.channelMeta } : {}),
+    ...(stitchedMonetization
+      ? { monetizationVerdict: stitchedMonetization }
+      : {}),
+    ...(extraMetadata?.videoMetadata
+      ? { videoMetadata: extraMetadata.videoMetadata }
+      : {}),
+    ...(extraMetadata?.channelMeta
+      ? { channelMeta: extraMetadata.channelMeta }
+      : {}),
     ...(extraMetadata?.comments ? { comments: extraMetadata.comments } : {}),
   };
 
@@ -278,17 +350,22 @@ export function stitchChunksIntoPayload(
   // retry rather than throwing away an otherwise-complete analysis.
   let parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
   for (let pass = 0; !parseResult.success && pass < 3; pass++) {
-    const unrecognized = parseResult.error.issues.filter(i => i.code === 'unrecognized_keys');
+    const unrecognized = parseResult.error.issues.filter(
+      (i) => i.code === "unrecognized_keys",
+    );
     if (unrecognized.length === 0) break;
-    const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'];
+    const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
     for (const issue of unrecognized) {
       let target: any = stitchedPayload;
       for (const seg of issue.path) {
-        if (FORBIDDEN_KEYS.includes(String(seg))) { target = undefined; break; }
+        if (FORBIDDEN_KEYS.includes(String(seg))) {
+          target = undefined;
+          break;
+        }
         target = target?.[seg as any];
         if (!target) break;
       }
-      if (target && typeof target === 'object') {
+      if (target && typeof target === "object") {
         for (const key of (issue as any).keys as string[]) {
           if (!FORBIDDEN_KEYS.includes(key)) delete target[key];
         }
@@ -298,29 +375,60 @@ export function stitchChunksIntoPayload(
   }
 
   if (!parseResult.success) {
-    console.error('[stitch-analysis-chunks] Stitched payload failed schema validation — preserving partial markdown', {
-      dimNumbers: cleanDimensions.map(d => d.number),
-      issues: parseResult.error.issues.slice(0, 10),
-    });
-    Sentry.captureMessage('analysis-persist: stitched payload failed schema validation (partial preserved)', {
-      level: 'warning',
-      tags: { operation: 'analysis-persist', phase: 'stitch_validation' },
-      extra: { issues: parseResult.error.issues.slice(0, 20) },
-    });
+    console.error(
+      "[stitch-analysis-chunks] Stitched payload failed schema validation — preserving partial markdown",
+      {
+        dimNumbers: cleanDimensions.map((d) => d.number),
+        issues: parseResult.error.issues.slice(0, 10),
+      },
+    );
+    Sentry.captureMessage(
+      "analysis-persist: stitched payload failed schema validation (partial preserved)",
+      {
+        level: "warning",
+        tags: { operation: "analysis-persist", phase: "stitch_validation" },
+        extra: { issues: parseResult.error.issues.slice(0, 20) },
+      },
+    );
     try {
       const partialMarkdown = reconstructMarkdown(stitchedPayload);
       if (partialMarkdown && partialMarkdown.trim().length > 0) {
-        return { payload: stitchedPayload, markdown: partialMarkdown, validationPassed: false };
+        return {
+          payload: stitchedPayload,
+          markdown: partialMarkdown,
+          validationPassed: false,
+        };
       }
     } catch (partialErr) {
-      const msg = partialErr instanceof Error ? partialErr.message : String(partialErr);
-      console.error('[stitch-analysis-chunks] partial markdown reconstruction failed:', msg);
-      Sentry.captureException(partialErr, { tags: { phase: 'partial_stitch' } });
+      const msg =
+        partialErr instanceof Error ? partialErr.message : String(partialErr);
+      console.error(
+        "[stitch-analysis-chunks] partial markdown reconstruction failed:",
+        msg,
+      );
+      Sentry.captureException(partialErr, {
+        tags: { phase: "partial_stitch" },
+      });
     }
-    const fallbackMarkdown = cleanDimensions.map((d) => `## Dimension ${d.number} ${d.name || ''}\n\n${(d.content || '').trim()}`).join('\n\n---\n\n');
-    return { payload: stitchedPayload, markdown: fallbackMarkdown || `# Partial Analysis\n\n${cleanDimensions.length} dimensions recovered`, validationPassed: false };
+    const fallbackMarkdown = cleanDimensions
+      .map(
+        (d) =>
+          `## Dimension ${d.number} ${d.name || ""}\n\n${(d.content || "").trim()}`,
+      )
+      .join("\n\n---\n\n");
+    return {
+      payload: stitchedPayload,
+      markdown:
+        fallbackMarkdown ||
+        `# Partial Analysis\n\n${cleanDimensions.length} dimensions recovered`,
+      validationPassed: false,
+    };
   }
 
   const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
-  return { payload: stitchedPayload, markdown: stitchedMarkdown, validationPassed: true };
+  return {
+    payload: stitchedPayload,
+    markdown: stitchedMarkdown,
+    validationPassed: true,
+  };
 }
