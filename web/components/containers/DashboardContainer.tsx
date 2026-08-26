@@ -773,9 +773,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         dimStatus = "error";
       }
 
-      const cfg =
-        dimensionConfigs[dim.number] ||
-        (dimensionConfigs as any)[String(dim.number)];
+      const dimensionMap = dimensionConfigs as Record<
+        number | string,
+        (typeof dimensionConfigs)[number] | undefined
+      >;
+      const cfg = dimensionMap[dim.number] || dimensionMap[String(dim.number)];
 
       return {
         key: `dim-${dim.number}`,
