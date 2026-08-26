@@ -13,9 +13,9 @@ describe("normalizeNodeWeight boundaries", () => {
   });
 
   it("sanitizes NaN, null, negative numbers, and boundary extremes without throwing", () => {
-    // @ts-ignore
+    // @ts-expect-error testing boundaries
     expect(normalizeNodeWeight(NaN, 5)).toBeGreaterThanOrEqual(0.1);
-    // @ts-ignore
+    // @ts-expect-error testing boundaries
     expect(normalizeNodeWeight(1, null)).toBeGreaterThanOrEqual(0.1);
     expect(normalizeNodeWeight(-5, 5)).toBeGreaterThanOrEqual(0.1); // negative frequency
     expect(normalizeNodeWeight(1, -5)).toBeGreaterThanOrEqual(0.1); // negative relevance
