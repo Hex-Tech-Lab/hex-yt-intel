@@ -49,16 +49,6 @@ const KnowledgeGraphCanvas = dynamic(
     loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
   },
 );
-const WordCloud = dynamic(
-  () =>
-    import("@/components/templates/console/WordCloud").then((mod) => ({
-      default: mod.WordCloud,
-    })),
-  {
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
-  },
-);
 const MindMap = dynamic(
   () =>
     import("@/components/templates/console/MindMap").then((mod) => ({
@@ -493,25 +483,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 else if (action === "export")
                   handlePanelExport("knowledge-graph");
                 else handleExpandPanel("knowledge-graph", action);
-              },
-            },
-            {
-              id: "word-cloud",
-              title: "Word Cloud",
-              defaultOpen: true,
-              content: () => (
-                <WordCloud
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("word-cloud");
-                else if (action === "export") handlePanelExport("word-cloud");
-                else handleExpandPanel("word-cloud", action);
               },
             },
             {
