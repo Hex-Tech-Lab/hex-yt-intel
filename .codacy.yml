@@ -3,9 +3,13 @@ engines:
   eslint:
     enabled: true
     exclude_paths:
+      - "design-system/**"
+      - "src/worker/**"
       - "scripts/**"
       - "worker/**"
       - "supabase/**"
 exclude_paths:
+  - "design-system/**"
+  - "src/worker/**"
   - "scripts/**"
   - "docs/**"

@@ -910,20 +910,28 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   isRepeat={status === "complete" || hasExistingAnalysis}
                 />
 
-                {effectiveViewMode === "simple" ? (
-                  <SimpleDashboardView
-                    status={status}
-                    analysisId={analysisId}
-                    videoMetadata={videoMetadata}
-                    digest={digest}
-                    digestLoading={digestLoading}
-                    mappedDigestData={mappedDigestData}
-                    graph={graph || nucleusKnowledgeGraph || { nodes: [], edges: [] }}
-                    selectedNodeId={selectedNodeId}
-                    onSelectNode={handleSelectNode}
-                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
-                  />
-                ) : (
+                {effectiveViewMode === "simple" ? (() => {
+                  const simpleViewGraph = (graph && graph.nodes && graph.nodes.length > 0)
+                    ? graph
+                    : (nucleusKnowledgeGraph && nucleusKnowledgeGraph.nodes && nucleusKnowledgeGraph.nodes.length > 0)
+                      ? nucleusKnowledgeGraph
+                      : { nodes: [], edges: [] };
+                  
+                  return (
+                    <SimpleDashboardView
+                      status={status}
+                      analysisId={analysisId}
+                      videoMetadata={videoMetadata}
+                      digest={digest}
+                      digestLoading={digestLoading}
+                      mappedDigestData={mappedDigestData}
+                      graph={simpleViewGraph as any}
+                      selectedNodeId={selectedNodeId}
+                      onSelectNode={handleSelectNode}
+                      hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                    />
+                  );
+                })() : (
                   <ProDashboardView
                     status={status}
                     analysisId={analysisId}
