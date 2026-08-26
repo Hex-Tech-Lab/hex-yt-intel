@@ -228,11 +228,11 @@ export function stitchChunksIntoPayload(
     const label = "label" in node ? String(node.label).toLowerCase().trim() : id;
     const canonical = id || label;
 
-    const f = frequencyMap.get(canonical) || 1;
+    const frequency = frequencyMap.get(canonical) || 1;
     const rawWeight = typeof node.weight === "number" ? node.weight : Number(node.weight);
     
     // Normalize weight
-    node.weight = normalizeNodeWeight(f, rawWeight);
+    node.weight = normalizeNodeWeight(frequency, rawWeight);
     return node;
   });
   

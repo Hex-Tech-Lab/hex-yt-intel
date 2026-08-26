@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
-import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { PricingModal } from "@/components/billing/PricingModal";
 import { Icon } from "@/components/templates/_shared/primitives";
+import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 
 export function ViewModeToggle() {
   const { effectiveViewMode: viewMode, setViewMode, canAccessPro, isLoading } = useEffectiveViewMode();
