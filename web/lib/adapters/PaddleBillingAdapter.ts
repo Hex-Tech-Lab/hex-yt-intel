@@ -177,7 +177,7 @@ export class PaddleBillingAdapter implements BillingPort {
         throw new Error('Paddle Pro price ID is not configured (PADDLE_PRO_PRICE_ID missing)');
       }
     } else if (planTier === 'founder') {
-      priceId = process.env.PADDLE_FOUNDER_PRICE_ID || process.env.PADDLE_PRO_PRICE_ID || '';
+      priceId = process.env.PADDLE_FOUNDER_PRICE_ID || '';
       if (!priceId) {
         throw new Error('Paddle Founder price ID is not configured (PADDLE_FOUNDER_PRICE_ID missing)');
       }

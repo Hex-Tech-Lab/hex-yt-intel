@@ -132,7 +132,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               />
             </div>
             {/* Screen reader notification container for alerts/toasts */}
-            <div role="status" aria-live="polite" className="sr-only" />
+            <div role="alert" aria-live="assertive" className="sr-only" />
           </motion.div>
         </div>
       )}

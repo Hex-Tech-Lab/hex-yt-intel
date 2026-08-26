@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ProcessPaddleWebhookUseCase } from '@/lib/usecases/ProcessPaddleWebhookUseCase';
+
 import { PaddleBillingAdapter } from '@/lib/adapters/PaddleBillingAdapter';
 import { GetUserEntitlementsUseCase } from '@/lib/usecases/GetUserEntitlementsUseCase';
+import { ProcessPaddleWebhookUseCase } from '@/lib/usecases/ProcessPaddleWebhookUseCase';
 import { CheckoutSchema } from '@/lib/types/contracts';
 
 // Mock Supabase
@@ -16,7 +17,6 @@ const mockRows = vi.fn().mockResolvedValue({
   ],
   error: null,
 });
-const mockOrder = vi.fn().mockReturnValue({ order: mockRows, then: mockRows.then });
 const mockIn = vi.fn().mockReturnValue({ order: mockRows });
 const mockEq = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnThis(),

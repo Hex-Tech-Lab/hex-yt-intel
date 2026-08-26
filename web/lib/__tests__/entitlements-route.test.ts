@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/supabase', () => ({
@@ -20,7 +21,6 @@ vi.mock('@/lib/usecases/GetUserEntitlementsUseCase', () => ({
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
 import { GET } from '@/app/api/billing/entitlements/route';
-import { NextRequest } from 'next/server';
 
 describe('GET /api/billing/entitlements', () => {
   beforeEach(() => vi.clearAllMocks());
