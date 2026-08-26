@@ -198,6 +198,13 @@ export function stitchChunksIntoPayload(
     const scaled = n > 0 && n <= 1 ? n * 10 : n;
     return Math.min(10, Math.max(1, scaled));
   };
+
+  // Helper for consistent entity canonicalization
+  function normalizeEntityKey(rawId?: unknown, rawLabel?: unknown): string {
+    const key = String(rawId ?? rawLabel ?? "").trim().toLowerCase();
+    return key;
+  }
+
   // Pass 1: Tally raw entity mention frequency across all chunks by canonical key
   const frequencyMap = new Map<string, number>();
   const firstOccurrenceMap = new Map<string, Record<string, unknown>>();
@@ -206,64 +213,67 @@ export function stitchChunksIntoPayload(
   for (const node of stitchedNodes) {
     if (node && typeof node === "object" && "id" in node) {
       const nodeRecord = node as Record<string, unknown>;
-      const origId = String(nodeRecord.id);
-      const id = origId.toLowerCase().trim();
-      const label = "label" in nodeRecord ? String(nodeRecord.label).toLowerCase().trim() : id;
-      const canonical = id || label;
+      const nodeId = String(nodeRecord.id ?? "").trim();
+      const canonicalKey = normalizeEntityKey(nodeRecord.id, nodeRecord.label);
       
-      idToCanonicalMap.set(origId, canonical);
-      frequencyMap.set(canonical, (frequencyMap.get(canonical) || 0) + 1);
+      if (!canonicalKey) continue;
+      
+      idToCanonicalMap.set(nodeId, canonicalKey);
+      frequencyMap.set(canonicalKey, (frequencyMap.get(canonicalKey) || 0) + 1);
 
-      if (!firstOccurrenceMap.has(canonical)) {
-        // Deep copy to avoid mutating the original
-        firstOccurrenceMap.set(canonical, { ...node });
+      if (!firstOccurrenceMap.has(canonicalKey)) {
+        firstOccurrenceMap.set(canonicalKey, { ...nodeRecord });
       }
     }
   }
 
   // Pass 2: Merge duplicate nodes and apply normalizeNodeWeight
-  stitchedNodes = Array.from(firstOccurrenceMap.values()).map(node => {
-    const origId = String(node.id);
-    const id = origId.toLowerCase().trim();
-    const label = "label" in node ? String(node.label).toLowerCase().trim() : id;
-    const canonical = id || label;
-
-    const frequency = frequencyMap.get(canonical) || 1;
-    const rawWeight = typeof node.weight === "number" ? node.weight : Number(node.weight);
+  stitchedNodes = Array.from(firstOccurrenceMap.values()).map(nodeRecord => {
+    const canonicalKey = normalizeEntityKey(nodeRecord.id, nodeRecord.label);
+    const frequency = frequencyMap.get(canonicalKey) || 1;
+    const rawWeight = typeof nodeRecord.weight === "number" ? nodeRecord.weight : Number(nodeRecord.weight);
     
-    // Normalize weight
-    node.weight = normalizeNodeWeight(frequency, rawWeight);
-    return node;
+    nodeRecord.weight = normalizeNodeWeight(frequency, rawWeight);
+    return nodeRecord;
   });
   
   // Reconcile edges so no references point to discarded duplicate IDs
   const canonicalToFirstIdMap = new Map<string, string>();
   for (const node of stitchedNodes) {
-    const id = String(node.id).toLowerCase().trim();
-    const label = "label" in node ? String(node.label).toLowerCase().trim() : id;
-    canonicalToFirstIdMap.set(id || label, node.id);
+    const nodeRecord = node as Record<string, unknown>;
+    const canonicalKey = normalizeEntityKey(nodeRecord.id, nodeRecord.label);
+    const firstId = String(nodeRecord.id ?? "").trim();
+    if (canonicalKey) {
+      canonicalToFirstIdMap.set(canonicalKey, firstId);
+    }
   }
 
-  const getReconciledId = (origId: string) => {
-    const canonical = idToCanonicalMap.get(origId);
-    if (!canonical) return origId;
-    return canonicalToFirstIdMap.get(canonical) || origId;
+  const getReconciledId = (origId: unknown): string | null => {
+    const stringId = String(origId ?? "").trim();
+    const canonical = idToCanonicalMap.get(stringId) || normalizeEntityKey(origId);
+    if (!canonical) return null;
+    return canonicalToFirstIdMap.get(canonical) || stringId;
   };
 
+  const validReconciledEdges: Record<string, unknown>[] = [];
   for (const edge of stitchedEdges) {
     if (edge && typeof edge === "object") {
       const edgeRecord = edge as Record<string, unknown>;
-      if ("source" in edgeRecord) {
-        edgeRecord.source = getReconciledId(String(edgeRecord.source));
-      }
-      if ("target" in edgeRecord) {
-        edgeRecord.target = getReconciledId(String(edgeRecord.target));
-      }
-      if ("strength" in edgeRecord) {
-        edgeRecord.strength = normalizeToTenScale(edgeRecord.strength);
+      
+      const reconciledSource = getReconciledId(edgeRecord.source);
+      const reconciledTarget = getReconciledId(edgeRecord.target);
+      
+      if (reconciledSource && reconciledTarget) {
+        edgeRecord.source = reconciledSource;
+        edgeRecord.target = reconciledTarget;
+        if ("strength" in edgeRecord) {
+          edgeRecord.strength = normalizeToTenScale(edgeRecord.strength);
+        }
+        validReconciledEdges.push(edgeRecord);
       }
     }
   }
+  stitchedEdges = validReconciledEdges;
 
   // Drop individually malformed KG nodes/edges before validation.
   //
