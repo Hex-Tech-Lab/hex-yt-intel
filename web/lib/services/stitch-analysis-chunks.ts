@@ -198,6 +198,20 @@ export function stitchChunksIntoPayload(
     const scaled = n > 0 && n <= 1 ? n * 10 : n;
     return Math.min(10, Math.max(1, scaled));
   };
+  // Aggregate duplicate entity nodes by canonical ID/label prior to frequency calculation
+  const uniqueNodesMap = new Map<string, unknown>();
+  for (const node of stitchedNodes) {
+    if (node && typeof node === "object" && "id" in node) {
+      const id = String((node as any).id).toLowerCase().trim();
+      const label = "label" in node ? String((node as any).label).toLowerCase().trim() : id;
+      const canonical = id || label;
+      if (!uniqueNodesMap.has(canonical)) {
+        uniqueNodesMap.set(canonical, node);
+      }
+    }
+  }
+  stitchedNodes = Array.from(uniqueNodesMap.values());
+  
   normalizeNodesWeights(stitchedNodes);
   for (const edge of stitchedEdges) {
     if (edge && typeof edge === "object" && "strength" in edge) {

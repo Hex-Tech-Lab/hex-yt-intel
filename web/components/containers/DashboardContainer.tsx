@@ -69,7 +69,7 @@ const MindMap = dynamic(
     loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
   },
 );
-import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
 import { useUIStore } from "@/store/useUIStore";
 import { useInputStore } from "@/store/useInputStore";
@@ -147,7 +147,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // component only ever reads pendingNav/clearPendingNav reactively; the
   // other useVideoStore usages below already correctly use .getState()
   // (a snapshot, not a subscription).
-  const viewMode = useConsoleViewStore((s) => s.viewMode);
+  const { effectiveViewMode } = useEffectiveViewMode();
   const pendingNav = useVideoStore((s) => s.pendingNav);
   const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
@@ -230,10 +230,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
 
-  const { graph } = useKnowledgeGraph(nucleusAnalysis?.id);
+  const { graph } = useKnowledgeGraph(nucleusAnalysis?.id, effectiveViewMode === "pro");
   const { insights, loading: insightsLoading } = useRelations(
     nucleusAnalysis?.id ?? null,
-    status === "complete",
+    status === "complete" && effectiveViewMode === "pro",
   );
   const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
@@ -448,7 +448,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const rightPanelItems = useMemo(
     () =>
-      viewMode === "simple"
+      effectiveViewMode === "simple"
         ? []
         : [
             {
@@ -532,7 +532,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             },
           ],
     [
-      viewMode,
+      effectiveViewMode,
       graph,
       selectedNodeId,
       insights,
@@ -941,7 +941,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   isRepeat={status === "complete" || hasExistingAnalysis}
                 />
 
-                {viewMode === "simple" ? (
+                {effectiveViewMode === "simple" ? (
                   <SimpleDashboardView
                     status={status}
                     analysisId={analysisId}

@@ -2,8 +2,17 @@ export function normalizeNodeWeight(
   frequency: number,
   relevanceScore: number,
 ): number {
-  const wNorm = Math.log(1 + frequency) * relevanceScore;
-  return Math.max(0.1, Math.min(1.0, wNorm));
+  const f = Number.isFinite(frequency) && frequency >= 0 ? frequency : 0;
+  const s = Number.isFinite(relevanceScore) && relevanceScore >= 0 ? relevanceScore : 1;
+  
+  // Scale relevance from 1-10 to 0.1-1.0 if it's > 1, 
+  // since relevanceScore in prompt could be 1-10
+  const normalizedS = s > 1 ? s / 10.0 : s;
+
+  const wNorm = Math.log(1 + f) * normalizedS;
+  const clamped = Math.max(0.1, Math.min(10.0, wNorm)); // allow up to 10
+  
+  return Number.isNaN(clamped) || !Number.isFinite(clamped) ? 0.5 : clamped;
 }
 
 export function normalizeNodesWeights(stitchedNodes: unknown[]) {
@@ -28,13 +37,8 @@ export function normalizeNodesWeights(stitchedNodes: unknown[]) {
         typeof (node as any).weight === "number"
           ? (node as any).weight
           : Number((node as any).weight);
-      const sRelevance = !Number.isFinite(rawWeight)
-        ? 0.5
-        : rawWeight > 1
-          ? rawWeight / 10.0
-          : rawWeight;
-
-      (node as { weight: number }).weight = normalizeNodeWeight(f, sRelevance);
+          
+      (node as { weight: number }).weight = normalizeNodeWeight(f, rawWeight);
     }
   }
 }

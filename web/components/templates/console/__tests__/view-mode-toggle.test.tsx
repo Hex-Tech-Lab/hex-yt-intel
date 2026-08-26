@@ -2,11 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ViewModeToggle } from "../ViewModeToggle";
-import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import * as UseEntitlementsModule from "@/lib/hooks/useEntitlements";
 
-vi.mock("@/lib/stores/useConsoleViewStore", () => ({
-  useConsoleViewStore: vi.fn(),
+vi.mock("@/lib/hooks/useEffectiveViewMode", () => ({
+  useEffectiveViewMode: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useEntitlements", () => ({
@@ -28,12 +28,7 @@ describe("ViewModeToggle", () => {
 
   beforeEach(() => {
     mockSetViewMode = vi.fn();
-    vi.mocked(useConsoleViewStore).mockImplementation((selector) =>
-      selector({
-        viewMode: "simple",
-        setViewMode: mockSetViewMode,
-      }),
-    );
+    vi.mocked(useEffectiveViewMode).mockReturnValue({ effectiveViewMode: "simple", setViewMode: mockSetViewMode } as any);
   });
 
   it("renders correctly with Simple mode active", () => {

@@ -92,7 +92,7 @@ export const KGNodeSchema = z
     // violates (models consistently emit 8-10 for salient nodes), silently
     // downgrading otherwise-complete 11/11-dimension analyses to
     // partial/billing_status=failed at the final schema-validation step.
-    weight: z.number().min(0.1).max(1.0),
+    weight: z.number().min(0.1).max(10.0),
     polarity: z.number().min(-1).max(1),
     keyTerms: z.array(z.string()).max(10),
     entityType: z.enum([
