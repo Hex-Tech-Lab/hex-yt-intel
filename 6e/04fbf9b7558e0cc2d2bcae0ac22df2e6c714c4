@@ -1,0 +1,16 @@
+.claude/settings.local.json
+  h_60000122af7b55 2-13,16
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1330
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "6e04fbf9b7558e0cc2d2bcae0ac22df2e6c714c4",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
