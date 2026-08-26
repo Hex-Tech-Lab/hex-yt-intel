@@ -1,0 +1,22 @@
+.codacy.yml
+  h_60000122af7b55 6-7,12-13
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1334-1336
+patch-dashboard.cjs
+  h_60000122af7b55 18-39,41
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 913-934
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 201-207,216-217,219-222,224-225,231-234,236-237,243-248,251-255,258,262-272,276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "f0e873eede81f3ac004b6a421d57c176ff59e031",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
