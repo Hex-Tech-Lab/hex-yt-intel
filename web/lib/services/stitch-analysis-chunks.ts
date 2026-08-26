@@ -390,7 +390,7 @@ export function stitchChunksIntoPayload(
         msg,
       );
       Sentry.captureException(partialErr, {
-        tags: { phase: "partial_stitch" },
+        contexts: { stitch: { phase: 'partial_stitch' } }
       });
     }
     const fallbackMarkdown = cleanDimensions

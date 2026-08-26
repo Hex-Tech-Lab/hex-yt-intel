@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type ConsoleViewMode = "simple" | "pro";
+
 interface ConsoleViewState {
-  viewMode: "simple" | "pro";
-  setViewMode: (mode: "simple" | "pro") => void;
+  viewMode: ConsoleViewMode;
+  setViewMode: (mode: ConsoleViewMode) => void;
 }
 
 export const useConsoleViewStore = create<ConsoleViewState>()(

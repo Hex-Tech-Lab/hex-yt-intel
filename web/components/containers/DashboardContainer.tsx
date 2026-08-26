@@ -70,6 +70,7 @@ const MindMap = dynamic(
   },
 );
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
+import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
 import { useUIStore } from "@/store/useUIStore";
 import { useInputStore } from "@/store/useInputStore";
@@ -147,7 +148,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // component only ever reads pendingNav/clearPendingNav reactively; the
   // other useVideoStore usages below already correctly use .getState()
   // (a snapshot, not a subscription).
-  const { effectiveViewMode } = useEffectiveViewMode();
+  const { effectiveViewMode }: { effectiveViewMode: ConsoleViewMode } = useEffectiveViewMode();
   const pendingNav = useVideoStore((s) => s.pendingNav);
   const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
@@ -761,11 +762,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         dimStatus = "error";
       }
 
-      const dimensionMap = dimensionConfigs as Record<
-        number | string,
-        (typeof dimensionConfigs)[number] | undefined
-      >;
-      const cfg = dimensionMap[dim.number] || dimensionMap[String(dim.number)];
+      const cfg = dimensionConfigs[Number(dim.number)];
 
       return {
         key: `dim-${dim.number}`,

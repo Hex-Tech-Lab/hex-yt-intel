@@ -28,7 +28,7 @@ describe("ViewModeToggle", () => {
 
   beforeEach(() => {
     mockSetViewMode = vi.fn();
-    vi.mocked(useEffectiveViewMode).mockReturnValue({ effectiveViewMode: "simple", setViewMode: mockSetViewMode } as any);
+    vi.mocked(useEffectiveViewMode).mockReturnValue({ effectiveViewMode: "simple", setViewMode: mockSetViewMode });
   });
 
   it("renders correctly with Simple mode active", () => {

@@ -87,11 +87,6 @@ export const KGNodeSchema = z
     dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
     label: z.string().min(1).max(200),
     content: z.string().min(10),
-    // 1-10, per the prompt's own instruction (ucis-v5.3.ts: "weight: Importance
-    // (1-10)") -- was previously capped at <=1, which every real LLM output
-    // violates (models consistently emit 8-10 for salient nodes), silently
-    // downgrading otherwise-complete 11/11-dimension analyses to
-    // partial/billing_status=failed at the final schema-validation step.
     weight: z.number().min(0.1).max(10.0),
     polarity: z.number().min(-1).max(1),
     keyTerms: z.array(z.string()).max(10),
