@@ -290,7 +290,7 @@ export function stitchChunksIntoPayload(
   // fix above -- filter the individually-invalid entries out rather than
   // reject everything.
   const validNodes = stitchedNodes.filter(
-    (node) => KGNodeSchema.safeParse(node).success,
+    (node) => { const res = KGNodeSchema.safeParse(node); if (!res.success) console.log(node, res.error); return res.success; },
   );
   const droppedNodeCount = stitchedNodes.length - validNodes.length;
   if (droppedNodeCount > 0) {
