@@ -1,0 +1,18 @@
+web/components/templates/console/ViewModeToggle.tsx
+  h_60000122af7b55 7
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 231,235
+web/lib/utils/node-weight-normalization.ts
+  h_60000122af7b55 5-6,8,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "105c98bef082298e27bb9965757c3011be684781",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
