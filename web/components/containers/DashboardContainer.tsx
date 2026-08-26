@@ -17,26 +17,15 @@ import { DashboardLayout } from "@/components/templates/console/DashboardLayout"
 import { Sidebar, SidebarItem } from "@/components/templates/console/Sidebar";
 import { TopBar } from "@/components/templates/console/TopBar";
 import { AnalysisHero } from "@/components/templates/console/AnalysisHero";
-import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
-import { DimensionAccordion } from "@/components/dashboard/DimensionAccordion";
 import {
   useTotalDimensions,
   useSynthesisConfig,
 } from "@/lib/config/synthesis-with-settings";
-import { VisualizationPanel } from "@/components/dashboard/VisualizationPanel";
 import { AnalysisHistory } from "@/components/templates/console/AnalysisHistory";
 import { IntelligencePanel } from "@/components/templates/console/IntelligencePanel";
 import { ChatDock } from "@/components/templates/console/ChatDock";
 import { RightPanelAccordion } from "@/components/dashboard/RightPanelAccordion";
-import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
-import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
-import { ShareButton } from "@/components/dashboard/ShareButton";
-import {
-  Icon,
-  StatusBadge,
-  ChapterChip,
-} from "@/components/templates/_shared/primitives";
 import { useVideoStore } from "@/store/useVideoStore";
 import { useStreamReattach } from "@/hooks/useStreamReattach";
 import { isStackedLayout } from "@/hooks/useIsStackedLayout";
@@ -46,7 +35,6 @@ import {
   getRankedMentionsForEntity,
 } from "@/lib/utils/entity-time-seek";
 import { findNearestEntityMentionAcrossDimensions } from "@/lib/utils/entity-time-seek-cross-dimension";
-import { EntityMentionTimeline } from "@/components/templates/console/EntityMentionTimeline";
 import { useAnalysisDimensionsStore } from "@/lib/stores/analysis-dimensions-store";
 import { useAnalysisStateStore } from "@/lib/stores/analysis-state-store";
 
@@ -81,7 +69,8 @@ const MindMap = dynamic(
     loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
   },
 );
-import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
+import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
 import { useUIStore } from "@/store/useUIStore";
 import { useInputStore } from "@/store/useInputStore";
@@ -103,10 +92,10 @@ import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
 import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
 import { useRelations } from "@/hooks/useRelations";
 import type { ConsoleProfile } from "@/lib/services/console-profile";
-import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
+import { SimpleDashboardView } from "./SimpleDashboardView";
+import { ProDashboardView } from "./ProDashboardView";
 import { ProcessingLog } from "@/components/templates/console/ProcessingLog";
 import { DimensionDrawer } from "@/components/templates/console/DimensionDrawer";
-import { ConsoleTabSwitcher } from "./dashboard/ConsoleTabSwitcher";
 import { SidebarFooter } from "./dashboard/SidebarFooter";
 import { ExpandedPanelOverlay } from "./dashboard/ExpandedPanelOverlay";
 import {
@@ -159,7 +148,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // component only ever reads pendingNav/clearPendingNav reactively; the
   // other useVideoStore usages below already correctly use .getState()
   // (a snapshot, not a subscription).
-  const viewMode = useConsoleViewStore((s) => s.viewMode);
+  const { effectiveViewMode }: { effectiveViewMode: ConsoleViewMode } = useEffectiveViewMode();
   const pendingNav = useVideoStore((s) => s.pendingNav);
   const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
@@ -242,10 +231,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
 
-  const { graph } = useKnowledgeGraph(nucleusAnalysis?.id);
+  const { graph } = useKnowledgeGraph(nucleusAnalysis?.id, effectiveViewMode === "pro");
   const { insights, loading: insightsLoading } = useRelations(
     nucleusAnalysis?.id ?? null,
-    status === "complete",
+    status === "complete" && effectiveViewMode === "pro",
   );
   const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
@@ -460,7 +449,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const rightPanelItems = useMemo(
     () =>
-      viewMode === "simple"
+      effectiveViewMode === "simple"
         ? []
         : [
             {
@@ -544,7 +533,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             },
           ],
     [
-      viewMode,
+      effectiveViewMode,
       graph,
       selectedNodeId,
       insights,
@@ -773,11 +762,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         dimStatus = "error";
       }
 
-      const dimensionMap = dimensionConfigs as Record<
-        number | string,
-        (typeof dimensionConfigs)[number] | undefined
-      >;
-      const cfg = dimensionMap[dim.number] || dimensionMap[String(dim.number)];
+      const cfg = dimensionConfigs[Number(dim.number)];
 
       return {
         key: `dim-${dim.number}`,
@@ -953,192 +938,44 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   isRepeat={status === "complete" || hasExistingAnalysis}
                 />
 
-                {(hasHadVideoRef.current ||
-                  videoMetadata ||
-                  nucleusAnalysis?.videoId) && (
-                  <div className="flex flex-col gap-1">
-                    <VideoPlayerCard />
-                    {viewMode === "pro" && timelineEntityData && (
-                      <EntityMentionTimeline
-                        entityId={timelineEntityData.entityId}
-                        entityLabel={timelineEntityData.entityLabel}
-                        mentions={timelineEntityData.mentions}
-                        videoDuration={videoMetadata?.duration ?? null}
-                        onClose={() => setSelectedNodeId(null)}
-                      />
-                    )}
-                    {/* Repositioned 2026-08-20 (live report): was rendered far
-                      below, under Executive Summary/Video Intelligence
-                      Context, disconnected from the player it controls.
-                      Moved directly under the video (and its own entity
-                      timeline scrubber above) per explicit instruction.
-                      Guard simplified 2026-08-20 (shared-hook extraction,
-                      docs/agent-prompts/2026-08-20-cc-simplify-shared-
-                      playback-hook.md finding #3): previously also required
-                      `videoMetadata` specifically to avoid an "orphaned
-                      scrubber with no real player context" -- that guard is
-                      now redundant. HighlightsScrubber's internal
-                      useSegmentPlayback hook refuses to start/advance
-                      playback on its own (its getCurrentTime primitive
-                      reads null until the store actually has a real
-                      position), so a player-not-ready state is safe
-                      whether or not videoMetadata has arrived yet.
-                      `status === 'complete' && analysisId` remains: both
-                      are genuine "is there anything to show" requirements
-                      (analysisId is a required prop; highlights only exist
-                      once analysis is complete), not a player-readiness
-                      guess. videoDurationSeconds is passed through as
-                      possibly-null -- the component's own display logic
-                      already handles that (see its
-                      `videoDurationSeconds ? ... : ''` duration line). */}
-                    {status === "complete" && analysisId && (
-                      <HighlightsScrubber
-                        analysisId={analysisId}
-                        videoDurationSeconds={videoMetadata?.duration ?? null}
-                      />
-                    )}
-                    {videoMetadata && (
-                      <BentoMetadata
-                        title={videoMetadata.title}
-                        channelTitle={videoMetadata.channelTitle}
-                        viewCount={videoMetadata.viewCount}
-                        likeCount={videoMetadata.likeCount}
-                        duration={videoMetadata.duration || 0}
-                        publishedAt={videoMetadata.publishedAt}
-                        description={videoMetadata.description}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {status !== "idle" && (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      {viewMode === "pro" ? (
-                        <ConsoleTabSwitcher
-                          activeTab={consoleTab}
-                          hasGraph={graph.nodes.length > 0}
-                          onTabChange={(t) =>
-                            startTransition(() => setConsoleTab(t))
-                          }
-                        />
-                      ) : (
-                        <div className="text-[var(--ink-secondary)] font-mono text-xs font-semibold py-1">
-                          SYNTHESIS OVERVIEW
-                        </div>
-                      )}
-                      {status === "complete" && analysisId && (
-                        <ShareButton analysisId={analysisId} />
-                      )}
-                    </div>
-
-                    {viewMode === "simple" ? (
-                      <>
-                        {status === "complete" && (digest || digestLoading) && (
-                          <ExecutiveSummary
-                            data={mappedDigestData}
-                            loading={digestLoading}
-                          />
-                        )}
-                        {status === "complete" && graph.nodes.length > 0 && (
-                          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 h-[400px]">
-                            <WordCloud
-                              graph={graph}
-                              selectedId={selectedNodeId}
-                              onSelect={handleSelectNode}
-                            />
-                          </div>
-                        )}
-                      </>
-                    ) : consoleTab === "synthesis" ? (
-                      <>
-                        {status === "complete" && (digest || digestLoading) && (
-                          <ExecutiveSummary
-                            data={mappedDigestData}
-                            loading={digestLoading}
-                          />
-                        )}
-                        {partialInfo && (
-                          <div
-                            role="status"
-                            className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
-                          >
-                            <Icon
-                              icon="solar:danger-triangle-linear"
-                              size={16}
-                              className="text-[var(--warn)] flex-shrink-0"
-                            />
-                            <div>
-                              <span className="font-mono font-bold text-[var(--warn)]">
-                                Partial analysis warning
-                              </span>
-                              {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                              <span className="text-[var(--ink-muted)]">
-                                Missing: {partialInfo.missing.join(", ")}.
-                              </span>
-                              {" Use Re-analyze to attempt the rest."}
-                            </div>
-                          </div>
-                        )}
-                        {status === "complete" && auxStatus && (
-                          <div
-                            className="flex flex-wrap gap-2"
-                            role="status"
-                            aria-label="Auxiliary data status"
-                          >
-                            <StatusBadge
-                              status={digest ? "done" : "idle"}
-                              label="Digest"
-                              tooltip="Executive summary digest generated from analysis"
-                            />
-                            <StatusBadge
-                              status={auxStatus.description ? "done" : "idle"}
-                              label="Description"
-                              tooltip="YouTube video description ingested"
-                            />
-                            <StatusBadge
-                              status={auxStatus.channelMeta ? "done" : "idle"}
-                              label="Channel Meta"
-                              tooltip="Channel metadata and statistics enriched"
-                            />
-                            <StatusBadge
-                              status={auxStatus.comments ? "done" : "idle"}
-                              label="Comments"
-                              tooltip="Top audience comments sampled and analyzed"
-                            />
-                            <ChapterChip
-                              hasChapters={
-                                chaptersStatus === "loaded"
-                                  ? chapters.length > 0
-                                  : null
-                              }
-                            />
-                          </div>
-                        )}
-                        {/* PersonaSelector removed from runtime per LLM Council Round 1 (2026-08-12):
-                          persona is a marketing/design lens, not a user-facing picker. Defaults
-                          to the apex 'creator' view (all 11 dimensions) instead.
-                          See docs/private/council/2026-08-12_1500_v1_round1_full_transcript.md */}
-                        <DimensionAccordion
-                          dimensions={dimensions}
-                          selectedDimensionKey={selectedDimensionKey}
-                          onSelectDimension={(k) =>
-                            startTransition(() => setSelectedDimensionKey(k))
-                          }
-                          status={status}
-                        />
-                      </>
-                    ) : (
-                      <VisualizationPanel
-                        graph={graph}
-                        selectedNodeId={selectedNodeId}
-                        onSelectNode={handleSelectNode}
-                        onFocusNode={(id) =>
-                          startTransition(() => setSelectedNodeId(id))
-                        }
-                      />
-                    )}
-                  </div>
+                {effectiveViewMode === "simple" ? (
+                  <SimpleDashboardView
+                    status={status}
+                    analysisId={analysisId}
+                    videoMetadata={videoMetadata}
+                    digest={digest}
+                    digestLoading={digestLoading}
+                    mappedDigestData={mappedDigestData}
+                    graph={graph}
+                    selectedNodeId={selectedNodeId}
+                    onSelectNode={handleSelectNode}
+                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                  />
+                ) : (
+                  <ProDashboardView
+                    status={status}
+                    analysisId={analysisId}
+                    videoMetadata={videoMetadata}
+                    timelineEntityData={timelineEntityData}
+                    setSelectedNodeId={(id) => startTransition(() => setSelectedNodeId(id))}
+                    consoleTab={consoleTab}
+                    setConsoleTab={(t) => startTransition(() => setConsoleTab(t))}
+                    graph={graph}
+                    digest={digest}
+                    digestLoading={digestLoading}
+                    mappedDigestData={mappedDigestData}
+                    partialInfo={partialInfo}
+                    TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
+                    auxStatus={auxStatus}
+                    chaptersStatus={chaptersStatus}
+                    chapters={chapters}
+                    dimensions={dimensions}
+                    selectedDimensionKey={selectedDimensionKey}
+                    setSelectedDimensionKey={(k) => startTransition(() => setSelectedDimensionKey(k))}
+                    selectedNodeId={selectedNodeId}
+                    handleSelectNode={handleSelectNode}
+                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                  />
                 )}
               </div>
             ) : (activeNav as string) === "history" ? (

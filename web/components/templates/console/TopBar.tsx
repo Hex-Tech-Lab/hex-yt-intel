@@ -71,7 +71,7 @@ function TopBarImpl({
         </kbd>
       </label>
 
-      <div className="hidden md:flex ml-4">
+      <div className="flex ml-4">
         <ViewModeToggle />
       </div>
 

@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useConsoleViewStore } from "@/lib/stores/useConsoleViewStore";
+import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
+import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { useEntitlements } from "@/lib/hooks/useEntitlements";
 import { PricingModal } from "@/components/billing/PricingModal";
 import { Icon } from "@/components/templates/_shared/primitives";
 
 export function ViewModeToggle() {
-  const viewMode = useConsoleViewStore((store) => store.viewMode);
-  const setViewMode = useConsoleViewStore((store) => store.setViewMode);
+  const { effectiveViewMode: viewMode, setViewMode } = useEffectiveViewMode();
   const { isFounder, isPro, isLoading } = useEntitlements();
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   const isProEntitled = isFounder || isPro;
 
-  const handleToggle = (mode: "simple" | "pro") => {
+  const handleToggle = (mode: ConsoleViewMode) => {
     if (mode === "pro" && !isProEntitled && !isLoading) {
       setPricingModalOpen(true);
       return;

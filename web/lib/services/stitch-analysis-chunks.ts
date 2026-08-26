@@ -20,7 +20,7 @@ import {
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
 import type { UCISPayloadV2 } from "@/lib/types/synthesis-nucleus";
 import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
-import { normalizeNodeWeight } from "../../../worker/src/services/GraphExtractor";
+import { normalizeNodesWeights } from "@/lib/utils/node-weight-normalization";
 import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
 import type {
   DimensionStatus,
@@ -198,38 +198,21 @@ export function stitchChunksIntoPayload(
     const scaled = n > 0 && n <= 1 ? n * 10 : n;
     return Math.min(10, Math.max(1, scaled));
   };
-  // Calculate frequency of each node based on its ID or label
-  const frequencyMap = new Map<string, number>();
+  // Aggregate duplicate entity nodes by canonical ID/label prior to frequency calculation
+  const uniqueNodesMap = new Map<string, unknown>();
   for (const node of stitchedNodes) {
-    if (node && typeof node === "object" && "label" in node) {
-      const label = String((node as any).label)
-        .toLowerCase()
-        .trim();
-      frequencyMap.set(label, (frequencyMap.get(label) || 0) + 1);
+    if (node && typeof node === "object" && "id" in node) {
+      const id = String((node as any).id).toLowerCase().trim();
+      const label = "label" in node ? String((node as any).label).toLowerCase().trim() : id;
+      const canonical = id || label;
+      if (!uniqueNodesMap.has(canonical)) {
+        uniqueNodesMap.set(canonical, node);
+      }
     }
   }
-
-  for (const node of stitchedNodes) {
-    if (node && typeof node === "object" && "weight" in node) {
-      const label = String((node as any).label)
-        .toLowerCase()
-        .trim();
-      const f = frequencyMap.get(label) || 1;
-
-      // Original relevance from prompt is 1-10.
-      const rawWeight =
-        typeof (node as any).weight === "number"
-          ? (node as any).weight
-          : Number((node as any).weight);
-      const sRelevance = !Number.isFinite(rawWeight)
-        ? 0.5
-        : rawWeight > 1
-          ? rawWeight / 10.0
-          : rawWeight;
-
-      (node as { weight: number }).weight = normalizeNodeWeight(f, sRelevance);
-    }
-  }
+  stitchedNodes = Array.from(uniqueNodesMap.values());
+  
+  normalizeNodesWeights(stitchedNodes);
   for (const edge of stitchedEdges) {
     if (edge && typeof edge === "object" && "strength" in edge) {
       (edge as { strength: number }).strength = normalizeToTenScale(
@@ -407,7 +390,7 @@ export function stitchChunksIntoPayload(
         msg,
       );
       Sentry.captureException(partialErr, {
-        tags: { phase: "partial_stitch" },
+        contexts: { stitch: { phase: 'partial_stitch' } }
       });
     }
     const fallbackMarkdown = cleanDimensions

@@ -25,7 +25,7 @@ const DEFAULT_KG_EXTRACTION_DIMENSION = 8;
 // Single engine + synthesizer instance (stateless, safe to reuse).
 const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
 
-export function useKnowledgeGraph(analysisId?: string | null): { graph: KnowledgeGraph; ready: boolean; loading: boolean } {
+export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean = true): { graph: KnowledgeGraph; ready: boolean; loading: boolean } {
   const analysis = useSynthesisNucleus((s) => s.analysis);
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
   const storeKnowledgeGraph = useSynthesisNucleus((s) => s.knowledgeGraph);
@@ -61,7 +61,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
 
   // 1. API Fetching (if analysisId exists)
   useEffect(() => {
-    if (!analysisId) {
+    if (!analysisId || !enabled) { // Gated by enabled flag
       setGraph(EMPTY);
       setLoadedFromApi(false);
       return;
