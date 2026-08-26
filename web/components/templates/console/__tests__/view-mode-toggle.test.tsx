@@ -3,14 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ViewModeToggle } from "../ViewModeToggle";
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
-import * as UseEntitlementsModule from "@/lib/hooks/useEntitlements";
 
 vi.mock("@/lib/hooks/useEffectiveViewMode", () => ({
   useEffectiveViewMode: vi.fn(),
-}));
-
-vi.mock("@/lib/hooks/useEntitlements", () => ({
-  useEntitlements: vi.fn(),
 }));
 
 // Mock the PricingModal
@@ -28,23 +23,14 @@ describe("ViewModeToggle", () => {
 
   beforeEach(() => {
     mockSetViewMode = vi.fn();
-    vi.mocked(useEffectiveViewMode).mockReturnValue({ effectiveViewMode: "simple", setViewMode: mockSetViewMode });
   });
 
   it("renders correctly with Simple mode active", () => {
-    vi.spyOn(UseEntitlementsModule, "useEntitlements").mockReturnValue({
-      isFounder: false,
-      isPro: false,
-      tier: "free",
-      status: "canceled",
-      entitlements: {
-        canAnalyzeVideo: true,
-        canAccessKnowledgeGraph: false,
-        canUseExtendedChat: false,
-      },
-      isLoading: false,
-      error: null,
-      mutate: vi.fn(),
+    vi.mocked(useEffectiveViewMode).mockReturnValue({ 
+      effectiveViewMode: "simple", 
+      setViewMode: mockSetViewMode,
+      canAccessPro: false,
+      isLoading: false
     });
     render(<ViewModeToggle />);
     expect(screen.getByText("Simple")).toBeTruthy();
@@ -52,19 +38,11 @@ describe("ViewModeToggle", () => {
   });
 
   it("allows switching to Pro when entitled", () => {
-    vi.spyOn(UseEntitlementsModule, "useEntitlements").mockReturnValue({
-      isFounder: true,
-      isPro: false,
-      tier: "founder",
-      status: "active",
-      entitlements: {
-        canAnalyzeVideo: true,
-        canAccessKnowledgeGraph: true,
-        canUseExtendedChat: true,
-      },
-      isLoading: false,
-      error: null,
-      mutate: vi.fn(),
+    vi.mocked(useEffectiveViewMode).mockReturnValue({ 
+      effectiveViewMode: "simple", 
+      setViewMode: mockSetViewMode,
+      canAccessPro: true,
+      isLoading: false
     });
     render(<ViewModeToggle />);
     fireEvent.click(screen.getByText("Pro"));
@@ -73,19 +51,11 @@ describe("ViewModeToggle", () => {
   });
 
   it("shows PricingModal when non-entitled user clicks Pro", () => {
-    vi.spyOn(UseEntitlementsModule, "useEntitlements").mockReturnValue({
-      isFounder: false,
-      isPro: false,
-      tier: "free",
-      status: "canceled",
-      entitlements: {
-        canAnalyzeVideo: true,
-        canAccessKnowledgeGraph: false,
-        canUseExtendedChat: false,
-      },
-      isLoading: false,
-      error: null,
-      mutate: vi.fn(),
+    vi.mocked(useEffectiveViewMode).mockReturnValue({ 
+      effectiveViewMode: "simple", 
+      setViewMode: mockSetViewMode,
+      canAccessPro: false,
+      isLoading: false
     });
     render(<ViewModeToggle />);
     fireEvent.click(screen.getByText("Pro"));

@@ -183,6 +183,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEagerVideoMetadata();
   const nucleusAnalysis = useSynthesisNucleus((s) => s.analysis);
   const nucleusProjection = useSynthesisNucleus((s) => s.projection);
+  const nucleusKnowledgeGraph = useSynthesisNucleus((s) => s.knowledgeGraph);
   // Gap 3: chapter markers for the current analysis's video, fetched once per
   // analysis id. Must be declared before handleSelectNode (below) which
   // threads them into findEntityTimestamp. Empty during the fetch window —
@@ -946,7 +947,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     digest={digest}
                     digestLoading={digestLoading}
                     mappedDigestData={mappedDigestData}
-                    graph={graph}
+                    graph={graph || nucleusKnowledgeGraph || { nodes: [], edges: [] }}
                     selectedNodeId={selectedNodeId}
                     onSelectNode={handleSelectNode}
                     hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}

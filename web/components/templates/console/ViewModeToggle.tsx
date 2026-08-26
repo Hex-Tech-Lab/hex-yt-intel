@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
-import { useEntitlements } from "@/lib/hooks/useEntitlements";
 import { PricingModal } from "@/components/billing/PricingModal";
 import { Icon } from "@/components/templates/_shared/primitives";
 
 export function ViewModeToggle() {
-  const { effectiveViewMode: viewMode, setViewMode } = useEffectiveViewMode();
-  const { isFounder, isPro, isLoading } = useEntitlements();
+  const { effectiveViewMode: viewMode, setViewMode, canAccessPro, isLoading } = useEffectiveViewMode();
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
-  const isProEntitled = isFounder || isPro;
-
   const handleToggle = (mode: ConsoleViewMode) => {
-    if (mode === "pro" && !isProEntitled && !isLoading) {
+    if (mode === "pro" && !canAccessPro && !isLoading) {
       setPricingModalOpen(true);
       return;
     }
@@ -48,7 +44,7 @@ export function ViewModeToggle() {
         >
           <Icon icon="solar:graph-up-linear" size={14} />
           Pro
-          {!isProEntitled && !isLoading && (
+          {!canAccessPro && !isLoading && (
             <Icon
               icon="solar:lock-password-linear"
               size={12}
