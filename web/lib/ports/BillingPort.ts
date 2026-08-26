@@ -5,5 +5,5 @@ export interface BillingPort {
   parseWebhookEvent(rawBody: string): WebhookPayload;
   processSubscriptionEvent(payload: WebhookPayload): Promise<{ success: boolean; error?: string }>;
   processTransactionEvent(payload: WebhookPayload): Promise<{ success: boolean; error?: string }>;
-  createCheckoutSession(userId: string, email: string, planTier: PlanTier): Promise<{ checkoutUrl: string }>;
+  createCheckoutSession(userId: string, email: string, planTier: PlanTier, interval?: 'once' | 'month' | 'year'): Promise<{ checkoutUrl: string }>;
 }

@@ -18,21 +18,21 @@ vi.mock('@/lib/supabase', () => ({
         return {
           select: vi.fn().mockImplementation((cols: string) => ({
             eq: vi.fn().mockImplementation((col: string, val: string) => ({
-              maybeSingle: vi.fn().mockImplementation(async () => {
+              maybeSingle: vi.fn().mockImplementation(() => {
                 const row = mockDb.get(val);
                 return { data: row || null, error: null };
               }),
               in: vi.fn().mockImplementation((inCol: string, statuses: string[]) => ({
-                order: vi.fn().mockImplementation(async () => {
+                order: vi.fn().mockImplementation(() => {
                   const rows = Array.from(mockDb.values()).filter(
-                    (r) => r.user_id === val && statuses.includes(r.status)
+                    (entitlementResponse) => entitlementResponse.user_id === val && statuses.includes(entitlementResponse.status)
                   );
                   return { data: rows, error: null };
                 }),
               })),
             })),
           })),
-          upsert: vi.fn().mockImplementation(async (record: any) => {
+          upsert: vi.fn().mockImplementation((record: any) => {
             mockDb.set(record.paddle_subscription_id, record);
             return { error: null };
           }),
@@ -100,7 +100,8 @@ describe('Paddle MoR End-to-End Billing Lifecycle', () => {
     expect(initialEntitlements.entitlements.canAccessKnowledgeGraph).toBe(false);
 
     // 2. Checkout: User clicks "Upgrade to Founder"
-    vi.mocked(paddle.transactions.create).mockResolvedValue({
+    const mockPaddleCreate = vi.mocked(paddle.transactions.create);
+    mockPaddleCreate.mockResolvedValue({
       id: 'txn_e2e_founder_001',
       checkout: { url: 'https://checkout.paddle.com/checkout/tx_txn_e2e_founder_001' },
     } as any);
@@ -119,6 +120,8 @@ describe('Paddle MoR End-to-End Billing Lifecycle', () => {
     expect(checkoutRes.status).toBe(200);
     const checkoutBody = await checkoutRes.json();
     expect(checkoutBody.sessionUrl).toBe('https://checkout.paddle.com/checkout/tx_txn_e2e_founder_001');
+
+    expect(mockPaddleCreate).toHaveBeenCalledWith(expect.objectContaining({ customData: { userId, planTier: 'founder' } }));
 
     // 3. Webhook: Paddle sends transaction.completed
     const webhookPayload = {

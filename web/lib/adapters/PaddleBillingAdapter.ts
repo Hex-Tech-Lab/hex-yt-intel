@@ -62,11 +62,17 @@ export class PaddleBillingAdapter implements BillingPort {
       const eventOccurredAt = payload.occurred_at || new Date().toISOString();
 
       // Ordering protection: check existing record timestamp if present
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('user_subscriptions')
         .select('updated_at')
         .eq('paddle_subscription_id', data.id)
         .maybeSingle();
+
+      if (existingError) {
+        console.error('[PaddleBillingAdapter] Database error checking existing subscription:', existingError);
+        Sentry.captureException(new Error(existingError.message), { tags: { operation: 'paddle-check-existing' } });
+        return { success: false, error: existingError.message };
+      }
 
       if (existing?.updated_at && new Date(existing.updated_at) > new Date(eventOccurredAt)) {
         console.info('[PaddleBillingAdapter] Stale subscription event ignored (existing updated_at:', existing.updated_at, '> occurred_at:', eventOccurredAt, ')');
@@ -148,11 +154,17 @@ export class PaddleBillingAdapter implements BillingPort {
       const eventOccurredAt = payload.occurred_at || new Date().toISOString();
 
       // Ordering protection: check existing record timestamp if present
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('user_subscriptions')
         .select('updated_at')
         .eq('paddle_subscription_id', 'tx_' + data.id)
         .maybeSingle();
+
+      if (existingError) {
+        console.error('[PaddleBillingAdapter] Database error checking existing transaction:', existingError);
+        Sentry.captureException(new Error(existingError.message), { tags: { operation: 'paddle-check-existing-tx' } });
+        return { success: false, error: existingError.message };
+      }
 
       if (existing?.updated_at && new Date(existing.updated_at) > new Date(eventOccurredAt)) {
         console.info('[PaddleBillingAdapter] Stale transaction event ignored');
@@ -192,7 +204,12 @@ export class PaddleBillingAdapter implements BillingPort {
     }
   }
 
-  async createCheckoutSession(userId: string, email: string, planTier: PlanTier): Promise<{ checkoutUrl: string }> {
+  async createCheckoutSession(
+    userId: string,
+    email: string,
+    planTier: PlanTier,
+    interval: 'once' | 'month' | 'year' = 'month'
+  ): Promise<{ checkoutUrl: string }> {
     if (planTier === 'free') {
       throw new Error('Cannot create checkout session for free tier');
     }
@@ -202,7 +219,11 @@ export class PaddleBillingAdapter implements BillingPort {
 
     let priceId = '';
     if (planTier === 'pro') {
-      priceId = process.env.PADDLE_PRO_PRICE_ID || '';
+      if (interval === 'year') {
+        priceId = process.env.PADDLE_PRO_ANNUAL_PRICE_ID || process.env.PADDLE_PRO_PRICE_ID || '';
+      } else {
+        priceId = process.env.PADDLE_PRO_PRICE_ID || '';
+      }
       if (!priceId) {
         throw new Error('Paddle Pro price ID is not configured (PADDLE_PRO_PRICE_ID missing)');
       }
@@ -222,7 +243,10 @@ export class PaddleBillingAdapter implements BillingPort {
         },
       });
 
-      const checkoutUrl = (transaction as any).checkout?.url || `https://checkout.paddle.com/checkout/tx_${transaction.id}`;
+      const checkoutUrl = (transaction as any).checkout?.url;
+      if (!checkoutUrl) {
+        throw new Error('Paddle API did not return a valid checkout URL');
+      }
       return { checkoutUrl };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

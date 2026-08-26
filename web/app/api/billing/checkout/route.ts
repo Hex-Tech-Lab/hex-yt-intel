@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
     if (provider.type === 'paddle') {
       // Use PaddleBillingAdapter directly to ensure { userId, planTier, email } customData is attached
       const adapter = new PaddleBillingAdapter();
-      const planTier = (validation.data.plan === 'founder_tier_a' ? 'founder' : validation.data.plan) as 'founder' | 'pro';
-      const result = await adapter.createCheckoutSession(userId, userEmail, planTier);
+      const planTier = validation.data.plan as 'founder' | 'pro';
+      const result = await adapter.createCheckoutSession(userId, userEmail, planTier, validation.data.interval);
       sessionUrl = result.checkoutUrl;
     } else {
       // 3b. Resolve price ID for alternative providers (e.g. Stripe)

@@ -14,10 +14,12 @@ export interface PricingModalProps {
 
 export function PricingModal({ isOpen, onClose }: PricingModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleUpgrade = async () => {
     try {
       setIsLoading(true);
+      setErrorMessage(null);
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: {
@@ -45,6 +47,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       }
     } catch (error) {
       console.error('[PricingModal] Upgrade error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Checkout failed');
       showToast(error instanceof Error ? error.message : 'Checkout failed');
     } finally {
       setIsLoading(false);
@@ -132,7 +135,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               />
             </div>
             {/* Screen reader notification container for alerts/toasts */}
-            <div role="alert" aria-live="assertive" className="sr-only" />
+            {errorMessage && <div role="alert" aria-live="assertive" className="sr-only">{errorMessage}</div>}
           </motion.div>
         </div>
       )}
