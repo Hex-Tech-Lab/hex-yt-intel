@@ -22,6 +22,7 @@ const mockEq = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnThis(),
   in: mockIn,
   order: mockRows,
+  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
 });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 vi.mock('@/lib/supabase', () => ({

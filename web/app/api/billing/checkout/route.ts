@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+
+import { PaddleBillingAdapter } from '@/lib/adapters/PaddleBillingAdapter';
 import { getBillingProvider } from '@/lib/billing-factory';
+import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
+import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
-import { guardTraffic, getUserTier } from '@/lib/services/traffic';
-import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
 
 /**
  * Real (plan, interval, provider) -> price ID resolution, now Settings-
@@ -64,32 +66,45 @@ export async function POST(request: NextRequest) {
     );
     if (!trafficAllowed && trafficResponse) return trafficResponse;
 
-    // 3. Determine active provider via switch
+    // 3. Determine active provider
     const provider = getBillingProvider();
 
-    // 3b. Resolve the real price ID for the requested plan+interval. Fail
-    // loudly rather than substituting a different plan/interval than what
-    // the user actually selected (see resolvePriceId's doc comment).
-    const priceId = await resolveCheckoutPriceId(provider.type, validation.data.plan, validation.data.interval);
-    if (!priceId) {
-      return NextResponse.json(
-        {
-          error: `Checkout for the "${validation.data.plan}" plan billed ${validation.data.interval}ly is not yet available. Only Pro (monthly) supports checkout today.`,
-        },
-        { status: 400 }
-      );
+    let sessionUrl: string | null = null;
+    let checkoutId: string | null = null;
+
+    if (provider.type === 'paddle') {
+      // Use PaddleBillingAdapter directly to ensure { userId, planTier, email } customData is attached
+      const adapter = new PaddleBillingAdapter();
+      const planTier = (validation.data.plan === 'founder_tier_a' ? 'founder' : validation.data.plan) as 'founder' | 'pro';
+      const result = await adapter.createCheckoutSession(userId, userEmail, planTier);
+      sessionUrl = result.checkoutUrl;
+    } else {
+      // 3b. Resolve price ID for alternative providers (e.g. Stripe)
+      const priceId = await resolveCheckoutPriceId(provider.type, validation.data.plan, validation.data.interval);
+      if (!priceId) {
+        return NextResponse.json(
+          {
+            error: `Checkout for the "${validation.data.plan}" plan billed ${validation.data.interval}ly is not yet available.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // 4. Create checkout using active provider
+      const res = await provider.createCheckout({
+        userId,
+        userEmail,
+        successUrl: validation.data.successUrl,
+        cancelUrl: validation.data.cancelUrl,
+        priceId,
+      });
+      sessionUrl = res.url;
+      checkoutId = res.id;
     }
 
-    // 4. Create checkout using active provider
-    const { url, id } = await provider.createCheckout({
-      userId,
-      userEmail,
-      successUrl: validation.data.successUrl,
-      cancelUrl: validation.data.cancelUrl,
-      priceId,
-    });
-
-    if (!url && !id) return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
+    if (!sessionUrl && !checkoutId) {
+      return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
+    }
 
     // 5. Log activity
     await supabase.from('usage_logs').insert({
@@ -100,8 +115,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ 
-      sessionUrl: url, 
-      checkoutId: id,
+      sessionUrl, 
+      checkoutId,
       provider: provider.type 
     });
   } catch (error) {

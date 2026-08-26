@@ -59,6 +59,19 @@ export class PaddleBillingAdapter implements BillingPort {
       if (!planTier) planTier = 'free';
 
       const cancelAtPeriodEnd = data.scheduled_change?.action === 'cancel' || false;
+      const eventOccurredAt = payload.occurred_at || new Date().toISOString();
+
+      // Ordering protection: check existing record timestamp if present
+      const { data: existing } = await supabase
+        .from('user_subscriptions')
+        .select('updated_at')
+        .eq('paddle_subscription_id', data.id)
+        .maybeSingle();
+
+      if (existing?.updated_at && new Date(existing.updated_at) > new Date(eventOccurredAt)) {
+        console.info('[PaddleBillingAdapter] Stale subscription event ignored (existing updated_at:', existing.updated_at, '> occurred_at:', eventOccurredAt, ')');
+        return { success: true };
+      }
 
       const { error } = await supabase
         .from('user_subscriptions')
@@ -72,7 +85,7 @@ export class PaddleBillingAdapter implements BillingPort {
             current_period_start: data.current_billing_period?.starts_at || null,
             current_period_end: data.current_billing_period?.ends_at || null,
             cancel_at_period_end: cancelAtPeriodEnd,
-            updated_at: new Date().toISOString()
+            updated_at: eventOccurredAt
           },
           { onConflict: 'paddle_subscription_id' }
         );
@@ -112,20 +125,37 @@ export class PaddleBillingAdapter implements BillingPort {
         planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
       }
       
-      if (!planTier || planTier === 'free') {
-        return { success: true }; // Not a founder tier or special one-time
+      // Strictly require founder tier for lifetime access provisioning.
+      // Pro one-time transactions or free tiers must not be granted 100-year lifetime access.
+      if (planTier !== 'founder') {
+        console.warn(`[PaddleBillingAdapter] Skipping lifetime provisioning for non-founder tier: ${planTier}`);
+        return { success: true };
       }
 
       // Guard: only provision lifetime access when ALL items are one-time (interval === 'once').
       // Recurring Pro transactions also fire transaction.completed — those are handled by
       // subscription.created / subscription.updated; provisioning lifetime here would be wrong.
-      const items: Array<{ price?: { billing_cycle?: { interval?: string } } }> = data.items ?? [];
+      const items: Array<{ price?: { id?: string; billing_cycle?: { interval?: string } } }> = data.items ?? [];
       const isOneTime = items.length > 0 && items.every(
         (item) => item.price?.billing_cycle?.interval === 'once' || item.price?.billing_cycle == null
       );
       if (!isOneTime && data.subscription_id) {
         // This transaction belongs to a recurring subscription — skip lifetime provisioning.
         console.info('[PaddleBillingAdapter] transaction.completed is recurring (sub:', data.subscription_id, ') — skipping lifetime upsert');
+        return { success: true };
+      }
+
+      const eventOccurredAt = payload.occurred_at || new Date().toISOString();
+
+      // Ordering protection: check existing record timestamp if present
+      const { data: existing } = await supabase
+        .from('user_subscriptions')
+        .select('updated_at')
+        .eq('paddle_subscription_id', 'tx_' + data.id)
+        .maybeSingle();
+
+      if (existing?.updated_at && new Date(existing.updated_at) > new Date(eventOccurredAt)) {
+        console.info('[PaddleBillingAdapter] Stale transaction event ignored');
         return { success: true };
       }
 
@@ -143,7 +173,7 @@ export class PaddleBillingAdapter implements BillingPort {
             current_period_start: new Date().toISOString(),
             current_period_end: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(), // effectively lifetime
             cancel_at_period_end: false,
-            updated_at: new Date().toISOString()
+            updated_at: eventOccurredAt
           },
           { onConflict: 'paddle_subscription_id' }
         );

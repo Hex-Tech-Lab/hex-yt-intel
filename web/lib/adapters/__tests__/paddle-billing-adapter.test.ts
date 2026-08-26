@@ -5,10 +5,16 @@ import { ProcessPaddleWebhookUseCase } from '../../usecases/ProcessPaddleWebhook
 
 // Mock Supabase
 const mockUpsert = vi.fn();
+const mockSelect = vi.fn(() => ({
+  eq: vi.fn(() => ({
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+  }))
+}));
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      upsert: mockUpsert
+      upsert: mockUpsert,
+      select: mockSelect,
     }))
   }))
 }));

@@ -33,8 +33,13 @@ describe('PaddleBillingAdapter — recurring transaction guard', () => {
   it('provisions lifetime access for a genuine once-interval founder transaction', async () => {
     const { getSupabaseServiceClient } = await import('@/lib/supabase');
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    });
     (getSupabaseServiceClient as ReturnType<typeof vi.fn>).mockReturnValue({
-      from: () => ({ upsert: mockUpsert }),
+      from: () => ({ upsert: mockUpsert, select: mockSelect }),
     });
 
     // @ts-expect-error test payload shape

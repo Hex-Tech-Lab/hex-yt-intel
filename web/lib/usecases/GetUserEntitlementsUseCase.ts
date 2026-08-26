@@ -40,7 +40,7 @@ export class GetUserEntitlementsUseCase {
           tags: { usecase: 'GetUserEntitlementsUseCase' },
           extra: { userId },
         });
-        return defaultFree;
+        throw new Error(`Database error querying subscription: ${error.message}`);
       }
 
       if (!rows || rows.length === 0) {
@@ -80,7 +80,7 @@ export class GetUserEntitlementsUseCase {
         tags: { usecase: 'GetUserEntitlementsUseCase' },
         extra: { userId },
       });
-      return defaultFree;
+      throw err instanceof Error ? err : new Error(errorMsg);
     }
   }
 }
