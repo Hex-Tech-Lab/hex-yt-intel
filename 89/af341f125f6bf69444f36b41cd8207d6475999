@@ -1,0 +1,14 @@
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 203,208-209,211,255-257,259-260,262-263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "89af341f125f6bf69444f36b41cd8207d6475999",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
