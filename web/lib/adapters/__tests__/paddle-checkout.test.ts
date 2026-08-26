@@ -1,8 +1,8 @@
+import { NextRequest } from 'next/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { PaddleBillingAdapter } from '../PaddleBillingAdapter';
 import { paddle } from '@/lib/paddle';
-import { NextRequest } from 'next/server';
-
 import { POST } from '@/app/api/billing/checkout/route';
 import * as supabaseAuth from '@/lib/supabase';
 

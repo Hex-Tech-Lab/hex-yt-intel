@@ -6,15 +6,22 @@ import { CheckoutSchema } from '@/lib/types/contracts';
 
 // Mock Supabase
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-const mockSingle = vi.fn().mockResolvedValue({
-  data: { plan_tier: 'founder', status: 'active' },
+const mockRows = vi.fn().mockResolvedValue({
+  data: [
+    {
+      plan_tier: 'founder',
+      status: 'active',
+      current_period_end: new Date(Date.now() + 86400000000).toISOString(),
+    },
+  ],
   error: null,
 });
-const mockLimit = vi.fn().mockReturnValue({ single: mockSingle, maybeSingle: mockSingle });
-const mockOrder = vi.fn().mockReturnValue({ limit: mockLimit });
+const mockOrder = vi.fn().mockReturnValue({ order: mockRows, then: mockRows.then });
+const mockIn = vi.fn().mockReturnValue({ order: mockRows });
 const mockEq = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnThis(),
-  order: mockOrder
+  in: mockIn,
+  order: mockRows,
 });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 vi.mock('@/lib/supabase', () => ({
@@ -34,15 +41,14 @@ describe('Founder Provisioning Integration', () => {
   });
 
   it('Step 1: Checkout request schema accepts founder tier and once interval', () => {
+    // Simulate setting NEXT_PUBLIC_APP_URL for validation
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.hex-yt-intel.com';
     const payload = {
       plan: 'founder',
       interval: 'once',
-      successUrl: 'http://localhost/success',
-      cancelUrl: 'http://localhost/cancel'
+      successUrl: 'https://app.hex-yt-intel.com/success',
+      cancelUrl: 'https://app.hex-yt-intel.com/cancel'
     };
-    
-    // Simulate setting NEXT_PUBLIC_APP_URL for validation
-    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost';
     const result = CheckoutSchema.safeParse(payload);
     expect(result.success).toBe(true);
   });

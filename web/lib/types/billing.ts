@@ -39,8 +39,10 @@ export interface WebhookPayload {
     id: string;
     customer_id: string;
     status: SubscriptionStatus;
+    /** Present on transaction.completed when the transaction is a recurring subscription renewal. */
+    subscription_id?: string;
     custom_data?: {
-      user_id?: string; [key: string]: any;
+      user_id?: string; userId?: string; [key: string]: unknown;
     };
     current_billing_period?: {
       starts_at: string;
@@ -50,6 +52,10 @@ export interface WebhookPayload {
       price?: {
         custom_data?: {
           plan_tier?: PlanTier;
+        };
+        billing_cycle?: {
+          interval?: 'once' | 'day' | 'week' | 'month' | 'year';
+          frequency?: number;
         };
       };
     }>;

@@ -9,19 +9,24 @@ import { GetUserEntitlementsUseCase } from '@/lib/usecases/GetUserEntitlementsUs
 export async function GET(_request: NextRequest) {
   try {
     const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const useCase = new GetUserEntitlementsUseCase();
-    
-    // If not authenticated, the UseCase returns defaultFree
-    const entitlements = await useCase.execute(user?.id || '');
+    const entitlements = await useCase.execute(user.id);
 
     return NextResponse.json({ success: true, entitlements });
   } catch (error) {
+    const isAuthError = error instanceof Error && error.message.toLowerCase().includes('auth');
+    if (isAuthError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('[/api/billing/entitlements] Error:', error);
     Sentry.captureException(error);
-    const useCase = new GetUserEntitlementsUseCase();
-    const fallback = await useCase.execute('');
-    return NextResponse.json({ success: true, entitlements: fallback });
+    // Return 503 so clients do not cache an outage as a Free entitlement.
+    return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
   }
 }

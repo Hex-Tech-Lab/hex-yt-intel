@@ -1,16 +1,14 @@
 /** @vitest-environment jsdom */
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { useEntitlements, clearEntitlementsCache } from '../useEntitlements';
 
-
-vi.mock('@/lib/supabase', () => ({
-  getSupabaseClient: () => ({
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'test-user-123' } } } }),
-      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
-    }
-  })
+vi.mock('@/lib/adapters/SupabaseClientAuthAdapter', () => ({
+  clientAuthAdapter: {
+    getSessionUserId: vi.fn().mockResolvedValue('test-user-123'),
+    onAuthStateChange: vi.fn().mockReturnValue(vi.fn()),
+  },
 }));
 
 describe('useEntitlements hook', () => {
@@ -27,7 +25,7 @@ describe('useEntitlements hook', () => {
     };
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockData,
+      json: () => Promise.resolve(mockData),
     });
 
     const { result } = renderHook(() => useEntitlements());
@@ -48,7 +46,7 @@ describe('useEntitlements hook', () => {
     };
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockData,
+      json: () => Promise.resolve(mockData),
     });
 
     const { result } = renderHook(() => useEntitlements());

@@ -44,7 +44,7 @@ export class PaddleBillingAdapter implements BillingPort {
       const supabase = getSupabaseServiceClient();
       
       const { data } = payload;
-      const userId = data.custom_data?.user_id;
+      const userId = data.custom_data?.user_id || data.custom_data?.userId;
       
       if (!userId) {
         // Not a SaaS subscription event or missing mapping
@@ -114,6 +114,19 @@ export class PaddleBillingAdapter implements BillingPort {
       
       if (!planTier || planTier === 'free') {
         return { success: true }; // Not a founder tier or special one-time
+      }
+
+      // Guard: only provision lifetime access when ALL items are one-time (interval === 'once').
+      // Recurring Pro transactions also fire transaction.completed — those are handled by
+      // subscription.created / subscription.updated; provisioning lifetime here would be wrong.
+      const items: Array<{ price?: { billing_cycle?: { interval?: string } } }> = data.items ?? [];
+      const isOneTime = items.length > 0 && items.every(
+        (item) => item.price?.billing_cycle?.interval === 'once' || item.price?.billing_cycle == null
+      );
+      if (!isOneTime && data.subscription_id) {
+        // This transaction belongs to a recurring subscription — skip lifetime provisioning.
+        console.info('[PaddleBillingAdapter] transaction.completed is recurring (sub:', data.subscription_id, ') — skipping lifetime upsert');
+        return { success: true };
       }
 
       // Insert or update user_subscriptions for this one-time purchase

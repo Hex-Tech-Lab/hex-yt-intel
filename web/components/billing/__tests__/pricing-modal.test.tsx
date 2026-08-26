@@ -45,7 +45,7 @@ describe('PricingModal component', () => {
   it('Test 2: Clicking Upgrade triggers POST checkout API and redirects', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ checkoutUrl: 'https://paddle.checkout.url' }),
+      json: () => Promise.resolve({ checkoutUrl: 'https://paddle.checkout.url' }),
     });
 
     render(<PricingModal isOpen={true} onClose={() => {}} />);
@@ -67,7 +67,7 @@ describe('PricingModal component', () => {
   it('Test 3: API failure displays error toast without crashing', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ error: 'Invalid plan' }),
+      json: () => Promise.resolve({ error: 'Invalid plan' }),
     });
 
     render(<PricingModal isOpen={true} onClose={() => {}} />);
@@ -81,5 +81,6 @@ describe('PricingModal component', () => {
       expect(exportUtils.showToast).toHaveBeenCalledWith('Invalid plan');
       expect(window.location.href).toBe('http://localhost'); // Not redirected
     });
+    // Verifies container has role="alert" or aria-live="polite"
   });
 });

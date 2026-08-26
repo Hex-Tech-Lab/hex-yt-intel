@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-import { getSupabaseClient } from '@/lib/supabase';
+import { clientAuthAdapter } from '@/lib/adapters/SupabaseClientAuthAdapter';
 
 import type { EntitlementState } from '@/lib/usecases/GetUserEntitlementsUseCase';
 
@@ -28,11 +28,8 @@ export function useEntitlements() {
   const [isSessionLoaded, setIsSessionLoaded] = useState<boolean>(false);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    
-    // Initial fetch of session
-    supabase.auth.getSession().then(({ data }) => {
-      const id = data.session?.user?.id || null;
+    // Initial fetch of session via adapter
+    clientAuthAdapter.getSessionUserId().then((id) => {
       if (id !== currentUserId) {
         currentUserId = id;
         setUserId(id);
@@ -42,27 +39,25 @@ export function useEntitlements() {
 
     if (!authListenerAttached && typeof window !== 'undefined') {
       authListenerAttached = true;
-      supabase.auth.onAuthStateChange((event, session) => {
-        const id = session?.user?.id || null;
+      clientAuthAdapter.onAuthStateChange((event, id) => {
         currentUserId = id;
-        
         if (event === 'SIGNED_OUT') {
           globalCache.clear();
           globalPromises.clear();
         }
-        
-        // Broadcast the new auth state (React state will catch up via individual component renders)
-        // For components already mounted, this listener doesn't trigger setUserId directly 
-        // across all instances, so we also rely on the per-component listener.
       });
     }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id || null);
+    const unsubscribe = clientAuthAdapter.onAuthStateChange((event, id) => {
+      setUserId(id);
+      if (event === 'SIGNED_OUT') {
+        setEntitlements(defaultFree);
+        setIsLoading(false);
+      }
     });
 
     return () => {
-      listener.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 

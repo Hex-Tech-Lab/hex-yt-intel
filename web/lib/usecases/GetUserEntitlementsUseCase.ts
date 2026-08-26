@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 
 import { getSupabaseServiceClient } from '@/lib/supabase';
 
-import type { PlanTier, SubscriptionStatus } from '@/lib/types/billing';
+import type { PlanTier } from '@/lib/types/billing';
 
 export interface EntitlementState {
   tier: 'free' | 'founder' | 'pro';
@@ -26,13 +26,13 @@ export class GetUserEntitlementsUseCase {
 
     try {
       const supabase = getSupabaseServiceClient();
-      const { data, error } = await supabase
+      // Select all active/trialing rows, ordered by tier rank then recency, to pick the best one.
+      const { data: rows, error } = await supabase
         .from('user_subscriptions')
         .select('plan_tier, status, current_period_end')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .in('status', ['active', 'trialing'])
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('[GetUserEntitlementsUseCase] Error querying subscription:', error.message);
@@ -43,20 +43,27 @@ export class GetUserEntitlementsUseCase {
         return defaultFree;
       }
 
-      if (!data) {
+      if (!rows || rows.length === 0) {
         return defaultFree;
       }
 
-      const status = data.status as SubscriptionStatus;
-      const planTier = data.plan_tier as PlanTier;
+      const now = new Date();
+      // Filter expired rows — if current_period_end is set and in the past, skip.
+      const valid = rows.filter((row) => {
+        if (!row.current_period_end) return true; // no expiry set (e.g. lifetime)
+        return new Date(row.current_period_end) > now;
+      });
 
-      // Active or trialing subscriptions unlock features based on their plan tier
-      const isActive = status === 'active' || status === 'trialing';
-
-      if (!isActive) {
+      if (valid.length === 0) {
         return defaultFree;
       }
 
+      // Prefer founder > pro > free ordering
+      const TIER_RANK: Record<string, number> = { founder: 2, pro: 1, free: 0 };
+      valid.sort((subA, subB) => (TIER_RANK[subB.plan_tier] ?? 0) - (TIER_RANK[subA.plan_tier] ?? 0));
+      const best = valid[0]!;
+
+      const planTier = best.plan_tier as PlanTier;
       if (planTier === 'founder' || planTier === 'pro') {
         return {
           tier: planTier,
