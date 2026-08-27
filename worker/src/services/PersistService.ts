@@ -100,6 +100,8 @@ function mergeDimensions(
       byNumber.set(parsed.data.number, parsed.data);
       validExtractedNumbers.add(parsed.data.number);
     } else {
+      console.warn('[persist] Schema validation dropped dimension', parsed.error.issues);
+      Sentry.captureMessage('PersistService: Schema validation dropped dimension', { level: 'warning', extra: { issues: parsed.error.issues } });
       anyExtractedEntryWasInvalid = true;
     }
   }

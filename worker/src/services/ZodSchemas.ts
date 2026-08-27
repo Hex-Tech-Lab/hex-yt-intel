@@ -5,6 +5,12 @@ import { z } from 'zod';
  * ADR 006: Structured JSON Streaming Blueprint
  */
 
+export const CaseInsensitiveEnum = <T extends string>(values: readonly [T, ...T[]]) =>
+  z.preprocess(
+    (val) => (typeof val === "string" ? val.trim().toLowerCase() : val),
+    z.enum(values)
+  );
+
 export const KGNodeSchema = z.object({
   id: z.string(),
   dimension: z.number(),
@@ -13,23 +19,14 @@ export const KGNodeSchema = z.object({
   weight: z.number(),
   polarity: z.number(),
   keyTerms: z.array(z.string()),
-  entityType: z.enum([
-    'person', 
-    'concept', 
-    'framework', 
-    'tool', 
-    'organization', 
-    'study', 
-    'trend', 
-    'metric'
-  ]).optional().default('concept'),
+  entityType: CaseInsensitiveEnum(['person', 'concept', 'framework', 'tool', 'organization', 'study', 'trend', 'metric']).optional().default('concept'),
 }).passthrough();
 
 export const KGEdgeSchema = z.object({
   source: z.string(),
   target: z.string(),
   strength: z.number(),
-  kind: z.enum(['similar', 'related', 'tangent', 'contrarian']),
+  kind: CaseInsensitiveEnum(['similar', 'related', 'tangent', 'contrarian']),
   rationale: z.string().optional(),
 }).passthrough();
 

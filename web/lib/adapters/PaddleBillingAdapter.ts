@@ -1,9 +1,41 @@
+import { z } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import * as crypto from 'crypto';
 import { BillingPort } from '../ports/BillingPort';
 import { getSupabaseServiceClient } from '../supabase';
 import { paddle } from '../paddle';
 import type { PlanTier, WebhookPayload } from '../types/billing';
+
+const WebhookCustomDataSchema = z.preprocess((val) => {
+  if (typeof val === 'object' && val !== null) {
+    return {
+      userId: (val as any).user_id || (val as any).userId,
+      planTier: (val as any).plan_tier || (val as any).planTier,
+      ...val
+    };
+  }
+  return val;
+}, z.object({
+  userId: z.string().optional(),
+  planTier: z.string().optional(),
+}).passthrough());
+
+const PaddleWebhookSchema = z.object({
+  event_type: z.string(),
+  occurred_at: z.string().optional(),
+  data: z.object({
+    id: z.string().optional(),
+    status: z.string().optional(),
+    customer_id: z.string().optional(),
+    subscription_id: z.string().optional(),
+    custom_data: WebhookCustomDataSchema.optional(),
+    current_billing_period: z.object({
+      starts_at: z.string().optional(),
+      ends_at: z.string().optional(),
+    }).passthrough().optional(),
+    items: z.array(z.any()).optional(),
+  }).passthrough()
+}).passthrough();
 
 export class PaddleBillingAdapter implements BillingPort {
   verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
@@ -39,20 +71,28 @@ export class PaddleBillingAdapter implements BillingPort {
     return JSON.parse(rawBody) as WebhookPayload;
   }
 
-  async processSubscriptionEvent(payload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
+  async processSubscriptionEvent(rawPayload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
     try {
+      const parsed = PaddleWebhookSchema.safeParse(rawPayload);
+      if (!parsed.success) {
+        console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
+        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        return { success: false, error: 'Invalid webhook payload schema' };
+      }
+      const payload = parsed.data as any;
       const supabase = getSupabaseServiceClient();
       
       const { data } = payload;
-      const userId = data.custom_data?.user_id || data.custom_data?.userId;
+      const userId = data.custom_data?.userId;
       
       if (!userId) {
         // Not a SaaS subscription event or missing mapping
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in custom_data', { level: 'warning', extra: { payload: data } });
         return { success: false, error: 'Missing user_id in custom_data' };
       }
 
       // Authoritative plan tier from subscription custom data (or fallback to item price custom data)
-      let planTier = data.custom_data?.plan_tier || data.custom_data?.planTier;
+      let planTier = data.custom_data?.planTier;
       if (!planTier && data.items && data.items.length > 0) {
         planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
       }
@@ -111,22 +151,30 @@ export class PaddleBillingAdapter implements BillingPort {
   }
 
 
-  async processTransactionEvent(payload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
+  async processTransactionEvent(rawPayload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
     try {
+      const parsed = PaddleWebhookSchema.safeParse(rawPayload);
+      if (!parsed.success) {
+        console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
+        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        return { success: false, error: 'Invalid webhook payload schema' };
+      }
+      const payload = parsed.data as any;
       if (payload.event_type !== 'transaction.completed') {
         return { success: true };
       }
       
       const supabase = getSupabaseServiceClient();
       const { data } = payload;
-      const userId = data.custom_data?.user_id || data.custom_data?.userId;
+      const userId = data.custom_data?.userId;
       
       if (!userId) {
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in transaction custom_data', { level: 'warning', extra: { payload: data } });
         return { success: false, error: 'Missing user_id in transaction custom_data' };
       }
 
       // Read authoritatively from transaction custom data
-      let planTier = data.custom_data?.plan_tier || data.custom_data?.planTier;
+      let planTier = data.custom_data?.planTier;
       if (!planTier && data.items && data.items.length > 0) {
         planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
       }
