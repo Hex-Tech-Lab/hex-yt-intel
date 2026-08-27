@@ -1,2 +1,13 @@
+node_modules/
+.next/
+dist/
+build/
+coverage/
+worker/**
+skill/**
+video-pipeline/**
 design-system/**
-src/worker/**
+/*.cjs
+/*.js
+/test-proxy.ts
+/instrumentation.ts

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { stitchChunksIntoPayload } from "../stitch-analysis-chunks";
 
 describe("Contract Boundaries E2E", () => {

@@ -1,10 +1,13 @@
-import { z } from 'zod';
 import * as Sentry from '@sentry/nextjs';
+
 import * as crypto from 'crypto';
-import { BillingPort } from '../ports/BillingPort';
-import { getSupabaseServiceClient } from '../supabase';
-import { paddle } from '../paddle';
-import type { PlanTier, WebhookPayload } from '../types/billing';
+import { z } from 'zod';
+
+import { BillingPort } from '@/lib/ports/BillingPort';
+import { getSupabaseServiceClient } from '@/lib/supabase';
+import { paddle } from '@/lib/paddle';
+
+import type { PlanTier, WebhookPayload } from '@/lib/types/billing';
 
 const WebhookCustomDataSchema = z.preprocess((val) => {
   if (typeof val === 'object' && val !== null) {
@@ -36,7 +39,6 @@ const PaddleWebhookSchema = z.object({
     items: z.array(z.any()).optional(),
   }).passthrough()
 }).passthrough();
-
 export class PaddleBillingAdapter implements BillingPort {
   verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
     try {

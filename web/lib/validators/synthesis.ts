@@ -130,12 +130,12 @@ export const KGEdgeSchema = z
  */
 const TolerantPersonaId = z.preprocess((val) => {
   if (typeof val !== "string") return val;
-  const v = val.trim().toLowerCase();
-  if (v === "content_creator" || v === "creator") return "creator";
-  if (v === "indie_maker" || v === "indiemaker") return "indieMaker";
-  if (v === "consultant") return "consultant";
-  if (v === "researcher") return "researcher";
-  if (v === "product_manager" || v === "productmanager") return "productManager";
+  const normalized = val.trim().toLowerCase();
+  if (normalized === "content_creator" || normalized === "creator") return "creator";
+  if (normalized === "indie_maker" || normalized === "indiemaker") return "indieMaker";
+  if (normalized === "consultant") return "consultant";
+  if (normalized === "researcher") return "researcher";
+  if (normalized === "product_manager" || normalized === "productmanager") return "productManager";
   return val;
 }, z.enum(["creator", "indieMaker", "consultant", "researcher", "productManager"]));
 
