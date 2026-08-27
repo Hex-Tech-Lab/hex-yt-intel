@@ -1,0 +1,54 @@
+worker/src/__tests__/adaptive-options.test.ts
+  s_4b2aacf8e9effe::t_df95f79e3608a6 18,20,29,31,39,41
+  s_4b2aacf8e9effe::t_87b4d31e72b5ea 12
+  s_4b2aacf8e9effe::t_bd409a8d09c0d3 167,169,171
+  s_4b2aacf8e9effe::t_c398a47f44df11 286-287
+  s_4b2aacf8e9effe::t_fd67d9f658b5b8 288
+  s_4b2aacf8e9effe::t_a87b8870bd1325 254
+  s_4b2aacf8e9effe::t_65058975c7d28e 255
+  s_4b2aacf8e9effe::t_4860c2f9167368 241,248,256,267,274,281,289
+web/components/dashboard/HighlightsScrubber.tsx
+  s_4b2aacf8e9effe::t_80b8e9cbce628c 203-208
+web/lib/utils/chat-options-settings.ts
+  s_4b2aacf8e9effe::t_8f57803ee16804 1-10
+web/lib/config/prompts.ts
+  s_4b2aacf8e9effe::t_5225cf9c96ec2d 22
+  s_4b2aacf8e9effe::t_c7d07edc9572e2 7
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_4b2aacf8e9effe::t_c0e442784d3047 69-71
+  s_4b2aacf8e9effe::t_d3a7c8f2e3c707 75,92-94
+web/lib/adapters/SupabaseClientAuthAdapter.ts
+  s_4b2aacf8e9effe::t_94f82e20d8eba9 1,14,20
+worker/src/utils/option-templates.ts
+  s_4b2aacf8e9effe::t_52e5e1ee481931 80,84-87,91,94-95,97-98
+worker/src/services/option-templates.ts
+  s_4b2aacf8e9effe::t_34d52d38d80a17 4-6
+  s_4b2aacf8e9effe::t_4f1f2e9b6537b4 17-19
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_a3eb2b8f4190d7 14
+  s_4b2aacf8e9effe::t_de7b85460a86e7 13
+worker/src/services/AdaptiveOptionsBuilder.ts
+  s_4b2aacf8e9effe::t_0de474bbaacf07 12,16
+  s_4b2aacf8e9effe::t_5027a1c1a1d617 32
+  s_4b2aacf8e9effe::t_da84b11d256ca5 93-95,98,108,110-111,113
+  s_4b2aacf8e9effe::t_22afc334e01295 205-206
+web/components/templates/console/ChatDock.tsx
+  s_4b2aacf8e9effe::t_6dbac77d75f0ca 26
+  s_4b2aacf8e9effe::t_34c4cb97f9701f 815
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5114483a743ac57f1c5d425d40d1ad70b9729260",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
