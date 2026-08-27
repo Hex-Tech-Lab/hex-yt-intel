@@ -5,19 +5,34 @@ import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { PlanTier } from '@/lib/types/billing';
 
 export interface EntitlementState {
-  tier: 'free' | 'founder' | 'pro';
+  tier: PlanTier;
+  is_founder: boolean;
+  is_enterprise: boolean;
+  is_unlimited: boolean;
   canAnalyzeVideo: boolean;
   canAccessKnowledgeGraph: boolean;
   canUseExtendedChat: boolean;
+  canExportKnowledgeGraph: boolean;
 }
+
+const TIER_RANK: Record<PlanTier, number> = {
+  enterprise: 4,
+  founder: 3,
+  pro: 2,
+  free: 1,
+};
 
 export class GetUserEntitlementsUseCase {
   async execute(userId: string): Promise<EntitlementState> {
     const defaultFree: EntitlementState = {
       tier: 'free',
+      is_founder: false,
+      is_enterprise: false,
+      is_unlimited: false,
       canAnalyzeVideo: true,
       canAccessKnowledgeGraph: false,
       canUseExtendedChat: false,
+      canExportKnowledgeGraph: false,
     };
 
     if (!userId) {
@@ -26,7 +41,6 @@ export class GetUserEntitlementsUseCase {
 
     try {
       const supabase = getSupabaseServiceClient();
-      // Select all active/trialing rows, ordered by tier rank then recency, to pick the best one.
       const { data: rows, error } = await supabase
         .from('user_subscriptions')
         .select('plan_tier, status, current_period_end')
@@ -48,9 +62,8 @@ export class GetUserEntitlementsUseCase {
       }
 
       const now = new Date();
-      // Filter expired rows — if current_period_end is set and in the past, skip.
       const valid = rows.filter((row) => {
-        if (!row.current_period_end) return true; // no expiry set (e.g. lifetime)
+        if (!row.current_period_end) return true;
         return new Date(row.current_period_end) > now;
       });
 
@@ -58,18 +71,25 @@ export class GetUserEntitlementsUseCase {
         return defaultFree;
       }
 
-      // Prefer founder > pro > free ordering
-      const TIER_RANK: Record<string, number> = { founder: 2, pro: 1, free: 0 };
-      valid.sort((subA, subB) => (TIER_RANK[subB.plan_tier] ?? 0) - (TIER_RANK[subA.plan_tier] ?? 0));
+      valid.sort((subA, subB) => (TIER_RANK[subB.plan_tier as PlanTier] ?? 0) - (TIER_RANK[subA.plan_tier as PlanTier] ?? 0));
       const best = valid[0]!;
 
       const planTier = best.plan_tier as PlanTier;
-      if (planTier === 'founder' || planTier === 'pro') {
+      const isEnterprise = planTier === 'enterprise';
+      const isUnlimited = isEnterprise;
+      const isFounder = planTier === 'founder';
+
+      if (isUnlimited || isEnterprise || planTier === 'founder' || planTier === 'pro') {
+        const hasPremium = true;
         return {
           tier: planTier,
+          is_founder: isFounder,
+          is_enterprise: isEnterprise,
+          is_unlimited: isUnlimited,
           canAnalyzeVideo: true,
-          canAccessKnowledgeGraph: true,
-          canUseExtendedChat: true,
+          canAccessKnowledgeGraph: hasPremium,
+          canUseExtendedChat: hasPremium,
+          canExportKnowledgeGraph: hasPremium,
         };
       }
 
