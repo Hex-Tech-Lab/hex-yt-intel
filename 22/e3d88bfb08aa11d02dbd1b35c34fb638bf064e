@@ -1,0 +1,27 @@
+worker/tsconfig.typecheck.json
+  s_4b2aacf8e9effe::t_9a9df00c9e13d0 5
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_0cd0c626cb9a1c 1355
+  s_4b2aacf8e9effe::t_a4409cbca8e70e 1356
+  s_4b2aacf8e9effe::t_c566f4d303524d 1354
+web/lib/validators/synthesis.ts
+  s_4b2aacf8e9effe::t_9a9df00c9e13d0 233-235,238-239,359-360
+worker/src/services/ZodSchemas.ts
+  s_4b2aacf8e9effe::t_9a9df00c9e13d0 53-62,79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "22e3d88bfb08aa11d02dbd1b35c34fb638bf064e",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
