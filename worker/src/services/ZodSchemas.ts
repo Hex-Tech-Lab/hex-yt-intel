@@ -19,7 +19,7 @@ export const KGNodeSchema = z.object({
   weight: z.number(),
   polarity: z.number(),
   keyTerms: z.array(z.string()),
-  entityType: CaseInsensitiveEnum(['person', 'concept', 'framework', 'tool', 'organization', 'study', 'trend', 'metric']).optional().default('concept'),
+  entityType: CaseInsensitiveEnum(["person", "organization", "location", "event", "object", "concept", "topic"]).optional().default('concept'),
 }).passthrough();
 
 export const KGEdgeSchema = z.object({

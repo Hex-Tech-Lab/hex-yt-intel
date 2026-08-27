@@ -12,9 +12,9 @@ import type { PlanTier, WebhookPayload } from '@/lib/types/billing';
 const WebhookCustomDataSchema = z.preprocess((val) => {
   if (typeof val === 'object' && val !== null) {
     return {
+      ...val,
       userId: (val as any).user_id || (val as any).userId,
       planTier: (val as any).plan_tier || (val as any).planTier,
-      ...val
     };
   }
   return val;
@@ -36,7 +36,23 @@ const PaddleWebhookSchema = z.object({
       starts_at: z.string().optional(),
       ends_at: z.string().optional(),
     }).passthrough().optional(),
-    items: z.array(z.any()).optional(),
+    items: z.array(z.preprocess((val) => {
+      if (typeof val === 'object' && val !== null && (val as any).price && (val as any).price.custom_data) {
+        const raw = (val as any).price.custom_data;
+        return {
+          ...val,
+          price: {
+            ...(val as any).price,
+            custom_data: {
+              ...raw,
+              userId: raw.user_id || raw.userId,
+              planTier: raw.plan_tier || raw.planTier,
+            }
+          }
+        };
+      }
+      return val;
+    }, z.any())).optional(),
   }).passthrough()
 }).passthrough();
 
@@ -79,7 +95,7 @@ export class PaddleBillingAdapter implements BillingPort {
       const parsed = PaddleWebhookSchema.safeParse(rawPayload);
       if (!parsed.success) {
         console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
-        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { event_type: rawPayload?.event_type, errorCount: parsed.error.issues.length, issues: parsed.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
         return { success: false, error: 'Invalid webhook payload schema' };
       }
       const payload = parsed.data as any;
@@ -90,7 +106,7 @@ export class PaddleBillingAdapter implements BillingPort {
       
       if (!userId) {
         // Not a SaaS subscription event or missing mapping
-        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in custom_data', { level: 'warning', extra: { payload: data } });
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in custom_data', { level: 'warning', extra: { event_type: payload?.event_type } });
         return { success: false, error: 'Missing user_id in custom_data' };
       }
 
@@ -159,7 +175,7 @@ export class PaddleBillingAdapter implements BillingPort {
       const parsed = PaddleWebhookSchema.safeParse(rawPayload);
       if (!parsed.success) {
         console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
-        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { event_type: rawPayload?.event_type, errorCount: parsed.error.issues.length, issues: parsed.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
         return { success: false, error: 'Invalid webhook payload schema' };
       }
       const payload = parsed.data as any;
@@ -172,7 +188,7 @@ export class PaddleBillingAdapter implements BillingPort {
       const userId = data.custom_data?.userId;
       
       if (!userId) {
-        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in transaction custom_data', { level: 'warning', extra: { payload: data } });
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in transaction custom_data', { level: 'warning', extra: { event_type: payload?.event_type } });
         return { success: false, error: 'Missing user_id in transaction custom_data' };
       }
 

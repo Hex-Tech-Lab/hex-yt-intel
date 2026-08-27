@@ -289,9 +289,15 @@ export function stitchChunksIntoPayload(
   // result over a KG cosmetic slip" philosophy as the weight-normalization
   // fix above -- filter the individually-invalid entries out rather than
   // reject everything.
-  const validNodes = stitchedNodes.filter(
-    (node) => { const res = KGNodeSchema.safeParse(node); if (!res.success) { console.warn('[stitch-analysis-chunks] Schema validation dropped entity', res.error.issues); Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped node', { level: 'warning', extra: { issues: res.error.issues, node } }); } return res.success; },
-  );
+  const validNodes = stitchedNodes.map(node => {
+    const res = KGNodeSchema.safeParse(node);
+    if (!res.success) {
+      console.warn('[stitch-analysis-chunks] Schema validation dropped entity', res.error.issues);
+      Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped node', { level: 'warning', extra: { errorCount: res.error.issues.length, issues: res.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
+      return null;
+    }
+    return res.data;
+  }).filter((n): n is NonNullable<typeof n> => n !== null);
   const droppedNodeCount = stitchedNodes.length - validNodes.length;
   if (droppedNodeCount > 0) {
     console.warn(
@@ -301,12 +307,26 @@ export function stitchChunksIntoPayload(
   const validNodeIds = new Set(
     validNodes.map((n) => (n as { id: unknown }).id),
   );
-  const validEdges = stitchedEdges.filter((edge) => {
-    const edgeRes = KGEdgeSchema.safeParse(edge); if (!edgeRes.success) { console.warn('[stitch-analysis-chunks] Schema validation dropped edge', edgeRes.error.issues); Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped edge', { level: 'warning', extra: { issues: edgeRes.error.issues, edge } }); return false; }
-    const e = edge as { source?: unknown; target?: unknown };
-    // An edge referencing a node we just dropped is equally invalid.
-    return validNodeIds.has(e.source) && validNodeIds.has(e.target);
-  });
+  let danglingEdgesCount = 0;
+  const validEdges = stitchedEdges.map(edge => {
+    const edgeRes = KGEdgeSchema.safeParse(edge);
+    if (!edgeRes.success) {
+      console.warn('[stitch-analysis-chunks] Schema validation dropped edge', edgeRes.error.issues);
+      Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped edge', { level: 'warning', extra: { errorCount: edgeRes.error.issues.length, issues: edgeRes.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
+      return null;
+    }
+    const e = edgeRes.data;
+    if (!validNodeIds.has(e.source) || !validNodeIds.has(e.target)) {
+      danglingEdgesCount++;
+      return null;
+    }
+    return e;
+  }).filter((e): e is NonNullable<typeof e> => e !== null);
+
+  if (danglingEdgesCount > 0) {
+    console.warn(`[stitch-analysis-chunks] Dropped ${danglingEdgesCount} dangling edges missing node endpoints`);
+    Sentry.captureMessage('stitch-analysis-chunks: dropped dangling edges', { level: 'warning', extra: { danglingEdgesCount } });
+  }
   const droppedEdgeCount = stitchedEdges.length - validEdges.length;
   if (droppedEdgeCount > 0) {
     console.warn(

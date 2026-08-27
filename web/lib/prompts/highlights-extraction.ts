@@ -94,12 +94,14 @@ export function parseHighlightsExtraction(
     if (typeof start !== 'number' || typeof end !== 'number' || typeof label !== 'string') continue;
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     // start MUST be a real segment start time (prevents hallucinated timestamps).
-        // fuzzy match for floating point differences (epsilon = 1.0s)
+    // fuzzy match for floating point differences (epsilon = 1.0s)
     let matchedStart: number | null = null;
+    let minDiff = Infinity;
     for (const validStart of validSegmentStarts) {
-      if (Math.abs(validStart - start) <= 1.0) {
+      const diff = Math.abs(validStart - start);
+      if (diff <= 1.0 && diff < minDiff) {
+        minDiff = diff;
         matchedStart = validStart;
-        break;
       }
     }
     if (matchedStart === null) continue;

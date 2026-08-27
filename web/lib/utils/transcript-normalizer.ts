@@ -10,7 +10,15 @@ export function normalizeTranscriptSegments(rawSegments: unknown[] | null | unde
   const normalized = rawSegments
     .map((s: any) => {
       if (!s) return null;
-      const start = typeof s.start === 'number' ? s.start : Number(s.start);
+      const rawStart = s.start;
+      let start: number;
+      if (typeof rawStart === "number" && Number.isFinite(rawStart)) {
+        start = rawStart;
+      } else if (typeof rawStart === "string" && rawStart.trim() !== "" && !isNaN(Number(rawStart))) {
+        start = Number(rawStart);
+      } else {
+        return null;
+      }
       if (!Number.isFinite(start) || start < 0) return null;
       if (typeof s.text !== 'string' || s.text.trim().length === 0) return null;
       return { start, text: s.text.trim() };

@@ -240,7 +240,7 @@ export async function* computeStanceRelationsStream(
         console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);
         Sentry.captureMessage("relations-engine: schema validation dropped entity", {
           level: "warning",
-          extra: { issues: result.error.issues, parsed }
+          extra: { errorCount: result.error.issues.length, issues: result.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) }
         });
         // Only import Sentry if it's not imported already, but let's just use console for now, wait, we need Sentry.
       }
