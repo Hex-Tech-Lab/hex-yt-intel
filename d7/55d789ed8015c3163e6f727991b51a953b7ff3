@@ -1,0 +1,33 @@
+web/lib/validators/synthesis.ts
+  s_4b2aacf8e9effe::t_b6f99ef8ea953a 142-149
+  s_4b2aacf8e9effe::t_10b8bdb13ec46c 131
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_4b2aacf8e9effe::t_05972f9396a02b 54
+web/lib/adapters/PaddleBillingAdapter.ts
+  s_4b2aacf8e9effe::t_4601f8225f7525 199,202-204
+web/lib/services/stitch-analysis-chunks.ts
+  s_4b2aacf8e9effe::t_54b21c12066622 19
+web/lib/__tests__/paddle-founder-provisioning.integration.test.ts
+  s_4b2aacf8e9effe::t_e91a4600195c4d 75
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_db77ac0546ac93 1346
+worker/src/services/PersistService.ts
+  s_4b2aacf8e9effe::t_bc9fbd9828c31e 339-342
+  s_4b2aacf8e9effe::t_dcf283a27f6fe1 184-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "d755d789ed8015c3163e6f727991b51a953b7ff3",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
