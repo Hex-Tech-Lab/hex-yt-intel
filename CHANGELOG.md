@@ -4,6 +4,39 @@ All notable changes to hex-yt-intel are tracked here going forward. Entries belo
 
 Classification: **MAJOR** = breaking change to existing behavior, data, or operational safety. **MINOR** = new backward-compatible capability. **PATCH** = fixes only.
 
+## [2.7.0] — 2026-08-27 (MINOR)
+
+### Added
+- Paddle Merchant of Record billing integration — phases 1-3: checkout, webhook verification (`timingSafeEqual` + replay skew guards), subscription lifecycle (`user_subscriptions` + `user_tier` precedence `enterprise:4 > founder:3 > pro:2 > free:1`), and Paddle loop-breaker hardening (PR #270, `2b5d497d`, `11801528`).
+- ADR 028 — Temporal SQLGraph: recursive CTEs for anchored entity traversal + 64-bit SimHash anchor mesh for cross-segment deduplication (`3a37b386`).
+- Highlights auto-scrubber + Dub.co share infrastructure: `analysis_highlights` table, `HighlightsScrubber`/`HighlightsTrack`/`useSegmentPlayback` playback loop, public share reel (`PublicHighlightsReel`) with signed token, and Dub.co short links (PR #233 `4ed18dc1`, PR #258 `b30c0915`, PR #266 `c235ef08`).
+- Highlights chat/reel consistency: duration clamping (`minSegmentDurationSeconds`/`maxSegmentDurationSeconds` via `SettingsRegistry`), `parent_takeaway_idx` 0-based linkage to Dim.0 takeaways, NULL-safety, verbatim excerpts, and grounded annotations (PR #268 `e0e55f1e`, `0c5ba6a9` eager QStash extraction on finalize).
+- ADR 026 Phase 1 scaffolding: grounded entity extraction model cascade, `retention_policies` table, normalized `kg_entity_mentions` schema, and chunk-grouping function for entity extraction (`f0132377`, `ba309d45`, `8297c0d1`, `720e86bc`).
+- Console Simple vs Pro view split + logarithmic node weight normalization (`eb81100f`, PR #243); fail-closed view gating for unauthenticated/premium routes (`dbb84a44`, PR #272).
+- Real email/password sign-in for automated testing — `TEST_AUTH_BYPASS_SECRET` gated `/api/test-auth/login` exempt from session middleware (PR #256 `6ffe943b`).
+- Dub `SettingsRegistry` config + TestSprite bypass registry + share button (`47befa3d`, PR #246); waitlist landing page + `waitlist_signups` table (`5fb30173`, PR #231).
+
+### Security
+- Zero-trust entitlements: `useEntitlements` now server-authoritative (`/api/billing/entitlements` is sole source), `user_metadata` cannot grant premium access, fail-closed during loading states, `activeUserIdRef` request cancellation on auth switch (PR #285 `17a651ce`, `98575795`).
+- Worker CORS + callback-URL trust consolidated into single allowlist; hotfix for `getvintel.com` outage (`e0ffa130`, `02c82f59`).
+- HMAC-signed chapter persistence (`POST/GET /api/videos/[videoId]/chapters`) decoupled from chunked-analysis lifecycle (carried from 2.6.2 scope if not already released — see PR #206).
+
+### Changed
+- Knowledge Graph caps aligned to `SYSTEM_REGISTRY` — `MAX_KG_NODES 24` / `MAX_KG_EDGES 18` enforced in Zod (`synthesis.ts`) and worker tsconfig path aliases resolved (PR #283 `b8c7b44a`).
+- LLM prompt-parser alignment: `MAX_PROMPT_TAKEAWAYS=10`, 0-based `[Index X]` takeaway indices, cumulative ADR 029 attention-bounded duration budgeting via `calculateAttentionBoundedBudget` + `ParseHighlightsOptions` (PR #285).
+- Supabase browser client now singleton `getSupabaseBrowserClient()` — eliminates `Multiple GoTrueClient instances` warning (PR #281 `de36e565`).
+- Highlights reel UX: uncapped selection (removed arbitrary 4-12 cap), marker-track scrubber, Astryx/Obsidian-Escher redesign, pause/resume + nav wraparound + control-height parity (`515c186c`, `b30c0915`).
+- Entity color taxonomy corrected — fixes monochrome WordCloud/MindMap/Knowledge Graph (`84ed269d`); Pricing UI overhaul (`ad2c4ea6`); Astryx Theme provider wiring (`c94ee35a`).
+
+### Fixed
+- Highlights resilience: bounded scrubber polling (3 attempts, 2.5s/5s backoff), `HighlightSegmentSchema` temporal invariant `end > start`, `safeParse` validHighlights-only gate, cumulative duration budgeting without silent overflow (PR #281, #285).
+- Boundary hardening: `PaddleBillingAdapter` payload validation, `SupabasePersistenceAdapter` typed `entityType`, `PersistService` telemetry, and contract auditor silent-error returns (PR #280 `a5068762`).
+- Graph hardening: POLE+O schema rejection handled, edge pruning with typed fallback, entity frequency accumulation, wordcloud data flow, and normalized weight bounds (`90d2efb6`, `df4baea3`).
+- Chunked-analysis pipeline: vitest teardown race eliminated, `LLMCascade` aligned to `SettingsRegistry` SSOT, YouTube player infinite-remount loop fixed (`67158f54`, `6a91890f`).
+- Worker deploy: explicit `wrangler --env production` target (`11ba7bc6`); CI: eslint/codacy monorepo ignore paths aligned (`2204cef0`); qa-intel import ordering fixes (`a80c3bec`).
+- Highlights reel scrubber: Play button deadlock from PR #263 fixed (`0843c8e3`); `isReady` guard before `start()`/`jumpTo()` (`da8bb017`); QStash completion polling + 10-sample warm extraction verified (`3a3b6d6f`).
+- Legal copy: ToS clauses 2.1-2.4 spacing, sub-processor ledger accuracy, last-updated date (`c2906ab8`, `a8b55056`, `b7e7f6d2`).
+
 ## [2.6.2] — 2026-08-06 (PATCH)
 
 ### Changed
