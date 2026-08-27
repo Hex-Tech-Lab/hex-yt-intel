@@ -4,7 +4,7 @@
  * Settings are cached in context to avoid repeated database hits.
  */
 
-import { createClient } from '@/utils/supabase/client';
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 import * as Sentry from '@sentry/nextjs';
 import type { AdminSettings, UserSettings } from '@/lib/types/settings';
 
@@ -15,7 +15,7 @@ import type { AdminSettings, UserSettings } from '@/lib/types/settings';
  */
 export async function fetchAdminSettings(): Promise<AdminSettings> {
   try {
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
       .from('admin_settings')
       .select('*')
@@ -68,7 +68,7 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
  */
 export async function fetchUserSettings(userId: string): Promise<UserSettings | null> {
   try {
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
@@ -114,7 +114,7 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
  */
 export async function upsertUserSettings(userId: string, settings: Partial<UserSettings>): Promise<UserSettings | null> {
   try {
-    const supabase = createClient();
+    const supabase = getSupabaseBrowserClient();
     const now = new Date().toISOString();
 
     const mappedSettings: Record<string, any> = {

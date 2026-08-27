@@ -124,25 +124,11 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       setError(null);
       setLoading(true);
       try {
-        let json: HighlightsResponse | null = null;
-        let attempts = 0;
-        const maxAttempts = 4;
-        
-        while (attempts < maxAttempts) {
-          const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
-          if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-          json = await res.json();
-          if (!json || !Array.isArray(json.highlights)) {
-            throw new Error('Invalid response format: expected highlights array');
-          }
-          if (json.highlights.length > 0) break;
-          // Highlights empty: QStash extraction might still be running.
-          // Wait 2s and retry (up to 4 times).
-          attempts++;
-          if (attempts < maxAttempts) {
-            await new Promise(r => setTimeout(r, 2000));
-            if (controller.signal.aborted) return;
-          }
+        const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
+        const json: HighlightsResponse | null = await res.json();
+        if (!json || !Array.isArray(json.highlights)) {
+          throw new Error('Invalid response format: expected highlights array');
         }
         setData(json);
       } catch (err) {
@@ -188,7 +174,10 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     setSpeed(SPEED_OPTIONS[nextIdx]!);
   };
 
-  if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
+  if (error) {
+    console.debug(`[HighlightsScrubber] collapsing: fetch error for ${analysisId}`);
+    return null;
+  }
   if (loading || !data) {
     return (
       <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)] h-[100px] items-center justify-center">
@@ -197,7 +186,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     );
   }
   if (data.highlights.length === 0) {
-    return null; // Silent failure if we exhausted retries and still got none
+    console.debug(`[HighlightsScrubber] collapsing: no highlights for ${analysisId}`);
+    return null;
   }
 
   const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(segments, segDurFallback, videoDurationSeconds);

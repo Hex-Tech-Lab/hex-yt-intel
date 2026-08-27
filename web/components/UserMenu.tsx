@@ -2,12 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@astryxdesign/core';
-import { createClient } from '@/utils/supabase/client';
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
 export function UserMenu({ user }: { user: User }) {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = getSupabaseBrowserClient();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

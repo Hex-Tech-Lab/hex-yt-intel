@@ -52,4 +52,38 @@ describe('HighlightsScrubber', () => {
     });
     expect(useVideoStore.getState().isPlaying).toBe(true);
   });
+
+  it('collapses gracefully without crashing when highlights array is empty', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => ({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      })
+    );
+
+    const { container } = render(<HighlightsScrubber analysisId="analysis-empty" videoDurationSeconds={60} />);
+
+    // Wait for the fetch to settle (skeleton renders, then collapses to null).
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull();
+    });
+  });
+
+  it('collapses gracefully on fetch error without throwing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ error: 'Internal error' }),
+      })
+    );
+
+    const { container } = render(<HighlightsScrubber analysisId="analysis-err" videoDurationSeconds={60} />);
+
+    await waitFor(() => {
+      expect(container.firstChild).toBeNull();
+    });
+  });
 });

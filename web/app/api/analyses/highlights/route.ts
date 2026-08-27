@@ -2,7 +2,9 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { HighlightsResponseSchema } from '@/lib/validators/highlights';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
@@ -67,20 +69,55 @@ export async function GET(request: NextRequest) {
     HIGHLIGHTS_REGISTRY_FALLBACK
   );
 
+  const rawHighlights = (data ?? []).map((row: HighlightRow) => ({
+    idx: row.idx,
+    start: row.start_seconds,
+    end: row.end_seconds,
+    label: row.label,
+    verbatimExcerpt: row.verbatim_excerpt ?? null,
+    takeawayIdx: row.takeaway_idx ?? null,
+  }));
+  
+  if (rawHighlights.length === 0) {
+    return NextResponse.json({
+      analysisId: parsed.data.analysisId,
+      highlights: [],
+      segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
+      contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
+      minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
+      maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
+    }, { status: 200 });
+  }
+
+  const validationRes = HighlightsResponseSchema.safeParse({
+    analysisId: parsed.data.analysisId,
+    highlights: rawHighlights,
+  });
+
+  let validHighlights: Record<string, unknown>[] = rawHighlights;
+  if (!validationRes.success) {
+    console.warn('[analyses/highlights] Schema validation failed', validationRes.error.issues);
+    Sentry.captureMessage('Validation dropped payload at HighlightsResponseSchema', {
+      level: 'warning',
+      extra: {
+        boundary: 'HighlightsResponseSchema',
+        issueCount: validationRes.error.issues.length,
+        issuePaths: validationRes.error.issues.map((i) => `${i.path.join('.')}: ${i.code}`),
+      },
+    });
+    // Graceful degradation: return raw rows (preprocess already coerced what it could).
+  } else {
+    validHighlights = validationRes.data.highlights;
+  }
+
   const payload = {
-    highlights: (data ?? []).map((row: HighlightRow) => ({
-      idx: row.idx,
-      start: row.start_seconds,
-      end: row.end_seconds,
-      label: row.label,
-      verbatimExcerpt: row.verbatim_excerpt ?? null,
-      takeawayIdx: row.takeaway_idx ?? null,
-    })),
+    analysisId: parsed.data.analysisId,
+    highlights: validHighlights,
     segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
     minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
     maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
   };
 
-  return NextResponse.json(payload);
+  return NextResponse.json(payload, { status: 200 });
 }
