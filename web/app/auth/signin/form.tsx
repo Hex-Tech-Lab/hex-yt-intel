@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Button, Banner, TextInput } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
-import { createClient } from '@/utils/supabase/client';
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 
 export default function SignInForm({ showTestAuth = false }: { showTestAuth?: boolean }) {
@@ -13,7 +13,7 @@ export default function SignInForm({ showTestAuth = false }: { showTestAuth?: bo
   const [testPassword, setTestPassword] = useState('');
 
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const nextTarget = useMemo(() => {
     if (typeof window === 'undefined') return '/dashboard';

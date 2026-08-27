@@ -2,18 +2,20 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { HighlightsResponseSchema } from '@/lib/validators/highlights';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 
-type HighlightRow = {
+type HighlightRow = Record<string, unknown> & {
   idx: number;
-  start_seconds: number;
-  end_seconds: number;
-  label: string;
-  verbatim_excerpt: string | null;
-  takeaway_idx: number | null;
+  start_seconds?: number;
+  end_seconds?: number;
+  label?: string;
+  verbatim_excerpt?: string | null;
+  takeaway_idx?: number | null;
 };
 
 /**
@@ -32,7 +34,6 @@ export async function GET(request: NextRequest) {
   const supabase = await getSupabaseClientWithAuth();
   
   if (publicToken) {
-    // Check if valid public token
     const { data: analysis, error: pErr } = await supabase
       .from('analyses')
       .select('id')
@@ -48,7 +49,6 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    // RLS handles owner check
   }
 
   const { data, error } = await supabase
@@ -67,20 +67,55 @@ export async function GET(request: NextRequest) {
     HIGHLIGHTS_REGISTRY_FALLBACK
   );
 
-  const payload = {
-    highlights: (data ?? []).map((row: HighlightRow) => ({
-      idx: row.idx,
-      start: row.start_seconds,
-      end: row.end_seconds,
-      label: row.label,
-      verbatimExcerpt: row.verbatim_excerpt ?? null,
-      takeawayIdx: row.takeaway_idx ?? null,
-    })),
+  const settingsPayload = {
     segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
     minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
     maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
   };
 
-  return NextResponse.json(payload);
+  const rows = (data ?? []) as HighlightRow[];
+  if (!rows || rows.length === 0) {
+    return NextResponse.json({
+      analysisId: parsed.data.analysisId,
+      highlights: [],
+      ...settingsPayload,
+    }, { status: 200 });
+  }
+
+  const rawHighlights = rows.map((row) => ({
+    id: row.id as string | undefined,
+    start: (row.start_seconds ?? row.start_time ?? row.startTime ?? (row as Record<string, unknown>).start) as unknown,
+    end: (row.end_seconds ?? row.end_time ?? row.endTime ?? (row as Record<string, unknown>).end) as unknown,
+    title: (row.title ?? row.headline ?? row.label ?? (row as Record<string, unknown>).key_point) as unknown,
+    summary: (row.summary ?? row.description ?? (row as Record<string, unknown>).text ?? '') as unknown,
+    idx: row.idx,
+    label: row.label,
+    verbatim_excerpt: row.verbatim_excerpt,
+    takeaway_idx: row.takeaway_idx,
+  }));
+
+  const parsedResponse = HighlightsResponseSchema.safeParse({
+    analysisId: parsed.data.analysisId,
+    highlights: rawHighlights,
+  });
+
+  const validHighlights = parsedResponse.success ? parsedResponse.data.highlights : [];
+  if (!parsedResponse.success) {
+    console.warn('[HighlightsRoute] Schema validation dropped malformed highlights', parsedResponse.error.issues);
+    Sentry.captureMessage('Validation dropped payload at HighlightsResponseSchema', {
+      level: 'warning',
+      extra: {
+        boundary: 'HighlightsResponseSchema',
+        issueCount: parsedResponse.error.issues.length,
+        issuePaths: parsedResponse.error.issues.map((i) => `${i.path.join('.')}: ${i.code}`),
+      },
+    });
+  }
+
+  return NextResponse.json({
+    analysisId: parsed.data.analysisId,
+    highlights: validHighlights,
+    ...settingsPayload,
+  }, { status: 200 });
 }
