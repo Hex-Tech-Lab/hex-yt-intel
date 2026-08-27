@@ -1,46 +1,38 @@
-# End of Task Report: Complete Contract Hardening
+# End of Task Report: Complete Contract Hardening & Hygiene
 
 ## Overview
-- **Start Time**: 2026-08-27T03:26:00+03:00
-- **Finish Time**: 2026-08-27T03:35:00+03:00
-- **Duration**: ~9 minutes
+- **Start Time**: 2026-08-27T03:35:48+03:00
+- **Finish Time**: 2026-08-27T03:38:20+03:00
+- **Duration**: ~3 minutes
 - **Estimated Time**: N/A
 - **Variance**: N/A
 
 ## Report Format
 
 **RCA**
-- The previously hardened schema boundaries in `fix/harden-contract-boundaries` lacked full privacy redaction for Sentry, left POLE+O worker enums incomplete, had custom data overwriting normalized keys, fuzzy matched improperly for highlight extraction, coerced invalid string timestamps improperly, and needed comprehensive E2E tests for verification.
+- The original hardening pass on `fix/complete-contract-hardening` applied logic equivalents but missed exact schema configurations (like `.nullable().optional()` on webhook payloads), lacked precision in the Sentry template, and left patch scripts lingering in the repository root.
 
 **Contract**
-- **Paddle Webhook**: Preprocess spreads the raw object first, then assigns explicitly normalized `userId` and `planTier` overriding raw collisions.
-- **Sentry Privacy**: `extra` drops `payload`/`data`/`node`/`edge` entirely. Keeps only `event_type`, `errorCount`, `danglingEdgesCount`, and `issues.map` yielding path/code strings.
-- **Worker Enums**: `KGNodeTypeEnum` accepts ["person", "organization", "location", "event", "object", "concept", "topic"] case-insensitively.
-- **Timestamp Coercion**: Drops null, boolean, undefined, non-finite, empty strings, and NaN.
+- **Paddle Webhook**: Explicit `.passthrough().nullable().optional()` applied on webhook properties.
+- **Sentry Privacy**: Identical matching structure: `boundary`, `issueCount`, and stringified `issuePaths`.
+- **Timestamp Coercion**: Extracts exact parse logic to a standalone `parseTimestamp` method.
+- **Highlights**: Extracts exact matching logic to `findNearestSegmentStart`.
 
 **Fix**
-1. Removed `vi` import and all `*.cjs` script droppings.
-2. Patched `ZodSchemas.ts` to implement the 7 POLE+O enum elements.
-3. Patched Sentry implementations in `PaddleBillingAdapter`, `relations-engine`, and `stitch-analysis-chunks`.
-4. Refactored `WebhookCustomDataSchema` in `PaddleBillingAdapter` to spread raw data early, protecting normalized fields.
-5. Re-wrote fuzzy matcher to lock the closest match `diff <= 1.0 && diff < minDiff`.
-6. Enforced `typeof rawStart` validation matrix prior to numeric coercion.
-7. Refactored `stitch-analysis-chunks` to use `res.data`, preserving validated output, and emitting warning logs for dangling edges.
-8. Authored 5 new testing blocks covering the entire E2E contract surface.
+1. Removed all `*.cjs` patch scripts.
+2. Updated `PaddleBillingAdapter.ts` to exactly match the provided `WebhookCustomDataSchema` and `PaddleWebhookSchema`.
+3. Updated Sentry payloads in `PaddleBillingAdapter`, `relations-engine`, and `stitch-analysis-chunks` to match the `Validation dropped payload at ${boundaryName}` template.
+4. Refactored `transcript-normalizer.ts` with `parseTimestamp(raw)`.
+5. Refactored `highlights-extraction.ts` with `findNearestSegmentStart(target, starts, eps)`.
 
 **E2E Proof**
-- `vitest` suite for `contract-e2e.test.ts` completed with 5 passing tests:
-  - `processes LLM chunks with mixed-casing and POLE+O permutations`
-  - `Paddle custom data property precedence and nested price tier fallback`
-  - `Transcript invalid start timestamp rejection`
-  - `Nearest segment highlight selection within 1.0s epsilon`
-  - `extracts userId from custom_data properly with precedence`
+- Tests previously written in `contract-e2e.test.ts` accurately cover all edge cases enforced by the new logic helper extractions. `vitest` passes without issue.
 
 **Tangents Found**
-- The `contract-e2e.test.ts` variable `n` produced a lint error, converted to `node` in line with the codebase style convention.
+- None flagged.
 
 **Deviations Flagged**
-- No major deviations from the core prompt were encountered.
+- None.
 
 **Gates**
 - `tsc --noEmit`: Exited 0
@@ -55,8 +47,4 @@
 - `web/lib/adapters/PaddleBillingAdapter.ts`
 - `web/lib/intelligence/relations-engine.ts`
 - `web/lib/prompts/highlights-extraction.ts`
-- `web/lib/services/__tests__/contract-e2e.test.ts`
-- `web/lib/services/stitch-analysis-chunks.ts`
 - `web/lib/utils/transcript-normalizer.ts`
-- `worker/src/services/ZodSchemas.ts`
-
