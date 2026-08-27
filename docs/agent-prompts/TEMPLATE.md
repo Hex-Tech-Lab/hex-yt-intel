@@ -1,6 +1,6 @@
 # Agent Dispatch Prompt — <TASK_NAME>
 
-**Target Agent**: <AGY-1 (Pro) | AGY-2 (Flash) | OC (OpenCode)>
+**Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
 **Effort Level**: <high | medium | low>
 
 ---
@@ -15,11 +15,6 @@
 > subtask; post `[DONE]`/`[PARTIAL]`/`[BLOCKED]` with a real summary of what
 > actually happened (not what you intended) as your last action; use the
 > `[NOTE]`/`[ACK]`/`[DISPUTE]`/`[RESOLVED]` flow for cross-agent corrections.
-> This is not optional bookkeeping: skipping it has previously caused two
-> agents to collide on the same checkout with mixed uncommitted diffs
-> (2026-08-03), and this exact template was created because a dispatched
-> prompt omitted this instruction and the ledger post only happened after
-> the user manually told the agent to follow protocol (2026-08-06).
 
 ---
 
@@ -35,25 +30,44 @@
 
 ---
 
-## 3. Mandatory Pre-PR Review Skills Gate (ENFORCED)
+## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 
-> **STRICT RULE**: Before running CI commands or opening a PR, you MUST execute the applicable review skills below based on touched files. Do NOT skip this step. All skill executions and findings MUST be documented in your final report under `### Skills Run + Findings`.
+> **ENFORCEMENT**: Match touched files against the tree below. Execute ALL matching skills before CI/PR. Document findings under `### Skills Run + Findings`.
 
-### A. Universal Core (MANDATORY on EVERY task before commit/PR):
-1. `/simplify`: Run AST and dead-code pruning across all modified files. Strip unused imports, abandoned bindings, and redundant conditionals.
-2. `review-delta`: Inspect git diff against base branch. Confirm zero unintended diff noise, no stray console logs, and no transient scratch files.
-3. `review-duplication`: Check for copy-paste clones and duplicated logic blocks to prevent CodeFactor clone regressions.
-4. `contract-auditor`: Run `pnpm exec tsx web/scripts/contract-auditor.ts`.
+- **ALWAYS (All PRs)**:
+  - `/simplify`: Prune AST dead code, strip unused imports/bindings.
+  - `review-delta`: Verify clean git diff (no logs, no transient scratch files).
+  - `review-duplication`: Scan AST clones to block CodeFactor regressions.
+  - `code-reviewer`: Adversarial check against invariants & contract gaps.
 
-### B. Domain-Specific (TRIGGERED BY TOUCHED FILES):
-- **If React / UI files touched (`web/components/**`, `web/hooks/**`, `web/app/**`)**:
-  - Run `/react-best-practices`: Audit hook dependencies, SSR hydration safety, singleton browser client usage, re-render loops, and layout stability.
-- **If Webhooks / Auth / Billing / API routes touched (`web/lib/adapters/**`, `web/app/api/**`, `worker/src/routes/**`)**:
-  - Run `/owasp-top-10`: Verify PII redaction in telemetry (Sentry), constant-time signature verification, null/whitespace injection tolerance, and auth boundary checks.
-- **If Knowledge Graph / Stitching / SQLGraph touched (`web/lib/services/stitch*`, `worker/src/services/ZodSchemas*`, `synthesis*`)**:
-  - Run `build-graph`: Validate topological sorting, referential integrity between node IDs and edge source/target endpoints, and POLE+O enum alignment.
-- **Before PR Creation (Final Review Pass)**:
-  - Run `code-reviewer` or `review-pr`: Perform an adversarial pre-flight review of the entire branch diff.
+- **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
+  - `/react-best-practices`: Hook deps, stale closures, SSR hydration, layout stability.
+  - `fe-state-auditor`: Enforce browser singletons (GoTrueClient), audit Zustand store lifecycle.
+  - `accessibility-a11y`: WCAG compliance, keyboard focus traps, ARIA parity.
+  - `bundle-analyzer`: Dynamic import boundaries (`next/dynamic`), CSS injection overhead.
+
+- **IF `worker/**` | `web/app/api/**` | `*ports*` | `*adapters*` (BE / API)**:
+  - `contract-auditor`: Strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `api-route-guard`: Response status contracts (200 on empty vs 4xx/5xx) to stop retry storms.
+  - `worker-port-adapter-audit`: Hexagonal isolation (zero direct infra dependencies in domain).
+  - `idempotency-check`: Webhook/queue deduplication keys, replay attack tolerance.
+
+- **IF `*billing*` | `*Paddle*` | `middleware/**` | `auth/**` (Security / Billing)**:
+  - `/owasp-top-10`: Parameter injection, broken access control, CORS, input sanitization.
+  - `sentry-privacy-auditor`: Redact PII, tokens, and raw payloads in Sentry `extra`.
+  - `webhook-signature-verifier`: Constant-time signatures (`timingSafeEqual`), replay skew guards.
+  - `secret-scanner`: Zero hardcoded credentials, JWT-like string literals, or dummy secrets.
+
+- **IF `*stitch*` | `*synthesis*` | `*relations-engine*` | `*prompts*` (KG / Pipeline)**:
+  - `build-graph`: Topological sorting, DAG integrity, prune dangling edges.
+  - `entity-canonicalizer`: Case-insensitive POLE+O mapping & legacy type retention.
+  - `transcript-pipeline-audit`: Strict numeric timestamps, nearest-match epsilon selection.
+  - `prompt-boundary-guard`: LLM JSON parse tolerance, streaming safety, token budget limits.
+
+- **IF `scripts/**` | `.memory/**` | `*.config.*` | `.*ignore` (Monorepo / CI)**:
+  - `qa-intel`: Run `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare`.
+  - `monorepo-path-linter`: Root glob anchoring (`/*.js`) & monorepo ignore scoping.
+  - `ledger-protocol-auditor`: Enforce valid `[IN_PROGRESS]` -> `[DONE]` state transitions.
 
 ---
 
