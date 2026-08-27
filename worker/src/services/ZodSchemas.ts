@@ -50,6 +50,16 @@ export const PersonaConfigSchema = z.object({
   selectionRationale: z.string(),
 }).passthrough();
 
+
+export const MAX_KG_NODES = 24;
+export const MAX_KG_EDGES = 18;
+
+export const KnowledgeGraphSchema = z.object({
+  nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
+  edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
+  rootId: z.string().nullable(),
+});
+
 export const UCISDimensionSchema = z.object({
   number: z.number(),
   name: z.string(),
@@ -66,11 +76,7 @@ export const UCISPayloadSchema = z.object({
   schemaVersion: z.literal('2.0'),
   persona: PersonaConfigSchema,
   dimensions: z.array(UCISDimensionSchema),
-  knowledgeGraph: z.object({
-    nodes: z.array(KGNodeSchema),
-    edges: z.array(KGEdgeSchema),
-    rootId: z.string().nullable(),
-  }).passthrough().optional().nullable(),
+  knowledgeGraph: KnowledgeGraphSchema.passthrough().optional().nullable(),
   classification: z.object({
     authoritative: z.boolean(),
     practicallyActionable: z.boolean(),
