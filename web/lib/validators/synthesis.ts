@@ -128,7 +128,7 @@ export const KGEdgeSchema = z
 /**
  * Persona configuration — structured replacement for the text header block.
  */
-const TolerantPersonaId = z.preprocess((val) => {
+export const TolerantPersonaId = z.preprocess((val) => {
   if (typeof val !== "string") return val;
   const normalized = val.trim().toLowerCase();
   if (normalized === "content_creator" || normalized === "creator") return "creator";
@@ -138,6 +138,14 @@ const TolerantPersonaId = z.preprocess((val) => {
   if (normalized === "product_manager" || normalized === "productmanager") return "productManager";
   return val;
 }, z.enum(["creator", "indieMaker", "consultant", "researcher", "productManager"]));
+
+export function normalizePersonaId(val: unknown): string {
+  const parseResult = TolerantPersonaId.safeParse(val);
+  if (parseResult.success) {
+    return parseResult.data;
+  }
+  return 'creator';
+}
 
 export const PersonaConfigSchema = z
   .object({

@@ -72,7 +72,7 @@ describe('Founder Provisioning Integration', () => {
           user_id: 'user_456',
           plan_tier: 'founder'
         },
-        items: []
+        items: [{ price: { id: 'pri_123', billing_cycle: { interval: 'once' }, custom_data: { plan_tier: 'founder' } } }]
       }
     };
 

@@ -16,6 +16,7 @@ import {
   UCISPayloadV2Schema,
   KGNodeSchema,
   KGEdgeSchema,
+  normalizePersonaId,
 } from "@/lib/validators/synthesis";
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
 import type { UCISPayloadV2 } from "@/lib/types/synthesis-nucleus";
@@ -289,9 +290,22 @@ export function stitchChunksIntoPayload(
   // result over a KG cosmetic slip" philosophy as the weight-normalization
   // fix above -- filter the individually-invalid entries out rather than
   // reject everything.
-  const validNodes = stitchedNodes.filter(
-    (node) => { const res = KGNodeSchema.safeParse(node); if (!res.success) { console.warn('[stitch-analysis-chunks] Schema validation dropped entity', res.error.issues); Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped node', { level: 'warning', extra: { issues: res.error.issues, node } }); } return res.success; },
-  );
+  const validNodes = stitchedNodes.map(node => {
+    const res = KGNodeSchema.safeParse(node);
+    if (!res.success) {
+      console.warn('[stitch-analysis-chunks] Schema validation dropped entity', res.error.issues);
+      Sentry.captureMessage(`Validation dropped payload at ${'stitch-analysis-chunks (node)'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'stitch-analysis-chunks (node)',
+            issueCount: res.error.issues.length,
+            issuePaths: res.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
+      return null;
+    }
+    return res.data;
+  }).filter((n): n is NonNullable<typeof n> => n !== null);
   const droppedNodeCount = stitchedNodes.length - validNodes.length;
   if (droppedNodeCount > 0) {
     console.warn(
@@ -301,12 +315,33 @@ export function stitchChunksIntoPayload(
   const validNodeIds = new Set(
     validNodes.map((n) => (n as { id: unknown }).id),
   );
-  const validEdges = stitchedEdges.filter((edge) => {
-    const edgeRes = KGEdgeSchema.safeParse(edge); if (!edgeRes.success) { console.warn('[stitch-analysis-chunks] Schema validation dropped edge', edgeRes.error.issues); Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped edge', { level: 'warning', extra: { issues: edgeRes.error.issues, edge } }); return false; }
-    const e = edge as { source?: unknown; target?: unknown };
-    // An edge referencing a node we just dropped is equally invalid.
-    return validNodeIds.has(e.source) && validNodeIds.has(e.target);
-  });
+  let danglingEdgesCount = 0;
+  const validEdges = stitchedEdges.map(edge => {
+    const edgeRes = KGEdgeSchema.safeParse(edge);
+    if (!edgeRes.success) {
+      console.warn('[stitch-analysis-chunks] Schema validation dropped edge', edgeRes.error.issues);
+      Sentry.captureMessage(`Validation dropped payload at ${'stitch-analysis-chunks (edge)'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'stitch-analysis-chunks (edge)',
+            issueCount: edgeRes.error.issues.length,
+            issuePaths: edgeRes.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
+      return null;
+    }
+    const e = edgeRes.data;
+    if (!validNodeIds.has(e.source) || !validNodeIds.has(e.target)) {
+      danglingEdgesCount++;
+      return null;
+    }
+    return e;
+  }).filter((e): e is NonNullable<typeof e> => e !== null);
+
+  if (danglingEdgesCount > 0) {
+    console.warn(`[stitch-analysis-chunks] Dropped ${danglingEdgesCount} dangling edges missing node endpoints`);
+    Sentry.captureMessage('stitch-analysis-chunks: dropped dangling edges', { level: 'warning', extra: { danglingEdgesCount } });
+  }
   const droppedEdgeCount = stitchedEdges.length - validEdges.length;
   if (droppedEdgeCount > 0) {
     console.warn(
@@ -325,18 +360,6 @@ export function stitchChunksIntoPayload(
   // IMMEDIATE priority at the time), confirmed still live and unfixed today.
   // Map known alternate spellings to the canonical id rather than reject the
   // whole analysis over a label variant the model uses interchangeably.
-  const PERSONA_ID_ALIASES: Record<string, string> = {
-    content_creator: "creator",
-    contentcreator: "creator",
-    indie_maker: "indieMaker",
-    indiemaker: "indieMaker",
-    product_manager: "productManager",
-    productmanager: "productManager",
-  };
-  const normalizePersonaId = (id: unknown): unknown =>
-    typeof id === "string" && PERSONA_ID_ALIASES[id]
-      ? PERSONA_ID_ALIASES[id]
-      : id;
   if (stitchedPersona && typeof stitchedPersona === "object") {
     for (const slot of ["primary", "secondary", "tertiary"] as const) {
       const entry = (stitchedPersona as Record<string, unknown>)[slot];

@@ -9,35 +9,51 @@ import { paddle } from '@/lib/paddle';
 
 import type { PlanTier, WebhookPayload } from '@/lib/types/billing';
 
-const WebhookCustomDataSchema = z.preprocess((val) => {
-  if (typeof val === 'object' && val !== null) {
+export const WebhookCustomDataSchema = z.preprocess(
+  (val) => {
+    if (!val || typeof val !== "object") return val;
+    const raw = val as Record<string, unknown>;
+    const rawUserId = raw.user_id ?? raw.userId;
+    const rawPlanTier = raw.plan_tier ?? raw.planTier;
+    const normalizedUserId = typeof rawUserId === "string" && rawUserId.trim() !== "" ? rawUserId.trim() : undefined;
+    const normalizedPlanTier = typeof rawPlanTier === "string" && rawPlanTier.trim() !== "" ? rawPlanTier.trim().toLowerCase() : undefined;
     return {
-      userId: (val as any).user_id || (val as any).userId,
-      planTier: (val as any).plan_tier || (val as any).planTier,
-      ...val
+      ...raw,
+      ...(normalizedUserId ? { userId: normalizedUserId, user_id: normalizedUserId } : {}),
+      ...(normalizedPlanTier ? { planTier: normalizedPlanTier, plan_tier: normalizedPlanTier } : {}),
     };
-  }
-  return val;
-}, z.object({
-  userId: z.string().optional(),
-  planTier: z.string().optional(),
-}).passthrough());
+  },
+  z.object({
+    userId: z.string().optional(),
+    user_id: z.string().optional(),
+    planTier: z.string().optional(),
+    plan_tier: z.string().optional(),
+  }).passthrough().nullable().optional()
+);
 
-const PaddleWebhookSchema = z.object({
+export const PaddleWebhookSchema = z.object({
+  event_id: z.string().optional(),
   event_type: z.string(),
   occurred_at: z.string().optional(),
   data: z.object({
     id: z.string().optional(),
-    status: z.string().optional(),
-    customer_id: z.string().optional(),
-    subscription_id: z.string().optional(),
-    custom_data: WebhookCustomDataSchema.optional(),
+    customer_id: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    custom_data: WebhookCustomDataSchema,
+    items: z.array(z.object({
+      price: z.object({
+        id: z.string().optional(),
+        custom_data: WebhookCustomDataSchema,
+      }).passthrough().nullable().optional(),
+    }).passthrough()).nullable().optional(),
+    scheduled_change: z.object({
+      action: z.string().nullable().optional(),
+      effective_at: z.string().nullable().optional(),
+    }).passthrough().nullable().optional(),
     current_billing_period: z.object({
-      starts_at: z.string().optional(),
-      ends_at: z.string().optional(),
-    }).passthrough().optional(),
-    items: z.array(z.any()).optional(),
-  }).passthrough()
+      ends_at: z.string().nullable().optional(),
+    }).passthrough().nullable().optional(),
+  }).passthrough(),
 }).passthrough();
 
 export class PaddleBillingAdapter implements BillingPort {
@@ -79,7 +95,14 @@ export class PaddleBillingAdapter implements BillingPort {
       const parsed = PaddleWebhookSchema.safeParse(rawPayload);
       if (!parsed.success) {
         console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
-        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        Sentry.captureMessage(`Validation dropped payload at ${'PaddleBillingAdapter'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'PaddleBillingAdapter',
+            issueCount: parsed.error.issues.length,
+            issuePaths: parsed.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
         return { success: false, error: 'Invalid webhook payload schema' };
       }
       const payload = parsed.data as any;
@@ -90,7 +113,7 @@ export class PaddleBillingAdapter implements BillingPort {
       
       if (!userId) {
         // Not a SaaS subscription event or missing mapping
-        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in custom_data', { level: 'warning', extra: { payload: data } });
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in custom_data', { level: 'warning', extra: { event_type: payload?.event_type } });
         return { success: false, error: 'Missing user_id in custom_data' };
       }
 
@@ -159,20 +182,30 @@ export class PaddleBillingAdapter implements BillingPort {
       const parsed = PaddleWebhookSchema.safeParse(rawPayload);
       if (!parsed.success) {
         console.warn('[PaddleBillingAdapter] Schema validation dropped payload', parsed.error.issues);
-        Sentry.captureMessage('PaddleBillingAdapter schema validation dropped payload', { level: 'warning', extra: { issues: parsed.error.issues, payload: rawPayload } });
+        Sentry.captureMessage(`Validation dropped payload at ${'PaddleBillingAdapter'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'PaddleBillingAdapter',
+            issueCount: parsed.error.issues.length,
+            issuePaths: parsed.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
         return { success: false, error: 'Invalid webhook payload schema' };
       }
       const payload = parsed.data as any;
       if (payload.event_type !== 'transaction.completed') {
         return { success: true };
       }
-      
+
       const supabase = getSupabaseServiceClient();
       const { data } = payload;
+      if (!data.id || !data.customer_id || !data.items || data.items.length === 0) {
+        return { success: false, error: 'Malformed transaction payload: missing id, customer_id, or items' };
+      }
       const userId = data.custom_data?.userId;
       
       if (!userId) {
-        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in transaction custom_data', { level: 'warning', extra: { payload: data } });
+        Sentry.captureMessage('PaddleBillingAdapter: Missing user_id in transaction custom_data', { level: 'warning', extra: { event_type: payload?.event_type } });
         return { success: false, error: 'Missing user_id in transaction custom_data' };
       }
 

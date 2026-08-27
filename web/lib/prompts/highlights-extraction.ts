@@ -23,6 +23,19 @@ import { parseJsonArray } from '@/lib/utils/json-parser';
  * start). This value bounds that duration so the model doesn't produce
  * over-long segments.
  */
+function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<number>, maxEpsilon = 1.0): number | null {
+  let closest: number | null = null;
+  let minDiff = Infinity;
+  for (const segStart of availableStarts) {
+    const diff = Math.abs(segStart - targetTime);
+    if (diff <= maxEpsilon && diff < minDiff) {
+      minDiff = diff;
+      closest = segStart;
+    }
+  }
+  return closest;
+}
+
 export function buildHighlightsExtractionSystemPrompt(maxCount: number, maxSegmentDurationSeconds: number): string {
   return `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text. Select the moments a viewer researching this video would most want to see -- claims, reveals, pricing/numbers mentioned, strong opinions, key demonstrations -- not filler, greetings, or transitions.
 
@@ -94,14 +107,7 @@ export function parseHighlightsExtraction(
     if (typeof start !== 'number' || typeof end !== 'number' || typeof label !== 'string') continue;
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     // start MUST be a real segment start time (prevents hallucinated timestamps).
-        // fuzzy match for floating point differences (epsilon = 1.0s)
-    let matchedStart: number | null = null;
-    for (const validStart of validSegmentStarts) {
-      if (Math.abs(validStart - start) <= 1.0) {
-        matchedStart = validStart;
-        break;
-      }
-    }
+    const matchedStart = findNearestSegmentStart(start, validSegmentStarts, 1.0);
     if (matchedStart === null) continue;
     const finalStart = matchedStart;
     // end is NO longer required to be a real segment start time (2026-08-21):

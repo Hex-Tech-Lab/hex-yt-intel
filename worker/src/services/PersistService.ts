@@ -101,7 +101,6 @@ function mergeDimensions(
       validExtractedNumbers.add(parsed.data.number);
     } else {
       console.warn('[persist] Schema validation dropped dimension', parsed.error.issues);
-      Sentry.captureMessage('PersistService: Schema validation dropped dimension', { level: 'warning', extra: { issues: parsed.error.issues } });
       anyExtractedEntryWasInvalid = true;
     }
   }
@@ -182,19 +181,10 @@ export class PersistService {
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
-        console.error('[persist] Zod validation failed:', result.error.format());
-        Sentry.captureMessage('PersistService: Zod validation failed', {
-          level: 'error',
-          contexts: {
-            persist: {
-              analysisId: options.analysisId,
-              videoId: options.videoId,
-              chunkIndex: options.chunkIndex,
-              totalChunks: options.totalChunks,
-              capturedDimensionCount: options.capturedDimensions?.length ?? 0,
-              zodError: result.error.format(),
-            },
-          },
+        console.warn('[persist] Zod validation failed:', result.error.format(), {
+          analysisId: options.analysisId,
+          videoId: options.videoId,
+          chunkIndex: options.chunkIndex,
         });
       }
     }
@@ -346,17 +336,10 @@ export class PersistService {
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
-        console.error('[settle] Zod validation failed:', result.error.format());
-        Sentry.captureMessage('PersistService: settleAnalysis Zod validation failed', {
-          level: 'error',
-          contexts: {
-            settle: {
-              analysisId: options.analysisId,
-              videoId: options.videoId,
-              status: options.status,
-              zodError: result.error.format(),
-            },
-          },
+        console.warn('[settle] Zod validation failed:', result.error.format(), {
+          analysisId: options.analysisId,
+          videoId: options.videoId,
+          status: options.status,
         });
       }
     }
