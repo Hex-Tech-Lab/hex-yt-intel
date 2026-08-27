@@ -128,41 +128,34 @@ export const KGEdgeSchema = z
 /**
  * Persona configuration — structured replacement for the text header block.
  */
+const TolerantPersonaId = z.preprocess((val) => {
+  if (typeof val !== "string") return val;
+  const v = val.trim().toLowerCase();
+  if (v === "content_creator" || v === "creator") return "creator";
+  if (v === "indie_maker" || v === "indiemaker") return "indieMaker";
+  if (v === "consultant") return "consultant";
+  if (v === "researcher") return "researcher";
+  if (v === "product_manager" || v === "productmanager") return "productManager";
+  return val;
+}, z.enum(["creator", "indieMaker", "consultant", "researcher", "productManager"]));
+
 export const PersonaConfigSchema = z
   .object({
     primary: z.object({
-      id: z.enum([
-        "creator",
-        "indieMaker",
-        "consultant",
-        "researcher",
-        "productManager",
-      ]),
+      id: TolerantPersonaId,
       label: z.string(),
       weight: z.number().min(0).max(1),
     }),
     secondary: z
       .object({
-        id: z.enum([
-          "creator",
-          "indieMaker",
-          "consultant",
-          "researcher",
-          "productManager",
-        ]),
+        id: TolerantPersonaId,
         label: z.string(),
         weight: z.number().min(0).max(1),
       })
       .optional(),
     tertiary: z
       .object({
-        id: z.enum([
-          "creator",
-          "indieMaker",
-          "consultant",
-          "researcher",
-          "productManager",
-        ]),
+        id: TolerantPersonaId,
         label: z.string(),
         weight: z.number().min(0).max(1),
       })
