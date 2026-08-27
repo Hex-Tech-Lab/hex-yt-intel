@@ -23,7 +23,7 @@ const sanitizeDimensionNumber = (val: unknown): number => {
 };
 
 const LLMInsightSchema = z.object({
-  kind: z.enum(['tangent', 'contrarian']),
+  kind: z.preprocess((val) => typeof val === "string" ? val.trim().toLowerCase() : val, z.enum(['tangent', 'contrarian'])),
   source: z.preprocess(sanitizeDimensionNumber, z.number().int().min(1).max(11)),
   target: z.preprocess(sanitizeDimensionNumber, z.number().int().min(1).max(11)),
   rationale: z.string().min(1).max(280),
@@ -236,6 +236,14 @@ export async function* computeStanceRelationsStream(
     try {
       const parsed = JSON.parse(json);
       const result = LLMResponseSchema.safeParse(parsed);
+      if (!result.success) {
+        console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);
+        Sentry.captureMessage("relations-engine: schema validation dropped entity", {
+          level: "warning",
+          extra: { issues: result.error.issues, parsed }
+        });
+        // Only import Sentry if it's not imported already, but let's just use console for now, wait, we need Sentry.
+      }
       if (result.success) {
         const insights = result.data.insights
           .filter((i) => i.source !== i.target && labelOf.has(i.source) && labelOf.has(i.target))

@@ -8,8 +8,14 @@ export function normalizeTranscriptSegments(rawSegments: unknown[] | null | unde
 
   const seenStarts = new Set<number>();
   const normalized = rawSegments
-    .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string' && Number.isFinite(s.start) && s.start >= 0 && s.text.trim().length > 0)
-    .map((s: any) => ({ start: s.start as number, text: s.text.trim() as string }))
+    .map((s: any) => {
+      if (!s) return null;
+      const start = typeof s.start === 'number' ? s.start : Number(s.start);
+      if (!Number.isFinite(start) || start < 0) return null;
+      if (typeof s.text !== 'string' || s.text.trim().length === 0) return null;
+      return { start, text: s.text.trim() };
+    })
+    .filter((s: NormalizedSegment | null): s is NormalizedSegment => s !== null)
     .filter((s) => {
       if (seenStarts.has(s.start)) return false;
       seenStarts.add(s.start);

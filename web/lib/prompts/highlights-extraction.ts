@@ -94,21 +94,30 @@ export function parseHighlightsExtraction(
     if (typeof start !== 'number' || typeof end !== 'number' || typeof label !== 'string') continue;
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     // start MUST be a real segment start time (prevents hallucinated timestamps).
-    if (!validSegmentStarts.has(start)) continue;
+        // fuzzy match for floating point differences (epsilon = 1.0s)
+    let matchedStart: number | null = null;
+    for (const validStart of validSegmentStarts) {
+      if (Math.abs(validStart - start) <= 1.0) {
+        matchedStart = validStart;
+        break;
+      }
+    }
+    if (matchedStart === null) continue;
+    const finalStart = matchedStart;
     // end is NO longer required to be a real segment start time (2026-08-21):
     // the LLM now returns a content-driven end timestamp, not the next
     // highlight's start. Only end > start and a duration clamp are enforced.
-    if (end <= start) continue;
+    if (end <= finalStart) continue;
     // Duration clamp: old data with "end = next segment start" could produce
     // very long spans, and a model can return a sub-floor point. Clamp the
     // duration into [min, max] instead of discarding the highlight.
-    const duration = end - start;
+    const duration = end - finalStart;
     const clampedEnd = duration < minSegmentDurationSeconds
-      ? start + minSegmentDurationSeconds
+      ? finalStart + minSegmentDurationSeconds
       : duration > maxSegmentDurationSeconds
-        ? start + maxSegmentDurationSeconds
+        ? finalStart + maxSegmentDurationSeconds
         : end;
-    if (seenStarts.has(start)) continue;
+    if (seenStarts.has(finalStart)) continue;
     // takeawayIdx: nullable integer in [0, takeawaysCount). A non-integer
     // (string, NaN, etc.) or out-of-range value is treated as null
     // (standalone highlight, not mapped to any takeaway).
@@ -119,8 +128,8 @@ export function parseHighlightsExtraction(
     const rawLabel = label.trim();
     const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
     if (trimmedLabel.length === 0) continue;
-    seenStarts.add(start);
-    out.push({ start, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
+    seenStarts.add(finalStart);
+    out.push({ start: finalStart, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
   }
 
   out.sort((left, right) => left.start - right.start);
