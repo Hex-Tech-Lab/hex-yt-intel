@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_8b8ef554080b02 1356-1360
+web/components/containers/DashboardContainer.tsx
+  s_4b2aacf8e9effe::t_7b3913b2391a05 15,201-204
+web/lib/prompts/highlights-extraction.ts
+  s_4b2aacf8e9effe::t_0a65c3c730e1ab 39-40,42-43,45-49,53-55,139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "4361ba2c2be1608979477a3226c318a86d5d4b73",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
