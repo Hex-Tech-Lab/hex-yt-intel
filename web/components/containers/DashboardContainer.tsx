@@ -12,7 +12,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { getSupabaseBrowserClient } from "@/utils/supabase/client";
 import { DashboardLayout } from "@/components/templates/console/DashboardLayout";
 import { Sidebar, SidebarItem } from "@/components/templates/console/Sidebar";
 import { TopBar } from "@/components/templates/console/TopBar";
@@ -198,10 +198,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     isLiveStreaming,
   );
 
-  // Memoized so the client instance (and therefore `handleSignOut`'s identity)
-  // stays stable across renders — createClient() otherwise builds a new
-  // client object every call, which would defeat useCallback below.
-  const supabase = useMemo(() => createClient(), []);
+  // Memoized singleton — getSupabaseBrowserClient() returns the single
+  // browserClientInstance in memory, but useMemo keeps the reference
+  // identity stable for useCallback below.
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
