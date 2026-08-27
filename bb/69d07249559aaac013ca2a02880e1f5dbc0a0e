@@ -1,0 +1,36 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1343-1344
+patch-step3.cjs
+  h_60000122af7b55 1-53
+patch-step4-precise.cjs
+  h_60000122af7b55 1-43
+patch-step4.cjs
+  h_60000122af7b55 1-37
+patch-step5.cjs
+  h_60000122af7b55 1-40
+patch-step6.cjs
+  h_60000122af7b55 1-37
+web/END_OF_TASK_REPORT.md
+  h_60000122af7b55 1-54,56,59-62
+web/lib/adapters/PaddleBillingAdapter.ts
+  h_60000122af7b55 12-19,21-23,25-35,40-52,54-56,98-105,185-192
+web/lib/intelligence/relations-engine.ts
+  h_60000122af7b55 241,243-247
+web/lib/prompts/highlights-extraction.ts
+  h_60000122af7b55 26-38,110
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 296-303,322-329
+web/lib/utils/transcript-normalizer.ts
+  h_60000122af7b55 6-18,26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "bb69d07249559aaac013ca2a02880e1f5dbc0a0e",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
