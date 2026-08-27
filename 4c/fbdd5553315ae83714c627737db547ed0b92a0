@@ -1,0 +1,38 @@
+web/lib/hooks/useEntitlements.ts
+  s_4b2aacf8e9effe::t_9db02e79e56bab 1,12-14,18,31-35,42-43,60-61,63,76,85-88,95-98,103,110,118,123,125-128,136,144
+  s_4b2aacf8e9effe::t_16dc5f87de57c2 141,143
+  s_4b2aacf8e9effe::t_30717728e3272e 137
+web/lib/usecases/__tests__/get-user-entitlements.test.ts
+  s_4b2aacf8e9effe::t_18c09a700fc00d 72-74,78
+  s_4b2aacf8e9effe::t_ce8bf7f7ef7133 109-111,115
+  s_4b2aacf8e9effe::t_f29cf851ae4716 35-37,41
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  s_4b2aacf8e9effe::t_d90de501ad5b6d 8-11,15,18-24,29-31,35,66,74,78-83,86-88,90-92
+web/components/templates/console/TopBar.tsx
+  s_4b2aacf8e9effe::t_6e8478b3d0c925 32
+  s_4b2aacf8e9effe::t_38ea9f315201a7 145
+web/lib/prompts/highlights-extraction.ts
+  s_4b2aacf8e9effe::t_01eac613ad3f3b 26-27
+  s_4b2aacf8e9effe::t_7d4ea0d3445446 44
+  s_4b2aacf8e9effe::t_f264e087f0a53e 110-111
+  s_4b2aacf8e9effe::t_b9b9b0055128f9 52-54
+  s_4b2aacf8e9effe::t_0e2662e536b0ef 136-137
+web/lib/types/billing.ts
+  s_4b2aacf8e9effe::t_56722857390e02 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "4cfbdd5553315ae83714c627737db547ed0b92a0",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
