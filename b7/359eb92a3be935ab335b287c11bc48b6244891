@@ -1,0 +1,20 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1340-1341
+docs/agent-prompts/2026-08-27-AGY2-fix-qa-intel-warnings.md
+  h_60000122af7b55 1-101
+web/lib/adapters/PaddleBillingAdapter.ts
+  h_60000122af7b55 2,4-10
+web/lib/validators/synthesis.ts
+  h_60000122af7b55 133-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "b7359eb92a3be935ab335b287c11bc48b6244891",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
