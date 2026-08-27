@@ -1,6 +1,6 @@
 # Agent Dispatch Prompt — <TASK_NAME>
 
-**Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
+**Target Agent**: <AGY-1 (Pro) | AGY-2 (Flash) | OC (Muse Spark 1.2 Low)>
 **Effort Level**: <high | medium | low>
 
 ---
@@ -24,7 +24,9 @@
 
 ---
 
-## 2. Contract & Implementation Directives
+## 2. Contract, Invariants & Semantic SSOT Directives
+
+> **ZERO-HALLUCINATION INVARIANT**: Transport success (HTTP 200, Zod parsing, green vitest/tsc) does NOT equal semantic Single Source of Truth (SSOT). Cross-modal outputs (e.g., Highlights, Dim.0 Takeaways, Chat Seeds) MUST share explicit relational foreign keys (`parent_takeaway_idx`). If counts differ, explain the cardinality mapping mathematically; never rationalize them as identical.
 
 <Directives>
 
@@ -95,4 +97,4 @@ pnpm exec tsx web/scripts/contract-auditor.ts
 
 ## 6. Report Format — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
 
-> RCA → Contract → Fix → E2E proof (with actual test output) → Tangents found → Deviations flagged → Skills Run + Findings → Gates → Files changed.
+> RCA → Contract → Semantic Lineage Proof → Fix → E2E proof (with actual test output) → Tangents found → Deviations flagged → Skills Run + Findings → Gates → Files changed.

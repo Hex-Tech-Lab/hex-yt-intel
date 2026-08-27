@@ -129,7 +129,7 @@ export class ExtractHighlightsUseCase {
       resolvedRegistry['highlights.maxCount'],
       HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxCount'],
       4,
-      80
+      18
     );
     const maxOutputTokens = clampHighlightsSetting(
       resolvedRegistry['highlights.maxOutputTokens'],
@@ -150,9 +150,10 @@ export class ExtractHighlightsUseCase {
       300
     );
 
+    const cappedTakeaways = takeaways.slice(0, 10);
     const completion = await this.completion.complete({
       system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
-      user: buildHighlightsExtractionUserMessage(segments, takeaways),
+      user: buildHighlightsExtractionUserMessage(segments, cappedTakeaways),
       models,
       maxTokens: maxOutputTokens,
       analysisId,
@@ -165,7 +166,7 @@ export class ExtractHighlightsUseCase {
       maxCount,
       minSegmentDuration,
       maxSegmentDuration,
-      takeaways.length
+      cappedTakeaways.length
     );
 
     // 'invalid' means the model response was unparseable -- a transient LLM

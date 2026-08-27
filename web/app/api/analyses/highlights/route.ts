@@ -16,6 +16,7 @@ type HighlightRow = Record<string, unknown> & {
   label?: string;
   verbatim_excerpt?: string | null;
   takeaway_idx?: number | null;
+  parent_takeaway_idx?: number | null;
 };
 
 /**
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
     label: row.label,
     verbatim_excerpt: row.verbatim_excerpt,
     takeaway_idx: row.takeaway_idx,
+    parent_takeaway_idx: (row.parent_takeaway_idx ?? row.takeaway_idx ?? (row as Record<string, unknown>).takeawayIdx ?? (row as Record<string, unknown>).parentTakeawayIdx) as unknown,
   }));
 
   const parsedResponse = HighlightsResponseSchema.safeParse({

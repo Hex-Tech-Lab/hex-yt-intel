@@ -17,12 +17,22 @@ export const HighlightSegmentSchema = z.preprocess(
       numEnd = cleanStart + 30;
     }
 
+    const rawParentIdx = raw.parent_takeaway_idx ?? raw.takeaway_idx ?? raw.takeawayIdx ?? raw.parentTakeawayIdx;
+    let parent_takeaway_idx: number | undefined = undefined;
+    if (typeof rawParentIdx === 'number' && Number.isInteger(rawParentIdx) && rawParentIdx >= 0) {
+      parent_takeaway_idx = rawParentIdx;
+    } else if (typeof rawParentIdx === 'string' && rawParentIdx.trim() !== '') {
+      const parsed = Number(rawParentIdx.trim());
+      if (Number.isFinite(parsed) && Number.isInteger(parsed) && parsed >= 0) parent_takeaway_idx = parsed;
+    }
+
     return {
       ...raw,
       start: cleanStart,
       end: numEnd,
       title: typeof title === "string" && title.trim() !== "" ? title.trim() : "Key Insight",
       summary: typeof summary === "string" ? summary.trim() : "",
+      parent_takeaway_idx,
     };
   },
   z.object({
@@ -31,6 +41,9 @@ export const HighlightSegmentSchema = z.preprocess(
     end: z.number().min(0),
     title: z.string().min(1),
     summary: z.string().optional(),
+    parent_takeaway_idx: z.number().int().min(0).optional(),
+    takeaway_idx: z.number().int().min(0).optional(),
+    takeawayIdx: z.number().int().min(0).optional(),
   }).passthrough().refine((data) => data.end > data.start, {
     message: 'end timestamp must be greater than start timestamp',
   })

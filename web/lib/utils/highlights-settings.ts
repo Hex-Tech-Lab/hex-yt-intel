@@ -13,7 +13,8 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   // DEFAULT_MAX_TOKENS=2000 completion fallback that was silently
   // truncating dense-video highlight sets before the count cap even
   // mattered.
-  'highlights.maxCount': 40,
+  // ROE caps (2026-08-27): Max Highlight Temporal Anchors 18, Max Takeaways 10, Max KG Nodes 24
+  'highlights.maxCount': 18,
   'highlights.maxOutputTokens': 6000,
   // Variable segment-duration clamps (2026-08-21). The LLM now returns a
   // content-driven end timestamp (the real end of the topic, not the next

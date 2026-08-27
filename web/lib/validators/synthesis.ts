@@ -232,7 +232,7 @@ export const MonetizationVerdictSchema = z
  */
 export const KnowledgeGraphSchema = z
   .object({
-    nodes: z.array(KGNodeSchema).max(30),
+    nodes: z.array(KGNodeSchema).max(24),
     edges: z.array(KGEdgeSchema).max(100),
     rootId: z.string().nullable(),
   })
