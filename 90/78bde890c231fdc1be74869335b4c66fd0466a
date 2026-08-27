@@ -1,0 +1,19 @@
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_4b2aacf8e9effe::t_80e0e4ec7afcb7 10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "9078bde890c231fdc1be74869335b4c66fd0466a",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
