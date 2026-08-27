@@ -1,0 +1,37 @@
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_b204ec6f83a66d 1354
+docs/agent-prompts/TEMPLATE.md
+  s_4b2aacf8e9effe::t_40050baf2245f8 3,27-29,100
+web/lib/utils/highlights-settings.ts
+  s_4b2aacf8e9effe::t_c41c69b55ff260 16-17
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_4b2aacf8e9effe::t_fdb01c45d327dc 132
+  s_4b2aacf8e9effe::t_92d6c830d3ab7c 153,156,169
+web/lib/validators/synthesis.ts
+  s_4b2aacf8e9effe::t_b4d716642c3dd8 235
+web/lib/validators/highlights.ts
+  s_4b2aacf8e9effe::t_a01c3b42c354df 20-28,35,44-46
+docs/agent-prompts/2026-08-27-agy1-enforce-ssot-takeaway-linkage.md
+  s_4b2aacf8e9effe::t_6bf4efa5d68bc4 1-66
+web/app/api/analyses/highlights/route.ts
+  s_4b2aacf8e9effe::t_669f5a21757fea 97
+  s_4b2aacf8e9effe::t_556572838bd946 19
+.memory/TEMPLATE.md
+  s_4b2aacf8e9effe::t_6008ced920c803 3,27-29,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "c011dee69573cf7b0182a802b21d0aba6b73ca36",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
