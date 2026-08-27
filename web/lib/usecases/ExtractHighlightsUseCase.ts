@@ -5,9 +5,10 @@ import {
   buildHighlightsExtractionSystemPrompt,
   buildHighlightsExtractionUserMessage,
   parseHighlightsExtraction,
+  MAX_PROMPT_TAKEAWAYS,
 } from '@/lib/prompts/highlights-extraction';
 import { buildVerbatimExcerpt } from '@/lib/prompts/highlights-reconciliation';
-import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
+import { HIGHLIGHTS_REGISTRY_FALLBACK, calculateHighlightBudgetSeconds, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
 
 /**
@@ -150,22 +151,27 @@ export class ExtractHighlightsUseCase {
       300
     );
 
+    const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS);
+
     const completion = await this.completion.complete({
       system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
-      user: buildHighlightsExtractionUserMessage(segments, takeaways),
+      user: buildHighlightsExtractionUserMessage(segments, promptTakeaways),
       models,
       maxTokens: maxOutputTokens,
       analysisId,
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
+    const lastSegment = segments[segments.length - 1];
+    const estimatedVideoDuration = lastSegment ? lastSegment.start + 10 : 0;
+    const budgetSeconds = calculateHighlightBudgetSeconds(estimatedVideoDuration);
     const result = parseHighlightsExtraction(
       completion.text,
       validStarts,
       maxCount,
       minSegmentDuration,
       maxSegmentDuration,
-      takeaways.length
+      { takeawaysCount: promptTakeaways.length, maxCumulativeDuration: budgetSeconds }
     );
 
     // 'invalid' means the model response was unparseable -- a transient LLM

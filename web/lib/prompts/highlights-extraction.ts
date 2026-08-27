@@ -89,14 +89,22 @@ export type HighlightsExtractionResult =
  * a defensive limit even though the prompt already asks for this shape,
  * since a bad model response shouldn't be trusted to self-limit.
  */
+export interface ParseHighlightsOptions {
+  takeawaysCount: number;
+  maxCumulativeDuration?: number;
+}
+
 export function parseHighlightsExtraction(
   text: string,
   validSegmentStarts: ReadonlySet<number>,
   maxHighlights: number,
   minSegmentDurationSeconds: number,
   maxSegmentDurationSeconds: number,
-  takeawaysCount: number = 0
+  takeawaysCountOrOptions: number | ParseHighlightsOptions = 0,
+  budgetSeconds: number = Infinity
 ): HighlightsExtractionResult {
+  const takeawaysCount = typeof takeawaysCountOrOptions === 'number' ? takeawaysCountOrOptions : takeawaysCountOrOptions.takeawaysCount;
+  const effectiveBudget = typeof takeawaysCountOrOptions === 'object' && takeawaysCountOrOptions.maxCumulativeDuration !== undefined ? takeawaysCountOrOptions.maxCumulativeDuration : budgetSeconds;
   const parseResult = parseJsonArray(text, 'highlights-extraction');
   if (parseResult.status === 'invalid') return { status: 'invalid' };
   const raw = parseResult.data;
@@ -104,6 +112,7 @@ export function parseHighlightsExtraction(
 
   const seenStarts = new Set<number>();
   const out: ExtractedHighlight[] = [];
+  let accumulatedDuration = 0;
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
     const { start, end, label } = item as Record<string, unknown>;
@@ -128,6 +137,10 @@ export function parseHighlightsExtraction(
         ? finalStart + maxSegmentDurationSeconds
         : end;
     if (seenStarts.has(finalStart)) continue;
+    const durationForBudget = clampedEnd - finalStart;
+    if (out.length > 0 && accumulatedDuration + durationForBudget > effectiveBudget) {
+      break;
+    }
     // takeawayIdx: nullable integer in [0, takeawaysCount). A non-integer
     // (string, NaN, etc.) or out-of-range value is treated as null
     // (standalone highlight, not mapped to any takeaway).
@@ -138,6 +151,7 @@ export function parseHighlightsExtraction(
     const rawLabel = label.trim();
     const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
     if (trimmedLabel.length === 0) continue;
+    accumulatedDuration += durationForBudget;
     seenStarts.add(finalStart);
     out.push({ start: finalStart, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
   }

@@ -130,3 +130,21 @@ export function sumHighlightDurations(
     return sum + clampedDur;
   }, 0);
 }
+
+export function calculateAttentionBoundedBudget(videoDurationSeconds: number): number {
+  if (!Number.isFinite(videoDurationSeconds) || videoDurationSeconds <= 0) {
+    return 180;
+  }
+  if (videoDurationSeconds <= 300) {
+    return Math.min(Math.round(videoDurationSeconds * 0.5), 120);
+  }
+  if (videoDurationSeconds <= 1800) {
+    return 180;
+  }
+  if (videoDurationSeconds <= 3600) {
+    return 240;
+  }
+  return Math.min(330, Math.round(180 + Math.log2(videoDurationSeconds / 1800) * 60));
+}
+
+export const calculateHighlightBudgetSeconds = calculateAttentionBoundedBudget;
