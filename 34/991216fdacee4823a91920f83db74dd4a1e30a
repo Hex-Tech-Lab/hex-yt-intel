@@ -1,0 +1,21 @@
+docs/agent-prompts/TEMPLATE.md
+  s_4b2aacf8e9effe::t_1c12509dced912 1-4,24,26,28-62,64,66-68,73-84
+.memory/TEMPLATE.md
+  s_4b2aacf8e9effe::t_887383668e35f3 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "34991216fdacee4823a91920f83db74dd4a1e30a",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
