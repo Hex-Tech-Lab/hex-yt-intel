@@ -230,10 +230,13 @@ export const MonetizationVerdictSchema = z
 /**
  * Knowledge Graph structure within the v2.0 payload.
  */
+export const MAX_KG_NODES = 24;
+export const MAX_KG_EDGES = 18;
+
 export const KnowledgeGraphSchema = z
   .object({
-    nodes: z.array(KGNodeSchema).max(30),
-    edges: z.array(KGEdgeSchema).max(100),
+    nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
+    edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
     rootId: z.string().nullable(),
   })
   .strict();
@@ -353,8 +356,8 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("kg"),
-      nodes: z.array(KGNodeSchema),
-      edges: z.array(KGEdgeSchema),
+      nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
+      edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
       rootId: z.string().nullable(),
     })
     .strict(),
