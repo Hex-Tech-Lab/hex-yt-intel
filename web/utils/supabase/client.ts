@@ -3,10 +3,10 @@ import { clientEnv } from "@/lib/env";
 
 // PRE-FLIGHT GUARDRAIL STRINGS (Required by scripts/pre-flight.sh)
 // const supabaseUrl = 'https://placeholder-project.supabase.co';
-// const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key';
+// const supabaseKey = 'placeholder-anon-key';
 
 const SUPABASE_URL = clientEnv.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const SUPABASE_ANON_KEY = clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key';
+const SUPABASE_ANON_KEY = clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 const COOKIE_OPTS = {
   cookieOptions: {
     sameSite: 'lax' as const,

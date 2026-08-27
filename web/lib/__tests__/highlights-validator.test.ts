@@ -83,6 +83,12 @@ describe('HighlightSegmentSchema', () => {
     expect(result.end).toBe(30); // end falls back to clampedStart + 30
   });
 
+  it('enforces end > start: inverted interval clamps end to start + 30', () => {
+    const result = HighlightSegmentSchema.parse({ start: 50, end: 10, title: 'Inverted' });
+    expect(result.start).toBe(50);
+    expect(result.end).toBe(80);
+  });
+
   it('defaults summary to empty string when absent', () => {
     const result = HighlightSegmentSchema.parse({ start: 0, end: 10, title: 'No summary' });
     expect(result.summary).toBe('');

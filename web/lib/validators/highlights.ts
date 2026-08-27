@@ -9,21 +9,20 @@ export const HighlightSegmentSchema = z.preprocess(
     const title = raw.title ?? raw.label ?? raw.headline ?? raw.key_point;
     const summary = raw.summary ?? raw.description ?? raw.text ?? "";
 
-    const rawNumStart = typeof start === "number" ? start : typeof start === "string" ? Number(start.trim()) : 0;
-    const rawNumEnd = typeof end === "number" ? end : typeof end === "string" ? Number(end.trim()) : rawNumStart + 30;
+    const numStart = typeof start === "number" ? start : typeof start === "string" ? Number(start.trim()) : 0;
+    let numEnd = typeof end === "number" ? end : typeof end === "string" ? Number(end.trim()) : numStart + 30;
 
-    const clampedStart = Number.isFinite(rawNumStart) && rawNumStart >= 0 ? rawNumStart : 0;
-    const clampedEnd = Number.isFinite(rawNumEnd) && rawNumEnd >= 0 ? rawNumEnd : clampedStart + 30;
-
-    const trimmedTitle = typeof title === "string" ? title.trim() : "";
-    const trimmedSummary = typeof summary === "string" ? summary.trim() : "";
+    const cleanStart = Number.isFinite(numStart) && numStart >= 0 ? numStart : 0;
+    if (!Number.isFinite(numEnd) || numEnd <= cleanStart) {
+      numEnd = cleanStart + 30;
+    }
 
     return {
       ...raw,
-      start: clampedStart,
-      end: clampedEnd,
-      title: trimmedTitle !== "" ? trimmedTitle : "Key Insight",
-      summary: trimmedSummary,
+      start: cleanStart,
+      end: numEnd,
+      title: typeof title === "string" && title.trim() !== "" ? title.trim() : "Key Insight",
+      summary: typeof summary === "string" ? summary.trim() : "",
     };
   },
   z.object({
@@ -32,7 +31,9 @@ export const HighlightSegmentSchema = z.preprocess(
     end: z.number().min(0),
     title: z.string().min(1),
     summary: z.string().optional(),
-  }).passthrough()
+  }).passthrough().refine((data) => data.end > data.start, {
+    message: 'end timestamp must be greater than start timestamp',
+  })
 );
 
 export const HighlightsResponseSchema = z.object({

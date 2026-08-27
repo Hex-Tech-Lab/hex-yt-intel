@@ -124,13 +124,27 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       setError(null);
       setLoading(true);
       try {
-        const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-        const json: HighlightsResponse | null = await res.json();
-        if (!json || !Array.isArray(json.highlights)) {
-          throw new Error('Invalid response format: expected highlights array');
+        let lastJson: HighlightsResponse | null = null;
+        const maxAttempts = 3;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
+          if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
+          const json: HighlightsResponse | null = await res.json();
+          if (!json || !Array.isArray(json.highlights)) {
+            throw new Error('Invalid response format: expected highlights array');
+          }
+          if (json.highlights.length > 0) {
+            lastJson = json;
+            break;
+          }
+          lastJson = json;
+          if (attempt < maxAttempts - 1) {
+            const delayMs = 2500 * Math.pow(2, attempt);
+            await new Promise((r) => setTimeout(r, delayMs));
+            if (controller.signal.aborted) return;
+          }
         }
-        setData(json);
+        setData(lastJson);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           console.debug(`[HighlightsScrubber] fetch aborted for ${analysisId} (analysisId changed or unmounted)`);
