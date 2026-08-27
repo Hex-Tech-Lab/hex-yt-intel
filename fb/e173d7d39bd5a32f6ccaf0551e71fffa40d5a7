@@ -1,0 +1,60 @@
+web/app/api/analyses/highlights/route.ts
+  s_4b2aacf8e9effe::t_3df86ee352cea0 108
+  s_4b2aacf8e9effe::t_12f265505151ad 97,105
+  s_4b2aacf8e9effe::t_025c13cb39b605 87-96,98-104,106-107,109-112,114-115,122
+  s_4b2aacf8e9effe::t_e497a4b43aa7ac 84-86
+web/hooks/useAuth.ts
+  s_4b2aacf8e9effe::t_44e6789942a787 2
+  s_4b2aacf8e9effe::t_c8af126ed25dab 14
+web/lib/adapters/settings-adapter.ts
+  s_4b2aacf8e9effe::t_23e6997508c143 18
+  s_4b2aacf8e9effe::t_81823dbbb830ef 71
+  s_4b2aacf8e9effe::t_aa15bc56e268f3 117
+  s_4b2aacf8e9effe::t_8714b817b7e999 7
+web/app/auth/signin/form.tsx
+  s_4b2aacf8e9effe::t_7617b2dea0fbee 16
+  s_4b2aacf8e9effe::t_83542714dc9523 6
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_025c13cb39b605 1342
+  s_4b2aacf8e9effe::t_92f78747f8bf14 1344
+  s_4b2aacf8e9effe::t_df5c1dd95e984c 1343
+web/components/UserMenu.tsx
+  s_4b2aacf8e9effe::t_1c2fa83df1c84b 10
+  s_4b2aacf8e9effe::t_0724bbf6a59651 5
+web/components/dashboard/HighlightsScrubber.tsx
+  s_4b2aacf8e9effe::t_e5c297a5e194bc 177-180,189-190
+  s_4b2aacf8e9effe::t_2fdfecb345b43c 127-131
+web/lib/validators/highlights.ts
+  s_4b2aacf8e9effe::t_f2b3d2215f86c9 12-26
+  s_4b2aacf8e9effe::t_69dfc4562aa504 9-11
+  s_4b2aacf8e9effe::t_f46b01cdac2151 27-29
+  s_4b2aacf8e9effe::t_b806e121bd8f07 1-8,30-41
+web/utils/supabase/client.ts
+  s_4b2aacf8e9effe::t_028e8b2ca2a85c 38-39,41,43
+  s_4b2aacf8e9effe::t_a20dc0a771c22a 17-22,36,40
+  s_4b2aacf8e9effe::t_ab55b8ad736a67 34
+  s_4b2aacf8e9effe::t_2f5d7ec48b1f35 23-33,35,37,42,44-49
+  s_4b2aacf8e9effe::t_aa785c78999fcf 8-16
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_4b2aacf8e9effe::t_480241d4780cb9 55-56,65-78,80-88
+  s_4b2aacf8e9effe::t_52d34750775888 57-64,79
+web/lib/__tests__/highlights-validator.test.ts
+  s_4b2aacf8e9effe::t_aabe85ac99a50c 1-75,77-82,84-133
+  s_4b2aacf8e9effe::t_561b39e68da0bc 76,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "fbe173d7d39bd5a32f6ccaf0551e71fffa40d5a7",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
