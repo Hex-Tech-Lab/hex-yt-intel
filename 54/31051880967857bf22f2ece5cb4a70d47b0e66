@@ -1,0 +1,28 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1342
+web/lib/adapters/PaddleBillingAdapter.ts
+  h_60000122af7b55 15,39-55,98,109,178,191
+web/lib/intelligence/relations-engine.ts
+  h_60000122af7b55 243
+web/lib/prompts/highlights-extraction.ts
+  h_60000122af7b55 97,99,101-103
+web/lib/services/__tests__/contract-e2e.test.ts
+  h_60000122af7b55 1,3-5,33-37,49-138
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 292-300,310-329
+web/lib/utils/transcript-normalizer.ts
+  h_60000122af7b55 13-21
+worker/src/services/ZodSchemas.ts
+  h_60000122af7b55 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "5431051880967857bf22f2ece5cb4a70d47b0e66",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
