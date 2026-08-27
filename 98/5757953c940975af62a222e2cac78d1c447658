@@ -1,0 +1,30 @@
+web/lib/utils/highlights-settings.ts
+  s_4b2aacf8e9effe::t_d80df715e60b80 133-150
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_4b2aacf8e9effe::t_9d2ec5a5e4ba94 8
+  s_4b2aacf8e9effe::t_922b3a716dd701 11
+  s_4b2aacf8e9effe::t_c914890055dc8d 154-155,158,165-167,174
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_0a751cd0c1b7ce 1358
+web/lib/prompts/highlights-extraction.ts
+  s_4b2aacf8e9effe::t_12f2df4ac61d45 92-96,103-104,106-107
+  s_4b2aacf8e9effe::t_48d57bbe5a28fb 115
+  s_4b2aacf8e9effe::t_55e81fc9ce0d16 154
+  s_4b2aacf8e9effe::t_08e54dd0af62b0 140-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "985757953c940975af62a222e2cac78d1c447658",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
