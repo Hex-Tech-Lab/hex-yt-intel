@@ -1,0 +1,23 @@
+docs/agent-prompts/TEMPLATE.md
+  s_4b2aacf8e9effe::t_9de0f28337fc15 3,33-70
+docs/agent-prompts/2026-08-27-agy1-adversarial-verify-pr281.md
+  s_4b2aacf8e9effe::t_081c83f80fcd19 1-90
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_1561dcee515c11 1352
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "4ced3dd99403dfac595cc93bdf675022e00823eb",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
