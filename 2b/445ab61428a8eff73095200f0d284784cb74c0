@@ -1,0 +1,21 @@
+web/lib/prompts/highlights-extraction.ts
+  s_4b2aacf8e9effe::t_4692582e2f5f9f 52
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_ccc2ebfd1eb9c0 1362
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "2b445ab61428a8eff73095200f0d284784cb74c0",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
