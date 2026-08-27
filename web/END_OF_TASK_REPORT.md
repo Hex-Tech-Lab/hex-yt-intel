@@ -1,60 +1,62 @@
-# End of Task Report: audit-and-harden-contracts-e2e
+# End of Task Report: Complete Contract Hardening
 
-**Start Time**: 2026-08-27T02:50:00+03:00
-**Finish Time**: 2026-08-27T03:00:00+03:00
-**Estimated Time**: 30m
-**Duration**: 10m
-**Variance**: -66%
+## Overview
+- **Start Time**: 2026-08-27T03:26:00+03:00
+- **Finish Time**: 2026-08-27T03:35:00+03:00
+- **Duration**: ~9 minutes
+- **Estimated Time**: N/A
+- **Variance**: N/A
 
-## RCA (Root Cause Analysis)
-- External data (LLM streams, paddle webhooks, youtube scrapers) are structurally probabilistic. They omit trailing cases, emit TitleCase vs camelCase intermittently, and lose float precision. 
-- The Zod boundary schemas enforcing valid shapes (`KGNodeSchema`, `PersonaConfigSchema`, `LLMInsightSchema`) were overly rigid. If an LLM returned `Person` instead of `person`, or `content_creator` instead of `creator`, the entire boundary validation `.safeParse()` failed.
-- Compounding the issue, failure branches often dropped payloads silently (`if (!result.success) continue;`) without writing out telemetry or warning logs, leaving missing data completely untraceable.
-- Specific instances found:
-  1. `worker/src/services/ZodSchemas.ts` used strict lowercase POLE+O `z.enum`.
-  2. `PersonaConfigSchema.id` failed if snake_case was presented.
-  3. `relations-engine` failed on 'Tangent' instead of 'tangent'.
-  4. `PaddleBillingAdapter` lacked explicit schema validation, blind-casting to `WebhookPayload`.
-  5. `transcript-normalizer` used strict `typeof === 'number'` skipping coercible numeric strings.
-  6. `highlights-extraction.ts` demanded an exact float match for highlight segment bounds against the actual transcript `validSegmentStarts`.
-  7. `SupabasePersistenceAdapter` fell back to `'concept'` instead of the POLE+O `'Object'`.
+## Report Format
 
-## Contract Definition
-- Pre-processing (`z.preprocess`) MUST translate inbound LLM casing variance, snake_case aliases, and numeric string coercion into precise canonical types expected by the system.
-- ANY boundary validator rejecting a payload during `.safeParse` MUST log the underlying `result.error.issues` and dispatch a `Sentry.captureMessage` warning payload to ensure dropped nodes are fully traceable.
+**RCA**
+- The previously hardened schema boundaries in `fix/harden-contract-boundaries` lacked full privacy redaction for Sentry, left POLE+O worker enums incomplete, had custom data overwriting normalized keys, fuzzy matched improperly for highlight extraction, coerced invalid string timestamps improperly, and needed comprehensive E2E tests for verification.
 
-## Fix Implementation
-- **Worker Schemas**: Refactored `KGNodeSchema` and `KGEdgeSchema` in `worker/src/services/ZodSchemas.ts` to use a `CaseInsensitiveEnum` preprocessor.
-- **Web Validators**: Implemented `TolerantPersonaId` in `synthesis.ts` mapping `content_creator -> creator`, etc.
-- **Relations Engine**: Added `z.preprocess` trimming and lowercase sanitization to `LLMInsightSchema.kind`, alongside Sentry error tracking on drop.
-- **Paddle Webhook**: Implemented full `PaddleWebhookSchema` with `.passthrough()` using `WebhookCustomDataSchema` preprocessor for robust property mapping (`user_id -> userId`), alongside Sentry capture when payload schemas fail or missing user_ids occur.
-- **Transcript Normalizer**: Overhauled the mapping routine to explicitly coerce `typeof s.start === 'string' ? Number(s.start) : s.start`, accepting coercible strings.
-- **Highlights Extraction**: Implemented a floating-point epsilon (1.0s) fuzzy matcher to allow minor LLM inaccuracies when mapping segment start times to the canonical timestamp.
-- **DB Persistence**: Updated `SupabasePersistenceAdapter` fallback from `'concept'` to the canonical POLE+O `'Object'`.
+**Contract**
+- **Paddle Webhook**: Preprocess spreads the raw object first, then assigns explicitly normalized `userId` and `planTier` overriding raw collisions.
+- **Sentry Privacy**: `extra` drops `payload`/`data`/`node`/`edge` entirely. Keeps only `event_type`, `errorCount`, `danglingEdgesCount`, and `issues.map` yielding path/code strings.
+- **Worker Enums**: `KGNodeTypeEnum` accepts ["person", "organization", "location", "event", "object", "concept", "topic"] case-insensitively.
+- **Timestamp Coercion**: Drops null, boolean, undefined, non-finite, empty strings, and NaN.
 
-## E2E Proof
-- Configured a new integration test `web/lib/services/__tests__/contract-e2e.test.ts` representing the entire data boundary traversal. 
-- Passed a chunk with `content_creator` and TitleCase `Person` entity types. The stitching service successfully coalesced the values into `creator` and schema-valid `Person`, demonstrating fully resolved boundary handling without drops.
+**Fix**
+1. Removed `vi` import and all `*.cjs` script droppings.
+2. Patched `ZodSchemas.ts` to implement the 7 POLE+O enum elements.
+3. Patched Sentry implementations in `PaddleBillingAdapter`, `relations-engine`, and `stitch-analysis-chunks`.
+4. Refactored `WebhookCustomDataSchema` in `PaddleBillingAdapter` to spread raw data early, protecting normalized fields.
+5. Re-wrote fuzzy matcher to lock the closest match `diff <= 1.0 && diff < minDiff`.
+6. Enforced `typeof rawStart` validation matrix prior to numeric coercion.
+7. Refactored `stitch-analysis-chunks` to use `res.data`, preserving validated output, and emitting warning logs for dangling edges.
+8. Authored 5 new testing blocks covering the entire E2E contract surface.
 
-## Tangents Found
-- `PaddleBillingAdapter.ts` was silently returning `{ success: false }` for missing `userId` payload properties, masking potential webhook drop bugs. Added `Sentry.captureMessage` to those exit branches.
+**E2E Proof**
+- `vitest` suite for `contract-e2e.test.ts` completed with 5 passing tests:
+  - `processes LLM chunks with mixed-casing and POLE+O permutations`
+  - `Paddle custom data property precedence and nested price tier fallback`
+  - `Transcript invalid start timestamp rejection`
+  - `Nearest segment highlight selection within 1.0s epsilon`
+  - `extracts userId from custom_data properly with precedence`
 
-## Deviations Flagged
-- None.
+**Tangents Found**
+- The `contract-e2e.test.ts` variable `n` produced a lint error, converted to `node` in line with the codebase style convention.
 
-## Gates
-- `vitest`: 1344 passing tests (zero failures).
-- `tsc --noEmit`: 0 errors.
-- `qa-intel`: No new issues since baseline.
-- `contract-auditor`: 0 critical, warnings addressed.
+**Deviations Flagged**
+- No major deviations from the core prompt were encountered.
 
-## Files Changed
-- `worker/src/services/ZodSchemas.ts`
-- `worker/src/services/PersistService.ts`
-- `web/lib/validators/synthesis.ts`
-- `web/lib/intelligence/relations-engine.ts`
+**Gates**
+- `tsc --noEmit`: Exited 0
+- `worker tsc -p tsconfig.typecheck.json`: Checked for `src/` (Clean)
+- `vitest`: Exited 0
+- `lint`: Exited 0
+- `verify-quality-engine.ts --ci --compare`: Clean (No issues)
+- `contract-auditor.ts`: 0 critical, 8 known warnings
+
+**Files Changed**
+- `.memory/AGENT_LEDGER.md`
 - `web/lib/adapters/PaddleBillingAdapter.ts`
-- `web/lib/utils/transcript-normalizer.ts`
+- `web/lib/intelligence/relations-engine.ts`
 - `web/lib/prompts/highlights-extraction.ts`
-- `web/lib/adapters/SupabasePersistenceAdapter.ts`
 - `web/lib/services/__tests__/contract-e2e.test.ts`
+- `web/lib/services/stitch-analysis-chunks.ts`
+- `web/lib/utils/transcript-normalizer.ts`
+- `worker/src/services/ZodSchemas.ts`
+

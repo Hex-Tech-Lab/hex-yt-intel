@@ -238,9 +238,13 @@ export async function* computeStanceRelationsStream(
       const result = LLMResponseSchema.safeParse(parsed);
       if (!result.success) {
         console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);
-        Sentry.captureMessage("relations-engine: schema validation dropped entity", {
+        Sentry.captureMessage(`Validation dropped payload at ${'relations-engine'}`, {
           level: "warning",
-          extra: { errorCount: result.error.issues.length, issues: result.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) }
+          extra: {
+            boundary: 'relations-engine',
+            issueCount: result.error.issues.length,
+            issuePaths: result.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
         });
         // Only import Sentry if it's not imported already, but let's just use console for now, wait, we need Sentry.
       }

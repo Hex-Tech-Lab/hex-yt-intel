@@ -293,7 +293,14 @@ export function stitchChunksIntoPayload(
     const res = KGNodeSchema.safeParse(node);
     if (!res.success) {
       console.warn('[stitch-analysis-chunks] Schema validation dropped entity', res.error.issues);
-      Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped node', { level: 'warning', extra: { errorCount: res.error.issues.length, issues: res.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
+      Sentry.captureMessage(`Validation dropped payload at ${'stitch-analysis-chunks (node)'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'stitch-analysis-chunks (node)',
+            issueCount: res.error.issues.length,
+            issuePaths: res.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
       return null;
     }
     return res.data;
@@ -312,7 +319,14 @@ export function stitchChunksIntoPayload(
     const edgeRes = KGEdgeSchema.safeParse(edge);
     if (!edgeRes.success) {
       console.warn('[stitch-analysis-chunks] Schema validation dropped edge', edgeRes.error.issues);
-      Sentry.captureMessage('stitch-analysis-chunks: schema validation dropped edge', { level: 'warning', extra: { errorCount: edgeRes.error.issues.length, issues: edgeRes.error.issues.map((i: any) => ({ path: i.path.join('.'), code: i.code })) } });
+      Sentry.captureMessage(`Validation dropped payload at ${'stitch-analysis-chunks (edge)'}`, {
+          level: "warning",
+          extra: {
+            boundary: 'stitch-analysis-chunks (edge)',
+            issueCount: edgeRes.error.issues.length,
+            issuePaths: edgeRes.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
+          },
+        });
       return null;
     }
     const e = edgeRes.data;
