@@ -28,7 +28,7 @@ export interface BillingProvider {
   cancelSubscription?(subscriptionId: string): Promise<boolean>;
 }
 
-export type PlanTier = 'free' | 'founder' | 'pro';
+export type PlanTier = 'free' | 'founder' | 'pro' | 'enterprise';
 export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing';
 
 export interface WebhookPayload {

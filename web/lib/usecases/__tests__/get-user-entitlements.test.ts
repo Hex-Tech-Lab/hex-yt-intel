@@ -32,9 +32,13 @@ describe('GetUserEntitlementsUseCase', () => {
 
     expect(entitlements).toEqual({
       tier: 'free',
+      is_founder: false,
+      is_enterprise: false,
+      is_unlimited: false,
       canAnalyzeVideo: true,
       canAccessKnowledgeGraph: false,
       canUseExtendedChat: false,
+      canExportKnowledgeGraph: false,
     });
   });
 
@@ -65,9 +69,13 @@ describe('GetUserEntitlementsUseCase', () => {
 
     expect(entitlements).toEqual({
       tier: 'founder',
+      is_founder: true,
+      is_enterprise: false,
+      is_unlimited: false,
       canAnalyzeVideo: true,
       canAccessKnowledgeGraph: true,
       canUseExtendedChat: true,
+      canExportKnowledgeGraph: true,
     });
   });
 
@@ -98,9 +106,13 @@ describe('GetUserEntitlementsUseCase', () => {
 
     expect(entitlements).toEqual({
       tier: 'free',
+      is_founder: false,
+      is_enterprise: false,
+      is_unlimited: false,
       canAnalyzeVideo: true,
       canAccessKnowledgeGraph: false,
       canUseExtendedChat: false,
+      canExportKnowledgeGraph: false,
     });
   });
 });
