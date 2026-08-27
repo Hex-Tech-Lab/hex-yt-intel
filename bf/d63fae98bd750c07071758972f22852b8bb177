@@ -1,0 +1,32 @@
+web/lib/prompts/highlights-extraction.ts
+  h_60000122af7b55 135-144
+web/lib/validators/highlights.ts
+  h_60000122af7b55 20-28
+worker/src/__tests__/chat-stream-requestId.test.ts
+  h_60000122af7b55 32,37
+worker/src/chat-stream.ts
+  h_60000122af7b55 5-6
+worker/src/routes/analysis.ts
+  h_60000122af7b55 17
+worker/src/services/CommentClassifier.ts
+  h_60000122af7b55 2
+worker/src/services/KnowledgeGraphSynthesizer.ts
+  h_60000122af7b55 15,17-18,24
+worker/src/services/PromptBuilder.ts
+  h_60000122af7b55 1-2,6-8,74
+worker/tsconfig.json
+  h_60000122af7b55 6,17-23,27
+worker/tsconfig.typecheck.json
+  h_60000122af7b55 2,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "bfd63fae98bd750c07071758972f22852b8bb177",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
