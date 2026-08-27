@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { Button, IconButton } from '@astryxdesign/core';
@@ -15,6 +16,9 @@ export interface PricingModalProps {
 export function PricingModal({ isOpen, onClose }: PricingModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const handleUpgrade = async () => {
     try {
@@ -54,7 +58,9 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -139,6 +145,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

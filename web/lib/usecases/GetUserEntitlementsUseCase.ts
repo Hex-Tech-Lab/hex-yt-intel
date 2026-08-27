@@ -5,7 +5,8 @@ import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { PlanTier } from '@/lib/types/billing';
 
 export interface EntitlementState {
-  tier: 'free' | 'founder' | 'pro';
+  tier: 'free' | 'founder' | 'pro' | 'enterprise';
+  is_unlimited?: boolean;
   canAnalyzeVideo: boolean;
   canAccessKnowledgeGraph: boolean;
   canUseExtendedChat: boolean;
@@ -64,7 +65,7 @@ export class GetUserEntitlementsUseCase {
       const best = valid[0]!;
 
       const planTier = best.plan_tier as PlanTier;
-      if (planTier === 'founder' || planTier === 'pro') {
+      if (planTier === 'founder' || planTier === 'pro' || planTier === 'enterprise') {
         return {
           tier: planTier,
           canAnalyzeVideo: true,

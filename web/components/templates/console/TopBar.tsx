@@ -29,7 +29,7 @@ function TopBarImpl({
 }: TopBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const setMobileNav = useUIStore((s) => s.setMobileNav);
-  const { isFounder, isLoading: entitlementsLoading } = useEntitlements();
+  const { isFounder, isEnterprise, isUnlimited, isLoading: entitlementsLoading } = useEntitlements();
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const setMobileRight = useUIStore((s) => s.setMobileRight);
 
@@ -142,7 +142,7 @@ function TopBarImpl({
           />
         </span>
       )}
-      {!entitlementsLoading && !isFounder && (
+      {!entitlementsLoading && !isFounder && !isEnterprise && !isUnlimited && (
         <>
           <Button
             variant="primary"

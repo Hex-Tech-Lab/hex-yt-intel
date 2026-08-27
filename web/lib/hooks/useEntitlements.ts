@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 import { clientAuthAdapter } from '@/lib/adapters/SupabaseClientAuthAdapter';
-
 import type { EntitlementState } from '@/lib/usecases/GetUserEntitlementsUseCase';
 
-// Keyed by user ID to prevent tenant bleed.
 const globalCache = new Map<string, EntitlementState>();
 const globalPromises = new Map<string, Promise<EntitlementState>>();
 
@@ -20,15 +18,14 @@ let currentUserId: string | null = null;
 
 export function useEntitlements() {
   const [userId, setUserId] = useState<string | null>(currentUserId);
-  const [entitlements, setEntitlements] = useState<EntitlementState>(
-    (currentUserId && globalCache.get(currentUserId)) || defaultFree
+  const [entitlements, setEntitlements] = useState<EntitlementState | null>(
+    currentUserId ? (globalCache.get(currentUserId) || null) : null
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [isSessionLoaded, setIsSessionLoaded] = useState<boolean>(false);
 
   useEffect(() => {
-    // Initial fetch of session via adapter
     clientAuthAdapter.getSessionUserId().then((id) => {
       if (id !== currentUserId) {
         currentUserId = id;
@@ -63,10 +60,11 @@ export function useEntitlements() {
 
   const fetchEntitlements = useCallback(async (force = false) => {
     if (!isSessionLoaded) {
-      return defaultFree; // Keep loading true while session loads
+      return defaultFree;
     }
     if (!userId) {
       setIsLoading(false);
+      setEntitlements(defaultFree);
       return defaultFree;
     }
 
@@ -88,12 +86,34 @@ export function useEntitlements() {
     setIsLoading(true);
     const doFetch = async () => {
       try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        let metadataTier = session?.user?.user_metadata?.tier;
+        let isUnlimited = session?.user?.user_metadata?.is_unlimited === true;
+
+        if (metadataTier === 'enterprise' || metadataTier === 'founder' || metadataTier === 'pro') {
+            const localState: EntitlementState = {
+                tier: metadataTier,
+                is_unlimited: isUnlimited,
+                canAnalyzeVideo: true,
+                canAccessKnowledgeGraph: true,
+                canUseExtendedChat: true,
+            };
+            globalCache.set(userId, localState);
+            return localState;
+        }
+
         const res = await fetch('/api/billing/entitlements');
         if (!res.ok) throw new Error('Failed to fetch entitlements');
         const data = await res.json();
+        
         if (data && data.success && data.entitlements) {
+          if (isUnlimited) {
+            data.entitlements.is_unlimited = true;
+          }
           globalCache.set(userId, data.entitlements);
-          return data.entitlements;
+          return data.entitlements as EntitlementState;
         }
         return defaultFree;
       } catch (err) {
@@ -116,11 +136,15 @@ export function useEntitlements() {
     fetchEntitlements();
   }, [fetchEntitlements, isSessionLoaded]);
 
+  const safeEntitlements = entitlements || defaultFree;
+
   return {
-    entitlements,
+    entitlements: safeEntitlements,
     isLoading,
-    isFounder: entitlements.tier === 'founder',
-    isPro: entitlements.tier === 'pro',
+    isFounder: safeEntitlements.tier === 'founder',
+    isPro: safeEntitlements.tier === 'pro',
+    isEnterprise: safeEntitlements.tier === 'enterprise',
+    isUnlimited: safeEntitlements.is_unlimited === true,
     refreshEntitlements: () => fetchEntitlements(true),
   };
 }
