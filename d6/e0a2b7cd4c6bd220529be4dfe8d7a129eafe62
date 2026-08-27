@@ -1,0 +1,22 @@
+web/components/billing/PricingModal.tsx
+  h_60000122af7b55 3-4,19-21,61-63,148-149
+web/components/templates/console/TopBar.tsx
+  h_60000122af7b55 32,145
+web/lib/hooks/useEntitlements.ts
+  h_60000122af7b55 2,21-22,63,67,89-106,110,112-114,116,139-140,142,144-147
+web/lib/types/billing.ts
+  h_60000122af7b55 31
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  h_60000122af7b55 8-9,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "d6e0a2b7cd4c6bd220529be4dfe8d7a129eafe62",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
