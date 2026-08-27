@@ -36,19 +36,23 @@ function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<n
   return closest;
 }
 
-export function buildHighlightsExtractionSystemPrompt(maxCount: number, maxSegmentDurationSeconds: number): string {
-  return `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text. Select the moments a viewer researching this video would most want to see -- claims, reveals, pricing/numbers mentioned, strong opinions, key demonstrations -- not filler, greetings, or transitions.
+export function buildHighlightsExtractionSystemPrompt(maxCount: number, maxSegmentDurationSeconds: number = 90): string {
+  return `You extract noteworthy key moments from a video transcript for a highlights reel. Given transcript segments with start times (seconds) and spoken text, select key claims, reveals, pricing/numbers, and demonstrations (no filler or transitions).
 
-Output ONLY a JSON array, no prose before or after, no markdown code fence. Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, to one decimal place, the timestamp where the discussion of this highlight's topic actually ends in the transcript. This must be the real end of the point being made -- not the start of the next highlight. Cover the minimum amount of the topic needed to include all meaningful keywords from that excerpt. Do not extend beyond the topic's natural boundary. The end value does NOT need to align with any segment boundary -- it can be any real timestamp between the highlight's start and the next highlight's start (or the video end).>, "label": <string, one short sentence describing what happens at this moment>, "takeawayIdx": <number or null, 0-indexed index of the takeaway this highlight maps to (from the KEY TAKEAWAYS list in the user message), or null if this highlight is important but not mapped to any takeaway>}.
+Output ONLY a raw JSON array of objects without prose or code fences:
+[{"start": <number, must match segment start>, "end": <number, seconds to 1 decimal, topic end, duration <= ${maxSegmentDurationSeconds}s>, "label": <string, one short sentence>, "takeawayIdx": <number | null, 0-indexed takeaway mapping or null>}]
 
-Each highlight's duration (end - start) should vary naturally -- short points get 5-15 seconds, longer discussions get 30-90 seconds. Never exceed ${maxSegmentDurationSeconds} seconds for any single highlight. The end timestamp is the real end of the topic, not the start of the next highlight -- do not use the next highlight's start time as the end value.
-
-Select every genuinely important moment -- there is NO fixed target count and NO fixed percentage of the video's runtime to aim for. A short, sparse video may only have a handful of real moments; a long, dense video may genuinely have several dozen. Do not artificially limit yourself to a small round number, and do not pad the list with filler to hit a count either -- only include moments a viewer would actually want to see. Hard ceiling: never return more than ${maxCount} moments even if more exist (pick the ${maxCount} most noteworthy if the video has more than that). Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments, return an empty array [].`;
+Rules:
+1. Duration (end - start) must be 5-${maxSegmentDurationSeconds}s. "end" is the real topic end, not next highlight start.
+2. Select genuine key moments up to a strict ceiling of ${maxCount} items.
+3. Every "start" MUST match an input segment start. Never fabricate timestamps.
+4. If the transcript lacks distinct noteworthy moments, return [].`;
 }
 
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>, takeaways?: string[]): string {
-  const takeawaysSection = takeaways && takeaways.length > 0
-    ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${takeaways.map((takeaway, i) => `${i + 1}. ${takeaway}`).join('\n')}\n\nFor each takeaway, identify the timestamp range in the transcript where that point is discussed. Map each highlight to the takeaway it represents by setting the takeawayIdx field (0-indexed, matching the takeaways list order above). If a takeaway has no clear transcript location, skip it. If a transcript moment is important but not in the takeaways, you may still include it with takeawayIdx: null.\n\n`
+  const cappedTakeaways = (takeaways || []).filter((_takeaway, i) => i < 10);
+  const takeawaysSection = cappedTakeaways.length > 0
+    ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${cappedTakeaways.map((takeaway, i) => `${i + 1}. ${takeaway}`).join('\n')}\n\nFor each takeaway, map corresponding highlights via 0-indexed takeawayIdx (or null if not in takeaways).\n\n`
     : '';
   const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
   return `${takeawaysSection}--- TRANSCRIPT (with timestamps) ---\n${lines}`;
@@ -132,7 +136,7 @@ export function parseHighlightsExtraction(
       parsedTakeawayIdx = takeawayIdx;
     }
     const rawLabel = label.trim();
-    const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
+    const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? rawLabel.slice(0, MAX_LABEL_LENGTH) + '...' : rawLabel;
     if (trimmedLabel.length === 0) continue;
     seenStarts.add(finalStart);
     out.push({ start: finalStart, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
