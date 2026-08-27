@@ -1,0 +1,25 @@
+web/package.json
+  s_4b2aacf8e9effe::t_862f1a9e926e9b 3
+worker/package.json
+  s_4b2aacf8e9effe::t_26a27f2cc22dd0 3
+CHANGELOG.md
+  s_4b2aacf8e9effe::t_bd7583c3ab805d 7-39
+package.json
+  s_4b2aacf8e9effe::t_45a0e8b09436ca 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8cc648d2a503f757220a4f88cc2f41a7600e302d",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
