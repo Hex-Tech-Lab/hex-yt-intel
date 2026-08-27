@@ -196,9 +196,12 @@ export class PaddleBillingAdapter implements BillingPort {
       if (payload.event_type !== 'transaction.completed') {
         return { success: true };
       }
-      
+
       const supabase = getSupabaseServiceClient();
       const { data } = payload;
+      if (!data.id || !data.customer_id || !data.items || data.items.length === 0) {
+        return { success: false, error: 'Malformed transaction payload: missing id, customer_id, or items' };
+      }
       const userId = data.custom_data?.userId;
       
       if (!userId) {

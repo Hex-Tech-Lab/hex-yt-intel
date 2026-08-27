@@ -51,7 +51,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         analysisId: params.analysisId,
         entities: params.analysisPayload.knowledgeGraph.nodes.map(n => ({
           label: (n as any).label,
-          type: (n as any).entityType || 'Object',
+          type: n.entityType ?? (n as unknown as { type?: string }).type ?? 'Object',
           weight: (n as any).weight || 1,
           rawNode: n
         })),

@@ -16,6 +16,7 @@ import {
   UCISPayloadV2Schema,
   KGNodeSchema,
   KGEdgeSchema,
+  normalizePersonaId,
 } from "@/lib/validators/synthesis";
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
 import type { UCISPayloadV2 } from "@/lib/types/synthesis-nucleus";
@@ -359,18 +360,6 @@ export function stitchChunksIntoPayload(
   // IMMEDIATE priority at the time), confirmed still live and unfixed today.
   // Map known alternate spellings to the canonical id rather than reject the
   // whole analysis over a label variant the model uses interchangeably.
-  const PERSONA_ID_ALIASES: Record<string, string> = {
-    content_creator: "creator",
-    contentcreator: "creator",
-    indie_maker: "indieMaker",
-    indiemaker: "indieMaker",
-    product_manager: "productManager",
-    productmanager: "productManager",
-  };
-  const normalizePersonaId = (id: unknown): unknown =>
-    typeof id === "string" && PERSONA_ID_ALIASES[id]
-      ? PERSONA_ID_ALIASES[id]
-      : id;
   if (stitchedPersona && typeof stitchedPersona === "object") {
     for (const slot of ["primary", "secondary", "tertiary"] as const) {
       const entry = (stitchedPersona as Record<string, unknown>)[slot];
