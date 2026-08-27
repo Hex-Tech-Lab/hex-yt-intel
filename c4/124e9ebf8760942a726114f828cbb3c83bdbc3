@@ -1,0 +1,21 @@
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_4b2aacf8e9effe::t_1adc01304a1eb5 162-164
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_a8a2ed05398127 1357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "c4124e9ebf8760942a726114f828cbb3c83bdbc3",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": null
+    }
+  }
+}
