@@ -23,6 +23,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { EXPAND_MARKER_PATTERN, truncateCitationPoints } from '@/lib/utils/citation-truncate';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
+import { CHAT_REGISTRY_FALLBACK } from '@/lib/utils/chat-options-settings';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
@@ -811,7 +812,7 @@ function parseAssistant(content: string): { body: string; options: string[] } {
       for (const optItem of parsedJson) {
         if (typeof optItem === 'string') {
           validOptions.push(optItem);
-          if (validOptions.length === 4) break;
+          if (validOptions.length === CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']) break;
         }
       }
     }

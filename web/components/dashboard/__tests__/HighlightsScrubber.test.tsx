@@ -66,11 +66,13 @@ describe('HighlightsScrubber', () => {
     const { container } = render(<HighlightsScrubber analysisId="analysis-empty" videoDurationSeconds={60} />);
 
     await waitFor(() => {
-      expect(container.firstChild).toBeNull();
+      // Empty state banner is now rendered instead of collapsing to null
+      expect(container.firstChild).not.toBeNull();
+      expect(container.firstChild?.textContent).toContain('No highlights yet');
     }, { timeout: 10000 });
   }, 15000);
 
-  it('bounded polling retries on empty before collapsing', async () => {
+  it('bounded polling retries on empty before showing empty state banner', async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -87,7 +89,9 @@ describe('HighlightsScrubber', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     await vi.advanceTimersByTimeAsync(100);
-    expect(container.firstChild).toBeNull();
+    // Empty state banner is now rendered instead of collapsing to null
+    expect(container.firstChild).not.toBeNull();
+    expect(container.firstChild?.textContent).toContain('No highlights yet');
   });
 
   it('collapses gracefully on fetch error without throwing', async () => {

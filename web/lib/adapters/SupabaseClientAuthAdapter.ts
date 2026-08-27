@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 
 export interface ClientAuthSession {
   userId: string | null;
@@ -11,13 +11,13 @@ export interface ClientAuthPort {
 
 export class SupabaseClientAuthAdapter implements ClientAuthPort {
   async getSessionUserId(): Promise<string | null> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.user?.id || null;
   }
 
   onAuthStateChange(callback: (event: string, userId: string | null) => void): () => void {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseBrowserClient();
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session?.user?.id || null);
     });

@@ -9,10 +9,11 @@
  * - userContext: UserKnowledgeContext (themes, FAQs, summary)
  * - currentConversation: string (current topic/message content)
  *
- * Output: 3-5 adaptive options tailored to user's learning path
+ * Output: up to CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'] options
  */
 
 import { STATIC_OPTIONS } from "./option-templates";
+import { CHAT_REGISTRY_FALLBACK } from "../../../web/lib/utils/chat-options-settings";
 
 export interface UserKnowledgeContext {
   themes?: string[]; // User's learning topics (e.g., "security", "performance")
@@ -28,7 +29,7 @@ export interface UserKnowledgeContext {
  * P0 Risk #4 Fix: Adaptive options quality
  * - Validates themes exist and are non-empty before generating options
  * - Enforces strict deduplication (exact string match)
- * - Returns 3-5 options with safe static fallback
+ * - Returns 3 to CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'] options with safe static fallback
  * - Logs empty/sparse context for observability
  */
 export async function buildAdaptiveOptions(
@@ -89,11 +90,12 @@ export async function buildAdaptiveOptions(
   }
 
   // Fallback: add static options if not enough adaptive options generated
-  // Must have at least 3 options per contract (3-5 range)
-  if (options.size < 3) {
+  const minOptions = 3;
+  const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
+  if (options.size < minOptions) {
     const staticOpts = getStaticOptions();
     for (const opt of staticOpts) {
-      if (options.size >= 3) break;
+      if (options.size >= minOptions) break;
       options.add(opt);
     }
   }
@@ -103,12 +105,12 @@ export async function buildAdaptiveOptions(
     return getStaticOptions();
   }
 
-  // Convert Set to array, slice to 3-5 options (enforce hard max)
+  // Convert Set to array, slice to [minOptions, maxOptions]
   const optionsArray = Array.from(options);
-  if (optionsArray.length > 5) {
-    console.warn('[AdaptiveOptionsBuilder] Generated more than 5 options, truncating to 5');
+  if (optionsArray.length > maxOptions) {
+    console.warn(`[AdaptiveOptionsBuilder] Generated more than ${maxOptions} options, truncating`);
   }
-  return optionsArray.slice(0, 5);
+  return optionsArray.slice(0, maxOptions);
 }
 
 /**
@@ -200,5 +202,6 @@ function generateRelatedThemeOption(themes: string[] | undefined): string | null
  * Return static fallback options (used when no user context)
  */
 export function getStaticOptions(): string[] {
-  return STATIC_OPTIONS.slice(0, 5);
+  const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
+  return STATIC_OPTIONS.slice(0, maxOptions);
 }

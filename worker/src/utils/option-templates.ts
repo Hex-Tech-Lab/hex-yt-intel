@@ -77,21 +77,25 @@ export function fillTemplate(
 
 /**
  * Validate that an option list meets constraints:
- * - 3-5 items
+ * - 3 to maxOptions items
  * - Each item <50 chars
  * - No duplicates
  */
-export function validateOptionsList(options: string[]): {
+export function validateOptionsList(
+  options: string[],
+  maxOptions: number = 10,
+): {
   valid: boolean;
   errors: string[];
 } {
+  const minOptions = 3;
   const errors: string[] = [];
 
-  if (options.length < 3) {
-    errors.push(`Expected 3-5 options, got ${options.length} (too few)`);
+  if (options.length < minOptions) {
+    errors.push(`Expected ${minOptions}-${maxOptions} options, got ${options.length} (too few)`);
   }
-  if (options.length > 5) {
-    errors.push(`Expected 3-5 options, got ${options.length} (too many)`);
+  if (options.length > maxOptions) {
+    errors.push(`Expected ${minOptions}-${maxOptions} options, got ${options.length} (too many)`);
   }
 
   const seenOptions = new Set<string>();

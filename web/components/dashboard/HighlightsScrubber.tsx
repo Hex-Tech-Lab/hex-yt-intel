@@ -200,8 +200,12 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     );
   }
   if (data.highlights.length === 0) {
-    console.debug(`[HighlightsScrubber] collapsing: no highlights for ${analysisId}`);
-    return null;
+    return (
+      <Card variant="transparent" padding={3} className="flex flex-col gap-1.5 border border-[var(--border-muted)] bg-[var(--surface)] h-[80px] items-center justify-center">
+        <span className="text-[11px] font-mono text-[var(--ink-muted)] uppercase tracking-wider">No highlights yet</span>
+        <span className="text-xs text-[var(--ink-secondary)]">This video has no keypoint reel — watch the video in full instead.</span>
+      </Card>
+    );
   }
 
   const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(segments, segDurFallback, videoDurationSeconds);

@@ -9,13 +9,15 @@ import {
   fillTemplate,
   validateOptionsList,
 } from "../utils/option-templates";
+import { CHAT_REGISTRY_FALLBACK } from "../../../web/lib/utils/chat-options-settings";
 
 describe("AdaptiveOptionsBuilder", () => {
   describe("buildAdaptiveOptions", () => {
     it("returns static options when context is undefined", async () => {
       const options = await buildAdaptiveOptions(undefined, "test conversation");
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
       expect(options.length).toBeGreaterThanOrEqual(3);
-      expect(options.length).toBeLessThanOrEqual(5);
+      expect(options.length).toBeLessThanOrEqual(maxOptions);
       options.forEach((opt) => {
         expect(opt.length).toBeLessThanOrEqual(50);
       });
@@ -24,8 +26,9 @@ describe("AdaptiveOptionsBuilder", () => {
     it("returns static options when context is empty", async () => {
       const context: UserKnowledgeContext = {};
       const options = await buildAdaptiveOptions(context, "test conversation");
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
       expect(options.length).toBeGreaterThanOrEqual(3);
-      expect(options.length).toBeLessThanOrEqual(5);
+      expect(options.length).toBeLessThanOrEqual(maxOptions);
     });
 
     it("generates theme-based options when themes are present", async () => {
@@ -33,8 +36,9 @@ describe("AdaptiveOptionsBuilder", () => {
         themes: ["security", "performance"],
       };
       const options = await buildAdaptiveOptions(context, "authentication in the video");
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
       expect(options.length).toBeGreaterThanOrEqual(3);
-      expect(options.length).toBeLessThanOrEqual(5);
+      expect(options.length).toBeLessThanOrEqual(maxOptions);
 
       // At least one option should reference a theme
       const hasThemeOption = options.some(
@@ -160,10 +164,11 @@ describe("AdaptiveOptionsBuilder", () => {
   });
 
   describe("getStaticOptions", () => {
-    it("returns 3-5 static options", () => {
+    it("returns 3 to MAX_STARTER_OPTIONS static options", () => {
       const options = getStaticOptions();
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
       expect(options.length).toBeGreaterThanOrEqual(3);
-      expect(options.length).toBeLessThanOrEqual(5);
+      expect(options.length).toBeLessThanOrEqual(maxOptions);
     });
 
     it("all static options under 50 chars", () => {
@@ -233,28 +238,22 @@ describe("AdaptiveOptionsBuilder", () => {
   describe("validateOptionsList", () => {
     it("validates correct options list", () => {
       const options = ["Option 1?", "Option 2?", "Option 3?"];
-      const result = validateOptionsList(options);
+      const result = validateOptionsList(options, CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']);
       expect(result.valid).toBe(true);
       expect(result.errors.length).toBe(0);
     });
 
     it("catches too few options", () => {
       const options = ["Option 1?", "Option 2?"];
-      const result = validateOptionsList(options);
+      const result = validateOptionsList(options, CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("too few"))).toBe(true);
     });
 
     it("catches too many options", () => {
-      const options = [
-        "Option 1?",
-        "Option 2?",
-        "Option 3?",
-        "Option 4?",
-        "Option 5?",
-        "Option 6?",
-      ];
-      const result = validateOptionsList(options);
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
+      const options = Array.from({ length: maxOptions + 1 }, (_idx, i) => `Option ${i + 1}?`);
+      const result = validateOptionsList(options, maxOptions);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("too many"))).toBe(true);
     });
@@ -265,34 +264,29 @@ describe("AdaptiveOptionsBuilder", () => {
         "This option is way too long and exceeds the 50 character limit significantly?",
         "Short option 2?",
       ];
-      const result = validateOptionsList(options);
+      const result = validateOptionsList(options, CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("too long"))).toBe(true);
     });
 
     it("catches duplicate options", () => {
       const options = ["Option 1?", "Option 1?", "Option 2?"];
-      const result = validateOptionsList(options);
+      const result = validateOptionsList(options, CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("duplicate"))).toBe(true);
     });
 
     it("catches empty or null options", () => {
       const options = ["Option 1?", "", "Option 2?"];
-      const result = validateOptionsList(options);
+      const result = validateOptionsList(options, CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions']);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("empty"))).toBe(true);
     });
 
-    it("validates list with 5 options (boundary)", () => {
-      const options = [
-        "Option 1?",
-        "Option 2?",
-        "Option 3?",
-        "Option 4?",
-        "Option 5?",
-      ];
-      const result = validateOptionsList(options);
+    it("validates list with maxOptions options (boundary)", () => {
+      const maxOptions = CHAT_REGISTRY_FALLBACK['chat.maxStarterOptions'];
+      const options = Array.from({ length: maxOptions }, (_idx, i) => `Option ${i + 1}?`);
+      const result = validateOptionsList(options, maxOptions);
       expect(result.valid).toBe(true);
     });
   });
