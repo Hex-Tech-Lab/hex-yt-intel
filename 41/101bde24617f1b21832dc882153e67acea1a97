@@ -1,0 +1,67 @@
+web/app/api/billing/entitlements/route.ts
+  s_0152ca93e1b507::t_8156cca989db0e 19
+web/lib/config/pricing-settings.ts
+  s_0152ca93e1b507::t_5db684c537c917 1-28
+.memory/AGENT_LEDGER.md
+  s_0152ca93e1b507::t_2157a19794fb12 1365-1366
+web/lib/__tests__/highlights-validator.test.ts
+  s_0152ca93e1b507::t_e4f5b0fe73ade2 70,73,89
+  s_0152ca93e1b507::t_a8dea6f7c47d0d 68,76,83,86
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  s_0152ca93e1b507::t_25f4a5f145137e 53-56,62-65
+  s_0152ca93e1b507::t_70a86d56530844 26,38-48,57-61,66-69
+  s_0152ca93e1b507::t_778c480303153f 70
+web/components/billing/PricingModal.tsx
+  s_0152ca93e1b507::t_8ae080751e2272 99
+  s_0152ca93e1b507::t_7e7045c83efc1a 9
+web/components/dashboard/HighlightsTrack.tsx
+  s_0152ca93e1b507::t_346e979ade7cba 110,122
+  s_0152ca93e1b507::t_5fa27636b76974 103,112,124
+web/components/billing/founders-table-client.tsx
+  s_0152ca93e1b507::t_4dcb7008bea21a 20-22,26,42
+  s_0152ca93e1b507::t_b4ef332d9ac36b 7
+web/lib/constants/pricing-plans.ts
+  s_0152ca93e1b507::t_7b9cc0ed6aab41 10-11
+  s_0152ca93e1b507::t_dc1de2422bdd8b 38-39,44,57,70
+web/store/useVideoStore.ts
+  s_0152ca93e1b507::t_f1c8e47d260fe8 18,27
+  s_0152ca93e1b507::t_d3dc8f98562ab3 38,53-54
+web/components/templates/console/ViewModeToggle.tsx
+  s_0152ca93e1b507::t_6de1d3f01a2a8c 45,49-55
+  s_0152ca93e1b507::t_ac90179ac3ca8f 4
+web/lib/prompts/highlights-extraction.ts
+  s_0152ca93e1b507::t_d1a4f49adbf962 42,44,46
+  s_0152ca93e1b507::t_8a11fba0d517b7 128-132,139
+web/lib/validators/highlights.ts
+  s_0152ca93e1b507::t_29baab34054200 13,17
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0152ca93e1b507::t_bf4b5fae3532cf 9
+  s_0152ca93e1b507::t_4a7294a37a68aa 10
+  s_0152ca93e1b507::t_7f4199d82737c8 260-261
+  s_0152ca93e1b507::t_f9b94e4290fb9c 296
+web/components/billing/__tests__/pricing-modal.test.tsx
+  s_0152ca93e1b507::t_8e65775cbd9bb3 5
+  s_0152ca93e1b507::t_ac8da50f65a767 41
+web/lib/hooks/useSegmentPlayback.ts
+  s_0152ca93e1b507::t_3cd05ad8e7bb31 273-274
+  s_0152ca93e1b507::t_59d8d871188ab0 265-272
+  s_0152ca93e1b507::t_9fba8b231a10ca 5
+web/components/dashboard/HighlightsTransitionOverlay.tsx
+  s_0152ca93e1b507::t_c8521398dec457 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "41101bde24617f1b21832dc882153e67acea1a97",
+  "prompts": {},
+  "sessions": {
+    "s_0152ca93e1b507": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbc21f739fferk6XmHxuMvuJgX",
+        "model": "muse-spark-1.2-contributor-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
