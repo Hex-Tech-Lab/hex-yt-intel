@@ -1,0 +1,35 @@
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_bc586115ae0a19 15
+  s_4b2aacf8e9effe::t_a3bd86c7f2b600 14
+  s_4b2aacf8e9effe::t_60b45f515652f3 13
+  s_0152ca93e1b507::t_a182c78a4dba87 1363
+worker/src/services/LLMCascade.ts
+  s_0152ca93e1b507::t_405005919422f7 33-36
+  s_0152ca93e1b507::t_325f483dfc8887 95-96,98
+web/hooks/useSSEStream.ts
+  s_0152ca93e1b507::t_a8fcdd082b66d5 310-311
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a234d11a1c368262f010a046abada1deecc29e0e",
+  "prompts": {},
+  "sessions": {
+    "s_0152ca93e1b507": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbc21f739fferk6XmHxuMvuJgX",
+        "model": "muse-spark-1.2-contributor-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
