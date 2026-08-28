@@ -1,0 +1,34 @@
+web/lib/prompts/highlights-extraction.ts
+  s_0152ca93e1b507::t_d56df259cb9387 52
+  s_0152ca93e1b507::t_837ca61318c9f4 134,148-150
+  s_0152ca93e1b507::t_b31b0a184eaa97 140-147
+web/lib/utils/highlights-settings.ts
+  s_0152ca93e1b507::t_65298996122bf5 25-29
+  s_0152ca93e1b507::t_afc8a30635a2f1 153-164
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_0152ca93e1b507::t_5b32a70668ae9f 212
+  s_0152ca93e1b507::t_57946cf2a3f83e 167-168,175
+  s_0152ca93e1b507::t_d46629a6da0232 11
+  s_0152ca93e1b507::t_b5467d09306c7d 154
+web/lib/__tests__/extract-highlights-usecase.test.ts
+  s_0152ca93e1b507::t_0ce38b6b8a6cc8 139-140
+web/lib/prompts/highlights-reconciliation.ts
+  s_0152ca93e1b507::t_c799e1b7ce08cb 97,103,107
+  s_0152ca93e1b507::t_f73028cb46ac34 98-99,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "33dfb3e59c90af71ef991023753da7719668a084",
+  "prompts": {},
+  "sessions": {
+    "s_0152ca93e1b507": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbc21f739fferk6XmHxuMvuJgX",
+        "model": "muse-spark-1.2-contributor-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
