@@ -49,7 +49,7 @@ Select every genuinely important moment -- there is NO fixed target count and NO
 }
 
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>, takeaways?: string[]): string {
-  const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS);
+  const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice, not string truncation ... */);
   const takeawaysSection = promptTakeaways.length > 0
     ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\nFor each takeaway, identify the timestamp range where it is discussed. Set parent_takeaway_idx to the exact integer [Index X] of the supporting takeaway (0 to ${promptTakeaways.length - 1}). If no takeaway matches, set parent_takeaway_idx to null.\n\n`
     : '';
@@ -131,15 +131,23 @@ export function parseHighlightsExtraction(
     // very long spans, and a model can return a sub-floor point. Clamp the
     // duration into [min, max] instead of discarding the highlight.
     const duration = end - finalStart;
-    const clampedEnd = duration < minSegmentDurationSeconds
+    let clampedEnd = duration < minSegmentDurationSeconds
       ? finalStart + minSegmentDurationSeconds
       : duration > maxSegmentDurationSeconds
         ? finalStart + maxSegmentDurationSeconds
         : end;
     if (seenStarts.has(finalStart)) continue;
-    const durationForBudget = clampedEnd - finalStart;
-    if (out.length > 0 && accumulatedDuration + durationForBudget > effectiveBudget) {
-      break;
+    let durationForBudget = clampedEnd - finalStart;
+    if (accumulatedDuration + durationForBudget > effectiveBudget) {
+      const remaining = effectiveBudget - accumulatedDuration;
+      if (remaining < 1) {
+        durationForBudget = minSegmentDurationSeconds;
+      } else {
+        durationForBudget = Math.max(minSegmentDurationSeconds, Math.min(durationForBudget, remaining, maxSegmentDurationSeconds));
+      }
+      clampedEnd = finalStart + durationForBudget;
+      if (clampedEnd <= finalStart) continue;
+      durationForBudget = clampedEnd - finalStart;
     }
     // takeawayIdx: nullable integer in [0, takeawaysCount). A non-integer
     // (string, NaN, etc.) or out-of-range value is treated as null

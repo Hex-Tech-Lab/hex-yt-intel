@@ -8,7 +8,7 @@ import {
   MAX_PROMPT_TAKEAWAYS,
 } from '@/lib/prompts/highlights-extraction';
 import { buildVerbatimExcerpt } from '@/lib/prompts/highlights-reconciliation';
-import { HIGHLIGHTS_REGISTRY_FALLBACK, calculateHighlightBudgetSeconds, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
+import { HIGHLIGHTS_REGISTRY_FALLBACK, calculateEffectiveHighlightBudget, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
 
 /**
@@ -151,7 +151,7 @@ export class ExtractHighlightsUseCase {
       300
     );
 
-    const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS);
+    const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice ... */);
 
     const completion = await this.completion.complete({
       system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
@@ -164,14 +164,15 @@ export class ExtractHighlightsUseCase {
     const validStarts = new Set(segments.map((segment) => segment.start));
     const lastSegment = segments[segments.length - 1];
     const estimatedVideoDuration = lastSegment ? lastSegment.start + 10 : 0;
-    const budgetSeconds = calculateHighlightBudgetSeconds(estimatedVideoDuration);
+    const baseBudgetSeconds = calculateEffectiveHighlightBudget(estimatedVideoDuration, promptTakeaways.length, 15);
+    const effectiveBudgetSeconds = Math.max(baseBudgetSeconds, promptTakeaways.length * minSegmentDuration);
     const result = parseHighlightsExtraction(
       completion.text,
       validStarts,
       maxCount,
       minSegmentDuration,
       maxSegmentDuration,
-      { takeawaysCount: promptTakeaways.length, maxCumulativeDuration: budgetSeconds }
+      { takeawaysCount: promptTakeaways.length, maxCumulativeDuration: effectiveBudgetSeconds }
     );
 
     // 'invalid' means the model response was unparseable -- a transient LLM
@@ -208,7 +209,7 @@ export class ExtractHighlightsUseCase {
           const rawText = windowSegments.map((s) => s.text).join(' ');
           const tokens = rawText.split(/\s+/).filter(Boolean);
           const simhash64 = computeSimHash64(tokens);
-          const verbatimAnchor = rawText.slice(0, 200);
+          const verbatimAnchor = rawText.length > 200 ? `${rawText.slice(0, 200)}...` : rawText;
           
           anchors.push({ 
             windowStart, 

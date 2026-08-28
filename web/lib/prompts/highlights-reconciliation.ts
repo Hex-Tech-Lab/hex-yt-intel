@@ -94,15 +94,17 @@ export function parseHighlightsReconciliation(
 
 /** Derive the verbatim transcript excerpt for a highlight by slicing the
  *  transcript segments whose start falls within [start, end). Zero LLM
- *  cost — pure array filter + join. (§2.C.1 of the design doc.) */
+ *  cost — pure array filter + join. (§2.C.1 of the design doc.)
+ *  Epsilon 0.5s on start compensates for ASR rounding; end is strict
+ *  (< end) to avoid including the next highlight's starting segment. */
 export function buildVerbatimExcerpt(
   start: number,
   end: number,
-  segments: Array<{ start: number; text: string }>
+  segments: Array<{ start: number; text: string; end?: number; duration?: number }>
 ): string {
   return segments
-    .filter((segment) => segment.start >= start && segment.start < end)
-    .map((segment) => segment.text)
+    .filter((segment) => segment.start >= start - 0.5 && segment.start < end)
+    .map((segment) => segment.text.trim())
     .join(' ')
     .trim();
 }
