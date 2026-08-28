@@ -1,0 +1,52 @@
+.memory/AGENT_LEDGER.md
+  s_0152ca93e1b507::t_513de1725b42ee 1367
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  s_0152ca93e1b507::t_456f61e08d9a44 53-61
+web/lib/utils/highlights-settings.ts
+  s_0152ca93e1b507::t_21d008e46c7230 25-28
+  s_0152ca93e1b507::t_a9c90705c0aa74 159
+web/components/dashboard/HighlightsTrack.tsx
+  s_0152ca93e1b507::t_e2076792bdd28d 104,108,111-112,115,117,124,127-128,131,133
+  s_0152ca93e1b507::t_7191c44ab71960 125-126
+  s_0152ca93e1b507::t_b608fcc87ac49d 109-110
+  s_0152ca93e1b507::t_6c8d63e2104e2e 6
+web/lib/__tests__/highlights-validator.test.ts
+  s_0152ca93e1b507::t_22a98c02b6da88 68,70,73,76,83,86,89
+web/lib/__tests__/extract-highlights-usecase.test.ts
+  s_0152ca93e1b507::t_dbed538e0fc3f9 139-140
+web/lib/prompts/highlights-extraction.ts
+  s_0152ca93e1b507::t_c5685aba79a89a 102
+  s_0152ca93e1b507::t_136b4a2af86bad 44,46
+  s_0152ca93e1b507::t_5a60abb5b08819 125-126
+web/components/dashboard/HighlightsTransitionOverlay.tsx
+  s_0152ca93e1b507::t_3900bcaff111de 3,8,11-44,53,62-81,84-86,88-93
+web/components/billing/UpgradeModal.tsx
+  s_0152ca93e1b507::t_3f1f6ebeb9448e 1-11
+web/lib/hooks/useSegmentPlayback.ts
+  s_0152ca93e1b507::t_36419764149c3e 273
+web/lib/validators/highlights.ts
+  s_0152ca93e1b507::t_6128d13867dcb5 13,17
+web/store/useVideoStore.ts
+  s_0152ca93e1b507::t_977bd92a63f0d6 19,28
+  s_0152ca93e1b507::t_5de5e438eb11a7 40
+  s_0152ca93e1b507::t_c0c6decdb0208d 55-56
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0152ca93e1b507::t_257fff40bf583f 297
+  s_0152ca93e1b507::t_6719e07de77b2d 261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "6ed7c4922864e413625b12c8d410017624c293bf",
+  "prompts": {},
+  "sessions": {
+    "s_0152ca93e1b507": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbc21f739fferk6XmHxuMvuJgX",
+        "model": "muse-spark-1.2-contributor-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
