@@ -136,8 +136,8 @@ describe('ExtractHighlightsUseCase', () => {
     expect(persistence.saveHighlights).toHaveBeenCalledWith({
       analysisId: 'an-1',
       highlights: [
-        { idx: 0, start: 10, end: 22, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim Reveal' },
-        { idx: 1, start: 20, end: 32, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Reveal Outro' },
+        { idx: 0, start: 10, end: 25, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim Reveal' },
+        { idx: 1, start: 20, end: 35, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Reveal Outro' },
       ],
     });
   });

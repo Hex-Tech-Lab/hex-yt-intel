@@ -258,6 +258,7 @@ export function VideoPlayerCard() {
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
   const isTransitioning = useVideoStore((s) => s.isTransitioning);
+  const transitionDirection = useVideoStore((s) => s.transitionDirection);
 
   if (!mounted || !videoId) return null;
 
@@ -293,7 +294,7 @@ export function VideoPlayerCard() {
   // needs to insert/remove nodes around the third-party-mutated container.
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
-      <HighlightsTransitionOverlay active={isTransitioning} />
+      <HighlightsTransitionOverlay active={isTransitioning} direction={transitionDirection ?? 'forward'} />
       <div className={`absolute inset-0 z-10 flex-col items-center justify-center p-6 text-center text-xs font-mono ${embedRestricted ? 'flex' : 'hidden'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
         <img

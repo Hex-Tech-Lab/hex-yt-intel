@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { Tooltip } from '@astryxdesign/core';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
+import { useVideoStore } from '@/store/useVideoStore';
 
 /**
  * Track height in px -- the single source of truth for the scrubber's own
@@ -100,28 +101,36 @@ export function HighlightsNav({
   };
 
   return (
-    <div className="flex items-center justify-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)] min-h-[36px] sm:min-h-[44px] px-1">
+    <div className="flex items-center justify-center gap-2 bg-[var(--surface-quiet)] border border-[var(--line)] min-h-[36px] sm:min-h-[40px] px-1 py-1">
       <button
         type="button"
         disabled={clampedActiveIndex === null}
-        onClick={handlePrev}
+        onClick={() => {
+          useVideoStore.getState().setTransitioning(true, 'backward');
+          setTimeout(() => useVideoStore.getState().setTransitioning(false), 1200);
+          handlePrev();
+        }}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="min-w-[40px] h-[36px] sm:min-w-[48px] sm:h-[40px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        <span aria-hidden="true" className="text-base sm:text-lg">‹</span>
+        <span aria-hidden="true" className="text-base sm:text-lg font-bold">‹</span>
       </button>
       <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
         {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
       </span>
       <button
         type="button"
-        onClick={handleNext}
+        onClick={() => {
+          useVideoStore.getState().setTransitioning(true, 'forward');
+          setTimeout(() => useVideoStore.getState().setTransitioning(false), 1200);
+          handleNext();
+        }}
         title="Next highlight"
         aria-label="Next highlight"
-        className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="min-w-[40px] h-[36px] sm:min-w-[48px] sm:h-[40px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        <span aria-hidden="true" className="text-base sm:text-lg">›</span>
+        <span aria-hidden="true" className="text-base sm:text-lg font-bold">›</span>
       </button>
     </div>
   );

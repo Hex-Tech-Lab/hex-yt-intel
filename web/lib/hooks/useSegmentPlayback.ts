@@ -270,7 +270,7 @@ export function useSegmentPlayback({
           setElapsedInSegmentSeconds(null);
           return;
         }
-        useVideoStore.getState().setTransitioning(true);
+        useVideoStore.getState().setTransitioning(true, 'forward');
         setTimeout(() => useVideoStore.getState().setTransitioning(false), 1200);
         playFrom(idx + 1);
       }

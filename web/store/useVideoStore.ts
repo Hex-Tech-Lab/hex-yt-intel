@@ -16,6 +16,7 @@ export interface VideoState {
    *  effect immediately instead of only on the next player mount. */
   playbackRate: number;
   isTransitioning: boolean;
+  transitionDirection: 'forward' | 'backward' | null;
   setPlaying: (isPlaying: boolean) => void;
   setSeekTo: (seconds: number) => void;
   setCurrentPlaybackSeconds: (seconds: number | null) => void;
@@ -24,7 +25,7 @@ export interface VideoState {
   toggleEntityTimeSeek: () => void;
   clearPendingNav: () => void;
   clearSeek: () => void;
-  setTransitioning: (active: boolean) => void;
+  setTransitioning: (active: boolean, direction?: 'forward' | 'backward' | null) => void;
   reset: () => void;
 }
 
@@ -36,6 +37,7 @@ export const useVideoStore = create<VideoState>((set) => ({
   currentPlaybackSeconds: null,
   playbackRate: 1,
   isTransitioning: false,
+  transitionDirection: null,
   setPlaying: (isPlaying) => set({ isPlaying }),
   setPlaybackRate: (rate) => set({ playbackRate: rate }),
   setEntityTimeSeekEnabled: (enabled) => set({ entityTimeSeekEnabled: enabled }),
@@ -50,6 +52,6 @@ export const useVideoStore = create<VideoState>((set) => ({
   setCurrentPlaybackSeconds: (seconds) => set({ currentPlaybackSeconds: seconds }),
   clearPendingNav: () => set({ pendingNav: null }),
   clearSeek: () => set({ seekTo: null }),
-  setTransitioning: (active) => set({ isTransitioning: active }),
-  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1, isTransitioning: false }),
+  setTransitioning: (active, direction = null) => set({ isTransitioning: active, transitionDirection: active ? (direction ?? 'forward') : null }),
+  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1, isTransitioning: false, transitionDirection: null }),
 }));

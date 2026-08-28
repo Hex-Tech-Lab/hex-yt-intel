@@ -41,9 +41,9 @@ function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<n
 export function buildHighlightsExtractionSystemPrompt(maxCount: number, maxSegmentDurationSeconds: number): string {
   return `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text, plus a list of key takeaways (Dim.0, N items). You MUST return exactly N highlights -- one per takeaway, where N is the number of takeaways provided (if 0 takeaways, return 0 highlights). Each highlight corresponds 1:1 to a takeaway: highlight i MUST have parent_takeaway_idx = i and MUST describe the moment where that takeaway is discussed in the transcript.
 
-Output ONLY a JSON array, no prose before or after, no markdown code fence. Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, to one decimal place, the timestamp where the discussion of this highlight's topic actually ends in the transcript. This MUST satisfy end > start. Cover the minimum amount of the topic needed to include all meaningful keywords from that excerpt. Do not extend beyond the topic's natural boundary. The end value does NOT need to align with any segment boundary -- it can be any real timestamp between the highlight's start and the next highlight's start (or the video end).>, "label": <string, one short sentence describing what happens at this moment>, "parent_takeaway_idx": <number, 0-indexed [Index X] of the takeaway this highlight maps to, MUST be between 0 and N-1 inclusive> }.
+Output ONLY a JSON array, no prose before or after, no markdown code fence. Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, to one decimal place, the timestamp where the discussion of this highlight's topic actually ends in the transcript. This MUST satisfy end > start (15s ≤ duration ≤ 60s, natural topic boundaries). Cover the minimum amount of the topic needed to include all meaningful keywords from that excerpt. Do not extend beyond the topic's natural boundary. The end value does NOT need to align with any segment boundary -- it can be any real timestamp between the highlight's start and the next highlight's start (or the video end).>, "label": <string, one short sentence describing what happens at this moment>, "parent_takeaway_idx": <number, 0-indexed [Index X] of the takeaway this highlight maps to, MUST be between 0 and N-1 inclusive> }.
 
-Each highlight's duration (end - start) must be between 12 and 25 seconds (clamped). Never exceed ${maxSegmentDurationSeconds} seconds for any single highlight. The end timestamp is the real end of the topic, not the start of the next highlight -- do not use the next highlight's start time as the end value. If a takeaway has no clear transcript location, still provide its highlight by choosing the nearest plausible segment and setting parent_takeaway_idx accordingly. Never return null for parent_takeaway_idx when takeaways are provided. Hard ceiling: never return more than ${maxCount} moments even if more exist. Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments and no takeaways were provided, return an empty array [].`;
+Each highlight's duration (end - start) should reflect natural topic boundaries, typically 15–60 seconds, distinct per takeaway and content-proportional. Never exceed ${maxSegmentDurationSeconds} seconds for any single highlight. The end timestamp is the real end of the topic, not the start of the next highlight -- do not use the next highlight's start time as the end value. If a takeaway has no clear transcript location, still provide its highlight by choosing the nearest plausible segment and setting parent_takeaway_idx accordingly. Never return null for parent_takeaway_idx when takeaways are provided. Hard ceiling: never return more than ${maxCount} moments even if more exist. Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments and no takeaways were provided, return an empty array [].`;
 }
 
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>, takeaways?: string[]): string {
@@ -99,10 +99,9 @@ export function parseHighlightsExtraction(
   minSegmentDurationSeconds: number,
   maxSegmentDurationSeconds: number,
   takeawaysCountOrOptions: number | ParseHighlightsOptions = 0,
-  budgetSeconds: number = Infinity
+  _budgetSeconds: number = Infinity
 ): HighlightsExtractionResult {
   const takeawaysCount = typeof takeawaysCountOrOptions === 'number' ? takeawaysCountOrOptions : takeawaysCountOrOptions.takeawaysCount;
-  const effectiveBudget = typeof takeawaysCountOrOptions === 'object' && takeawaysCountOrOptions.maxCumulativeDuration !== undefined ? takeawaysCountOrOptions.maxCumulativeDuration : budgetSeconds;
   const parseResult = parseJsonArray(text, 'highlights-extraction');
   if (parseResult.status === 'invalid') return { status: 'invalid' };
   const raw = parseResult.data;
@@ -110,7 +109,6 @@ export function parseHighlightsExtraction(
 
   const seenStarts = new Set<number>();
   const out: ExtractedHighlight[] = [];
-  let accumulatedDuration = 0;
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
     const { start, end, label } = item as Record<string, unknown>;
@@ -121,14 +119,11 @@ export function parseHighlightsExtraction(
     const matchedStart = findNearestSegmentStart(start, validSegmentStarts, 1.0);
     if (matchedStart === null) continue;
     const finalStart = matchedStart;
-    // end is NO longer required to be a real segment start time (2026-08-21):
-    // the LLM now returns a content-driven end timestamp, not the next
-    // highlight's start. Only end > start and a duration clamp are enforced.
-    if (end <= finalStart) continue;
     // Temporal sanity: end MUST be > start. Reject inverted timestamps
     // (e.g. 05:41–05:38 where end < start) rather than silently fixing to
     // start+30s, which would hide LLM hallucinations and cause scrubber
-    // (11 raw) vs table (8 after dropping) drift. Only clamp valid durations.
+    // (11 raw) vs table (8 after dropping) drift. Only clamp valid durations
+    // to natural 15-60s boundaries.
     if (end <= finalStart) continue;
     const duration = end - finalStart;
     let clampedEnd = duration < minSegmentDurationSeconds
@@ -138,18 +133,6 @@ export function parseHighlightsExtraction(
         : end;
     if (clampedEnd <= finalStart) continue;
     if (seenStarts.has(finalStart)) continue;
-    let durationForBudget = clampedEnd - finalStart;
-    if (accumulatedDuration + durationForBudget > effectiveBudget) {
-      const remaining = effectiveBudget - accumulatedDuration;
-      if (remaining < 1) {
-        durationForBudget = minSegmentDurationSeconds;
-      } else {
-        durationForBudget = Math.max(minSegmentDurationSeconds, Math.min(durationForBudget, remaining, maxSegmentDurationSeconds));
-      }
-      clampedEnd = finalStart + durationForBudget;
-      if (clampedEnd <= finalStart) continue;
-      durationForBudget = clampedEnd - finalStart;
-    }
     // takeawayIdx: nullable integer in [0, takeawaysCount). A non-integer
     // (string, NaN, etc.) or out-of-range value is treated as null
     // (standalone highlight, not mapped to any takeaway).
@@ -160,7 +143,6 @@ export function parseHighlightsExtraction(
     const rawLabel = label.trim();
     const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
     if (trimmedLabel.length === 0) continue;
-    accumulatedDuration += durationForBudget;
     seenStarts.add(finalStart);
     out.push({ start: finalStart, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
   }

@@ -22,11 +22,10 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   // segment start" semantics doesn't produce 15-minute "segments" while
   // new data isn't truncated shorter than the floor. Paired with the
   // 20260821120000_highlights_segment_duration_clamps.sql migration.
-  // 1:1 cardinality fix (2026-08-28, ADR 029): clamp tighter to
-  // 12-25s so N takeaways always fit within attention budget without
-  // starvation (9 takeaways x 39s avg previously collapsed to 4).
-  'highlights.minSegmentDurationSeconds': 12,
-  'highlights.maxSegmentDurationSeconds': 25,
+  // Natural durations (2026-08-29, fix flattening): allow 15-60s natural
+  // topic boundaries anchored to transcript timestamps, distinct per takeaway.
+  'highlights.minSegmentDurationSeconds': 15,
+  'highlights.maxSegmentDurationSeconds': 60,
 } as const;
 
 /** A malformed/missing/out-of-range registry value must never reach the
@@ -157,7 +156,7 @@ export function calculateEffectiveHighlightBudget(
 ): number {
   const base = calculateAttentionBoundedBudget(videoDurationSeconds);
   if (!Number.isFinite(takeawaysCount) || takeawaysCount <= 0) return base;
-  const minRequired = takeawaysCount * 12;
+  const minRequired = takeawaysCount * 15;
   const ideal = takeawaysCount * targetPerTakeawaySeconds;
   return Math.max(base, minRequired, ideal);
 }
