@@ -7,6 +7,8 @@
 // the full pricing table (components/billing/pricing-table-client.tsx) and
 // the landing page's pricing summary (app/landing-page.tsx) so the two
 // surfaces can never drift out of sync again.
+// Amounts now derived from PRICING_REGISTRY_FALLBACK (SSOT) — no hardcoded
+// literals bypassing the registry.
 
 export interface PricingPlan {
   name: string;
@@ -33,11 +35,13 @@ export interface PricingPlan {
  */
 export const PRICING_APPROVED = false;
 
+import { PRICING_REGISTRY_FALLBACK } from '@/lib/config/pricing-settings';
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
     name: "Free",
     checkoutPlan: "light",
-    monthlyPrice: 0,
+    monthlyPrice: PRICING_REGISTRY_FALLBACK.free.amountCents !== null ? PRICING_REGISTRY_FALLBACK.free.amountCents / 100 : 0,
     desc: "Try a full analysis, no card required",
     features: [
       { label: "Limited analyses/month (paced, resets monthly)", tooltip: "A small monthly allowance that resets automatically — no card required to try it." },
@@ -50,7 +54,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     name: "Light",
     checkoutPlan: "light",
-    monthlyPrice: 5,
+    monthlyPrice: PRICING_REGISTRY_FALLBACK.light.amountCents !== null ? PRICING_REGISTRY_FALLBACK.light.amountCents / 100 : 5,
     desc: "A focused view of every analysis",
     features: [
       { label: "15 analyses/mo & 5 hrs of video (whichever hits first)", tooltip: "Your monthly quota, capped by whichever limit — analysis count or total video hours — you hit first." },
@@ -63,7 +67,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     name: "Pro",
     checkoutPlan: "pro",
-    monthlyPrice: 9,
+    monthlyPrice: PRICING_REGISTRY_FALLBACK.pro.amountCents !== null ? PRICING_REGISTRY_FALLBACK.pro.amountCents / 100 : 9,
     desc: "The complete intelligence breakdown",
     features: [
       { label: "60 analyses/mo & 20 hrs of video (whichever hits first)", tooltip: "Your monthly quota, capped by whichever limit — analysis count or total video hours — you hit first." },

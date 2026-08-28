@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Tooltip } from "@astryxdesign/core";
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import { PricingModal } from "@/components/billing/PricingModal";
 import { Icon } from "@/components/templates/_shared/primitives";
@@ -41,16 +42,17 @@ export function ViewModeToggle() {
               : "text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--line-faint)]"
           }`}
           aria-pressed={viewMode === "pro"}
+          title={!canAccessPro && !isLoading ? "Pro view requires Founder, Pro, or Enterprise tier" : undefined}
         >
           <Icon icon="solar:graph-up-linear" size={14} />
           Pro
-          {!canAccessPro && !isLoading && (
-            <Icon
-              icon="solar:lock-password-linear"
-              size={12}
-              className="text-[var(--ink-muted)] ml-0.5"
-            />
-          )}
+          {!canAccessPro && !isLoading ? (
+            <Tooltip content="Pro view requires Founder, Pro, or Enterprise tier. Upgrade to unlock advanced console.">
+              <span className="inline-flex ml-0.5">
+                <Icon icon="solar:lock-password-linear" size={12} className="text-[var(--ink-muted)]" />
+              </span>
+            </Tooltip>
+          ) : null}
         </button>
       </div>
 

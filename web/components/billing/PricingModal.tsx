@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Button, IconButton } from '@astryxdesign/core';
 import { Icon, GlowBorder, CornerFrame } from '@/components/templates/_shared/primitives';
 import { showToast } from '@/lib/dashboard/export';
+import { PRICING_REGISTRY_FALLBACK } from '@/lib/config/pricing-settings';
 
 export interface PricingModalProps {
   isOpen: boolean;
@@ -95,7 +96,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                   <div className="p-4 bg-[var(--surface)] rounded-lg flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                       <span className="font-mono text-sm font-semibold tracking-wider text-[var(--ink)]">FOUNDER TIER</span>
-                      <span className="font-mono font-bold text-[var(--accent)]">$29</span>
+                      <span className="font-mono font-bold text-[var(--accent)]">{PRICING_REGISTRY_FALLBACK.founder.display}</span>
                     </div>
                     <ul className="flex flex-col gap-2 m-0 p-0 list-none">
                       <li className="flex items-start gap-2 text-sm text-[var(--ink)]">

@@ -15,6 +15,7 @@ export interface VideoState {
    *  mid-playback (e.g. from the highlights reel's speed control) takes
    *  effect immediately instead of only on the next player mount. */
   playbackRate: number;
+  isTransitioning: boolean;
   setPlaying: (isPlaying: boolean) => void;
   setSeekTo: (seconds: number) => void;
   setCurrentPlaybackSeconds: (seconds: number | null) => void;
@@ -23,6 +24,7 @@ export interface VideoState {
   toggleEntityTimeSeek: () => void;
   clearPendingNav: () => void;
   clearSeek: () => void;
+  setTransitioning: (active: boolean) => void;
   reset: () => void;
 }
 
@@ -33,6 +35,7 @@ export const useVideoStore = create<VideoState>((set) => ({
   entityTimeSeekEnabled: false,
   currentPlaybackSeconds: null,
   playbackRate: 1,
+  isTransitioning: false,
   setPlaying: (isPlaying) => set({ isPlaying }),
   setPlaybackRate: (rate) => set({ playbackRate: rate }),
   setEntityTimeSeekEnabled: (enabled) => set({ entityTimeSeekEnabled: enabled }),
@@ -47,5 +50,6 @@ export const useVideoStore = create<VideoState>((set) => ({
   setCurrentPlaybackSeconds: (seconds) => set({ currentPlaybackSeconds: seconds }),
   clearPendingNav: () => set({ pendingNav: null }),
   clearSeek: () => set({ seekTo: null }),
-  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1 }),
+  setTransitioning: (active) => set({ isTransitioning: active }),
+  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1, isTransitioning: false }),
 }));

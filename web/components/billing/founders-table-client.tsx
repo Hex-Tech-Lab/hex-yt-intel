@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@astryxdesign/core/Button';
 import { Tooltip } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { PRICING_REGISTRY_FALLBACK } from '@/lib/config/pricing-settings';
 
 interface FounderPlan {
   name: string;
@@ -16,14 +17,13 @@ interface FounderPlan {
 }
 
 // DRAFT / PLACEHOLDER — real numbers sourced from
-// docs/private/2026-08-16_PRICING_ECONOMICS_MASTER_MODEL.md §6/§6q (Founder Light $49,
-// Founder Pro $99, "illustrative, ~3-3.5x Light's value, real research-backed number
-// still needed"). Discount-lock durations (1yr / 2yr) are TBD per the same doc.
-// Do not ship to production until the pricing council's numbers lock.
+// docs/private/2026-08-16_PRICING_ECONOMICS_MASTER_MODEL.md §6/§6q. Discount-lock
+// durations (1yr / 2yr) are TBD per the same doc. Amounts now derived from
+// PRICING_REGISTRY_FALLBACK (SSOT) — no hardcoded literals.
 const FOUNDER_PLANS: FounderPlan[] = [
   {
     name: "Founder Light",
-    price: 49,
+    price: (PRICING_REGISTRY_FALLBACK.founder_tier_a.amountCents ?? 4900) / 100,
     lockLabel: "One-time payment -- discount honored ~1 year (candidate)",
     desc: "Full access, first-cohort pricing, shorter lock",
     included: [
@@ -39,7 +39,7 @@ const FOUNDER_PLANS: FounderPlan[] = [
   },
   {
     name: "Founder Pro",
-    price: 99,
+    price: (PRICING_REGISTRY_FALLBACK.founder_tier_b.amountCents ?? 9900) / 100,
     lockLabel: "One-time payment -- discount honored ~2 years (candidate)",
     desc: "Everything in Light, longer price-lock, first pick on quota",
     included: [

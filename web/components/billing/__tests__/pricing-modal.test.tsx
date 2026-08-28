@@ -2,6 +2,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PricingModal } from '../PricingModal';
+import { PRICING_REGISTRY_FALLBACK } from '@/lib/config/pricing-settings';
 import * as exportUtils from '@/lib/dashboard/export';
 
 vi.mock('@/lib/dashboard/export', () => ({
@@ -37,7 +38,7 @@ describe('PricingModal component', () => {
   it('Test 1: Renders Founder tier benefits and price clearly', () => {
     render(<PricingModal isOpen={true} onClose={() => {}} />);
     expect(screen.getAllByText('Upgrade to Founder')).toBeDefined();
-    expect(screen.getByText('$29')).toBeDefined();
+    expect(screen.getByText(PRICING_REGISTRY_FALLBACK.founder.display)).toBeDefined();
     expect(screen.getByText('Unlimited video analysis')).toBeDefined();
     expect(screen.getByText('Knowledge Graph access')).toBeDefined();
   });

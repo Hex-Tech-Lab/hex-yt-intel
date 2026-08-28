@@ -65,28 +65,28 @@ describe('HighlightSegmentSchema', () => {
     expect(blankTitle.title).toBe('Key Insight');
   });
 
-  it('defaults end to start + 30 when end is absent or invalid', () => {
+  it('defaults end to start + 12 when end is absent or invalid', () => {
     const missingEnd = HighlightSegmentSchema.parse({ start: 100, title: 'No end' });
-    expect(missingEnd.end).toBe(130);
+    expect(missingEnd.end).toBe(112);
 
     const invalidEnd = HighlightSegmentSchema.parse({ start: 50, end: 'NaN', title: 'Bad end' });
-    expect(invalidEnd.end).toBe(80);
+    expect(invalidEnd.end).toBe(62);
   });
 
-  it('clamps negative start to 0 and defaults end to start+30 when end is negative', () => {
+  it('clamps negative start to 0 and defaults end to start+12 when end is negative', () => {
     const result = HighlightSegmentSchema.parse({
       start: -5,
       end: -1,
       title: 'Negative',
     });
     expect(result.start).toBe(0);
-    expect(result.end).toBe(30); // end falls back to clampedStart + 30
+    expect(result.end).toBe(12);
   });
 
-  it('enforces end > start: inverted interval clamps end to start + 30', () => {
+  it('enforces end > start: inverted interval clamps end to start + 12', () => {
     const result = HighlightSegmentSchema.parse({ start: 50, end: 10, title: 'Inverted' });
     expect(result.start).toBe(50);
-    expect(result.end).toBe(80);
+    expect(result.end).toBe(62);
   });
 
   it('defaults summary to empty string when absent', () => {

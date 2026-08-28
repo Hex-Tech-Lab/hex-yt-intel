@@ -23,7 +23,7 @@ const TIER_RANK: Record<PlanTier, number> = {
 };
 
 export class GetUserEntitlementsUseCase {
-  async execute(userId: string): Promise<EntitlementState> {
+  async execute(userId: string, email?: string | null): Promise<EntitlementState> {
     const defaultFree: EntitlementState = {
       tier: 'free',
       is_founder: false,
@@ -35,8 +35,37 @@ export class GetUserEntitlementsUseCase {
       canExportKnowledgeGraph: false,
     };
 
+    const founderEntitlement: EntitlementState = {
+      tier: 'founder',
+      is_founder: true,
+      is_enterprise: false,
+      is_unlimited: true,
+      canAnalyzeVideo: true,
+      canAccessKnowledgeGraph: true,
+      canUseExtendedChat: true,
+      canExportKnowledgeGraph: true,
+    };
+
     if (!userId) {
       return defaultFree;
+    }
+
+    const founderUserIds = (process.env.FOUNDER_USER_IDS ?? process.env.ADMIN_FOUNDER_USER_IDS ?? '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (founderUserIds.includes(userId)) {
+      return founderEntitlement;
+    }
+
+    if (email) {
+      const founderEmails = (process.env.ADMIN_FOUNDER_EMAILS ?? '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean);
+      if (founderEmails.includes(email.toLowerCase())) {
+        return founderEntitlement;
+      }
     }
 
     try {

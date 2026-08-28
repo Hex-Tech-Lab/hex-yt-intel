@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const useCase = new GetUserEntitlementsUseCase();
-    const entitlements = await useCase.execute(user.id);
+    const entitlements = await useCase.execute(user.id, user.email ?? null);
 
     return NextResponse.json({ success: true, entitlements });
   } catch (error) {

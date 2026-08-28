@@ -10,11 +10,11 @@ export const HighlightSegmentSchema = z.preprocess(
     const summary = raw.summary ?? raw.description ?? raw.text ?? "";
 
     const numStart = typeof start === "number" ? start : typeof start === "string" ? Number(start.trim()) : 0;
-    let numEnd = typeof end === "number" ? end : typeof end === "string" ? Number(end.trim()) : numStart + 30;
+    let numEnd = typeof end === "number" ? end : typeof end === "string" ? Number(end.trim()) : numStart + 12;
 
     const cleanStart = Number.isFinite(numStart) && numStart >= 0 ? numStart : 0;
     if (!Number.isFinite(numEnd) || numEnd <= cleanStart) {
-      numEnd = cleanStart + 30;
+      numEnd = cleanStart + 12;
     }
 
     return {

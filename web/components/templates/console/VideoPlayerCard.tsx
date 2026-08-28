@@ -6,6 +6,8 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
+import { HighlightsTransitionOverlay } from '@/components/dashboard/HighlightsTransitionOverlay';
+
 import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
 
 export function VideoPlayerCard() {
@@ -255,6 +257,8 @@ export function VideoPlayerCard() {
     return () => clearInterval(intervalId);
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
+  const isTransitioning = useVideoStore((s) => s.isTransitioning);
+
   if (!mounted || !videoId) return null;
 
   // 101/150 = embedding disabled by the owner — the embedded player can never
@@ -289,6 +293,7 @@ export function VideoPlayerCard() {
   // needs to insert/remove nodes around the third-party-mutated container.
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
+      <HighlightsTransitionOverlay active={isTransitioning} />
       <div className={`absolute inset-0 z-10 flex-col items-center justify-center p-6 text-center text-xs font-mono ${embedRestricted ? 'flex' : 'hidden'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
         <img

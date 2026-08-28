@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HIGHLIGHTS_SPEED_MIN, HIGHLIGHTS_SPEED_MAX } from '@/lib/utils/highlights-settings';
+import { useVideoStore } from '@/store/useVideoStore';
 
 /**
  * Shared playback-engine hook for the highlights reel (extracted 2026-08-20
@@ -261,6 +262,16 @@ export function useSegmentPlayback({
         ? segment.end
         : leadIn + segmentDurationRef.current;
       if (currentTime >= segmentEnd - ADVANCE_LEAD_SECONDS) {
+        if (idx === segmentsRef.current.length - 1) {
+          primitivesRef.current.pause?.();
+          pendingSeekTargetRef.current = null;
+          pendingStartIndexRef.current = null;
+          setPlayingIdx(null);
+          setElapsedInSegmentSeconds(null);
+          return;
+        }
+        useVideoStore.getState().setTransitioning(true);
+        setTimeout(() => useVideoStore.getState().setTransitioning(false), 1200);
         playFrom(idx + 1);
       }
     };

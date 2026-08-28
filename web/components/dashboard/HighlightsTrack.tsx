@@ -100,23 +100,16 @@ export function HighlightsNav({
   };
 
   return (
-    <div className="h-5 flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
-      {/* Real fix (live report, 2026-08-21): the earlier text-[10px]
-          leading-none applied to match this bar's height against the
-          speed pill shrank the '<'/'>' glyphs into near-illegibility.
-          Decoupled: the button itself is a fixed h-4 box (matches the
-          speed pill's rendered height), the glyph inside is a normal,
-          clearly-visible text-xs -- flex centering means the glyph's own
-          font-size no longer controls the button's outer height. */}
+    <div className="flex items-center justify-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)] min-h-[36px] sm:min-h-[44px] px-1">
       <button
         type="button"
         disabled={clampedActiveIndex === null}
         onClick={handlePrev}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="h-4 w-4 flex items-center justify-center text-xs leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
-        <span aria-hidden="true">‹</span>
+        <span aria-hidden="true" className="text-base sm:text-lg">‹</span>
       </button>
       <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
         {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
@@ -126,9 +119,9 @@ export function HighlightsNav({
         onClick={handleNext}
         title="Next highlight"
         aria-label="Next highlight"
-        className="h-4 w-4 flex items-center justify-center text-xs leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+        className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
       >
-        <span aria-hidden="true">›</span>
+        <span aria-hidden="true" className="text-base sm:text-lg">›</span>
       </button>
     </div>
   );
