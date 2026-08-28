@@ -307,6 +307,8 @@ export function useSSEStream() {
                   models: job.models,
                   cascade: job.cascade,
                   maxOutputTokens: job.maxOutputTokens,
+                  llmCascadeTimeoutMs: job.llmCascadeTimeoutMs,
+                  llmCascadeHandshakeTimeoutMs: job.llmCascadeHandshakeTimeoutMs,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,

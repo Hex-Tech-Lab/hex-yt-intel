@@ -30,6 +30,10 @@ const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 // .default) per the standing no-hardcoded-tunables directive -- these are
 // ONLY the fallback for a stale client that didn't forward maxOutputTokens.
 
+const LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK = 15000;
+const LLM_TIMEOUT_MS_FALLBACK = 240000;
+const LLM_MAX_TOKENS_FALLBACK = { haiku: 8192, default: 16000 } as const;
+
 // Fallback only, for a stale client that didn't forward llmCascadeTimeoutMs
 // -- see CreateAnalysisUseCase's resolution of analysis.llmCascade.timeoutMs
 // and this file's timeoutMs doc comment on streamCascade's callLLMStream
@@ -88,13 +92,10 @@ export class LLMCascade implements LLMCascadePort {
     llmHandshakeTimeoutMs?: number
   ) {
     this.apiKey = apiKey;
-    if (!llmHandshakeTimeoutMs) throw new Error('LLMCascade SSOT Violation: Missing llmHandshakeTimeoutMs from Settings Registry');
-    this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs;
-    if (!maxOutputTokens) throw new Error('LLMCascade SSOT Violation: Missing maxOutputTokens from Settings Registry');
-    this.maxTokens = maxOutputTokens;
+    this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs && llmHandshakeTimeoutMs > 0 ? llmHandshakeTimeoutMs : LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK;
+    this.maxTokens = maxOutputTokens ?? LLM_MAX_TOKENS_FALLBACK;
     this.userId = userId;
-    if (!llmTimeoutMs) throw new Error('LLMCascade SSOT Violation: Missing llmTimeoutMs from Settings Registry');
-    this.llmTimeoutMs = llmTimeoutMs;
+    this.llmTimeoutMs = llmTimeoutMs && llmTimeoutMs > 0 ? llmTimeoutMs : LLM_TIMEOUT_MS_FALLBACK;
     if (!cascade || cascade.length === 0) {
       throw new Error('LLMCascade SSOT Violation: Missing cascade configuration from Settings Registry');
     }
