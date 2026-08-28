@@ -1157,70 +1157,104 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Invalid token", reason }, 401);
   }
 
-  const upstashUrl = c.env.UPSTASH_REDIS_REST_URL;
-  const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
-  const cache =
-    upstashUrl && upstashToken
-      ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
-      : undefined;
-  const promptConfig =
-    upstashUrl && upstashToken
-      ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
-      : undefined;
+  // 2026-08-28 (stream-5 RCA): everything from token verification through stream
+  // construction ran unguarded, so any throw (parseChapters on a malformed
+  // description, adapter constructors, buildStreamResponse setup) escaped to the
+  // global error handler, which in production returns only
+  // {"error":"Internal server error"} — the client-reported
+  // "Worker stream N failed (500)" carried zero diagnostics. This boundary sits
+  // AFTER HMAC verification, so the caller is the authenticated Vercel backend:
+  // including message/stack in the response leaks nothing to untrusted callers
+  // and turns the next 500 into a root-cause signal instead of a dead end.
+  try {
+    const upstashUrl = c.env.UPSTASH_REDIS_REST_URL;
+    const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
+    const cache =
+      upstashUrl && upstashToken
+        ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
+        : undefined;
+    const promptConfig =
+      upstashUrl && upstashToken
+        ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
+        : undefined;
 
-  // Decoupled chapter persistence: parse chapters from the video description
-  // (already available in req.metadata, no need to wait for the LLM stream)
-  // and fire-and-forget to the new /api/videos/[videoId]/chapters endpoint.
-  // This runs in parallel with the LLM stream — chapters are independent of
-  // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
-  const description = (req.metadata as { description?: string }).description;
-  if (description !== undefined) {
-    const chapters = parseChapters(description);
-    // Same fallback as the persist callback above (line ~769) -- previously
-    // fell back to '' here, which silently skipped chapter persistence with
-    // no error when both req.appUrl and APP_URL were absent (real P1 found
-    // by automated PR review on #244, fixed same session).
-    const appUrl = req.appUrl || c.env.APP_URL || "https://getvintel.com";
-    if (appUrl && signingKey) {
-      c.executionCtx.waitUntil((async () => {
-        try {
-          const exp = Date.now() + 120_000;
-          const canonical = JSON.stringify({ chapters });
-          const sig = await signBoundContent(signingKey, 'chapters', req.videoId, exp, canonical);
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10_000);
-          const response = await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chapters, sig, exp }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeout);
-          if (!response.ok) {
-            const bodyText = await response.text();
-            const bodySnippet = bodyText.length > 200 ? bodyText.slice(0, 200) + '...' : bodyText;
-            console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
+    // Decoupled chapter persistence: parse chapters from the video description
+    // (already available in req.metadata, no need to wait for the LLM stream)
+    // and fire-and-forget to the new /api/videos/[videoId]/chapters endpoint.
+    // This runs in parallel with the LLM stream — chapters are independent of
+    // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
+    const description = (req.metadata as { description?: string }).description;
+    if (description !== undefined) {
+      const chapters = parseChapters(description);
+      // Same fallback as the persist callback above (line ~769) -- previously
+      // fell back to '' here, which silently skipped chapter persistence with
+      // no error when both req.appUrl and APP_URL were absent (real P1 found
+      // by automated PR review on #244, fixed same session).
+      const appUrl = req.appUrl || c.env.APP_URL || "https://getvintel.com";
+      if (appUrl && signingKey) {
+        c.executionCtx.waitUntil((async () => {
+          try {
+            const exp = Date.now() + 120_000;
+            const canonical = JSON.stringify({ chapters });
+            const sig = await signBoundContent(signingKey, 'chapters', req.videoId, exp, canonical);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10_000);
+            const response = await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chapters, sig, exp }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeout);
+            if (!response.ok) {
+              const bodyText = await response.text();
+              const bodySnippet = bodyText.length > 200 ? bodyText.slice(0, 200) + '...' : bodyText;
+              console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
+                videoId: req.videoId,
+                status: response.status,
+                body: bodySnippet,
+              });
+            }
+          } catch (err) {
+            console.warn('[analyze-llm-stream] Chapter persist failed (non-blocking)', {
               videoId: req.videoId,
-              status: response.status,
-              body: bodySnippet,
+              error: err instanceof Error ? err.message : String(err),
             });
           }
-        } catch (err) {
-          console.warn('[analyze-llm-stream] Chapter persist failed (non-blocking)', {
-            videoId: req.videoId,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      })());
+        })());
+      }
     }
+
+    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs), new ValidationService(), cache);
+
+    const persistController = new AbortController();
+    const httpConnSignal = c.req.raw['signal'];
+
+    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[analyze-llm-stream] Stream setup failed", {
+      message,
+      stack,
+      videoId: req.videoId,
+      analysisId: req.analysisId,
+      modelCount: req.models?.length ?? 0,
+    });
+    Sentry.captureException(err, {
+      tags: { component: "analyze-llm-stream", phase: "stream-setup" },
+      extra: { videoId: req.videoId, analysisId: req.analysisId },
+    });
+    return c.json(
+      {
+        error: message,
+        stack,
+        videoId: req.videoId,
+        analysisId: req.analysisId,
+      },
+      500,
+    );
   }
-
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs), new ValidationService(), cache);
-
-  const persistController = new AbortController();
-  const httpConnSignal = c.req.raw['signal'];
-
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache);
 });
 
 export default analysis;
