@@ -1,0 +1,21 @@
+worker/src/middleware/error-handler.ts
+  s_4b2aacf8e9effe::t_c43675b712fbdb 2,16-26,34
+worker/src/routes/analysis.ts
+  s_4b2aacf8e9effe::t_ff3c65bc61cd74 1160-1219,1221,1224-1225,1228,1230-1231,1233-1257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "f217a6a38af8d9ece93efca106f1e582454d7b70",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
