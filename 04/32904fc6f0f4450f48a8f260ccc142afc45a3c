@@ -1,0 +1,33 @@
+web/lib/__tests__/highlights-parser-reconciliation.test.ts
+  s_4b2aacf8e9effe::t_350f7abd3ea83a 19-34,37-57
+  s_4b2aacf8e9effe::t_d01ea0fc035b07 35
+  s_4b2aacf8e9effe::t_2b25449290ddbd 36
+supabase/migrations/20260829011500_admin_list_users_activity_grant_authenticated.sql
+  s_4b2aacf8e9effe::t_686432f818c055 1-16,19-25
+  s_4b2aacf8e9effe::t_4728c927c88dc8 17-18,26-27
+web/lib/admin-logs/fetchers.ts
+  s_4b2aacf8e9effe::t_5045c41fe201b6 572-582
+web/lib/prompts/highlights-extraction.ts
+  s_4b2aacf8e9effe::t_c1a3b94f14d68e 150,155
+  s_4b2aacf8e9effe::t_9d9682e871f312 111-117
+  s_4b2aacf8e9effe::t_463f70c1c55dd4 52
+web/components/dashboard/HighlightsTrack.tsx
+  s_4b2aacf8e9effe::t_f24ff8de5ba9cb 131
+  s_4b2aacf8e9effe::t_d70a783e1d32d4 115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "0432904fc6f0f4450f48a8f260ccc142afc45a3c",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
