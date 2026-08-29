@@ -6,6 +6,7 @@ import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -269,6 +270,21 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           />
         </div>
       </div>
+
+      {(() => {
+        const activeSegment = playingIdx !== null ? segments[playingIdx] : null;
+        return activeSegment ? (
+          <div
+            className="mt-2.5 px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800/80 text-xs sm:text-sm text-slate-200 leading-relaxed transition-opacity duration-200"
+            data-testid="verbatim-caption"
+          >
+            <span className="font-mono text-emerald-400 font-semibold mr-2">
+              [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
+            </span>
+            <span className="text-slate-300 italic">"{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}"</span>
+          </div>
+        ) : null;
+      })()}
 
       {/* Footer row: live transcript ticker (left, grows/truncates) +
           Speed cycle-pill + relocated moment stepper (right). */}

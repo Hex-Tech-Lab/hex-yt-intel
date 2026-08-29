@@ -144,6 +144,22 @@ export function HighlightsNav({
 // own number, not a guess.
 const PERMANENT_LABEL_MAX_COUNT = 15;
 
+function PlayheadNeedle({ maxTime }: { maxTime: number }) {
+  const currentTime = useVideoStore((state) => state.currentPlaybackSeconds) ?? 0;
+  const progressPercent = maxTime > 0 ? (currentTime / maxTime) * 100 : 0;
+  const clamped = Math.min(100, Math.max(0, progressPercent));
+  return (
+    <div
+      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none transition-[left] duration-75 shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      style={{ left: `${clamped}%` }}
+      aria-hidden="true"
+      data-testid="playhead-needle"
+    >
+      <div className="absolute -top-1 -left-[3px] w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,1)]" />
+    </div>
+  );
+}
+
 export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, segmentDurationSeconds, hideNav = false }: HighlightsTrackProps) {
   // Real fix (/simplify + code-review pass, 2026-08-21): the empty-array
   // early return used to run BEFORE the hooks added below (markerLeftPcts/
@@ -308,6 +324,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
               style={{ left: `${pctFor(activeHighlight.end > activeHighlight.start ? activeHighlight.end : activeHighlight.start + segmentDurationSeconds, 99)}%` }}
             />
           )}
+          <PlayheadNeedle maxTime={maxTime} />
         </div>
       </div>
 
