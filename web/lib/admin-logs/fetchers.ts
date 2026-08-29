@@ -569,6 +569,17 @@ export async function fetchSentryLogs(searchParams: URLSearchParams): Promise<Fe
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
+      // Fail-soft (2026-08-29): an expired/revoked/under-scoped
+      // SENTRY_LOGS_AUTH_TOKEN must not crash the whole Admin Dashboard with
+      // an HTTP 500. Auth failures (401/403) return an empty issue set with
+      // an explicit warning so the dashboard renders; other failures keep
+      // the error path below.
+      if (res.status === 401 || res.status === 403) {
+        return {
+          status: 200,
+          body: { issues: [], totalEntries: 0, logs: `[${new Date().toISOString()}] [WARN] [sentry] No issues available -- Sentry token rejected (${res.status}).`, warning: `Invalid or expired SENTRY_AUTH_TOKEN (Sentry API returned ${res.status}).` },
+        };
+      }
       throw new Error(`Sentry Issues API returned status ${res.status}: ${errText}`);
     }
     const issues = (await res.json()) as any[];

@@ -49,7 +49,7 @@ Each highlight's duration (end - start) should reflect natural topic boundaries,
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>, takeaways?: string[]): string {
   const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice, not string truncation ... */);
   const takeawaysSection = promptTakeaways.length > 0
-    ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\nFor each takeaway, identify the timestamp range where it is discussed. Set parent_takeaway_idx to the exact integer [Index X] of the supporting takeaway (0 to ${promptTakeaways.length - 1}). If no takeaway matches, set parent_takeaway_idx to null.\n\n`
+    ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\nFor each takeaway, identify the timestamp range where it is discussed. Set parent_takeaway_idx to the exact integer [Index X] of the supporting takeaway (0 to ${promptTakeaways.length - 1}). Never return null: if a takeaway's location is unclear, choose the nearest plausible segment that could contain it (this overrides any earlier instruction to return null -- the 1:1 takeaway-to-highlight mapping is mandatory).\n\n`
     : '';
   const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
   return `${takeawaysSection}--- TRANSCRIPT (with timestamps) ---\n${lines}`;
@@ -108,6 +108,13 @@ export function parseHighlightsExtraction(
   if (!Array.isArray(raw)) return { status: 'invalid' };
 
   const seenStarts = new Set<number>();
+  // Strict 1:1 DAG enforcement (2026-08-29 master dispatch): when takeaways
+  // drive extraction, at most one highlight may claim a given
+  // parent_takeaway_idx. Without this, a model returning two highlights for
+  // takeaway 3 and none for takeaway 7 passes every per-entry check yet
+  // violates the N<->N contract (scrubber count vs takeaway count drift).
+  // First occurrence in model-output order wins -- the model's primary pick.
+  const seenTakeawayIdxs = new Set<number>();
   const out: ExtractedHighlight[] = [];
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
@@ -140,10 +147,12 @@ export function parseHighlightsExtraction(
     if (typeof rawTakeawayIdx === 'number' && Number.isFinite(rawTakeawayIdx) && Number.isInteger(rawTakeawayIdx) && rawTakeawayIdx >= 0 && rawTakeawayIdx < takeawaysCount) {
       parsedTakeawayIdx = rawTakeawayIdx;
     }
+    if (takeawaysCount > 0 && parsedTakeawayIdx !== null && seenTakeawayIdxs.has(parsedTakeawayIdx)) continue;
     const rawLabel = label.trim();
     const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
     if (trimmedLabel.length === 0) continue;
     seenStarts.add(finalStart);
+    if (parsedTakeawayIdx !== null) seenTakeawayIdxs.add(parsedTakeawayIdx);
     out.push({ start: finalStart, end: clampedEnd, label: trimmedLabel, takeawayIdx: parsedTakeawayIdx, verbatimExcerpt: '' });
   }
 

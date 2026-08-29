@@ -112,7 +112,7 @@ export function HighlightsNav({
         }}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="min-w-[40px] h-[36px] sm:min-w-[48px] sm:h-[40px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
+        className="min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[44px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <span aria-hidden="true" className="text-base sm:text-lg font-bold">‹</span>
       </button>
@@ -128,7 +128,7 @@ export function HighlightsNav({
         }}
         title="Next highlight"
         aria-label="Next highlight"
-        className="min-w-[40px] h-[36px] sm:min-w-[48px] sm:h-[40px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
+        className="min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[44px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <span aria-hidden="true" className="text-base sm:text-lg font-bold">›</span>
       </button>

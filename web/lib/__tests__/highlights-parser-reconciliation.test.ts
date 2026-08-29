@@ -16,6 +16,45 @@ import {
 
 const VALID_STARTS = new Set([10, 30, 60]);
 
+describe('parseHighlightsExtraction strict 1:1 takeaway mapping (2026-08-29)', () => {
+  it('keeps only the first highlight per parent_takeaway_idx when takeaways drive extraction', () => {
+    const result = parseHighlightsExtraction(
+      JSON.stringify([
+        { start: 10, end: 30, label: 'first claim on takeaway 1', takeawayIdx: 1 },
+        { start: 30, end: 50, label: 'duplicate claim on takeaway 1', takeawayIdx: 1 },
+        { start: 60, end: 80, label: 'claim on takeaway 2', takeawayIdx: 2 },
+      ]),
+      VALID_STARTS,
+      40,
+      5,
+      60,
+      { takeawaysCount: 3 }
+    );
+    expect(result.status).toBe('ok');
+    expect(result.highlights).toHaveLength(2);
+    expect(result.highlights.map((highlight) => highlight.takeawayIdx)).toEqual([1, 2]);
+  });
+
+  it('does not dedupe by takeawayIdx in standalone mode (takeawaysCount = 0)', () => {
+    // With no takeaways, takeawayIdx values are out of range -> null -> no dedupe.
+    const result = parseHighlightsExtraction(
+      JSON.stringify([
+        { start: 10, end: 30, label: 'standalone A', takeawayIdx: null },
+        { start: 30, end: 50, label: 'standalone B', takeawayIdx: null },
+      ]),
+      VALID_STARTS,
+      40,
+      5,
+      60,
+      { takeawaysCount: 0 }
+    );
+    expect(result.status).toBe('ok');
+    expect(result.highlights).toHaveLength(2);
+    expect(result.highlights[0]!.takeawayIdx).toBeNull();
+    expect(result.highlights[1]!.takeawayIdx).toBeNull();
+  });
+});
+
 describe('parseHighlightsExtraction duration clamping (B2)', () => {
   it('clamps sub-min-duration highlights instead of dropping them', () => {
     // start=10, end=11 → duration=1, below min=5. Should clamp to start+5=15, not drop.
