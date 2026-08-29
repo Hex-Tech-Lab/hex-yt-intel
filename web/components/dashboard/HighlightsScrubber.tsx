@@ -281,7 +281,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             <span className="font-mono text-emerald-400 font-semibold mr-2">
               [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
             </span>
-            <span className="text-slate-300 italic">"{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}"</span>
+            <span className="text-slate-300 italic">&quot;{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}&quot;</span>
           </div>
         ) : null;
       })()}
