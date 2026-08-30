@@ -1,0 +1,19 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  s_1d33669bdad1d6::t_f1ca55f1646fee 284
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2ae41bcbbfc90cce59d8c21683c0007c860637ec",
+  "prompts": {},
+  "sessions": {
+    "s_1d33669bdad1d6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fb008a371ffePY8Hq6N5eITnjo",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
