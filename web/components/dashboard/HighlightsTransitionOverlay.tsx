@@ -8,9 +8,27 @@ export interface HighlightsTransitionOverlayProps {
   direction?: 'forward' | 'backward';
 }
 
-function playSwoosh() {
+let sharedAudioContext: AudioContext | null = null;
+
+function getSharedAudioContext(): AudioContext | null {
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (sharedAudioContext && sharedAudioContext.state !== 'closed') {
+      if (sharedAudioContext.state === 'suspended') void sharedAudioContext.resume().catch((resumeError) => console.debug('[HighlightsTransitionOverlay] AudioContext resume failed', resumeError));
+      return sharedAudioContext;
+    }
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    sharedAudioContext = new Ctx();
+    return sharedAudioContext;
+  } catch (error) {
+    console.debug('[HighlightsTransitionOverlay] AudioContext creation failed', error);
+    return null;
+  }
+}
+
+function playSwoosh() {
+  const ctx = getSharedAudioContext();
+  if (!ctx) return;
+  try {
     const duration = 0.6;
     const bufferSize = Math.floor(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -29,8 +47,9 @@ function playSwoosh() {
     source.connect(filter).connect(gain).connect(ctx.destination);
     source.start();
     source.stop(ctx.currentTime + duration);
-    setTimeout(() => ctx.close().catch(() => {}), (duration + 0.1) * 1000);
-  } catch {}
+  } catch (error) {
+    console.debug('[HighlightsTransitionOverlay] playSwoosh failed', error);
+  }
 }
 
 export function HighlightsTransitionOverlay({ active, direction = 'forward' }: HighlightsTransitionOverlayProps) {

@@ -158,7 +158,11 @@ export function calculateEffectiveHighlightBudget(
   if (!Number.isFinite(takeawaysCount) || takeawaysCount <= 0) return base;
   const minRequired = takeawaysCount * 15;
   const ideal = takeawaysCount * targetPerTakeawaySeconds;
-  return Math.max(base, minRequired, ideal);
+  const raw = Math.max(base, minRequired, ideal);
+  if (Number.isFinite(videoDurationSeconds) && videoDurationSeconds > 0) {
+    return Math.min(raw, videoDurationSeconds);
+  }
+  return raw;
 }
 
 export const calculateHighlightBudgetSeconds = calculateAttentionBoundedBudget;
