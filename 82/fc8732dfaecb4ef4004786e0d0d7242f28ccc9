@@ -1,0 +1,30 @@
+.memory/AGENT_LEDGER.md
+  s_4b2aacf8e9effe::t_4b0af1946d7d15 13
+  s_4b2aacf8e9effe::t_26b2224edbba01 6
+web/components/dashboard/HighlightsTransitionOverlay.tsx
+  s_4b2aacf8e9effe::t_4b009a768aa663 16,22-23
+  s_4b2aacf8e9effe::t_596ea7de1e4ab6 11-15,17-21,24-27,29-30
+  s_4b2aacf8e9effe::t_70392712451391 50-52
+web/lib/__tests__/highlights-budget-boundary.test.ts
+  s_4b2aacf8e9effe::t_cee4e1ff2f3f7e 1-37
+web/lib/admin-logs/__tests__/fetchSentryLogs.test.ts
+  s_4b2aacf8e9effe::t_ccd88209f41560 1-39
+web/lib/utils/highlights-settings.ts
+  s_4b2aacf8e9effe::t_552223f7545524 161-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "82fc8732dfaecb4ef4004786e0d0d7242f28ccc9",
+  "prompts": {},
+  "sessions": {
+    "s_4b2aacf8e9effe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbf4ca164ffedPxXlJ77J5na43",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
