@@ -1,0 +1,24 @@
+docs/agent-prompts/TEMPLATE.md
+  s_a6831e03fcd958::t_51362482a70ad7 60-65
+  s_a6831e03fcd958::t_2090098c0305d5 112
+web/lib/usecases/__tests__/get-user-entitlements.test.ts
+  s_a6831e03fcd958::t_8e708dba9ead0b 118-175
+supabase/migrations/20260905120000_fix_temporal_subgraph_idor.sql
+  s_a6831e03fcd958::t_4194d7f655786e 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "24c1fc48805f0e7e3a62315f219a955d313507eb",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
