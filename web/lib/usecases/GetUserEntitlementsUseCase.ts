@@ -101,7 +101,10 @@ export class GetUserEntitlementsUseCase {
       }
 
       valid.sort((subA, subB) => (TIER_RANK[subB.plan_tier as PlanTier] ?? 0) - (TIER_RANK[subA.plan_tier as PlanTier] ?? 0));
-      const best = valid[0]!;
+      const best = valid[0];
+      if (!best) {
+        return defaultFree;
+      }
 
       const planTier = best.plan_tier as PlanTier;
       const isEnterprise = planTier === 'enterprise';
