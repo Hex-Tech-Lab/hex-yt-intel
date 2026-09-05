@@ -1,0 +1,26 @@
+web/vitest.config.ts
+  s_a6831e03fcd958::t_b917df041a8890 62-68
+scripts/quality-engine/rules/security-lessons-20260905.ts
+  s_a6831e03fcd958::t_bd8a57eb88242c 14-41,49-56,58-59,73-75,86-112,114-117,122-125,127-128,132-135,140-141,154-161
+  s_a6831e03fcd958::t_05f44727d12f48 67,169
+scripts/quality-engine/__tests__/wave9-new-rules.test.ts
+  s_a6831e03fcd958::t_fe1818787fbea3 87
+scripts/quality-engine/rules/__tests__/security-lessons-20260905.test.ts
+  s_a6831e03fcd958::t_832e585c34adac 1-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "352e64d93e9bbe1fd692cbdbfdc5a6a52951273e",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
