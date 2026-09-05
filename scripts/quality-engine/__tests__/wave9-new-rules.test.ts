@@ -84,7 +84,7 @@ describe('WAVE 9: New Quality Rules', () => {
       const timerId = setTimeout(() => {
         console.log('timeout');
       }, 1000);
-      // Missing clearTimeout(timerId)
+      // Timer is never cleared before the component unmounts
     `;
     const source = createTestSource(code);
     expect(source.getText()).toContain('setTimeout');

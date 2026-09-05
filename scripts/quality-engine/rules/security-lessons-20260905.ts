@@ -11,6 +11,34 @@ function isTestFile(f: string): boolean {
   return /\.(test|spec)\.[jt]sx?$/.test(f) || f.includes("__tests__/");
 }
 
+/** Strip a .ts/.tsx/.test.ts/.spec.tsx-style suffix and lowercase+strip
+ * non-alphanumerics, so "GetUserEntitlementsUseCase.ts" and
+ * "get-user-entitlements.test.ts" can be compared on equal footing. */
+function toNormalizedStem(fileName: string): string {
+  const withoutTestSuffix = fileName.replace(/\.(test|spec)\.[jt]sx?$/, "");
+  const withoutExt = withoutTestSuffix.replace(/\.[jt]sx?$/, "");
+  return withoutExt.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+const ARCHITECTURAL_SUFFIXES = ["usecase", "adapter", "service", "route", "repository", "client", "component", "hook", "handler", "controller"];
+
+/** Candidate normalized stems for a source file: the full name, and (if it
+ * ends with a known architectural-role word) the name with that word
+ * stripped -- this repo's convention drops it in test filenames
+ * (GetUserEntitlementsUseCase.ts -> get-user-entitlements.test.ts, verified
+ * against that exact pair on 2026-09-05). */
+function candidateStemsFor(fileName: string): string[] {
+  const full = toNormalizedStem(fileName);
+  const variants = [full];
+  for (const suffix of ARCHITECTURAL_SUFFIXES) {
+    if (full.endsWith(suffix) && full.length > suffix.length) {
+      variants.push(full.slice(0, full.length - suffix.length));
+      break; // at most one architectural suffix realistically applies
+    }
+  }
+  return variants;
+}
+
 /**
  * Lesson from the 2026-09-05 security-fix PR (#286, entitlements bypass +
  * get_temporal_subgraph IDOR): both fixes originally shipped with zero new
@@ -18,15 +46,17 @@ function isTestFile(f: string): boolean {
  * caught it; qa-intel did not. This rule mechanizes that catch.
  *
  * Heuristic: a non-test file whose text contains an authorization-relevant
- * marker (auth.uid(), is_founder/founder tier grants, SECURITY DEFINER
- * references in TS glue code, "bypass"/"HARDCODED_OWNER"-style identifiers)
- * is flagged UNLESS the current scan (ctx.allFiles -- the diff or full file
- * list, whichever mode is running) also contains at least one test file
- * whose path stem matches this file's stem (e.g. GetUserEntitlementsUseCase.ts
- * <-> get-user-entitlements*.test.ts / GetUserEntitlementsUseCase.test.ts).
- * This is a coarse same-diff heuristic, not proof the test actually covers
+ * marker is flagged UNLESS the current scan (ctx.allFiles -- the diff or
+ * full file list, whichever mode is running) also contains a test file in
+ * the same directory (or its `__tests__` subdirectory) whose normalized
+ * stem EXACTLY matches one of this file's candidate stems. Exact-stem
+ * matching (not substring) deliberately avoids e.g. `foo-admin.test.ts`
+ * suppressing a missing-test finding for `foo.ts`.
+ *
+ * This is a coarse same-scan heuristic, not proof the test actually covers
  * the changed branch -- it catches "shipped zero tests," not "shipped a
- * weak test."
+ * weak test." That is a known, accepted limitation (see also: no import
+ * relationship is checked, no assertion is inspected).
  */
 export const SecurityFixWithoutTestRule: Rule = {
   name: "security-fix-without-regression-test",
@@ -34,13 +64,15 @@ export const SecurityFixWithoutTestRule: Rule = {
   check: (ctx: RuleContext) => {
     const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = normalizePosixPath(source.getFilePath());
+    const filePath = normalizePosixPath(ctx.filePath);
 
     if (isTestFile(filePath)) return findings;
     if (filePath.includes("/quality-engine/") || filePath.includes("verify-quality-engine")) return findings;
 
     const text = source.getText();
-    const AUTH_MARKERS = [
+    // Exact-substring markers (real API/identifier names -- case matters,
+    // e.g. `auth.uid()` vs prose mentioning "the current UID").
+    const EXACT_MARKERS = [
       "auth.uid()",
       "auth.jwt()",
       "SECURITY DEFINER",
@@ -51,50 +83,62 @@ export const SecurityFixWithoutTestRule: Rule = {
       "getSession(",
       "getUser(",
     ];
-    const hasAuthMarker = AUTH_MARKERS.some((m) => text.includes(m));
-    if (!hasAuthMarker) return findings;
+    // Case-insensitive markers -- these are English/identifier words that
+    // show up in varying case (HARDCODED_OWNER_IDS, hardcodedOwnerIds,
+    // "bypass" in a comment or identifier) and were the actual class of bug
+    // in this PR's entitlements fix (a HARDCODED_OWNER_* regex bypass).
+    const CASE_INSENSITIVE_MARKERS = ["bypass", "hardcoded_owner", "hardcodedowner"];
 
-    const allFiles = ctx.allFiles ?? [];
-    if (allFiles.length === 0) return findings; // no scan-wide context available (e.g. single-file invocation) -- don't false-positive
+    const matchedExact = EXACT_MARKERS.find((m) => text.includes(m));
+    const lowerText = matchedExact ? "" : text.toLowerCase();
+    const matchedInsensitive = matchedExact ? undefined : CASE_INSENSITIVE_MARKERS.find((m) => lowerText.includes(m));
+    const matchedMarker = matchedExact ?? matchedInsensitive;
+    if (!matchedMarker) return findings;
 
-    // Derive a loose "stem" to match this file against a sibling test.
-    // This repo's convention drops architectural-role suffixes in test
-    // filenames (GetUserEntitlementsUseCase.ts -> get-user-entitlements.test.ts,
-    // not get-user-entitlements-use-case.test.ts) -- verified against this
-    // exact file's own real test on 2026-09-05. Try both the full stem and
-    // the stem with a trailing architectural suffix word stripped.
-    const base = filePath.split("/").pop() ?? filePath;
-    const stem = base.replace(/\.(ts|tsx)$/, "");
-    const ARCHITECTURAL_SUFFIXES = ["usecase", "adapter", "service", "route", "repository", "client", "component", "hook", "handler", "controller"];
-    const toNormalized = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const candidateStems = [stem];
-    for (const suffix of ARCHITECTURAL_SUFFIXES) {
-      const normalizedFull = toNormalized(stem);
-      if (normalizedFull.endsWith(suffix) && normalizedFull.length > suffix.length) {
-        // Strip the suffix from the ORIGINAL-case stem, not the normalized
-        // one, so case-boundary word-splitting below still works correctly.
-        const suffixLen = suffix.length;
-        candidateStems.push(stem.slice(0, stem.length - suffixLen));
-        break; // at most one architectural suffix realistically applies
-      }
+    const allFiles = ctx.allFiles;
+    if (!allFiles || allFiles.length === 0) {
+      // Fail-VISIBLE, not fail-open: scan-wide context wasn't provided (e.g.
+      // a single-file invocation outside QualityEngine.analyze), so this
+      // rule cannot verify a sibling test exists either way. Surface that
+      // as a low-severity diagnostic instead of silently emitting nothing,
+      // per the 2026-09-05 review of this rule's first version.
+      findings.push({
+        file: filePath,
+        severity: "low",
+        title: "Security: cannot verify sibling test (no scan-wide file list provided)",
+        why: `File contains an authorization/entitlement marker ('${matchedMarker}') but this rule was invoked without ctx.allFiles, so it cannot check whether a regression test exists anywhere else in the scan. This is a diagnostic about the rule's own inputs, not a finding about the file.`,
+        fix: "Invoke this rule via QualityEngine.analyze() (which populates ctx.allFiles), not a standalone single-file check.",
+      });
+      return findings;
     }
-    const stemNormalizedVariants = candidateStems.map(toNormalized);
+
+    const fileDir = filePath.split("/").slice(0, -1).join("/");
+    const base = filePath.split("/").pop() ?? filePath;
+    const candidateStems = candidateStemsFor(base);
 
     const hasSiblingTest = allFiles.some((f) => {
       const norm = normalizePosixPath(f);
       if (!isTestFile(norm)) return false;
+      const testDir = norm.split("/").slice(0, -1).join("/");
+      // Same directory, or that directory's own `__tests__` subdirectory.
+      const sameModule = testDir === fileDir || testDir === `${fileDir}/__tests__`;
+      if (!sameModule) return false;
       const testBase = norm.split("/").pop() ?? norm;
-      const testNormalized = toNormalized(testBase);
-      return stemNormalizedVariants.some((v) => testNormalized.includes(v));
+      const testStem = toNormalizedStem(testBase);
+      return candidateStems.includes(testStem);
     });
 
     if (!hasSiblingTest) {
+      const stemForDisplay = base
+        .replace(/\.(ts|tsx)$/, "")
+        .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+        .toLowerCase();
       findings.push({
         file: filePath,
         severity: "high",
         title: "Security: authorization-relevant change with no sibling test in this scan",
-        why: `File contains an authorization/entitlement marker (${AUTH_MARKERS.find((m) => text.includes(m))}) but no test file matching this file's name was found in the current scan. A removed or changed authorization check with no regression test can be silently reintroduced later.`,
-        fix: `Add or update a test file for ${base} (e.g. __tests__/${stemKebab}.test.ts) asserting the specific authorization branch this change touches, in the same PR.`,
+        why: `File contains an authorization/entitlement marker ('${matchedMarker}') but no test file matching this file's name was found in its directory (or its __tests__ subdirectory) in the current scan. A removed or changed authorization check with no regression test can be silently reintroduced later.`,
+        fix: `Add or update a test file for ${base} (e.g. __tests__/${stemForDisplay}.test.ts) asserting the specific authorization branch this change touches, in the same PR.`,
       });
     }
 
@@ -107,6 +151,14 @@ export const SecurityFixWithoutTestRule: Rule = {
  * assertion on an array index immediately following a .sort()/.filter()
  * chain) -- a distinct, common pattern worth its own narrow rule instead of
  * relying on an external tool per-PR.
+ *
+ * Known limitation (documented, not silently hidden): this checks whether a
+ * `.sort(`/`.filter(` call assigning to the same identifier appears
+ * ANYWHERE in the enclosing block, not strictly before the non-null
+ * assertion in source-position order, and does not yet recognize a direct
+ * chain like `items.filter(...)[0]!` (no intermediate variable). Both are
+ * tracked as follow-up in the ruleset lessons ledger rather than fixed here,
+ * to keep this rule's false-positive rate low while still being useful.
  */
 export const NonNullAfterArraySortFilterRule: Rule = {
   name: "non-null-assertion-after-array-transform",
@@ -114,7 +166,7 @@ export const NonNullAfterArraySortFilterRule: Rule = {
   check: (ctx: RuleContext) => {
     const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = normalizePosixPath(source.getFilePath());
+    const filePath = normalizePosixPath(ctx.filePath);
 
     source.forEachDescendant((node) => {
       if (!Node.isNonNullExpression(node)) return;
@@ -124,10 +176,6 @@ export const NonNullAfterArraySortFilterRule: Rule = {
       const objectExpr = inner.getExpression();
       const objectText = objectExpr.getText();
 
-      // Walk back through preceding sibling statements in the same block for
-      // a `.sort(` or `.filter(` call on the same identifier -- a coarse but
-      // low-false-positive signal that this array's "definitely has an
-      // element" assumption came from a runtime transform, not a literal.
       const block = node.getFirstAncestorByKind(SyntaxKind.Block);
       if (!block) return;
       const blockText = block.getText();
