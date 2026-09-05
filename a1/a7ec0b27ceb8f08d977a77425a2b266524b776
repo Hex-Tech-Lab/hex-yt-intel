@@ -1,0 +1,19 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_a6831e03fcd958::t_684885e1f4c395 143-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a1a7ec0b27ceb8f08d977a77425a2b266524b776",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
