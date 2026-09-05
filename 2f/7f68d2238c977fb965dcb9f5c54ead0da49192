@@ -1,0 +1,21 @@
+supabase/migrations/20260905120000_fix_temporal_subgraph_idor.sql
+  s_a6831e03fcd958::t_ebde8740052007 1-73
+.memory/AGENT_LEDGER.md
+  s_a6831e03fcd958::t_4696dfc7170567 1371-1372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "2f7f68d2238c977fb965dcb9f5c54ead0da49192",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
