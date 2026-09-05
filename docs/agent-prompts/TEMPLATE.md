@@ -57,8 +57,12 @@
     silently skipping this step.
 
 - **ALWAYS (all PRs)**:
-  - `qa-intel` — run in **both** `--diff` and `--full` mode (never trust one
-    mode's "clean" result alone — standing project rule).
+  - `qa-intel` — run in **both** `--mode diff` and `--mode full` (never trust
+    one mode's "clean" result alone — standing project rule; verified real
+    CLI flags against `scripts/verify-quality-engine.ts`'s own `--help`
+    output and `package.json`'s `qa-intel`/`qa-intel:ci`/`qa-intel:baseline`
+    scripts on 2026-09-05 — the flags are `--mode <diff|full|watch|
+    working-tree|HEAD>` and `--compare`, NOT bare `--diff`/`--full`).
   - `code-reviewer` — correctness/maintainability/contract-gap review.
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
@@ -105,7 +109,7 @@
 
 ---
 
-## 4. Verification & Quality Gates (local)
+## 4a. Verification & Quality Gates (local)
 
 ```bash
 pnpm --filter @hex-yt-intel/web exec tsc --noEmit

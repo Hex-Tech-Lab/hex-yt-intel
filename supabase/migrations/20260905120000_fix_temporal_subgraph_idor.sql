@@ -69,5 +69,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION get_temporal_subgraph(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_temporal_subgraph(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION get_temporal_subgraph(UUID) TO authenticated, service_role;
