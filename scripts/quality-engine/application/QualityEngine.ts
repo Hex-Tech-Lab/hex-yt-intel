@@ -56,6 +56,7 @@ export class QualityEngine {
                 filePath: file,
                 ast,
                 graph: scope === "file" ? undefined : graph,
+                allFiles: existing,
               });
 
               findings.push(...ruleFindings);
