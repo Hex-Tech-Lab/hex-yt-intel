@@ -8,6 +8,14 @@ export const CredentialLeakRule: IRule = {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
       if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
+      // RCA (2026-09-05): a real production ID used ONLY as a test fixture --
+      // e.g. asserting exact-match founder-allowlist behavior against the
+      // real founder UUID -- is not a leak, it's the correct way to test that
+      // exact-match code path. Flagging it trained toward removing the test
+      // instead of the actual risk (a regex-based bypass elsewhere in the
+      // same file). Exempt test files, mirroring ReservedKeywordRule's scope.
+      const isTestFile = /\.(test|spec)\.[jt]sx?$/.test(filePath) || filePath.includes('__tests__/');
+      if (isTestFile) return findings;
       const FORBIDDEN_IDS = ['test-user-id', 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
       
       source.forEachDescendant((node) => {
