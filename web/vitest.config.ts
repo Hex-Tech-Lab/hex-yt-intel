@@ -59,6 +59,13 @@ export default defineConfig({
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
       '../worker/src/services/CommentClassifier.test.ts',
+      // Real coverage gap found 2026-09-05 (PR #287 review): qa-intel's own
+      // rule tests under scripts/quality-engine/**/*.test.ts (including the
+      // pre-existing wave9-new-rules.test.ts) matched none of the globs
+      // above -- same silent-non-execution class as the .tsx/middleware
+      // gaps documented earlier in this file. Named explicitly rather than
+      // a bare 'scripts/**' to avoid picking up unrelated future scripts.
+      '../scripts/quality-engine/**/*.test.ts',
     ],
     exclude: [
       ...configDefaults.exclude,

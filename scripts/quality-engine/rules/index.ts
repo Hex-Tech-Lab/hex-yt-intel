@@ -52,3 +52,4 @@ export { PersistResilienceRule, PersistAbortScopeRule, RetryFlagInterferenceRule
 export { InpAlertBlockerRule, CanvasHoverReRenderRule, OverlayCloseCascadeRule, ValidationOnChangeRule, UnhandledClipboardPromiseRule, StartTransitionWrappingRule, ToastAccessibilityRule, SwallowedErrorRule, SyncImportBeforeRedirectRule, CanvasStaleDataRule, ZustandWholeStoreInEffectDepsRule } from "./ui";
 export { AsyncWithoutAwaitRule, DeadCodeRule, VariableNamingRule, TimeoutCleanupRule, ImportOrderingRule, ErrorObservabilityRule } from "./quality";
 export { DatabaseConstraintRule, DefaultValueConsistencyRule, TruncationValidationRule } from "./data-integrity";
+export { SecurityFixWithoutTestRule, NonNullAfterArraySortFilterRule } from "./security-lessons-20260905";
