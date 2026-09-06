@@ -1,0 +1,19 @@
+docs/agent-prompts/TEMPLATE.md
+  s_a6831e03fcd958::t_627b34c58ab1f2 18-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c2ba8b9201a5bb6f6bf40207547108715a6d1099",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
