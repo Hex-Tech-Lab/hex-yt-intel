@@ -3,6 +3,12 @@
 **Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
 **Effort Level**: <high | medium | low>
 
+> **Before dispatching**: run the `improve-prompt` skill against the filled-in
+> prompt below. It mechanizes this file's own Model-tuning rule and report
+> contract as a checklist — cheaper than re-deriving them from memory each
+> time, and catches drift the way this template's own history shows prose
+> reminders alone don't.
+
 ---
 
 ## 0. Ledger protocol — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
