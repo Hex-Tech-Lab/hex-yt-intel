@@ -1,0 +1,22 @@
+CLAUDE.md
+  s_a6831e03fcd958::t_26580243bd1626 43-63
+docs/agent-prompts/TEMPLATE.md
+  s_a6831e03fcd958::t_4c3fd891f5f06d 3-10
+  s_a6831e03fcd958::t_e268921041d3b9 99-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "2e0339f619d86256745d39c4aba48c936a0ebff7",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
