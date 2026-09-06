@@ -15,6 +15,43 @@
 > subtask; post `[DONE]`/`[PARTIAL]`/`[BLOCKED]` with a real summary of what
 > actually happened (not what you intended) as your last action; use the
 > `[NOTE]`/`[ACK]`/`[DISPUTE]`/`[RESOLVED]` flow for cross-agent corrections.
+>
+> This is not optional bookkeeping: skipping it has previously caused two
+> agents to collide on the same checkout with mixed uncommitted diffs
+> (2026-08-03), and this exact template was created because a dispatched
+> prompt omitted this instruction and the ledger post only happened after
+> the user manually told the agent to follow protocol (2026-08-06).
+
+---
+
+## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
+
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
+Flash low) does not reliably execute prose *principles* — it executes
+literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
+tangent-hunt" once as a paragraph is not enough at this tier; the model will
+often satisfy the injection/entry-site case and stop, treating the
+downstream chain and adjacent files as implicitly covered when they were
+never actually checked. Confirmed twice on 2026-08-07: an OC dispatch that
+explicitly demanded "E2E proof, not code-reading confidence" in prose still
+shipped a fix backed only by a unit-test-expectation change, and a Cubic
+re-review caught a real ordering-invariant gap the agent's own report never
+surfaced.
+
+Before writing sections 1–2 below, decide:
+- **Small, single-file task?** One dispatch is fine, but still phrase the
+  Three Tenets (section 5) as a literal numbered checklist scoped to the
+  exact files/functions involved — not the generic prose block.
+- **Touches more than ~2 files, or needs investigation + fix + PR?** Split
+  into sequential, separately-dispatched prompts (investigate → fix →
+  verify/PR), each narrowly scoped, rather than one prompt bundling all
+  three. A dense 40-line prompt for one focused step beats a 200-line
+  prompt covering three steps at once — length is not the lever,
+  specificity per step is.
+- **Requires `/pr-review-workflow`, a specific branch, or a specific PR
+  number?** Name them explicitly and literally in section 2 ("create branch
+  `fix/xyz`", "invoke the `/pr-review-workflow` skill", "target PR #NNN") —
+  never phrase it as "follow the usual review process."
 
 ---
 
