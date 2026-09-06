@@ -1,5 +1,13 @@
 # Agent Dispatch Prompt — <TASK_NAME>
 
+> **Before filling in Target Agent/Effort below**: check CLAUDE.md's
+> "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
+> effort; multi-hop or long-horizon work → a non-Flash tier (AGY Pro / Claude
+> / OC on a stronger model); narrow well-scoped fix → OC's cheap default.
+> That table decays fast (model landscape moves monthly) — if this task is
+> non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
+> outcome on a similar task shape before trusting the table blindly.
+
 **Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
 **Effort Level**: <high | medium | low>
 
@@ -88,6 +96,21 @@ Before writing sections 1–2 below, decide:
 > `prompt-boundary-guard`, `monorepo-path-linter`, `ledger-protocol-auditor`).
 > Do not add a skill name to this file without confirming it exists in the
 > live `Skill` tool listing first.**
+>
+> **SELECT is re-evaluated continuously, not decided once at dispatch.** CORE
+> is fixed by design — it never changes regardless of what the task touches.
+> SELECT exists specifically because the diff's real footprint isn't always
+> known upfront: a task that starts in `web/components/**` can legitimately
+> land in `supabase/migrations/**` once you follow the actual fix. **Every
+> time the touched-file set grows beyond what it was when you last matched
+> against this tree — a tangent, a new file, scope discovered mid-task — re-run
+> the IF-matching below against the new file set before continuing.** Treating
+> SELECT as a one-time decision at the top of the task is the single most
+> likely way a real skill goes unrun: the file that would have triggered it
+> wasn't touched yet when the tree was first consulted. Log each re-match in
+> the final report's `### Skills Run + Findings` section with what triggered
+> the re-check ("touched `supabase/migrations/*.sql` mid-task, added
+> `supabase-postgres-best-practices` + `database-sentinel`"), not silently.
 
 - **STEP 0 — before any Grep/Glob/Read (token-savings, always first)**:
   - `build-graph` (rebuilds/updates `.code-review-graph/graph.db`), then use
