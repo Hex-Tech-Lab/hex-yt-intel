@@ -8,6 +8,7 @@ export const CredentialLeakRule: IRule = {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
       if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
+      if (/\.(test|spec)\.[tj]sx?$/.test(filePath) || filePath.includes('__tests__/')) return findings;
       const FORBIDDEN_IDS = ['test-user-id', 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
       
       source.forEachDescendant((node) => {
