@@ -1,0 +1,30 @@
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_58d08577c1f2d2::t_55622de370b893 173-175
+  s_58d08577c1f2d2::t_61512bf8232990 1-2
+  s_58d08577c1f2d2::t_5091c6e89ad929 96-107
+  s_58d08577c1f2d2::t_ce42647d5281ab 179-254
+web/lib/usecases/__tests__/generate-executive-digest-highlights-backfill.test.ts
+  s_58d08577c1f2d2::t_e484db8639afa8 110
+  s_58d08577c1f2d2::t_b1f9f8bffa726e 37-41
+  s_58d08577c1f2d2::t_1070a0e266885c 139-186
+  s_58d08577c1f2d2::t_877eeabbac4937 78-80
+  s_58d08577c1f2d2::t_1f2958cc1d03db 28-36
+web/lib/__tests__/executive-digest-usecase.test.ts
+  s_58d08577c1f2d2::t_fdca0e2df6eb7b 14-18,23-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "ca3ae0e297d24fe2bca6b2928cb4a884f2070a74",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
