@@ -1,11 +1,11 @@
 import { SourceGraph } from "../domain/SourceGraph";
+import { SourceRegistry } from "./SourceRegistry";
 import type { Finding } from "../domain/Finding";
 import type { Rule } from "../domain/Rule";
 import type { RuleError } from "../domain/RuleError";
 import type { CachePort } from "./ports/CachePort";
 import type { FileLoaderPort } from "./ports/FileLoaderPort";
 import type { FileSystemPort } from "./ports/FileSystemPort";
-import { SourceRegistry } from "./SourceRegistry";
 import type { EngineConfig } from "./EngineConfig";
 
 export class QualityEngine {
@@ -22,10 +22,10 @@ export class QualityEngine {
 
   async analyze(files: string[]): Promise<Finding[]> {
     this.ruleErrors = [];
-    const existing = files.filter((f) => this.fs.exists(f));
+    const existing = files.filter((filePath) => this.fs.exists(filePath));
 
     // GRAPH CONSTRUCTION: buildGraph() parses imports and constructs the overall dependency graph
-    const needsGraph = this.rules.some(r => r.scope === "graph" || r.scope === "neighbors" || this.config.defaultScope === "graph" || this.config.defaultScope === "neighbors");
+    const needsGraph = this.rules.some(rule => rule.scope === "graph" || rule.scope === "neighbors" || this.config.defaultScope === "graph" || this.config.defaultScope === "neighbors");
     const graph = needsGraph ? await this.buildGraph(existing) : new SourceGraph();
 
     const findings: Finding[] = [];
@@ -107,8 +107,8 @@ export class QualityEngine {
       } else {
         await this.cache?.setAST(path, String(ast));
       }
-    } catch (e) {
-      console.warn(`Failed to write cache for ${path}:`, e);
+    } catch (cacheError) {
+      console.warn(`Failed to write cache for ${path}:`, cacheError);
     }
     this.registry.add(path, ast);
     return ast;
