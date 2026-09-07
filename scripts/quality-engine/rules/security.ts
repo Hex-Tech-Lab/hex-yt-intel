@@ -47,6 +47,17 @@ export const AuthorizationRegexBypassRule: IRule = {
     // v1 of this rule matched on enclosing-scope text and false-positived on
     // every content-classification/log-message regex in the repo.
     const ELEVATED_RETURN_SHAPE = /founder\s*:\s*true|is_founder\s*:\s*true|is_enterprise\s*:\s*true|is_unlimited\s*:\s*true|tier\s*:\s*['"](?:founder|enterprise|admin)['"]|role\s*:\s*['"]admin['"]|isAdmin\s*:\s*true|hasPremium/;
+    // The real historical incident's shape (`return founderEntitlement;`) is
+    // an identifier/helper-call return, not an inline object literal -- v1
+    // of this rule (2026-09-07) only matched inline shapes and would have
+    // missed the exact bug it was written for if reintroduced (review
+    // finding, 2026-09-07). Matches a bare `return <name>;` or
+    // `return <name>();` where the identifier itself reads as an elevated
+    // entitlement (founderEntitlement, adminEntitlement,
+    // getFounderEntitlement(), etc.) -- a name-based heuristic, not full
+    // semantic resolution of arbitrary helpers, but it directly covers the
+    // incident shape and its obvious variants.
+    const ELEVATED_RETURN_IDENTIFIER = /\breturn\s+\w*(?:founder|admin|owner|unlimited|privileged|elevated|superuser)\w*\s*(?:\(\s*\))?\s*;/i;
 
     source.forEachDescendant((node) => {
       if (!Node.isIfStatement(node)) return;
@@ -55,24 +66,37 @@ export const AuthorizationRegexBypassRule: IRule = {
 
       const thenBlock = node.getThenStatement();
       const thenText = thenBlock.getText();
-      if (!ELEVATED_RETURN_SHAPE.test(thenText) || !/\breturn\b/.test(thenText)) return;
+      const hasElevatedReturn = ELEVATED_RETURN_SHAPE.test(thenText) || ELEVATED_RETURN_IDENTIFIER.test(thenText);
+      if (!hasElevatedReturn || !/\breturn\b/.test(thenText)) return;
 
       // Find the regex literal(s) actually driving this condition: either
       // inlined directly in the condition, or (the real-incident shape)
-      // declared in a `const` a line above and referenced by variable name
-      // inside the condition -- e.g. `PATTERNS.some(p => p.test(email))`
-      // where PATTERNS = [/kelly/i] is declared separately.
+      // declared in a `const` and referenced by variable name inside the
+      // condition -- e.g. `PATTERNS.some(p => p.test(email))` where
+      // PATTERNS = [/kelly/i] is declared separately. Resolved against the
+      // WHOLE source file, not just the enclosing function -- a
+      // module-scope declaration referenced from inside a method was
+      // previously invisible to this check (review finding, 2026-09-07).
       const directLiterals = node.getExpression().getDescendantsOfKind(SyntaxKind.RegularExpressionLiteral);
-      const enclosingFn = node.getFirstAncestor((a) =>
-        Node.isFunctionDeclaration(a) || Node.isArrowFunction(a) || Node.isMethodDeclaration(a) || Node.isFunctionExpression(a)
-      ) ?? source;
-      const referencedLiterals = enclosingFn.getDescendantsOfKind(SyntaxKind.VariableDeclaration).flatMap((decl) => {
+      const referencedLiterals = source.getDescendantsOfKind(SyntaxKind.VariableDeclaration).flatMap((decl) => {
         const name = decl.getName();
         if (!new RegExp(`\\b${name}\\b`).test(conditionText)) return [];
         return decl.getDescendantsOfKind(SyntaxKind.RegularExpressionLiteral);
       });
       const regexLiterals = [...directLiterals, ...referencedLiterals];
-      const unanchored = regexLiterals.filter((r) => !/^\/\^.*\$\/[a-z]*$/.test(r.getText()));
+      // "Anchored" must mean fully literal/exact, not merely delimited by
+      // ^...$ -- /^kelly.*$/i is anchored but still matches
+      // "kellyattacker@evil.com" via its wildcard body (review finding,
+      // 2026-09-07). Reject any regex metacharacter in the body between the
+      // anchors; only a plain literal string counts as safe.
+      const isExactAnchored = (r: typeof regexLiterals[number]) => {
+        const text = r.getText();
+        const match = /^\/\^(.*)\$\/([a-z]*)$/.exec(text);
+        if (!match) return false;
+        const body = match[1] ?? '';
+        return !/[.*+?^${}()|[\]\\]/.test(body);
+      };
+      const unanchored = regexLiterals.filter((r) => !isExactAnchored(r));
       if (regexLiterals.length === 0 || unanchored.length === 0) return;
 
       const patterns = unanchored.map((r) => r.getText()).join(', ');
@@ -644,4 +668,5 @@ export function registerSecurityRules(engine: unknown) {
   e.addRule(InformationDisclosureRule);
   e.addRule(YamlInjectionRule);
   e.addRule(ReservedKeywordRule);
+  e.addRule(AuthorizationRegexBypassRule);
 }
