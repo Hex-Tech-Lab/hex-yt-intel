@@ -1,0 +1,25 @@
+docs/history/THOS_2026-09-07_1510_SECURITY_HIGHLIGHTS_PR_MERGE_MARATHON.md
+  s_58d08577c1f2d2::t_e7ad0920037e25 7
+  s_58d08577c1f2d2::t_9f35ae99052fc0 220-221
+  s_58d08577c1f2d2::t_fa40d403d2d08c 223
+  s_58d08577c1f2d2::t_cf9add7b82eb34 230-231
+  s_58d08577c1f2d2::t_ebf86d9777129b 166
+  s_58d08577c1f2d2::t_2b003e057284a7 1-6,8-165,167-208,216-219,222,224-229,232-260
+  s_58d08577c1f2d2::t_481dfc684962b3 209-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c87e32ef0ef8820f1ea19e967d31cca58a603f3d",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
