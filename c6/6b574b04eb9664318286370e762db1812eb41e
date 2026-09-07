@@ -1,0 +1,20 @@
+.github/workflows/ci-cd.yml
+  s_27a98410ea5034::t_ccd78b05e7458e 556-558
+  s_27a98410ea5034::t_f8f261e52b4f76 550-554
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c66b574b04eb9664318286370e762db1812eb41e",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
