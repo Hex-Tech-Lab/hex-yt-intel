@@ -185,10 +185,10 @@ export function PublicHighlightsReel({
         </label>
       </div>
 
-      {activeHighlight && (
+      {activeHighlight && playingIdx !== null && (
         <div className="text-xs text-gray-700 leading-snug" aria-live="polite">
           <span className="font-mono text-[10px] text-gray-400 mr-1">
-            {playingIdx! + 1}/{highlights.length}
+            {playingIdx + 1}/{highlights.length}
           </span>
           {revealedText || activeHighlight.label}
           {/* UI-truthfulness fix (2026-09-07, same as HighlightsScrubber):

@@ -47,15 +47,25 @@ export function useHighlightTicker(
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
 ): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
-  // Same truthiness as the `verbatimExcerpt || label` display choice below,
-  // so `usingVerbatim` always describes exactly what `revealedText` derives from.
-  const usingVerbatim = Boolean(verbatimExcerpt);
-  const text = verbatimExcerpt || label;
+  // Trim before checking truthiness: a whitespace-only verbatimExcerpt (a
+  // real DB row shape a corrupt/poorly-normalized transcript can produce)
+  // is truthy under a bare `Boolean()` check but yields zero real words,
+  // silently falling back to `label` while still claiming `usingVerbatim`
+  // (external review finding). Normalizing once here means every consumer
+  // of this hook's return value sees a consistent, already-correct answer.
+  const normalizedVerbatim = verbatimExcerpt?.trim() || null;
+  const usingVerbatim = normalizedVerbatim !== null;
+  const text = normalizedVerbatim || label;
   const words = text ? text.split(/\s+/).filter(Boolean) : [];
   const totalWords = words.length;
 
   if (playingIdx === null || totalWords === 0 || elapsedSeconds === null) {
-    return { revealedText: '', totalWords, usingVerbatim };
+    // `revealedText` is empty here, so any consumer doing
+    // `revealedText || label` is about to display `label` (or nothing) --
+    // `usingVerbatim` must be false in that case regardless of what it was
+    // computed as above, or the badge would be skipped while a paraphrase
+    // (or nothing) is actually on screen (external review finding).
+    return { revealedText: '', totalWords, usingVerbatim: false };
   }
 
   const durationSeconds = Math.max(1, segmentDurationSeconds);

@@ -281,13 +281,17 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             <span className="font-mono text-emerald-400 font-semibold mr-2">
               [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
             </span>
-            <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}</span>
+            <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt?.trim() || activeSegment.label || 'No transcript excerpt available.'}</span>
             {/* UI-truthfulness fix (2026-09-07, live user report): when the
                 verbatim excerpt is missing (legacy rows pre-2026-08-25, or a
                 window that matched no transcript segments), this line silently
                 showed the LLM-synthesized label with zero visual distinction.
-                A paraphrase must never pass itself off as verbatim transcript. */}
-            {!activeSegment.verbatimExcerpt && activeSegment.label ? (
+                A paraphrase must never pass itself off as verbatim transcript.
+                Trimmed before the truthiness check -- a whitespace-only
+                verbatimExcerpt (external review finding) was treated as a
+                real excerpt, hiding the badge while rendering a blank/
+                whitespace caption instead of the label fallback. */}
+            {!activeSegment.verbatimExcerpt?.trim() && activeSegment.label ? (
               <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
                 <span className="ml-1.5 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">summarized</span>
               </Tooltip>
@@ -299,20 +303,25 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       {/* Footer row: live transcript ticker (left, grows/truncates) +
           Speed cycle-pill + relocated moment stepper (right). */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
-          {activeHighlight ? (
+        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug flex items-center gap-1" aria-live="polite">
+          {activeHighlight && playingIdx !== null ? (
             <>
-              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
-                {playingIdx! + 1}/{data.highlights.length}
+              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1 shrink-0">
+                {playingIdx + 1}/{data.highlights.length}
               </span>
-              {revealedText || activeHighlight.label}
+              {/* Label text gets its own min-w-0/truncate child so long
+                  fallback labels clip on their own line instead of pushing
+                  the badge below out of the flex box entirely (external
+                  review finding) -- the badge is a shrink-0 sibling, never
+                  inside the truncated span. */}
+              <span className="truncate min-w-0">{revealedText || activeHighlight.label}</span>
               {/* Same UI-truthfulness fix as the banner above: the hook's
                   usingVerbatim flag is exactly "the revealed text comes from
                   the verbatim excerpt" -- false here means the LLM label
                   paraphrase is on screen and must be marked as such. */}
               {!usingVerbatim && activeHighlight.label ? (
                 <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
-                  <span className="ml-1 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--ink-muted)] border border-dashed border-[var(--line)] px-1">summarized</span>
+                  <span className="shrink-0 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--ink-muted)] border border-dashed border-[var(--line)] px-1">summarized</span>
                 </Tooltip>
               ) : null}
             </>

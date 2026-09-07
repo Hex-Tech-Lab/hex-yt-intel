@@ -142,7 +142,11 @@ describe('HighlightsScrubber', () => {
 
     const caption = await screen.findByTestId('verbatim-caption');
     expect(caption.textContent).toContain('First moment');
-    expect(screen.getAllByText('summarized').length).toBeGreaterThanOrEqual(1);
+    // Exactly 2 render sites badge a fallback: the banner (verbatim-caption)
+    // and the footer ticker. A bare >= 1 assertion (the original version of
+    // this test) would still pass if one site silently regressed and lost
+    // its badge while the other kept working -- external review finding.
+    expect(screen.getAllByText('summarized')).toHaveLength(2);
   });
 
   it('shows no summarized badge when a verbatim transcript excerpt is displayed', async () => {

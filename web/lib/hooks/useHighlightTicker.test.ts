@@ -142,11 +142,20 @@ describe('useHighlightTicker usingVerbatim flag', () => {
     expect(result.current.usingVerbatim).toBe(false);
   });
 
-  it('usingVerbatim is still reported when nothing is revealed (not playing)', () => {
+  it('usingVerbatim is false when nothing is revealed (not playing) even with a real verbatim excerpt -- consumers fall back to label in this state, so the badge must show (external review finding, corrected 2026-09-07)', () => {
     const { result } = renderHook(() =>
       useHighlightTicker(null, 'label here', 10, 5, 'verbatim excerpt text')
     );
     expect(result.current.revealedText).toBe('');
-    expect(result.current.usingVerbatim).toBe(true);
+    expect(result.current.usingVerbatim).toBe(false);
+  });
+
+  it('falls back to label (with usingVerbatim: false) when verbatimExcerpt is whitespace-only', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'fallback label words', 10, 5, '   \n\t  ')
+    );
+    expect(result.current.usingVerbatim).toBe(false);
+    expect(result.current.revealedText.length).toBeGreaterThan(0);
+    expect(result.current.revealedText).not.toMatch(/^\s*$/);
   });
 });
