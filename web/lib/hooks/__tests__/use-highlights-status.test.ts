@@ -95,7 +95,7 @@ describe('useHighlightsStatus', () => {
 
     // The stale first request resolving late must not clobber the new result.
     resolveFirst({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}, {}, {}, {}] }) });
-    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(result.current.count).toBe(2);
   });
 
