@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getHighlightsRetryDelayMs, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 
 export interface HighlightsStatusResult {
   /** true = highlights present, false = confirmed zero after bounded retry, null = not yet known (loading/error/no analysis/malformed response) */
@@ -14,16 +15,16 @@ const IDLE: HighlightsStatusResult = { hasHighlights: null, count: 0 };
  * fetch -- that one drives the actual scrubber UI and has its own richer
  * state; this is a cheap count-only check for the status chip.
  *
- * Bounded-retry mirrors HighlightsScrubber.tsx's own pattern exactly (same
- * 3-attempt/backoff shape): the highlights API has no separate "extraction
- * status" field distinct from the highlights array itself, so an empty
- * response immediately after an analysis completes is genuinely ambiguous
- * between "confirmed zero" and "not persisted yet" (a real, observed
- * finalization race -- external review finding). Only commits to
- * `hasHighlights: false` after the array is still empty on the final
- * attempt.
+ * `digestLoading` is a deliberate re-trigger dependency, not just a value
+ * read: see HighlightsScrubber.tsx and highlights-settings.ts's retry-
+ * constants doc for the full mechanism -- highlights are backfilled by
+ * scheduleHighlightsRecovery() AFTER digest generation, so a
+ * digestLoading:true->false transition is the real, video-length-scaled
+ * signal that recovery has now been scheduled server-side, not a fixed
+ * timeout guessed from stream-completion (real production race, confirmed
+ * 2026-09-08 against the live DB).
  */
-export function useHighlightsStatus(analysisId: string | null, status: string): HighlightsStatusResult {
+export function useHighlightsStatus(analysisId: string | null, status: string, digestLoading?: boolean): HighlightsStatusResult {
   const [result, setResult] = useState<HighlightsStatusResult>(IDLE);
 
   useEffect(() => {
@@ -31,6 +32,13 @@ export function useHighlightsStatus(analysisId: string | null, status: string): 
       setResult(IDLE);
       return;
     }
+
+    // Already have real highlights -- a later digestLoading flip (e.g. a
+    // manual digest refresh) must not blank/reset the badge. Deliberately
+    // NOT in the dependency array: a guard read of the current value, not
+    // a re-trigger condition (see HighlightsScrubber.tsx for the same
+    // pattern).
+    if (result.hasHighlights === true) return;
 
     // Reset immediately for the NEW analysisId, not the previous one's
     // result -- otherwise switching directly between two completed
@@ -43,8 +51,7 @@ export function useHighlightsStatus(analysisId: string | null, status: string): 
 
     (async () => {
       try {
-        const maxAttempts = 3;
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
           const res = await fetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`, {
             signal: controller.signal,
           });
@@ -63,8 +70,8 @@ export function useHighlightsStatus(analysisId: string | null, status: string): 
             setResult({ hasHighlights: true, count });
             return;
           }
-          if (attempt < maxAttempts - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 2500 * Math.pow(2, attempt)));
+          if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
+            await new Promise((resolve) => setTimeout(resolve, getHighlightsRetryDelayMs(attempt)));
             if (controller.signal.aborted) return;
           }
         }
@@ -79,7 +86,9 @@ export function useHighlightsStatus(analysisId: string | null, status: string): 
     })();
 
     return () => controller.abort();
-  }, [analysisId, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `result` is a
+    // deliberate guard read above, not a dependency (see its comment).
+  }, [analysisId, status, digestLoading]);
 
   return result;
 }

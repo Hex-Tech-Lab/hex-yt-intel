@@ -65,7 +65,7 @@ export function ProDashboardView({
   handleSelectNode,
   hasHadVideo,
 }: ProDashboardViewProps) {
-  const { hasHighlights, count: highlightsCount } = useHighlightsStatus(analysisId, status);
+  const { hasHighlights, count: highlightsCount } = useHighlightsStatus(analysisId, status, digestLoading);
   return (
     <>
       {hasHadVideo && (

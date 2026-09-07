@@ -28,6 +28,55 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   'highlights.maxSegmentDurationSeconds': 60,
 } as const;
 
+/**
+ * Bounded-retry parameters for the client-side "highlights might not be
+ * persisted yet" race: `analysis_highlights` rows for a fresh analysis are
+ * written asynchronously by `scheduleHighlightsRecovery()` (ADR/PR #290),
+ * triggered by digest generation, via Next.js `after()` -- the digest
+ * response itself returns before that background work finishes, so even
+ * "digest is done" doesn't mean "highlights row already exists," just
+ * "the highlights-recovery call has now been scheduled."
+ *
+ * Deliberately NOT a video-length-scaled timeout. The part of this whole
+ * pipeline that scales with video length -- the digest generation itself,
+ * summarizing however many takeaways a longer/denser video produces -- is
+ * a SEPARATE wait the client already tracks natively via
+ * `useExecutiveDigest`'s own `digestLoading` state (a real Vercel/AI-call
+ * duration, not a client-side guess). The highlights-fetch retry loop
+ * below is NOT meant to cover that wait -- callers MUST restart/re-trigger
+ * this retry sequence specifically when `digestLoading` transitions from
+ * true to false (see `HighlightsScrubber.tsx` and `useHighlightsStatus.ts`
+ * for the two call sites), not run it blindly from component mount. Once
+ * digest itself is done, the ONLY remaining latency is the highlights
+ * extraction's own bounded LLM call over the already-extracted takeaways
+ * (NOT the raw transcript) -- a cost that does not grow with video length,
+ * which is what these retry constants are actually sized for.
+ *
+ * Real observed timing (2026-09-08, live production repro, video
+ * MTZwSjiDg30 under a fresh test-account analysis, verified directly
+ * against the DB): 5/5 SSE streams completed at 22:01:44 UTC+3; digest
+ * generation + highlights backfill together landed the 10 real rows at
+ * 22:01:58 UTC+3 -- a ~14s gap from stream-completion. The PREVIOUS retry
+ * budget (3 attempts, 2.5s/5s backoff, ~7.5s window, run from mount rather
+ * than from digest completion) was both wrongly-triggered (counted from
+ * stream-end, not digest-end) and too short, permanently showing "No
+ * highlights yet" until an unrelated manual refresh forced a fresh fetch
+ * after the backfill had since completed. These values give real headroom
+ * (~4x the one observed data point) over the digest-independent tail
+ * latency specifically. Delay per attempt is
+ * `min(BASE_DELAY_MS * 2^attempt, MAX_DELAY_MS)` -- capped exponential,
+ * not unbounded exponential, so a larger MAX_ATTEMPTS can't make a single
+ * retry wait minutes.
+ */
+export const HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS = 5;
+export const HIGHLIGHTS_STATUS_RETRY_BASE_DELAY_MS = 2500;
+export const HIGHLIGHTS_STATUS_RETRY_MAX_DELAY_MS = 15000;
+
+/** Capped exponential backoff shared by both highlights-status retry loops. */
+export function getHighlightsRetryDelayMs(attempt: number): number {
+  return Math.min(HIGHLIGHTS_STATUS_RETRY_BASE_DELAY_MS * Math.pow(2, attempt), HIGHLIGHTS_STATUS_RETRY_MAX_DELAY_MS);
+}
+
 /** A malformed/missing/out-of-range registry value must never reach the
  *  client as-is -- it drives setTimeout durations and seek offsets in both
  *  the authenticated and public scrubber components. Same min/max bounds as
