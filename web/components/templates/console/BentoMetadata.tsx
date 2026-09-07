@@ -13,8 +13,8 @@ const DESCRIPTION_EXPAND_THRESHOLD = 140;
 
 const URL_PATTERN = /(https?:\/\/[^\s<]+[^\s<.,;:!?'")\]])/g;
 
-// Splits on URLs and renders them as real anchors -- via JSX text nodes, never
-// dangerouslySetInnerHTML, so untrusted YouTube description text can't inject markup.
+// Splits on URLs and renders them as real anchors via plain JSX text nodes --
+// deliberately not raw-HTML injection, so untrusted YouTube description text can't inject markup.
 function linkifyDescription(text: string) {
   const parts = text.split(URL_PATTERN);
   return parts.map((part, i) =>
