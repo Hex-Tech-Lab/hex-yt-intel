@@ -132,6 +132,14 @@ export const TimeoutCleanupRule: IRule = {
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
+    // qa-intel's own rule tests embed deliberately-bad example code as
+    // TEMPLATE-LITERAL TEXT to feed to the rule under test (e.g.
+    // wave9-new-rules.test.ts's `const code = \`const timerId = setTimeout(...)\`\`)
+    // -- a plain source.getText() scan can't distinguish that from real
+    // executable code in the test file itself (review finding, 2026-09-07).
+    if (filePath.includes('/quality-engine/') && (filePath.includes('.test.') || filePath.includes('__tests__/'))) {
+      return findings;
+    }
     const text = source.getText();
 
     // Look for setTimeout/setInterval without corresponding cleanup

@@ -59,6 +59,10 @@ export default defineConfig({
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
       '../worker/src/services/CommentClassifier.test.ts',
+      // qa-intel's own rule tests -- named explicitly (not a bare
+      // 'scripts/**') to avoid picking up unrelated future scripts.
+      // See docs/qa-intel/RULESET_LESSONS_LEDGER.md for why this was added.
+      '../scripts/quality-engine/**/*.test.ts',
     ],
     exclude: [
       ...configDefaults.exclude,
