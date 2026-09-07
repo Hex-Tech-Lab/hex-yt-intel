@@ -1,0 +1,24 @@
+web/components/templates/console/__tests__/BentoMetadata-linkify.test.ts
+  s_58d08577c1f2d2::t_67301b77ae9f37 1-50
+web/components/templates/console/BentoMetadata.tsx
+  s_58d08577c1f2d2::t_1f97e60719fc85 24
+  s_58d08577c1f2d2::t_e7e8e7cc258bf6 14-23,25-43,47,49-53,55-56,62,64-67
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_58d08577c1f2d2::t_4437487c06f9cd 134-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "698a43a33b1b6552b1601ac26ad5f0a5d4f44994",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
