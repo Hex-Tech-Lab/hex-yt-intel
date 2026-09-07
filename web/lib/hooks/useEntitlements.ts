@@ -57,10 +57,17 @@ export function useEntitlements() {
     }
 
     const unsubscribe = clientAuthAdapter.onAuthStateChange((event, id) => {
+      // Same-id events (TOKEN_REFRESHED, USER_UPDATED, late INITIAL_SESSION) must
+      // not reset loaded entitlements: userId would stay unchanged so the fetch
+      // effect never re-runs, leaving isLoading stuck true and the view clamped
+      // to Simple permanently. Only a genuine user change may reset state.
+      if (id === currentUserId) {
+        return;
+      }
+      currentUserId = id;
       setEntitlements(defaultFree);
       setIsLoading(true);
       setUserId(id);
-      currentUserId = id;
       if (event === 'SIGNED_OUT') {
         setIsLoading(false);
       }
