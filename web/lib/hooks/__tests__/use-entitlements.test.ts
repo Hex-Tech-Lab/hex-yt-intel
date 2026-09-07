@@ -113,18 +113,56 @@ describe('useEntitlements hook', () => {
     });
     expect(result.current.entitlements).toEqual(founderData.entitlements);
 
-    const localListener = vi
-      .mocked(clientAuthAdapter.onAuthStateChange)
-      .mock.calls.map((call) => call[0])
-      .at(-1)!;
+    // Dispatch to EVERY registered listener in real production registration
+    // order (global listener registers first, then this hook's local
+    // listener) -- not just the last one. A version of this test that only
+    // fired the local listener passed even when the production code had a
+    // real race (the global listener's currentUserId mutation ran first and
+    // made the local listener's guard always see "same user"), giving false
+    // confidence. See useEntitlements.ts's lastObservedIdRef comment.
+    const listeners = vi.mocked(clientAuthAdapter.onAuthStateChange).mock.calls.map((call) => call[0]);
+    expect(listeners.length).toBeGreaterThanOrEqual(2);
     act(() => {
-      localListener('SIGNED_IN', 'other-user-456');
+      for (const listener of listeners) {
+        listener('SIGNED_IN', 'other-user-456');
+      }
     });
 
     await waitFor(() => {
       expect(result.current.entitlements).toEqual(proData.entitlements);
     });
     expect(result.current.isLoading).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('Test 5: SIGNED_OUT and a late INITIAL_SESSION for the same new user both correctly reset+refetch, dispatched in real registration order', async () => {
+    const founderData = {
+      success: true,
+      entitlements: { tier: 'founder', canAnalyzeVideo: true, canAccessKnowledgeGraph: true, canUseExtendedChat: true },
+    };
+    const freeData = { success: true, entitlements: { tier: 'free', canAnalyzeVideo: true, canAccessKnowledgeGraph: false, canUseExtendedChat: false } };
+    (global.fetch as any)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(founderData) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(freeData) });
+
+    const { result } = renderHook(() => useEntitlements());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.entitlements).toEqual(founderData.entitlements);
+
+    const listeners = vi.mocked(clientAuthAdapter.onAuthStateChange).mock.calls.map((call) => call[0]);
+
+    // Sign-out: old entitlements must not survive.
+    act(() => {
+      for (const listener of listeners) listener('SIGNED_OUT', null);
+    });
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.entitlements).not.toEqual(founderData.entitlements);
+
+    // A late INITIAL_SESSION for a genuinely different user must still trigger a real refetch.
+    act(() => {
+      for (const listener of listeners) listener('INITIAL_SESSION', 'other-user-789');
+    });
+    await waitFor(() => expect(result.current.entitlements).toEqual(freeData.entitlements));
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });
