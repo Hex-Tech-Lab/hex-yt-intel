@@ -13,6 +13,7 @@ import type {
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { ReconcileHighlightsUseCase } from './ReconcileHighlightsUseCase';
+import { ExtractHighlightsUseCase } from './ExtractHighlightsUseCase';
 
 const MAX_DIGEST_PAYLOAD_BYTES = 100_000;
 
@@ -155,22 +156,40 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
     }
 
-    // Highlights extraction is now owned by a dedicated QStash task fired at
-    // persist finalize (web/app/api/webhooks/highlights) -- decoupled from this
-    // digest pass entirely.
-    // However, reconciliation MUST happen when both exist. Since the digest
-    // is generated here, we can asynchronously attempt reconciliation now.
+    // Highlights extraction is primarily owned by a dedicated QStash task
+    // fired at persist finalize (web/app/api/webhooks/highlights) --
+    // decoupled from this digest pass. But that task's payload carries no
+    // takeaways (the digest doesn't exist yet at finalize time), so its
+    // extraction prompt is always told "0 takeaways" and, by its own
+    // documented rule, always returns zero highlights -- silently, since an
+    // empty result is never persisted (see ExtractHighlightsUseCase). This is
+    // the ONLY place real takeaways become available after that, so it's
+    // also the fallback backfill path documented in
+    // ExtractHighlightsUseCase's own docstring ("also invoked from
+    // GenerateExecutiveDigestUseCase... when the finalize path didn't
+    // produce a set") -- which was never actually wired up here; only
+    // reconciliation (index remapping for an EXISTING set) was, and
+    // ReconcileHighlightsUseCase explicitly no-ops when there is nothing yet
+    // to reconcile (RCA 2026-09-07, live "No highlights yet" report).
     if (parsed.takeaways && parsed.takeaways.length > 0) {
-      // Execute reconciliation immediately rather than dynamic import.
-      // We don't await this to keep digest generation fast, but static import prevents teardown race.
-      new ReconcileHighlightsUseCase(this.persistence, this.completion)
-        .execute({
-          analysisId,
-          userId,
-          takeaways: parsed.takeaways!,
-          models,
-        })
-        .catch(err => console.error('[digest-usecase] reconciliation async failed:', err));
+      const takeaways = parsed.takeaways;
+      (async () => {
+        try {
+          const existing = await this.persistence.findHighlightsForAnalysis(analysisId);
+          if (existing.length === 0 && row.video_id) {
+            // Full backfill: the finalize-time webhook had no takeaways and
+            // produced nothing. skipIfPresent:false is safe/explicit here --
+            // we just confirmed the set is empty.
+            await new ExtractHighlightsUseCase(this.persistence, this.completion)
+              .execute({ analysisId, videoId: row.video_id, models, skipIfPresent: false, takeaways });
+          } else {
+            await new ReconcileHighlightsUseCase(this.persistence, this.completion)
+              .execute({ analysisId, userId, takeaways, models });
+          }
+        } catch (err) {
+          console.error('[digest-usecase] post-digest highlights backfill/reconciliation failed:', err);
+        }
+      })();
     }
 
     return { type: 'success', digest, cached: false };
