@@ -25,6 +25,20 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   },
 }));
 
+// `after()` requires a real Next.js request scope, which doesn't exist in a
+// unit test -- stub it to invoke its callback immediately (still async, so
+// the caller's own await/flush behavior is exercised the same way).
+vi.mock('next/server', () => ({
+  after: (cb: () => Promise<void> | void) => {
+    void cb();
+  },
+}));
+
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
 const DIGEST_COMPLETION_TEXT = `
 #### 0.1 Snapshot
 A short snapshot.
@@ -61,9 +75,9 @@ function makeCompletion() {
 }
 
 async function flushMicrotasks() {
-  // The post-digest backfill/reconcile call is fire-and-forget (not awaited
-  // by execute()) so digest generation stays fast -- poll briefly for it.
-  await vi.waitFor(() => {}, { timeout: 500, interval: 5 }).catch(() => {});
+  // The recovery call runs inside a mocked `after()` (invoked synchronously
+  // in tests, see the next/server mock above) but the callback itself is
+  // still async -- one macrotask tick is enough for it to settle.
   await new Promise((resolve) => setTimeout(resolve, 20));
 }
 
@@ -93,7 +107,7 @@ describe('GenerateExecutiveDigestUseCase — post-digest highlights backfill rou
       expect.objectContaining({
         analysisId: 'a1',
         videoId: 'video-abc',
-        skipIfPresent: false,
+        skipIfPresent: true,
         takeaways: expect.arrayContaining(['First real takeaway', 'Second real takeaway']),
       })
     );
@@ -121,5 +135,53 @@ describe('GenerateExecutiveDigestUseCase — post-digest highlights backfill rou
       expect.objectContaining({ analysisId: 'a2', userId: 'u1' })
     );
     expect(extractSpy).not.toHaveBeenCalled();
+  });
+
+  it('runs the backfill on a CACHED digest hit too, not just fresh generation (regression: review finding 2026-09-07)', async () => {
+    // This is the exact real-world case the original bug report hit: an
+    // analysis whose digest was already generated (and cached) before this
+    // fix landed, but whose highlights are still empty from the always-
+    // empty finalize-time webhook. A version of this fix that only checked
+    // on fresh generation would never help these already-existing analyses.
+    const persistence = makePorts({
+      verifyOwnership: vi.fn().mockResolvedValue({
+        analysis_markdown: '# Analysis\nSome real content.',
+        analysis_payload: null,
+        executive_digest: {
+          snapshot: 'cached snapshot',
+          overview: 'cached overview',
+          takeaways: ['Cached takeaway one', 'Cached takeaway two'],
+          model: 'test-model',
+          generatedAt: new Date().toISOString(),
+        },
+        video_id: 'video-cached',
+      }),
+      findHighlightsForAnalysis: vi.fn().mockResolvedValue([]),
+    });
+    const completion = makeCompletion();
+
+    const extractSpy = vi.spyOn(ExtractHighlightsUseCase.prototype, 'execute').mockResolvedValue(undefined);
+    const reconcileSpy = vi.spyOn(ReconcileHighlightsUseCase.prototype, 'execute').mockResolvedValue(undefined);
+
+    const useCase = new GenerateExecutiveDigestUseCase(persistence as any, completion as any);
+    const result = await useCase.execute({ analysisId: 'a3', userId: 'u1', models: [] as any });
+
+    expect(result.type).toBe('success');
+    expect(result.type === 'success' && result.cached).toBe(true);
+    // The digest completion must NOT have been called for a cache hit.
+    expect(completion.complete).not.toHaveBeenCalled();
+
+    await flushMicrotasks();
+
+    expect(extractSpy).toHaveBeenCalledTimes(1);
+    expect(extractSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        analysisId: 'a3',
+        videoId: 'video-cached',
+        skipIfPresent: true,
+        takeaways: expect.arrayContaining(['Cached takeaway one', 'Cached takeaway two']),
+      })
+    );
+    expect(reconcileSpy).not.toHaveBeenCalled();
   });
 });

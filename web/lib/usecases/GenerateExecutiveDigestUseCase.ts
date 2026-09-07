@@ -1,3 +1,5 @@
+import { after } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import {
   getExecutiveDigestSystemPrompt,
   buildExecutiveDigestUserMessage,
@@ -91,6 +93,18 @@ export class GenerateExecutiveDigestUseCase {
 
     // Idempotency: return the stored digest untouched unless a re-gen is forced.
     if (!force && isStoredDigest(row.executive_digest)) {
+      // RCA (2026-09-07 review): a cache hit used to skip the highlights
+      // recovery check entirely -- meaning re-opening exactly the analyses
+      // this fix targets (an existing digest, but zero highlights from the
+      // always-empty finalize-time webhook) never triggered the backfill.
+      // Must run on the cached path too, not just fresh generation.
+      this.scheduleHighlightsRecovery({
+        analysisId,
+        userId,
+        videoId: row.video_id,
+        takeaways: row.executive_digest.takeaways,
+        models,
+      });
       return { type: 'success', digest: row.executive_digest, cached: true };
     }
 
@@ -156,43 +170,87 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
     }
 
-    // Highlights extraction is primarily owned by a dedicated QStash task
-    // fired at persist finalize (web/app/api/webhooks/highlights) --
-    // decoupled from this digest pass. But that task's payload carries no
-    // takeaways (the digest doesn't exist yet at finalize time), so its
-    // extraction prompt is always told "0 takeaways" and, by its own
-    // documented rule, always returns zero highlights -- silently, since an
-    // empty result is never persisted (see ExtractHighlightsUseCase). This is
-    // the ONLY place real takeaways become available after that, so it's
-    // also the fallback backfill path documented in
-    // ExtractHighlightsUseCase's own docstring ("also invoked from
-    // GenerateExecutiveDigestUseCase... when the finalize path didn't
-    // produce a set") -- which was never actually wired up here; only
-    // reconciliation (index remapping for an EXISTING set) was, and
-    // ReconcileHighlightsUseCase explicitly no-ops when there is nothing yet
-    // to reconcile (RCA 2026-09-07, live "No highlights yet" report).
-    if (parsed.takeaways && parsed.takeaways.length > 0) {
-      const takeaways = parsed.takeaways;
-      (async () => {
-        try {
-          const existing = await this.persistence.findHighlightsForAnalysis(analysisId);
-          if (existing.length === 0 && row.video_id) {
-            // Full backfill: the finalize-time webhook had no takeaways and
-            // produced nothing. skipIfPresent:false is safe/explicit here --
-            // we just confirmed the set is empty.
-            await new ExtractHighlightsUseCase(this.persistence, this.completion)
-              .execute({ analysisId, videoId: row.video_id, models, skipIfPresent: false, takeaways });
-          } else {
-            await new ReconcileHighlightsUseCase(this.persistence, this.completion)
-              .execute({ analysisId, userId, takeaways, models });
-          }
-        } catch (err) {
-          console.error('[digest-usecase] post-digest highlights backfill/reconciliation failed:', err);
-        }
-      })();
-    }
+    // Highlights recovery (backfill-if-empty, else reconcile) -- see
+    // scheduleHighlightsRecovery's docstring for the full RCA.
+    this.scheduleHighlightsRecovery({ analysisId, userId, videoId: row.video_id, takeaways: parsed.takeaways, models });
 
     return { type: 'success', digest, cached: false };
+  }
+
+  /**
+   * Highlights extraction is primarily owned by a dedicated QStash task
+   * fired at persist finalize (web/app/api/webhooks/highlights) -- decoupled
+   * from this digest pass. But that task's payload carries no takeaways (the
+   * digest doesn't exist yet at finalize time), so its extraction prompt is
+   * always told "0 takeaways" and, by its own documented rule, always
+   * returns zero highlights -- silently, since an empty result is never
+   * persisted (see ExtractHighlightsUseCase). This is the ONLY place real
+   * takeaways become available after that, so it's also the fallback
+   * backfill path documented in ExtractHighlightsUseCase's own docstring
+   * ("also invoked from GenerateExecutiveDigestUseCase... when the finalize
+   * path didn't produce a set") -- which was never actually wired up; only
+   * reconciliation (index remapping for an EXISTING set) was, and
+   * ReconcileHighlightsUseCase explicitly no-ops when there is nothing yet
+   * to reconcile (RCA 2026-09-07, live "No highlights yet" report).
+   *
+   * Called from BOTH the cached-digest early-return path and the fresh-
+   * generation path -- a cache hit used to skip this check entirely, which
+   * meant re-opening exactly the analyses this fix targets (existing digest,
+   * zero highlights from the always-empty webhook) never triggered recovery
+   * (review finding, 2026-09-07).
+   *
+   * Wrapped in `after()` (Next.js) rather than a bare detached promise --
+   * a fire-and-forget async IIFE can be killed by the serverless runtime
+   * once the response is sent, silently dropping the recovery work (review
+   * finding, 2026-09-07). `after()` extends the function's lifetime until
+   * the callback settles.
+   *
+   * Uses skipIfPresent:true (not false) on the extraction call -- a prior
+   * version force-overwrote existing highlights on the assumption that
+   * "we just read zero rows" is still true by the time the LLM call
+   * returns, which is a real TOCTOU race against a concurrent
+   * finalize/retry that could populate the set in between (review finding,
+   * 2026-09-07). ExtractHighlightsUseCase's own existence check right
+   * before its write is a much smaller, safer race window than trusting a
+   * read from here.
+   */
+  private scheduleHighlightsRecovery(params: {
+    analysisId: string;
+    userId: string;
+    videoId: string | null | undefined;
+    takeaways: string[];
+    models: readonly CompletionModel[];
+  }): void {
+    const { analysisId, userId, videoId, takeaways, models } = params;
+    if (!takeaways || takeaways.length === 0) return;
+
+    after(async () => {
+      try {
+        const existing = await this.persistence.findHighlightsForAnalysis(analysisId);
+        if (existing.length === 0 && videoId) {
+          await new ExtractHighlightsUseCase(this.persistence, this.completion)
+            .execute({ analysisId, videoId, models, skipIfPresent: true, takeaways });
+        } else if (existing.length > 0) {
+          await new ReconcileHighlightsUseCase(this.persistence, this.completion)
+            .execute({ analysisId, userId, takeaways, models });
+        } else {
+          // existing.length === 0 but no videoId -- can't extract without a
+          // transcript lookup key. Not silently ignorable: surface it.
+          console.error(`[digest-usecase] Cannot backfill highlights for ${analysisId}: no video_id`);
+          Sentry.captureMessage('[digest-usecase] highlights backfill skipped: missing video_id', {
+            level: 'warning',
+            tags: { usecase: 'GenerateExecutiveDigestUseCase' },
+            extra: { analysisId },
+          });
+        }
+      } catch (err) {
+        console.error('[digest-usecase] post-digest highlights backfill/reconciliation failed:', err);
+        Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+          tags: { usecase: 'GenerateExecutiveDigestUseCase', operation: 'highlights-recovery' },
+          extra: { analysisId },
+        });
+      }
+    });
   }
 }
 

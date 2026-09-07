@@ -11,9 +11,22 @@ vi.mock('@/lib/usecases/ReconcileHighlightsUseCase', () => ({
     execute: vi.fn().mockResolvedValue({ success: true, reconciledHighlights: [] })
   }; })
 }));
+vi.mock('@/lib/usecases/ExtractHighlightsUseCase', () => ({
+  ExtractHighlightsUseCase: vi.fn().mockImplementation(function() { return {
+    execute: vi.fn().mockResolvedValue(undefined)
+  }; })
+}));
 vi.mock('@/lib/prompts/highlights-reconciliation', () => ({
   parseJsonArray: vi.fn().mockReturnValue([]),
   highlightsReconciliationPrompt: vi.fn().mockReturnValue('')
+}));
+// `after()` requires a real Next.js request scope, absent in unit tests.
+vi.mock('next/server', () => ({
+  after: (cb: () => Promise<void> | void) => { void cb(); },
+}));
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
 }));
 
 import { GenerateExecutiveDigestUseCase } from '@/lib/usecases/GenerateExecutiveDigestUseCase';
