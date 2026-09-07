@@ -1,0 +1,23 @@
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_58d08577c1f2d2::t_4b7bc70c17c660 16
+  s_58d08577c1f2d2::t_4c5f6d0c179db1 159-173,175-178,180-192
+  s_58d08577c1f2d2::t_adaf94538d70c4 179
+web/lib/usecases/__tests__/generate-executive-digest-highlights-backfill.test.ts
+  s_58d08577c1f2d2::t_d0d286c85ef048 1-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "25dd98f4f5a76ea7ba707c749b52228d404b427e",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
