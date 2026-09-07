@@ -1,0 +1,19 @@
+docs/history/THOS_2026-09-07_0313_AUDIT_SECURITY_FIXES_AND_SKILL_SSOT_UNIFICATION.md
+  s_a6831e03fcd958::t_c5576fe2ea35d6 1-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "d97cbafa438a20c1b2f8828f862569fa44524d29",
+  "prompts": {},
+  "sessions": {
+    "s_a6831e03fcd958": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b1bc4a-9a5a-4553-a3a4-7d23f796adec",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
