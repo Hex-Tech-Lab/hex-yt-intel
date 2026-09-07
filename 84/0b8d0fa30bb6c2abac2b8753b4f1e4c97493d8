@@ -1,0 +1,48 @@
+CLAUDE.md
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 43-63
+docs/agent-prompts/TEMPLATE.md
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 3-10,14-19,32-68,86-136,139-142,145-148,151-161,164-174,178,189-210
+  s_58d08577c1f2d2::t_2061803796ac93 211
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 104-107
+web/lib/usecases/__tests__/get-user-entitlements.test.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 118-175
+scripts/quality-engine/rules/security.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 11,29-111,668
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_58d08577c1f2d2::t_0cd7daa4e24f93 142
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 143-148
+scripts/quality-engine/rules/index.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 49
+.memory/AGENT_LEDGER.md
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1371
+docs/history/THOS_2026-09-07_0313_AUDIT_SECURITY_FIXES_AND_SKILL_SSOT_UNIFICATION.md
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1-262
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1-2,18,96-107,173-175,179-253
+  s_58d08577c1f2d2::t_7fb188926a40b0 254
+docs/HOUSEKEEPING_AUDIT_2026-09-07.md
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1-31
+supabase/migrations/20260905120000_fix_temporal_subgraph_idor.sql
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1-73
+web/lib/usecases/__tests__/generate-executive-digest-highlights-backfill.test.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 1-187
+web/lib/__tests__/executive-digest-usecase.test.ts
+  s_58d08577c1f2d2::t_4c0bfe38d9a699 14-18,23-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "840b8d0fa30bb6c2abac2b8753b4f1e4c97493d8",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
