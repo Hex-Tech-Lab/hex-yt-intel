@@ -1,0 +1,32 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  s_27a98410ea5034::t_edff75b68383b9 8
+  s_27a98410ea5034::t_56bae7c706a2ab 55
+  s_27a98410ea5034::t_62e2985ef37d45 113-115,117-126,141,153-154,175-180
+web/lib/utils/highlights-settings.ts
+  s_27a98410ea5034::t_2fd3a571b743c0 35-38,40-54,59-66
+  s_27a98410ea5034::t_b7397d88f6e2cc 31-34,39,55-58,70,79
+  s_27a98410ea5034::t_85579e16a8ada1 67-69,71-78
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_27a98410ea5034::t_e1a7b4dae693b1 139
+  s_27a98410ea5034::t_3c2d5d3ada180a 72-73,76-78,94-99,106-138,140
+  s_27a98410ea5034::t_693386d3d5605c 141-142
+web/components/containers/SimpleDashboardView.tsx
+  s_27a98410ea5034::t_f01535e347e85a 1
+  s_27a98410ea5034::t_03802cc07e16b1 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "995c3861013fec0fcfe6afcbb6eb52e7f2438162",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
