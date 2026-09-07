@@ -236,7 +236,7 @@ export function HighlightsChip({ hasHighlights, count }: { hasHighlights: boolea
   return (
     <Tooltip content={config.title}>
       <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded ${config.cls}`}>
-        <Icon icon="solar:playlist-2-linear" size={11} />
+        <Icon icon="solar:checklist-minimalistic-linear" size={11} />
         {config.label}
       </span>
     </Tooltip>
