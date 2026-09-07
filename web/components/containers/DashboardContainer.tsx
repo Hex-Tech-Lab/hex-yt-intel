@@ -204,8 +204,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    // Live user report (2026-09-08): clicking Sign Out hung indefinitely --
+    // signOut() has no timeout of its own, and if the underlying network
+    // call (or a stuck GoTrue client, a documented past issue in this repo,
+    // see commit 5114483a "enforce gotrue singleton") never resolves, the
+    // button sits forever with no feedback. Staying signed-in-looking after
+    // the user explicitly asked to sign out is worse than a slow/failed
+    // server-side revoke -- race it against a timeout and navigate away
+    // regardless, so the UI never blocks on this specific call.
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_resolve, reject) => setTimeout(() => reject(new Error('signOut timed out')), 5000)),
+      ]);
+    } catch (err) {
+      console.warn('[DashboardContainer] signOut did not complete cleanly, navigating away regardless:', err);
+    } finally {
+      router.push("/");
+    }
   }, [supabase, router]);
 
   // Track if we've ever had a video and sync input URL box
@@ -546,7 +562,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
-  // user can decide whether to re-analyze (a re-run bypasses the cache).
+  // user can decide whether to re-analyze (a re-run skips the cache).
   //
   // Derived from `analysis.analysis_markdown` via `parseUcisDimensionNumbers` --
   // the SAME canonical, content-based presence check AnalysisHistory's WIP card
