@@ -546,7 +546,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
-  // user can decide whether to re-analyze (a re-run bypasses the cache).
+  // user can decide whether to re-analyze (a re-run skips the cache).
   //
   // Derived from `analysis.analysis_markdown` via `parseUcisDimensionNumbers` --
   // the SAME canonical, content-based presence check AnalysisHistory's WIP card
