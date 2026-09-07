@@ -1,0 +1,25 @@
+web/components/containers/ProDashboardView.tsx
+  s_27a98410ea5034::t_f8db2ecb632298 68
+  s_27a98410ea5034::t_369c27dae04f72 13,15
+  s_27a98410ea5034::t_648079fff4cc4b 171
+web/lib/hooks/useHighlightsStatus.ts
+  s_27a98410ea5034::t_309654aa5c1172 1-43
+web/components/templates/_shared/primitives.tsx
+  s_27a98410ea5034::t_c93d07bcea216c 218-244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "8f316b66a1cfa03058a224b019bac35876300313",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
