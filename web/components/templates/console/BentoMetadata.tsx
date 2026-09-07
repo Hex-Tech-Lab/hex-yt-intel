@@ -11,6 +11,64 @@ const MotionCard = motion.create(Card);
 // toggle rather than pay for a layout-measurement effect just to find out.
 const DESCRIPTION_EXPAND_THRESHOLD = 140;
 
+// Deliberately greedy -- boundary punctuation is trimmed afterward by
+// trimUrlTrailingPunctuation, which distinguishes balanced URL punctuation
+// (e.g. Wikipedia's .../Function_(mathematics)) from real sentence-ending
+// punctuation. A single exclusion character class can't make that
+// distinction (review finding, 2026-09-07: the prior pattern truncated any
+// URL ending in a balanced ), ], or similar).
+const URL_PATTERN = /(https?:\/\/[^\s<]+)/g;
+
+/** Strips trailing sentence punctuation from a matched URL, keeping a
+ *  balanced closing `)`/`]` (one whose opener appears earlier in the URL). */
+export function trimUrlTrailingPunctuation(url: string): string {
+  let trimmed = url;
+  for (;;) {
+    const last = trimmed[trimmed.length - 1];
+    if (!last) return trimmed;
+    if (last === ')' || last === ']') {
+      const open = last === ')' ? '(' : '[';
+      const opens = trimmed.split(open).length - 1;
+      const closes = trimmed.split(last).length - 1;
+      if (closes <= opens) return trimmed; // balanced -- part of the URL
+      trimmed = trimmed.slice(0, -1);
+      continue;
+    }
+    if (/[.,;:!?'"]/.test(last)) {
+      trimmed = trimmed.slice(0, -1);
+      continue;
+    }
+    return trimmed;
+  }
+}
+
+// Splits on URLs and renders them as real anchors via plain JSX text nodes --
+// deliberately not raw-HTML injection, so untrusted YouTube description text can't inject markup.
+const linkifyDescription = (text: string) => {
+  const parts = text.split(URL_PATTERN);
+  return parts.flatMap((part, i) => {
+    if (!(part.startsWith('http://') || part.startsWith('https://'))) return [part];
+    const url = trimUrlTrailingPunctuation(part);
+    // Not a truncation -- extracts the suffix trimUrlTrailingPunctuation
+    // removed, rendered as plain text right after the anchor (see below),
+    // so nothing is lost and no ellipsis is needed.
+    const trailingPunctuation = part.slice(/* no ellipsis: full text is preserved below */ url.length);
+    const anchor = (
+      <a
+        key={`${url}-${i}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[var(--accent)] underline hover:no-underline break-all"
+        onClick={(clickEvent) => clickEvent.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    return trailingPunctuation ? [anchor, trailingPunctuation] : [anchor];
+  });
+};
+
 export interface BentoMetadataProps {
   title: string;
   channelTitle: string;
@@ -104,7 +162,7 @@ export function BentoMetadata({
                 id={descriptionId}
                 className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${canExpandDescription && !descriptionExpanded ? 'line-clamp-2' : ''}`}
               >
-                {description}
+                {linkifyDescription(description)}
               </p>
               {canExpandDescription && (
                 <button

@@ -6,5 +6,5 @@
  * no hardcoded numeric literal can drift between the three layers.
  */
 export const CHAT_REGISTRY_FALLBACK = {
-  'chat.maxStarterOptions': 10,
+  'chat.maxStarterOptions': 5,
 } as const;

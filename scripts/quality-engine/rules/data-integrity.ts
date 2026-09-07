@@ -150,6 +150,18 @@ export const TruncationValidationRule: IRule = {
       if (Node.isCallExpression(node)) {
         const expr = node.getExpression().getText();
         if (expr.includes('slice') || expr.includes('substring') || expr.includes('substr')) {
+          // A negative end index (e.g. slice(0, -1)) means "drop the last N
+          // characters" -- structurally never a "truncate to length N for
+          // display" operation, so it can't need an ellipsis (real
+          // false-positive class, review finding 2026-09-07:
+          // trimUrlTrailingPunctuation's slice(0, -1) loop flagged as if it
+          // were lossy display truncation).
+          const endArg = node.getArguments()[1];
+          const isNegativeEnd = endArg && (
+            Node.isPrefixUnaryExpression(endArg) && endArg.getOperatorToken() === SyntaxKind.MinusToken
+          );
+          if (isNegativeEnd) return;
+
           // Check if this is truncating without indicating truncation (no ellipsis)
           const parent = node.getParent();
           if (parent && !parent.getText().includes('...') && !parent.getText().includes('ellipsis')) {
