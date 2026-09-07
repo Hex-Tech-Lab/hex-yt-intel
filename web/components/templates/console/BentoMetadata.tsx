@@ -11,6 +11,30 @@ const MotionCard = motion.create(Card);
 // toggle rather than pay for a layout-measurement effect just to find out.
 const DESCRIPTION_EXPAND_THRESHOLD = 140;
 
+const URL_PATTERN = /(https?:\/\/[^\s<]+[^\s<.,;:!?'")\]])/g;
+
+// Splits on URLs and renders them as real anchors -- via JSX text nodes, never
+// dangerouslySetInnerHTML, so untrusted YouTube description text can't inject markup.
+function linkifyDescription(text: string) {
+  const parts = text.split(URL_PATTERN);
+  return parts.map((part, i) =>
+    part.startsWith('http://') || part.startsWith('https://') ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[var(--accent)] underline hover:no-underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 export interface BentoMetadataProps {
   title: string;
   channelTitle: string;
@@ -104,7 +128,7 @@ export function BentoMetadata({
                 id={descriptionId}
                 className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${canExpandDescription && !descriptionExpanded ? 'line-clamp-2' : ''}`}
               >
-                {description}
+                {linkifyDescription(description)}
               </p>
               {canExpandDescription && (
                 <button
