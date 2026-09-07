@@ -1,0 +1,54 @@
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 104-107
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_58d08577c1f2d2::t_0324f7b41cba25 156
+  s_58d08577c1f2d2::t_88fdc8fda30a40 157-170
+web/components/templates/console/__tests__/BentoMetadata-linkify.test.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-50
+docs/history/THOS_2026-09-07_0313_AUDIT_SECURITY_FIXES_AND_SKILL_SSOT_UNIFICATION.md
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-262
+web/components/templates/console/BentoMetadata.tsx
+  s_58d08577c1f2d2::t_88fdc8fda30a40 14-71,165
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-2,18,96-107,173-175,179-253
+  s_58d08577c1f2d2::t_9b3d1a45fc34d1 254
+web/lib/usecases/__tests__/get-user-entitlements.test.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 118-175
+CLAUDE.md
+  s_58d08577c1f2d2::t_88fdc8fda30a40 43-63
+scripts/quality-engine/rules/security.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 36-118,675
+docs/HOUSEKEEPING_AUDIT_2026-09-07.md
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-31
+scripts/quality-engine/rules/data-integrity.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 153-164
+scripts/quality-engine/rules/index.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 49
+docs/agent-prompts/TEMPLATE.md
+  s_58d08577c1f2d2::t_88fdc8fda30a40 3-10,14-19,32-68,86-136,139-142,145-148,151-161,164-174,178,189-210
+  s_58d08577c1f2d2::t_3f31288da56c67 211
+supabase/migrations/20260905120000_fix_temporal_subgraph_idor.sql
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-73
+web/lib/__tests__/executive-digest-usecase.test.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 14-18,23-30
+web/lib/utils/chat-options-settings.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 9
+web/lib/usecases/__tests__/generate-executive-digest-highlights-backfill.test.ts
+  s_58d08577c1f2d2::t_88fdc8fda30a40 1-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "f800a8b75e3c790f8c12a262dfd7f4485ddbf22d",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
