@@ -547,8 +547,15 @@ jobs:
                 # heredoc) never matches a bare closing "EOF" line, and GitHub's runner fails the
                 # whole step with "Matching delimiter not found" -- this exact bug, confirmed live
                 # on PR #294's CI run (2026-09-07). Fixed per GitHub's own documented pattern: a
-                # random, collision-proof delimiter instead of a fixed/quoted one.
+                # random delimiter instead of a fixed/quoted one. Collision-RESISTANT, not
+                # collision-proof (external review correction, 2026-09-08): regenerate below if
+                # the random token happens to already appear as a standalone line in the
+                # payload, per GitHub's own documented delimiter contract, instead of assuming
+                # it never will just because the payload is valid JSON.
                 DELIM="EOF_$(openssl rand -hex 8)"
+                while grep -qxF "$DELIM" "$TEMP_OUT"; do
+                  DELIM="EOF_$(openssl rand -hex 8)"
+                done
                 {
                   echo "CONFIDENCE_JSON<<${DELIM}"
                   cat "$TEMP_OUT"
