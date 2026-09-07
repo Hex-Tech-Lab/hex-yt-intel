@@ -50,15 +50,6 @@ export class GetUserEntitlementsUseCase {
       return defaultFree;
     }
 
-    const HARDCODED_OWNER_IDS = ['da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
-    const HARDCODED_OWNER_EMAIL_PATTERNS = [/kelly/i, /admin@getmytestdrive\.com/i, /admin@v-intel\.app/i, /owner@hex-tech-lab/i];
-    if (HARDCODED_OWNER_IDS.includes(userId)) {
-      return founderEntitlement;
-    }
-    if (email && HARDCODED_OWNER_EMAIL_PATTERNS.some((pattern) => pattern.test(email))) {
-      return founderEntitlement;
-    }
-
     const founderUserIds = (process.env.FOUNDER_USER_IDS ?? process.env.ADMIN_FOUNDER_USER_IDS ?? '')
       .split(',')
       .map((entry) => entry.trim())
@@ -110,7 +101,10 @@ export class GetUserEntitlementsUseCase {
       }
 
       valid.sort((subA, subB) => (TIER_RANK[subB.plan_tier as PlanTier] ?? 0) - (TIER_RANK[subA.plan_tier as PlanTier] ?? 0));
-      const best = valid[0]!;
+      const best = valid[0];
+      if (!best) {
+        return defaultFree;
+      }
 
       const planTier = best.plan_tier as PlanTier;
       const isEnterprise = planTier === 'enterprise';
