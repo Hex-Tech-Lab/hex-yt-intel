@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
@@ -52,7 +52,7 @@ interface HighlightsResponse {
  * docs/agent-prompts/2026-08-20-cc-simplify-shared-playback-hook.md) --
  * this component only supplies the store-backed primitives and renders.
  */
-export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analysisId: string; videoDurationSeconds: number | null }) {
+export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoading }: { analysisId: string; videoDurationSeconds: number | null; digestLoading?: boolean }) {
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,8 +110,20 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   useEffect(() => {
     // Stop any in-progress playback from the previous analysisId -- otherwise
     // switching videos mid-playback keeps auto-seeking a now-different
-    // player against stale timestamps from the old video's highlights.
+    // player against stale timestamps from the old video's highlights. Kept
+    // in its own effect (analysisId-only) so it does NOT re-fire on every
+    // digestLoading flip below.
     stop();
+  }, [analysisId, stop]);
+
+  useEffect(() => {
+    // Already have real highlights for this analysis -- a later digestLoading
+    // flip (e.g. a manual digest refresh) must not blank/refetch and cause a
+    // visible flicker. `data` is deliberately NOT in the dependency array:
+    // this is a guard read of the current value, not a re-trigger condition
+    // -- re-triggering on `data` changing would infinite-loop against this
+    // same effect's own setData call below.
+    if (data && data.highlights.length > 0) return;
 
     // AbortController: if analysisId changes again (or the component
     // unmounts) while this fetch is in flight, cancel the actual request --
@@ -126,8 +138,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       setLoading(true);
       try {
         let lastJson: HighlightsResponse | null = null;
-        const maxAttempts = 3;
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
           const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
@@ -139,9 +150,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             break;
           }
           lastJson = json;
-          if (attempt < maxAttempts - 1) {
-            const delayMs = 2500 * Math.pow(2, attempt);
-            await new Promise((r) => setTimeout(r, delayMs));
+          if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
+            await new Promise((r) => setTimeout(r, getHighlightsRetryDelayMs(attempt)));
             if (controller.signal.aborted) return;
           }
         }
@@ -162,7 +172,12 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     return () => {
       controller.abort();
     };
-  }, [analysisId, stop]);
+    // digestLoading is a deliberate re-trigger dependency, not just a value
+    // read -- see highlights-settings.ts's retry-constants doc for why: a
+    // digestLoading:true->false transition is the real signal that
+    // scheduleHighlightsRecovery() has now been scheduled server-side, not
+    // a fixed timeout guessed from stream-completion.
+  }, [analysisId, digestLoading]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;

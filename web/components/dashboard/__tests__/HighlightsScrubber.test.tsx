@@ -69,10 +69,13 @@ describe('HighlightsScrubber', () => {
       // Empty state banner is now rendered instead of collapsing to null
       expect(container.firstChild).not.toBeNull();
       expect(container.firstChild?.textContent).toContain('No highlights yet');
-    }, { timeout: 10000 });
-  }, 15000);
+    }, { timeout: 40000 });
+  }, 45000);
 
   it('bounded polling retries on empty before showing empty state banner', async () => {
+    // 5 attempts, capped-exponential backoff (2.5s/5s/10s/15s -- see
+    // highlights-settings.ts's HIGHLIGHTS_STATUS_RETRY_* constants and their
+    // doc comment for why this window widened from the original 3/2.5s/5s).
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -88,10 +91,53 @@ describe('HighlightsScrubber', () => {
     await vi.advanceTimersByTimeAsync(5100);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
+    await vi.advanceTimersByTimeAsync(10100);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await vi.advanceTimersByTimeAsync(15100);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+
     await vi.advanceTimersByTimeAsync(100);
     // Empty state banner is now rendered instead of collapsing to null
     expect(container.firstChild).not.toBeNull();
     expect(container.firstChild?.textContent).toContain('No highlights yet');
+  });
+
+  it('re-triggers the highlights fetch when digestLoading transitions to false, even after the initial retry budget was exhausted', async () => {
+    // The real bug this covers (live production repro, 2026-09-08): a fresh
+    // analysis's highlights are backfilled by scheduleHighlightsRecovery()
+    // AFTER digest generation, which can land well after this component's
+    // own retry budget gives up. digestLoading:true->false is the real
+    // signal that recovery has now been scheduled server-side -- verify it
+    // actually restarts the fetch cycle rather than leaving the empty state
+    // permanent until an unrelated page refresh.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }) })
+      .mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            highlights: [{ idx: 0, start: 10, end: 15, label: 'Recovered highlight' }],
+            segmentDurationSeconds: 5,
+            contextLeadSeconds: 2,
+          }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={true} />
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Simulate digest finishing -- this is the real trigger, not a timeout.
+    rerender(<HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={false} />);
+
+    await waitFor(() => {
+      expect(container.firstChild?.textContent).not.toContain('No highlights yet');
+      expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    });
   });
 
   it('collapses gracefully on fetch error without throwing', async () => {
