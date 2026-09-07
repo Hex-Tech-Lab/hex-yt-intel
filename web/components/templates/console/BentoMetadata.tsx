@@ -25,7 +25,7 @@ function linkifyDescription(text: string) {
         target="_blank"
         rel="noopener noreferrer"
         className="text-[var(--accent)] underline hover:no-underline break-all"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(clickEvent) => clickEvent.stopPropagation()}
       >
         {part}
       </a>
