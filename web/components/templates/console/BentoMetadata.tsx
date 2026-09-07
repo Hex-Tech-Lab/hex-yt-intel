@@ -11,29 +11,60 @@ const MotionCard = motion.create(Card);
 // toggle rather than pay for a layout-measurement effect just to find out.
 const DESCRIPTION_EXPAND_THRESHOLD = 140;
 
-const URL_PATTERN = /(https?:\/\/[^\s<]+[^\s<.,;:!?'")\]])/g;
+// Deliberately greedy -- boundary punctuation is trimmed afterward by
+// trimUrlTrailingPunctuation, which distinguishes balanced URL punctuation
+// (e.g. Wikipedia's .../Function_(mathematics)) from real sentence-ending
+// punctuation. A single exclusion character class can't make that
+// distinction (review finding, 2026-09-07: the prior pattern truncated any
+// URL ending in a balanced ), ], or similar).
+const URL_PATTERN = /(https?:\/\/[^\s<]+)/g;
+
+/** Strips trailing sentence punctuation from a matched URL, keeping a
+ *  balanced closing `)`/`]` (one whose opener appears earlier in the URL). */
+export function trimUrlTrailingPunctuation(url: string): string {
+  let trimmed = url;
+  for (;;) {
+    const last = trimmed[trimmed.length - 1];
+    if (!last) return trimmed;
+    if (last === ')' || last === ']') {
+      const open = last === ')' ? '(' : '[';
+      const opens = trimmed.split(open).length - 1;
+      const closes = trimmed.split(last).length - 1;
+      if (closes <= opens) return trimmed; // balanced -- part of the URL
+      trimmed = trimmed.slice(0, -1);
+      continue;
+    }
+    if (/[.,;:!?'"]/.test(last)) {
+      trimmed = trimmed.slice(0, -1);
+      continue;
+    }
+    return trimmed;
+  }
+}
 
 // Splits on URLs and renders them as real anchors via plain JSX text nodes --
 // deliberately not raw-HTML injection, so untrusted YouTube description text can't inject markup.
-function linkifyDescription(text: string) {
+const linkifyDescription = (text: string) => {
   const parts = text.split(URL_PATTERN);
-  return parts.map((part, i) =>
-    part.startsWith('http://') || part.startsWith('https://') ? (
+  return parts.flatMap((part, i) => {
+    if (!(part.startsWith('http://') || part.startsWith('https://'))) return [part];
+    const url = trimUrlTrailingPunctuation(part);
+    const trailingPunctuation = part.slice(url.length);
+    const anchor = (
       <a
-        key={i}
-        href={part}
+        key={`${url}-${i}`}
+        href={url}
         target="_blank"
         rel="noopener noreferrer"
         className="text-[var(--accent)] underline hover:no-underline break-all"
         onClick={(clickEvent) => clickEvent.stopPropagation()}
       >
-        {part}
+        {url}
       </a>
-    ) : (
-      part
-    )
-  );
-}
+    );
+    return trailingPunctuation ? [anchor, trailingPunctuation] : [anchor];
+  });
+};
 
 export interface BentoMetadataProps {
   title: string;
