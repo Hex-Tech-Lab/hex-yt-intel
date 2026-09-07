@@ -864,8 +864,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
         }
         rightPanel={
-          <AnimatePresence mode="wait">
-            {rightPanelItems.length > 0 && (
+          rightPanelItems.length > 0 ? (
+            <AnimatePresence mode="wait">
               <motion.div
                 key="right-panel"
                 initial={{ x: 20, opacity: 0 }}
@@ -876,8 +876,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               >
                 <RightPanelAccordion items={rightPanelItems} />
               </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>
+          ) : null
         }
         dock={
           <ChatDock
