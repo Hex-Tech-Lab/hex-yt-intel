@@ -40,6 +40,27 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 
 **Same-checkout warning**: AGY and OC have both been run in the same shared working-tree checkout (not isolated git worktrees) at least once this session, resulting in mixed uncommitted diffs from two agents on one branch that sat unpushed/undeployed for hours before being noticed. Prefer isolated worktrees per agent when running AGY/OC concurrently with other work; if a shared checkout is unavoidable, check `git status`/`git diff` per-file before committing anything, don't assume the working tree reflects only your own current task.
 
+### Model/task-fit routing (added 2026-09-07 — decays fast, read the caveat)
+
+The roster above says *which agent*; this says *which model tier, for which
+kind of task*, based on real comparative results this session:
+
+| Task shape | Route to | Why |
+|---|---|---|
+| UI/frontend, first-pass or grunt-level work | AGY on Gemini Flash (3.7/3.8), no/low effort | Directly observed to excel here — fast, cheap, sufficiently accurate for first-level UI engagement. |
+| Multi-hop or long-horizon reasoning (spans many files/steps, needs to hold state across a long chain) | A non-Flash-tier model — AGY Pro, Claude, or OC on a stronger tier (not its cheap default) | Flash-tier models underperform on multi-hop/long-horizon work regardless of provider — this is a tier property, not an AGY-specific weakness. |
+| Well-scoped, narrow investigation+fix (bug report, PR comment, tech-debt item) | OC on its cheap default (DeepSeek/GLM low-effort tier) | Narrow scope doesn't need a premium model; see the OC row above for prompt-handholding rules. |
+| Orchestration, cross-agent verification, merge sign-off | CC (this session) | Not a tier question — this is CC's standing role regardless of model churn. |
+
+**This table decays.** Model quality, pricing, and availability change
+monthly — do not treat these rows as permanent facts. Before routing a
+non-trivial or expensive task on this table alone, skim `.memory/AGENT_LEDGER.md`
+for recent real outcomes on a similar task shape (last 2-4 weeks) and let
+that override a stale row. Deliberately not building an automated
+model-benchmarking system for this — a stale table caught by a human skim
+before a costly dispatch is cheaper than maintaining a benchmarking
+pipeline for a fast-moving model landscape.
+
 ### Mandatory template for every agent dispatch prompt (added 2026-08-03, enforced as a file template 2026-08-06)
 
 Every prompt dispatched to AGY, OC, a remote/worktree Agent-tool call, or written by CC for itself — investigation, execution, or both — MUST be built from **`docs/agent-prompts/TEMPLATE.md`**, not re-derived from memory or written ad hoc. Copy that file, fill in its `[FILL IN]` sections (Context, Task, Goal, Expected results, Task-specific skills/tools/MCPs, task-specific fixtures), and dispatch — do not paraphrase or drop its `[ALWAYS INCLUDE]` sections (ledger protocol, code-review-graph as Step 0, the three tenets, gates, report format). Save the filled-in prompt to `docs/agent-prompts/<date>-<agent>-<short-name>.md` before dispatching, same as every prior prompt in that directory.
