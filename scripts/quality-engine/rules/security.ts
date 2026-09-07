@@ -8,7 +8,10 @@ export const CredentialLeakRule: IRule = {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
       if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
-      if (/\.(test|spec)\.[tj]sx?$/.test(filePath) || filePath.includes('__tests__/')) return findings;
+      // Test-file exemption for this rule is added independently in PR #287
+      // (chore/qa-intel-security-lessons-rules) -- not duplicated here to
+      // avoid a merge conflict; that PR's version is more complete (named
+      // var + full test coverage) and should land first.
       const FORBIDDEN_IDS = ['test-user-id', 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
       
       source.forEachDescendant((node) => {
