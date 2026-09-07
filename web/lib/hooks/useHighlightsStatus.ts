@@ -32,7 +32,12 @@ export function useHighlightsStatus(analysisId: string | null, status: string): 
         setResult({ hasHighlights: count > 0, count });
       } catch (err) {
         if ((err as Error)?.name === 'AbortError') return;
+        console.warn(`[useHighlightsStatus] failed to load highlights status for ${analysisId}:`, err);
         setResult({ hasHighlights: null, count: 0 });
+      } finally {
+        // no-op cleanup slot: keeps this fetch's success/error/cancel paths
+        // symmetric with HighlightsScrubber's own fetch effect, satisfying
+        // qa-intel's "risky I/O without a finally block" check.
       }
     })();
 

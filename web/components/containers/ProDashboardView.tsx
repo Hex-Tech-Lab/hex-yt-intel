@@ -23,7 +23,7 @@ interface ProDashboardViewProps {
   timelineEntityData: any;
   setSelectedNodeId: (id: string | null) => void;
   consoleTab: "synthesis" | "graph";
-  setConsoleTab: (t: "synthesis" | "graph") => void;
+  setConsoleTab: (tab: "synthesis" | "graph") => void;
   graph: KnowledgeGraph;
   digest: any;
   digestLoading: boolean;
@@ -35,7 +35,7 @@ interface ProDashboardViewProps {
   chapters: any[];
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
-  setSelectedDimensionKey: (k: string | null) => void;
+  setSelectedDimensionKey: (dimensionKey: string | null) => void;
   selectedNodeId: string | null;
   handleSelectNode: (id: string | null) => void;
   hasHadVideo: boolean;
