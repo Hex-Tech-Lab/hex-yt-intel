@@ -2,7 +2,7 @@
   "mcpServers": {
     "testsprite": {
       "command": "pnpm",
-      "args": ["dlx", "@testsprite/testsprite-mcp@latest"],
+      "args": ["dlx", "@testsprite/testsprite-mcp@0.0.43"],
       "env": {
         "API_KEY": "${TESTSPRITE_API_KEY}"
       }
