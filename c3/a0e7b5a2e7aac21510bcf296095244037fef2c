@@ -1,0 +1,29 @@
+web/lib/hooks/__tests__/use-effective-view-mode.test.ts
+  s_bc78e2a881607c::t_7b15a30f23911d 2
+  s_bc78e2a881607c::t_a65b04d196cfd3 42-44,46,50-81
+  s_bc78e2a881607c::t_a337cc28e2a060 3,5
+web/lib/hooks/__tests__/use-entitlements.test.ts
+  s_bc78e2a881607c::t_2b6ddc2b255ed6 120-122
+  s_bc78e2a881607c::t_3395d10559eb78 62-82,90-119,123-129
+  s_bc78e2a881607c::t_08f1a8fb3b12c2 83-89
+  s_bc78e2a881607c::t_e95b0c9b09e0c7 2
+  s_bc78e2a881607c::t_aab92972947eb9 6
+web/lib/hooks/useEntitlements.ts
+  s_bc78e2a881607c::t_f8906b977683de 60-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c3a0e7b5a2e7aac21510bcf296095244037fef2c",
+  "prompts": {},
+  "sessions": {
+    "s_bc78e2a881607c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f83d7cd28ffeYJ5QnEMqNQ0Au7",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
