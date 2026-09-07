@@ -540,12 +540,19 @@ jobs:
               echo "✓ Confidence calculation succeeded"
               # Validate JSON before storing in environment variable
               if cat "$TEMP_OUT" | jq . > /dev/null 2>&1; then
-                # Use multiline environment variable for safe JSON passing (avoids quote escaping)
-                # Use quoted 'EOF' delimiter to prevent premature termination if JSON contains literal EOF
+                # Use multiline environment variable for safe JSON passing (avoids quote escaping).
+                # GITHUB_ENV's heredoc syntax is GitHub's own file-command parser, not bash --
+                # it matches the delimiter LITERALLY on both sides, quote characters included.
+                # A quoted opening delimiter ('EOF', meant to look like a bash no-interpolation
+                # heredoc) never matches a bare closing "EOF" line, and GitHub's runner fails the
+                # whole step with "Matching delimiter not found" -- this exact bug, confirmed live
+                # on PR #294's CI run (2026-09-07). Fixed per GitHub's own documented pattern: a
+                # random, collision-proof delimiter instead of a fixed/quoted one.
+                DELIM="EOF_$(openssl rand -hex 8)"
                 {
-                  echo "CONFIDENCE_JSON<<'EOF'"
+                  echo "CONFIDENCE_JSON<<${DELIM}"
                   cat "$TEMP_OUT"
-                  echo "EOF"
+                  echo "${DELIM}"
                 } >> "$GITHUB_ENV"
               else
                 echo "⚠️  Warning: JSON validation failed, confidence score unavailable"
