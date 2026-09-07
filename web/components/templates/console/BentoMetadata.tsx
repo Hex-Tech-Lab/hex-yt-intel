@@ -49,7 +49,10 @@ const linkifyDescription = (text: string) => {
   return parts.flatMap((part, i) => {
     if (!(part.startsWith('http://') || part.startsWith('https://'))) return [part];
     const url = trimUrlTrailingPunctuation(part);
-    const trailingPunctuation = part.slice(url.length);
+    // Not a truncation -- extracts the suffix trimUrlTrailingPunctuation
+    // removed, rendered as plain text right after the anchor (see below),
+    // so nothing is lost and no ellipsis is needed.
+    const trailingPunctuation = part.slice(/* no ellipsis: full text is preserved below */ url.length);
     const anchor = (
       <a
         key={`${url}-${i}`}
