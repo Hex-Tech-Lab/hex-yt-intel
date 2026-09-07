@@ -8,6 +8,7 @@ export const CredentialLeakRule: IRule = {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
       if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
+      if (/\.(test|spec)\.[tj]sx?$/.test(filePath) || filePath.includes('__tests__/')) return findings;
       const FORBIDDEN_IDS = ['test-user-id', 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
       
       source.forEachDescendant((node) => {
@@ -23,6 +24,65 @@ export const CredentialLeakRule: IRule = {
       });
       return findings;
     }
+};
+
+// Added 2026-09-07: an unanchored /kelly/i email regex granting founder
+// entitlements survived in prod ~10 days because no rule checked for this --
+// CredentialLeakRule only caught the co-located hardcoded UUID literal, not
+// the far more dangerous unanchored-substring auth bypass next to it.
+// See docs/qa-intel/RULESET_LESSONS_LEDGER.md 2026-09-07 entry.
+export const AuthorizationRegexBypassRule: IRule = {
+  name: "authorization-regex-bypass-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
+    if (/\.(test|spec)\.[tj]sx?$/.test(filePath) || filePath.includes('__tests__/')) return findings;
+
+    // Deliberately narrow: only the *returned value* of the gated branch counts
+    // as signal, not any mention of these words anywhere in the function --
+    // v1 of this rule matched on enclosing-scope text and false-positived on
+    // every content-classification/log-message regex in the repo.
+    const ELEVATED_RETURN_SHAPE = /founder\s*:\s*true|is_founder\s*:\s*true|is_enterprise\s*:\s*true|is_unlimited\s*:\s*true|tier\s*:\s*['"](?:founder|enterprise|admin)['"]|role\s*:\s*['"]admin['"]|isAdmin\s*:\s*true|hasPremium/;
+
+    source.forEachDescendant((node) => {
+      if (!Node.isIfStatement(node)) return;
+      const conditionText = node.getExpression().getText();
+      if (!/\.test\(|\.exec\(/.test(conditionText)) return;
+
+      const thenBlock = node.getThenStatement();
+      const thenText = thenBlock.getText();
+      if (!ELEVATED_RETURN_SHAPE.test(thenText) || !/\breturn\b/.test(thenText)) return;
+
+      // Find the regex literal(s) actually driving this condition: either
+      // inlined directly in the condition, or (the real-incident shape)
+      // declared in a `const` a line above and referenced by variable name
+      // inside the condition -- e.g. `PATTERNS.some(p => p.test(email))`
+      // where PATTERNS = [/kelly/i] is declared separately.
+      const directLiterals = node.getExpression().getDescendantsOfKind(SyntaxKind.RegularExpressionLiteral);
+      const enclosingFn = node.getFirstAncestor((a) =>
+        Node.isFunctionDeclaration(a) || Node.isArrowFunction(a) || Node.isMethodDeclaration(a) || Node.isFunctionExpression(a)
+      ) ?? source;
+      const referencedLiterals = enclosingFn.getDescendantsOfKind(SyntaxKind.VariableDeclaration).flatMap((decl) => {
+        const name = decl.getName();
+        if (!new RegExp(`\\b${name}\\b`).test(conditionText)) return [];
+        return decl.getDescendantsOfKind(SyntaxKind.RegularExpressionLiteral);
+      });
+      const regexLiterals = [...directLiterals, ...referencedLiterals];
+      const unanchored = regexLiterals.filter((r) => !/^\/\^.*\$\/[a-z]*$/.test(r.getText()));
+      if (regexLiterals.length === 0 || unanchored.length === 0) return;
+
+      const patterns = unanchored.map((r) => r.getText()).join(', ');
+      findings.push({
+        file: filePath,
+        severity: "critical",
+        title: "Security: Unanchored regex gates an elevated-entitlement return",
+        why: `Regex literal(s) ${patterns} are tested (.test()/.exec()) directly gating a branch that returns an elevated entitlement (founder/admin/enterprise/unlimited), without exact-match anchoring. An unanchored pattern like /kelly/i matches ANY string containing that substring (e.g. "notkelly@evil.com"), letting attacker-controlled input (email/username) satisfy the check and gain unauthorized access.`,
+        fix: "Replace regex-based identity matching with exact-match comparison against a known allowlist (env var or DB-sourced), e.g. ALLOWED_EMAILS.includes(email.toLowerCase()). Never grant elevated entitlements via unanchored substring matching on user-controlled input."
+      });
+    });
+    return findings;
+  }
 };
 
 export const SanitizationRule: IRule = {
