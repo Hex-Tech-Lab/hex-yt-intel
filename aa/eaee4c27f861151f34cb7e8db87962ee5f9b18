@@ -1,0 +1,23 @@
+web/components/templates/console/BentoMetadata.tsx
+  s_58d08577c1f2d2::t_4112d1e88adb42 14-20,22-37
+  s_58d08577c1f2d2::t_1c1d564ac22982 131
+  s_58d08577c1f2d2::t_78cf6186024984 21
+web/lib/utils/chat-options-settings.ts
+  s_58d08577c1f2d2::t_147d88758d8bb7 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "aaeaee4c27f861151f34cb7e8db87962ee5f9b18",
+  "prompts": {},
+  "sessions": {
+    "s_58d08577c1f2d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f503c21e-5780-4642-bc4f-bd2fe7dc67ea",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
