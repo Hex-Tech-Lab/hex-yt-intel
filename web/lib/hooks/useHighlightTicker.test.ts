@@ -113,3 +113,40 @@ describe('useHighlightTicker verbatimExcerpt override', () => {
     expect(result.current.revealedText).toBe('');
   });
 });
+
+// --- UI-truthfulness fix (2026-09-07): usingVerbatim must exactly describe
+// which source the reveal text derives from, so consumers can badge the
+// label-paraphrase fallback instead of passing it off as verbatim. ---
+describe('useHighlightTicker usingVerbatim flag', () => {
+  it('usingVerbatim is true when the verbatim excerpt is displayed', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'short label', 10, 0, 'the actual transcript words here')
+    );
+    expect(result.current.revealedText).toBe('the...');
+    expect(result.current.usingVerbatim).toBe(true);
+  });
+
+  it('usingVerbatim is false when verbatimExcerpt is null (label paraphrase fallback)', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'fallback label words', 10, 0, null)
+    );
+    expect(result.current.revealedText).toBe('fallback...');
+    expect(result.current.usingVerbatim).toBe(false);
+  });
+
+  it('usingVerbatim is false when verbatimExcerpt is an empty string', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, 'fallback label words', 10, 0, '')
+    );
+    expect(result.current.revealedText).toBe('fallback...');
+    expect(result.current.usingVerbatim).toBe(false);
+  });
+
+  it('usingVerbatim is still reported when nothing is revealed (not playing)', () => {
+    const { result } = renderHook(() =>
+      useHighlightTicker(null, 'label here', 10, 5, 'verbatim excerpt text')
+    );
+    expect(result.current.revealedText).toBe('');
+    expect(result.current.usingVerbatim).toBe(true);
+  });
+});

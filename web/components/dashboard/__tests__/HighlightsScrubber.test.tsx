@@ -126,4 +126,48 @@ describe('HighlightsScrubber', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  // --- UI-truthfulness fix (2026-09-07, live user report): when a highlight
+  // row has no verbatim transcript excerpt (legacy rows pre-2026-08-25, or a
+  // window matching no transcript segments), the caption banner and footer
+  // ticker silently showed the LLM-synthesized label paraphrase with zero
+  // visual distinction. A paraphrase must be badged, never passed off as
+  // verbatim transcript text. ---
+  it('shows the summarized badge when verbatimExcerpt is missing and the label paraphrase is displayed', async () => {
+    // The shared beforeEach fixture has no verbatimExcerpt on either row.
+    render(<HighlightsScrubber analysisId="analysis-noexcerpt" videoDurationSeconds={60} />);
+
+    const playButton = await screen.findByRole('button', { name: 'Play highlights' });
+    fireEvent.click(playButton);
+
+    const caption = await screen.findByTestId('verbatim-caption');
+    expect(caption.textContent).toContain('First moment');
+    expect(screen.getAllByText('summarized').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows no summarized badge when a verbatim transcript excerpt is displayed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => ({
+          highlights: [
+            { idx: 0, start: 10, end: 15, label: 'First moment', verbatimExcerpt: 'exact transcript words spoken here' },
+            { idx: 1, start: 30, end: 35, label: 'Second moment', verbatimExcerpt: 'more verbatim speech' },
+          ],
+          segmentDurationSeconds: 5,
+          contextLeadSeconds: 2,
+        }),
+      })
+    );
+
+    render(<HighlightsScrubber analysisId="analysis-verbatim" videoDurationSeconds={60} />);
+
+    const playButton = await screen.findByRole('button', { name: 'Play highlights' });
+    fireEvent.click(playButton);
+
+    const caption = await screen.findByTestId('verbatim-caption');
+    expect(caption.textContent).toContain('exact transcript words spoken here');
+    expect(screen.queryByText('summarized')).toBeNull();
+  });
 });

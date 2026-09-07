@@ -2,7 +2,7 @@
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, IconButton, Spinner } from '@astryxdesign/core';
+import { Card, IconButton, Spinner, Tooltip } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
@@ -169,7 +169,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const activeDuration = activeHighlight
     ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur) + (data?.contextLeadSeconds ?? 0)
     : segDurFallback;
-  const { revealedText } = useHighlightTicker(
+  const { revealedText, usingVerbatim } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
     activeDuration,
@@ -282,6 +282,16 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
               [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
             </span>
             <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}</span>
+            {/* UI-truthfulness fix (2026-09-07, live user report): when the
+                verbatim excerpt is missing (legacy rows pre-2026-08-25, or a
+                window that matched no transcript segments), this line silently
+                showed the LLM-synthesized label with zero visual distinction.
+                A paraphrase must never pass itself off as verbatim transcript. */}
+            {!activeSegment.verbatimExcerpt && activeSegment.label ? (
+              <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+                <span className="ml-1.5 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">summarized</span>
+              </Tooltip>
+            ) : null}
           </div>
         ) : null;
       })()}
@@ -296,6 +306,15 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
                 {playingIdx! + 1}/{data.highlights.length}
               </span>
               {revealedText || activeHighlight.label}
+              {/* Same UI-truthfulness fix as the banner above: the hook's
+                  usingVerbatim flag is exactly "the revealed text comes from
+                  the verbatim excerpt" -- false here means the LLM label
+                  paraphrase is on screen and must be marked as such. */}
+              {!usingVerbatim && activeHighlight.label ? (
+                <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+                  <span className="ml-1 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--ink-muted)] border border-dashed border-[var(--line)] px-1">summarized</span>
+                </Tooltip>
+              ) : null}
             </>
           ) : nextHighlight ? (
             <span className="italic text-[var(--ink-muted)]">Up next: {previewWords(nextHighlight.label)}</span>

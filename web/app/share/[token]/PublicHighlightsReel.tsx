@@ -2,7 +2,7 @@
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@astryxdesign/core';
+import { Button, Tooltip } from '@astryxdesign/core';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
 import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
@@ -132,7 +132,7 @@ export function PublicHighlightsReel({
   const activeDuration = activeHighlight
     ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur) + contextLeadSeconds
     : segmentDurationSeconds + contextLeadSeconds;
-  const { revealedText } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
+  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
 
   if (highlights.length === 0) return null;
 
@@ -191,6 +191,14 @@ export function PublicHighlightsReel({
             {playingIdx! + 1}/{highlights.length}
           </span>
           {revealedText || activeHighlight.label}
+          {/* UI-truthfulness fix (2026-09-07, same as HighlightsScrubber):
+              mark label-paraphrase fallback instead of silently passing it
+              off as verbatim transcript text. */}
+          {!usingVerbatim && activeHighlight.label ? (
+            <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+              <span className="ml-1 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-gray-400 border border-dashed border-gray-300 px-1">summarized</span>
+            </Tooltip>
+          ) : null}
         </div>
       )}
       {nextHighlight && (

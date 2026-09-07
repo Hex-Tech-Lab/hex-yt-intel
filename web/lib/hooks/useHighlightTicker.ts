@@ -19,6 +19,14 @@
  * actual transcript words instead of the LLM-synthesized paraphrase.
  * Falls back to `label` gracefully for old rows where the column is null.
  *
+ * `usingVerbatim` (2026-09-07, UI-truthfulness fix): tells the caller which
+ * source the reveal text actually comes from -- true iff the verbatim
+ * excerpt is displayed, false when the LLM-synthesized `label` paraphrase
+ * is being shown instead (legacy rows pre-2026-08-25, or a highlight whose
+ * window matched no transcript segments). Consumers MUST surface this (a
+ * small "summarized" badge) rather than silently passing a paraphrase off
+ * as verbatim transcript text.
+ *
  * `playingIdx` is the caller's source of truth for which segment is
  * currently active; `elapsedSeconds` (new 2026-08-20, shared-hook
  * extraction) is the caller's source of truth for how far into that
@@ -38,13 +46,16 @@ export function useHighlightTicker(
   segmentDurationSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
-): { revealedText: string; totalWords: number } {
+): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
+  // Same truthiness as the `verbatimExcerpt || label` display choice below,
+  // so `usingVerbatim` always describes exactly what `revealedText` derives from.
+  const usingVerbatim = Boolean(verbatimExcerpt);
   const text = verbatimExcerpt || label;
   const words = text ? text.split(/\s+/).filter(Boolean) : [];
   const totalWords = words.length;
 
   if (playingIdx === null || totalWords === 0 || elapsedSeconds === null) {
-    return { revealedText: '', totalWords };
+    return { revealedText: '', totalWords, usingVerbatim };
   }
 
   const durationSeconds = Math.max(1, segmentDurationSeconds);
@@ -55,7 +66,7 @@ export function useHighlightTicker(
 
   const revealedText =
     words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');
-  return { revealedText, totalWords };
+  return { revealedText, totalWords, usingVerbatim };
 }
 
 /** Static "up next" preview -- first 5-10 words of the upcoming segment's
