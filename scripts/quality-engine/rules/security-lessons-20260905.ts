@@ -121,7 +121,12 @@ export const SecurityFixWithoutTestRule: Rule = {
       if (!isTestFile(norm)) return false;
       const testDir = norm.split("/").slice(0, -1).join("/");
       // Same directory, or that directory's own `__tests__` subdirectory.
-      const sameModule = testDir === fileDir || testDir === `${fileDir}/__tests__`;
+      // For a root-level file, fileDir is "" -- the sibling `__tests__` dir
+      // is "__tests__", not "/__tests__" (review finding, 2026-09-07: the
+      // unconditional template literal produced a leading-slash path that
+      // never matched a real root-level sibling test).
+      const testsSubdir = fileDir ? `${fileDir}/__tests__` : "__tests__";
+      const sameModule = testDir === fileDir || testDir === testsSubdir;
       if (!sameModule) return false;
       const testBase = norm.split("/").pop() ?? norm;
       const testStem = toNormalizedStem(testBase);
@@ -152,13 +157,17 @@ export const SecurityFixWithoutTestRule: Rule = {
  * chain) -- a distinct, common pattern worth its own narrow rule instead of
  * relying on an external tool per-PR.
  *
- * Known limitation (documented, not silently hidden): this checks whether a
- * `.sort(`/`.filter(` call assigning to the same identifier appears
- * ANYWHERE in the enclosing block, not strictly before the non-null
- * assertion in source-position order, and does not yet recognize a direct
- * chain like `items.filter(...)[0]!` (no intermediate variable). Both are
- * tracked as follow-up in the ruleset lessons ledger rather than fixed here,
- * to keep this rule's false-positive rate low while still being useful.
+ * Checks the assigning statement precedes the assertion in source order and
+ * that its RHS is the same identifier being asserted on (review fixes,
+ * 2026-09-07 -- the original version matched any preceding-OR-following
+ * `.sort()`/`.filter()` anywhere in the block, including on an unrelated
+ * variable, as long as `objectText = ` appeared somewhere earlier as text).
+ *
+ * Known limitation (documented, not silently hidden): still does not
+ * recognize a direct chain with no intermediate variable, e.g.
+ * `items.filter(...)[0]!`. Tracked as follow-up in the ruleset lessons
+ * ledger rather than fixed here, to keep this rule's false-positive rate low
+ * while still being useful.
  */
 export const NonNullAfterArraySortFilterRule: Rule = {
   name: "non-null-assertion-after-array-transform",
@@ -178,11 +187,40 @@ export const NonNullAfterArraySortFilterRule: Rule = {
 
       const block = node.getFirstAncestorByKind(SyntaxKind.Block);
       if (!block) return;
-      const blockText = block.getText();
-      const sortOrFilterPattern = new RegExp(
-        `${objectText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*=\\s*[\\s\\S]*?\\.(sort|filter)\\(`,
-      );
-      if (!sortOrFilterPattern.test(blockText)) return;
+
+      // Review findings, 2026-09-07, both fixed by walking real preceding
+      // sibling statements instead of regex-matching the whole block text:
+      // (1) a transform appearing AFTER the assertion still matched, since
+      //     the old check searched the entire block regardless of position;
+      // (2) the regex's lazy `[\s\S]*?` could match an unrelated `.sort()`/
+      //     `.filter()` on a completely different variable later in the
+      //     block, as long as `objectText = ` appeared somewhere earlier.
+      const hasPrecedingTransform = block.getStatements().some((stmt) => {
+        if (stmt.getStart() >= node.getStart()) return false; // must precede the assertion
+        if (Node.isVariableStatement(stmt)) {
+          return stmt.getDeclarationList().getDeclarations().some((decl) => {
+            const init = decl.getInitializer();
+            return decl.getName() === objectText && !!init && /\.(sort|filter)\(/.test(init.getText());
+          });
+        }
+        if (Node.isExpressionStatement(stmt)) {
+          const expr = stmt.getExpression();
+          if (Node.isBinaryExpression(expr) && expr.getOperatorToken().getText() === "=") {
+            return expr.getLeft().getText() === objectText && /\.(sort|filter)\(/.test(expr.getRight().getText());
+          }
+          // Bare `arr.sort(...)` -- .sort() mutates in place with no
+          // assignment, a common real-world form this must also catch.
+          if (Node.isCallExpression(expr)) {
+            const callee = expr.getExpression();
+            if (Node.isPropertyAccessExpression(callee)) {
+              const method = callee.getName();
+              return callee.getExpression().getText() === objectText && (method === "sort" || method === "filter");
+            }
+          }
+        }
+        return false;
+      });
+      if (!hasPrecedingTransform) return;
 
       findings.push({
         file: filePath,
