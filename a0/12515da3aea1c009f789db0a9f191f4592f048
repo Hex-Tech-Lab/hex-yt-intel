@@ -1,0 +1,19 @@
+web/components/containers/DashboardContainer.tsx
+  s_5f36e2601854a4::t_f30abf30413f5b 867-868,879-880
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a012515da3aea1c009f789db0a9f191f4592f048",
+  "prompts": {},
+  "sessions": {
+    "s_5f36e2601854a4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f83dbcfe4ffeL5hvPUDz2GeJvK",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
