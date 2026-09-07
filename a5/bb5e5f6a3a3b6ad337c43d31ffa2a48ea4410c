@@ -1,0 +1,35 @@
+web/lib/hooks/useHighlightTicker.ts
+  s_8563084d5dfc46::t_101e130e79098e 69
+  s_8563084d5dfc46::t_ab42aa3c5529f4 22-29
+  s_8563084d5dfc46::t_2325d39f3769a7 49-52,58
+web/components/dashboard/HighlightsScrubber.tsx
+  s_8563084d5dfc46::t_75eb0d8bfc4223 5
+  s_8563084d5dfc46::t_d4593ebd909fef 172
+  s_8563084d5dfc46::t_c9f251a03f8287 285-294
+  s_8563084d5dfc46::t_6ec93e6306f05f 309-317
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_8563084d5dfc46::t_bff8ddffac2807 135
+  s_8563084d5dfc46::t_dff9fad0545a12 5
+  s_8563084d5dfc46::t_6096448cf917d6 194-201
+web/lib/hooks/useHighlightTicker.test.ts
+  s_8563084d5dfc46::t_bf3189d410fbee 116-152
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_8563084d5dfc46::t_39b2545319bf5d 130-135,137
+  s_8563084d5dfc46::t_4656c9d5a860dd 129,136,138-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a5bb5e5f6a3a3b6ad337c43d31ffa2a48ea4410c",
+  "prompts": {},
+  "sessions": {
+    "s_8563084d5dfc46": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f83cd2b07ffeSpARP0PltcEMvh",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
