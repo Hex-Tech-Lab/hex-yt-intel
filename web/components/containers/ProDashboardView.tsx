@@ -10,7 +10,9 @@ import {
   Icon,
   StatusBadge,
   ChapterChip,
+  HighlightsChip,
 } from "@/components/templates/_shared/primitives";
+import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
 
@@ -63,6 +65,7 @@ export function ProDashboardView({
   handleSelectNode,
   hasHadVideo,
 }: ProDashboardViewProps) {
+  const { hasHighlights, count: highlightsCount } = useHighlightsStatus(analysisId, status);
   return (
     <>
       {hasHadVideo && (
@@ -165,6 +168,7 @@ export function ProDashboardView({
                       chaptersStatus === "loaded" ? chapters.length > 0 : null
                     }
                   />
+                  <HighlightsChip hasHighlights={hasHighlights} count={highlightsCount} />
                 </div>
               )}
               <DimensionAccordion
