@@ -28,8 +28,9 @@ export async function signOutWithTimeout(
   logPrefix: string
 ): Promise<SignOutOutcome> {
   let timedOut = false;
+  let timer: ReturnType<typeof setTimeout>;
   const timeoutPromise = new Promise<'timeout'>((resolve) => {
-    setTimeout(() => {
+    timer = setTimeout(() => {
       timedOut = true;
       resolve('timeout');
     }, SIGN_OUT_TIMEOUT_MS);
@@ -50,5 +51,10 @@ export async function signOutWithTimeout(
     if (timedOut) return 'timeout';
     console.warn(`${logPrefix} signOut rejected, navigating away regardless:`, err);
     return 'rejected';
+  } finally {
+    // Efficiency review (/simplify, PR #299): a leaked timer when signOut()
+    // wins the race first -- clear it so it doesn't sit on the event loop
+    // for the remainder of SIGN_OUT_TIMEOUT_MS after we're already done.
+    clearTimeout(timer!);
   }
 }
