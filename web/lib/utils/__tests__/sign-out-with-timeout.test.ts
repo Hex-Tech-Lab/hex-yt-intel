@@ -51,4 +51,37 @@ describe('signOutWithTimeout', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(await outcomePromise).toBe('success');
   });
+
+  it('concurrency guard: two simultaneous calls (double-click, or two mounted sign-out buttons) only invoke the real signOut() once (race-condition-guard skill)', async () => {
+    // Fires two "simultaneous" calls with a real barrier (both start before
+    // either awaits) -- a sequential call wouldn't reproduce the race this
+    // guards against.
+    let signOutCallCount = 0;
+    const supabase = fakeSupabase(() => {
+      signOutCallCount += 1;
+      return Promise.resolve({ error: null });
+    });
+
+    const [outcomeA, outcomeB] = await Promise.all([
+      signOutWithTimeout(supabase, '[test-A]'),
+      signOutWithTimeout(supabase, '[test-B]'),
+    ]);
+
+    expect(signOutCallCount).toBe(1);
+    expect(outcomeA).toBe('success');
+    expect(outcomeB).toBe('success');
+  });
+
+  it('concurrency guard releases after completion -- a THIRD call after the first settles starts a fresh signOut()', async () => {
+    let signOutCallCount = 0;
+    const supabase = fakeSupabase(() => {
+      signOutCallCount += 1;
+      return Promise.resolve({ error: null });
+    });
+
+    await signOutWithTimeout(supabase, '[test]');
+    await signOutWithTimeout(supabase, '[test]');
+
+    expect(signOutCallCount).toBe(2);
+  });
 });

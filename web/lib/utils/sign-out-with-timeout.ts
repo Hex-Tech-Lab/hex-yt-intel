@@ -9,6 +9,18 @@ const SIGN_OUT_TIMEOUT_MS = 5000;
 
 export type SignOutOutcome = 'success' | 'error' | 'timeout' | 'rejected';
 
+// Module-scoped in-flight guard (race-condition-guard skill's "concurrent
+// lazy-init / double-submit" pattern): clicking Sign Out twice before the
+// first call settles -- or two mounted sign-out buttons (UserMenu +
+// SidebarFooter) firing near-simultaneously -- would otherwise start two
+// independent signOut()+timeout races. Neither is dangerous on its own
+// (signOut() is safe to call twice, a duplicate router.push('/') is a
+// no-op), but it's real wasted work with no guard today. Only the FIRST
+// caller's promise does the work; every concurrent caller awaits the same
+// one, matching Supabase's actual runtime semantics (one signed-in user,
+// one real sign-out operation at a time).
+let inFlight: Promise<SignOutOutcome> | null = null;
+
 /**
  * Races Supabase's signOut() against a timeout so a hung/slow call never
  * blocks navigating away -- staying signed-in-looking after the user
@@ -23,7 +35,18 @@ export type SignOutOutcome = 'success' | 'error' | 'timeout' | 'rejected';
  * catch, so a resolved `{ error }` (a genuinely failed sign-out) was
  * silently treated as success and the user was redirected as if it worked.
  */
-export async function signOutWithTimeout(
+export function signOutWithTimeout(
+  supabase: SupabaseClient,
+  logPrefix: string
+): Promise<SignOutOutcome> {
+  if (inFlight) return inFlight;
+  inFlight = performSignOut(supabase, logPrefix).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function performSignOut(
   supabase: SupabaseClient,
   logPrefix: string
 ): Promise<SignOutOutcome> {
