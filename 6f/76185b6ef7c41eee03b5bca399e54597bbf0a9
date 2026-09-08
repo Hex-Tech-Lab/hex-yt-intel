@@ -1,0 +1,35 @@
+web/lib/__tests__/analysis-requeue.test.ts
+  s_07c8ee8a00d4ae::t_fcb036eea7dfeb 1-99
+web/lib/__tests__/analysis-reaper.test.ts
+  s_07c8ee8a00d4ae::t_7796770fbae8e3 316-492
+  s_07c8ee8a00d4ae::t_25f7cb58781001 10-12
+web/lib/services/analysis-reaper.ts
+  s_07c8ee8a00d4ae::t_afb7c9785aba6b 24-28,33-36
+  s_07c8ee8a00d4ae::t_dc7d809c3a48ef 29
+  s_07c8ee8a00d4ae::t_0a94bc24ae5aa6 81-84,91
+  s_07c8ee8a00d4ae::t_f0d6cc9f869615 85-88
+  s_07c8ee8a00d4ae::t_f986973b6a8c78 249
+  s_07c8ee8a00d4ae::t_d95f178ee9b5ac 390-416
+  s_07c8ee8a00d4ae::t_6d31286b6b5f7a 23
+  s_07c8ee8a00d4ae::t_aae49f986899ae 349-365
+  s_07c8ee8a00d4ae::t_d57b41e40bb5c0 108-109
+  s_07c8ee8a00d4ae::t_1602c240d26e59 37
+web/lib/services/analysis-requeue.ts
+  s_07c8ee8a00d4ae::t_1014f75b7677ee 1-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "6f76185b6ef7c41eee03b5bca399e54597bbf0a9",
+  "prompts": {},
+  "sessions": {
+    "s_07c8ee8a00d4ae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7cf965eaffegZ98t892UFKAPC",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
