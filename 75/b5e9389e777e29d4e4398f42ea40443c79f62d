@@ -1,0 +1,83 @@
+.github/workflows/ci-cd.yml
+  s_806c0f506228c0::t_e0c45da7d8263f 543-558,560,562
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 93-112
+web/lib/utils/__tests__/sign-out-with-timeout.test.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 1-87
+web/lib/hooks/useHighlightsStatus.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 1-135
+web/lib/hooks/__tests__/use-highlights-status.test.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 1-158
+web/lib/hooks/__tests__/use-effective-view-mode.test.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 2-3,5,42-44,46,50-81
+.mcp.json
+  s_806c0f506228c0::t_e0c45da7d8263f 2-10
+web/lib/hooks/__tests__/use-entitlements.test.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 2,5-6,62-170
+web/components/dashboard/HighlightsTrack.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 4,8,154-183,186
+web/lib/hooks/useHighlightTicker.test.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 116-161
+web/lib/hooks/useEntitlements.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 10-13,34-49,60,80-91
+web/components/containers/ProDashboardView.tsx
+  s_806c0f506228c0::t_5682f7bafc05ca 129-132
+  s_806c0f506228c0::t_49f32d6bc97331 82
+  s_806c0f506228c0::t_e0c45da7d8263f 13,19,30,42,72,164
+  s_806c0f506228c0::t_5ebd8133fea34d 35
+  s_806c0f506228c0::t_890894c7a424f2 15-18
+web/components/templates/_shared/primitives.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 218-244
+web/lib/hooks/useHighlightTicker.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 22-29,49-58,63-68,79
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 5,135,188,191,194-201
+web/components/containers/DashboardContainer.tsx
+  s_806c0f506228c0::t_739aaa09388303 318
+  s_806c0f506228c0::t_e0c45da7d8263f 107,223-234,655,973-998
+  s_806c0f506228c0::t_9e5f929dd3725c 341-349
+  s_806c0f506228c0::t_42cdfd65941304 264-281
+  s_806c0f506228c0::t_4bd2185caeb0e2 966
+  s_806c0f506228c0::t_d0f38868c543b1 616-624
+  s_806c0f506228c0::t_7e833f7827356c 116-120
+  s_806c0f506228c0::t_330df3a0acc94c 434
+  s_806c0f506228c0::t_6cd77bd55ddf82 312-317,319-320,322
+web/components/dashboard/HighlightsScrubber.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 4-5,8,55,59-64,119-121,123-137,139-143,145,153-154,157-164,173-182,187,189-199,203,206,210,212-217,219,221-250,257,369-383,391-392,394-395,397-411
+web/components/containers/SimpleDashboardView.tsx
+  s_806c0f506228c0::t_172ab3beb24cb3 74-77
+  s_806c0f506228c0::t_e0c45da7d8263f 42
+  s_806c0f506228c0::t_a66c6620fb16fb 5-8
+  s_806c0f506228c0::t_d206b47fc5370b 17
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 72-73,76-78,94-99,106-281,314-361
+web/components/dashboard/PartialAnalysisWarning.tsx
+  s_806c0f506228c0::t_f9d4addf6aeae3 1-45
+web/components/UserMenu.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 6,14-18
+web/lib/utils/sign-out-with-timeout.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 1-83
+web/components/templates/console/VideoPlayerCard.tsx
+  s_806c0f506228c0::t_e0c45da7d8263f 10-14,260
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_806c0f506228c0::t_e0c45da7d8263f 171-187
+web/lib/utils/highlights-settings.ts
+  s_806c0f506228c0::t_e0c45da7d8263f 6-14,40-87
+  s_806c0f506228c0::t_f3344dbeb71d63 88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "75b5e9389e777e29d4e4398f42ea40443c79f62d",
+  "prompts": {},
+  "sessions": {
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
