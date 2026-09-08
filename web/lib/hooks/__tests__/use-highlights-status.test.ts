@@ -53,16 +53,17 @@ describe('useHighlightsStatus', () => {
     expect(result.current).toEqual({ hasHighlights: false, count: 0 });
   });
 
-  it('re-triggers the fetch cycle when digestLoading transitions to false, even after the retry budget was exhausted', async () => {
+  it('re-triggers the fetch cycle when digestLoading transitions to false, even after the retry budget was FULLY exhausted', async () => {
     // Real production race (2026-09-08, live DB verification): highlights
     // are backfilled by scheduleHighlightsRecovery() AFTER digest
     // generation, which can land after this hook's own retry budget gives
     // up. digestLoading:true->false is the signal that recovery has now
-    // been scheduled server-side.
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ highlights: [] }) })
-      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}] }) });
+    // been scheduled server-side. CodeRabbit review, PR #294: the original
+    // version of this test only made 1 fetch call before flipping
+    // digestLoading, never proving the re-trigger works AFTER the full
+    // 5-attempt retry schedule has genuinely exhausted to confirmed-empty.
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [] }) });
     vi.stubGlobal('fetch', fetchMock);
 
     const { result, rerender } = renderHook(
@@ -70,11 +71,25 @@ describe('useHighlightsStatus', () => {
       { initialProps: { digestLoading: true } }
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Run through the complete 5-attempt retry schedule (2.5s/5s/10s/15s).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+      await vi.advanceTimersByTimeAsync(5000);
+      await vi.advanceTimersByTimeAsync(10000);
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(result.current).toEqual({ hasHighlights: false, count: 0 });
 
+    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}] }) });
     rerender({ digestLoading: false });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
-    await waitFor(() => expect(result.current).toEqual({ hasHighlights: true, count: 2 }));
+    expect(result.current).toEqual({ hasHighlights: true, count: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    vi.useRealTimers();
   });
 
   it('recovers to true if a later retry attempt finds highlights after earlier empty attempts', async () => {

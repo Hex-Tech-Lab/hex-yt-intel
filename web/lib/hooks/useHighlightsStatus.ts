@@ -42,9 +42,12 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
 
     // Already have real highlights for THIS analysisId -- a later
     // digestLoading flip (e.g. a manual digest refresh) must not
-    // blank/reset the badge. Deliberately NOT in the dependency array: a
-    // guard read of the current value, not a re-trigger condition (see
-    // HighlightsScrubber.tsx for the same pattern).
+    // blank/reset the badge. A confirmed-EMPTY result (false) deliberately
+    // does NOT short-circuit here -- a later digestLoading transition must
+    // still be allowed to retry, since "empty" from an earlier check can
+    // become "found" once scheduleHighlightsRecovery() actually runs.
+    // Deliberately NOT in the dependency array: a guard read of the current
+    // value, not a re-trigger condition (see HighlightsScrubber.tsx).
     if (loadedForAnalysisIdRef.current === analysisId && result.hasHighlights === true) return;
 
     // Reset immediately for the NEW analysisId, not the previous one's
@@ -109,5 +112,11 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
     // deliberate guard read above, not a dependency (see its comment).
   }, [analysisId, status, digestLoading]);
 
+  // CodeRabbit finding, PR #294: guard the RETURNED value too, not just the
+  // effect's own re-trigger -- if analysisId changed but this render still
+  // runs before the effect above has fired (React renders synchronously,
+  // effects run after paint), `result` could briefly still hold the
+  // PREVIOUS analysisId's settled value.
+  if (loadedForAnalysisIdRef.current !== analysisId) return IDLE;
   return result;
 }
