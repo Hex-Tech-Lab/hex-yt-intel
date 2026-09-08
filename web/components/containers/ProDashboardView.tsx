@@ -19,24 +19,34 @@ import {
 import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
+import type { VideoMetadata } from "@/lib/types";
+import type { StoredExecutiveDigest } from "@/lib/ports/ExecutiveDigestPorts";
+import type { ExecutiveSummaryData } from "@/components/organisms/ExecutiveSummary";
+import type { AuxElementStatus } from "@/hooks/useAuxElementStatus";
+import type { ChapterEntry } from "@/store/useChaptersStore";
+import type { RankedEntityMention } from "@/lib/utils/entity-time-seek";
 
 interface ProDashboardViewProps {
   status: string;
   analysisId: string | null;
-  videoMetadata: any;
-  timelineEntityData: any;
+  videoMetadata: VideoMetadata | null;
+  timelineEntityData: {
+    entityId: string;
+    entityLabel: string;
+    mentions: RankedEntityMention[];
+  } | null;
   setSelectedNodeId: (id: string | null) => void;
   consoleTab: "synthesis" | "graph";
   setConsoleTab: (tab: "synthesis" | "graph") => void;
   graph: KnowledgeGraph;
-  digest: any;
+  digest: StoredExecutiveDigest | null;
   digestLoading: boolean;
-  mappedDigestData: any;
+  mappedDigestData: ExecutiveSummaryData | null;
   partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
-  auxStatus: any;
+  auxStatus: AuxElementStatus | null;
   chaptersStatus: string;
-  chapters: any[];
+  chapters: ChapterEntry[];
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
   setSelectedDimensionKey: (dimensionKey: string | null) => void;

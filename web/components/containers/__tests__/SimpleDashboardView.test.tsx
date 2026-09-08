@@ -23,10 +23,10 @@ describe("SimpleDashboardView", () => {
       <SimpleDashboardView
         status="complete"
         analysisId="test-1"
-        videoMetadata={{}}
-        digest={{}}
+        videoMetadata={null}
+        digest={{ overview: "", snapshot: "", takeaways: [] }}
         digestLoading={false}
-        mappedDigestData={[]}
+        mappedDigestData={null}
         partialInfo={null}
         TOTAL_DIMENSIONS={11}
         hasHadVideo
@@ -41,10 +41,10 @@ describe("SimpleDashboardView", () => {
       <SimpleDashboardView
         status="complete"
         analysisId="test-1"
-        videoMetadata={{}}
-        digest={{}}
+        videoMetadata={null}
+        digest={null}
         digestLoading={false}
-        mappedDigestData={[]}
+        mappedDigestData={null}
         partialInfo={{ presentCount: 10, missing: [5] }}
         TOTAL_DIMENSIONS={11}
         hasHadVideo
@@ -60,10 +60,10 @@ describe("SimpleDashboardView", () => {
       <SimpleDashboardView
         status="complete"
         analysisId="test-1"
-        videoMetadata={{}}
-        digest={{}}
+        videoMetadata={null}
+        digest={null}
         digestLoading={false}
-        mappedDigestData={[]}
+        mappedDigestData={null}
         partialInfo={null}
         TOTAL_DIMENSIONS={11}
         hasHadVideo

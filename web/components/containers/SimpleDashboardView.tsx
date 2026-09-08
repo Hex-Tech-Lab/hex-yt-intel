@@ -6,14 +6,17 @@ import {
   PartialAnalysisWarning,
   type PartialAnalysisInfo,
 } from "@/components/dashboard/PartialAnalysisWarning";
+import type { VideoMetadata } from "@/lib/types";
+import type { StoredExecutiveDigest } from "@/lib/ports/ExecutiveDigestPorts";
+import type { ExecutiveSummaryData } from "@/components/organisms/ExecutiveSummary";
 
 interface SimpleDashboardViewProps {
   status: string;
   analysisId: string | null;
-  videoMetadata: any;
-  digest: any;
+  videoMetadata: VideoMetadata | null;
+  digest: StoredExecutiveDigest | null;
   digestLoading: boolean;
-  mappedDigestData: any;
+  mappedDigestData: ExecutiveSummaryData | null;
   partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
   hasHadVideo: boolean;

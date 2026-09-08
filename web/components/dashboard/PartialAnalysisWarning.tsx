@@ -14,10 +14,11 @@ interface PartialAnalysisWarningProps {
  *  same underlying analysis.analysis_markdown data drives both (see
  *  DashboardContainer.tsx's partialInfo memo), the previous divergence was a
  *  render gap, not a data gap (live-reported 2026-09-08). */
-export function PartialAnalysisWarning({
+// skipcq: JS-0067
+export const PartialAnalysisWarning = ({
   partialInfo,
   totalDimensions,
-}: PartialAnalysisWarningProps) {
+}: PartialAnalysisWarningProps) => {
   if (!partialInfo) return null;
 
   return (
@@ -42,4 +43,4 @@ export function PartialAnalysisWarning({
       </div>
     </div>
   );
-}
+};
