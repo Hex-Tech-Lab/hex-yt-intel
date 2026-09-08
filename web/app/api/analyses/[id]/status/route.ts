@@ -56,7 +56,15 @@ export async function GET(
     const parsedDimensions = parseToUCISDimensions(reconstructedMarkdown || '');
     const completedDimensions = Object.keys(parsedDimensions).map(Number);
 
-    const isStale = status === 'processing' && Date.now() - new Date(analysis.created_at).getTime() >= 120_000;
+    // Staleness clock must be updated_at, not created_at: the worker touches
+    // updated_at on every incremental dimension write, so a genuinely
+    // in-flight analysis keeps resetting this clock. created_at never
+    // changes, so any analysis older than 120s with zero dimensions
+    // persisted yet (persist writes analysis_markdown only at the very end)
+    // was always misreported as stale/dead, even mid-stream on a healthy
+    // worker. Falls back to created_at only when updated_at is absent.
+    const staleClockMs = new Date(analysis.updated_at || analysis.created_at).getTime();
+    const isStale = status === 'processing' && Date.now() - staleClockMs >= 120_000;
     if (isStale && completedDimensions.length === 0) {
       status = 'error';
     }
