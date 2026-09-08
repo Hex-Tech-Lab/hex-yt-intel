@@ -94,6 +94,7 @@ import {
   type PanelId,
 } from "@/lib/dashboard/export";
 import { parseUcisDimensionNumbers } from "@/lib/utils/count-ucis-dimensions";
+import { signOutWithTimeout } from "@/lib/utils/sign-out-with-timeout";
 import { Avatar } from "@astryxdesign/core";
 
 // See /docs/ui/dashboard-container.md
@@ -204,7 +205,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Live user report (2026-09-08): clicking Sign Out hung indefinitely --
+    // signOut() has no timeout of its own, and if the underlying network
+    // call (or a stuck GoTrue client, a documented past issue in this repo,
+    // see commit 5114483a "enforce gotrue singleton") never resolves, the
+    // button sits forever with no feedback. Staying signed-in-looking after
+    // the user explicitly asked to sign out is worse than a slow/failed
+    // server-side revoke -- race it against a timeout and navigate away
+    // regardless, so the UI never blocks on this specific call. Shared with
+    // UserMenu.tsx's handleSignOut (deeper review, PR #299: the duplicated
+    // per-file version also silently treated a RESOLVED `{ error }` as
+    // success, since signOut() resolves rather than rejects on failure).
+    await signOutWithTimeout(supabase, '[DashboardContainer]');
     router.push("/");
   }, [supabase, router]);
 
