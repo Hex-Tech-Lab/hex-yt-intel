@@ -1,0 +1,23 @@
+web/lib/hooks/__tests__/use-highlights-status.test.ts
+  s_27a98410ea5034::t_8a8b383e186391 86-88,90
+  s_27a98410ea5034::t_67156db6d646a4 56,61-66,74-82,84,91-92
+web/lib/hooks/useHighlightsStatus.ts
+  s_27a98410ea5034::t_0134020c4d08f1 115-120
+  s_27a98410ea5034::t_1d21abf87c9e0b 45-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "26e34263d96364e9e787a8bfe34e350142c21d51",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
