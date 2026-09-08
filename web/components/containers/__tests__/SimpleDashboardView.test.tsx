@@ -29,7 +29,7 @@ describe("SimpleDashboardView", () => {
         mappedDigestData={[]}
         partialInfo={null}
         TOTAL_DIMENSIONS={11}
-        hasHadVideo={true}
+        hasHadVideo
       />,
     );
 
@@ -47,7 +47,7 @@ describe("SimpleDashboardView", () => {
         mappedDigestData={[]}
         partialInfo={{ presentCount: 10, missing: [5] }}
         TOTAL_DIMENSIONS={11}
-        hasHadVideo={true}
+        hasHadVideo
       />,
     );
 
@@ -66,7 +66,7 @@ describe("SimpleDashboardView", () => {
         mappedDigestData={[]}
         partialInfo={null}
         TOTAL_DIMENSIONS={11}
-        hasHadVideo={true}
+        hasHadVideo
       />,
     );
 

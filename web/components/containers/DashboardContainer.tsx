@@ -287,11 +287,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // efficiency-lens finding, PR #302 review).
   const displayGraph = useMemo(
     () =>
-      graph && graph.nodes && graph.nodes.length > 0
+      graph?.nodes?.length
         ? graph
-        : nucleusKnowledgeGraph &&
-            nucleusKnowledgeGraph.nodes &&
-            nucleusKnowledgeGraph.nodes.length > 0
+        : nucleusKnowledgeGraph?.nodes?.length
           ? toDisplayGraph(nucleusKnowledgeGraph)
           : EMPTY_GRAPH,
     [graph, nucleusKnowledgeGraph],
@@ -1055,7 +1053,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     mappedDigestData={mappedDigestData}
                     partialInfo={partialInfo}
                     TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
-                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                    hasHadVideo={Boolean(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
                   />
                 ) : (
                   <ProDashboardView
@@ -1080,7 +1078,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     setSelectedDimensionKey={(k) => startTransition(() => setSelectedDimensionKey(k))}
                     selectedNodeId={selectedNodeId}
                     handleSelectNode={handleSelectNode}
-                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                    hasHadVideo={Boolean(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
                   />
                 )}
               </div>
