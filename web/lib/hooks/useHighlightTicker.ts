@@ -19,6 +19,14 @@
  * actual transcript words instead of the LLM-synthesized paraphrase.
  * Falls back to `label` gracefully for old rows where the column is null.
  *
+ * `usingVerbatim` (2026-09-07, UI-truthfulness fix): tells the caller which
+ * source the reveal text actually comes from -- true iff the verbatim
+ * excerpt is displayed, false when the LLM-synthesized `label` paraphrase
+ * is being shown instead (legacy rows pre-2026-08-25, or a highlight whose
+ * window matched no transcript segments). Consumers MUST surface this (a
+ * small "summarized" badge) rather than silently passing a paraphrase off
+ * as verbatim transcript text.
+ *
  * `playingIdx` is the caller's source of truth for which segment is
  * currently active; `elapsedSeconds` (new 2026-08-20, shared-hook
  * extraction) is the caller's source of truth for how far into that
@@ -38,13 +46,26 @@ export function useHighlightTicker(
   segmentDurationSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
-): { revealedText: string; totalWords: number } {
-  const text = verbatimExcerpt || label;
+): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
+  // Trim before checking truthiness: a whitespace-only verbatimExcerpt (a
+  // real DB row shape a corrupt/poorly-normalized transcript can produce)
+  // is truthy under a bare `Boolean()` check but yields zero real words,
+  // silently falling back to `label` while still claiming `usingVerbatim`
+  // (external review finding). Normalizing once here means every consumer
+  // of this hook's return value sees a consistent, already-correct answer.
+  const normalizedVerbatim = verbatimExcerpt?.trim() || null;
+  const usingVerbatim = normalizedVerbatim !== null;
+  const text = normalizedVerbatim || label;
   const words = text ? text.split(/\s+/).filter(Boolean) : [];
   const totalWords = words.length;
 
   if (playingIdx === null || totalWords === 0 || elapsedSeconds === null) {
-    return { revealedText: '', totalWords };
+    // `revealedText` is empty here, so any consumer doing
+    // `revealedText || label` is about to display `label` (or nothing) --
+    // `usingVerbatim` must be false in that case regardless of what it was
+    // computed as above, or the badge would be skipped while a paraphrase
+    // (or nothing) is actually on screen (external review finding).
+    return { revealedText: '', totalWords, usingVerbatim: false };
   }
 
   const durationSeconds = Math.max(1, segmentDurationSeconds);
@@ -55,7 +76,7 @@ export function useHighlightTicker(
 
   const revealedText =
     words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');
-  return { revealedText, totalWords };
+  return { revealedText, totalWords, usingVerbatim };
 }
 
 /** Static "up next" preview -- first 5-10 words of the upcoming segment's
