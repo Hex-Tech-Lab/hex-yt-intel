@@ -92,6 +92,8 @@ import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
 import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
 import { useRelations } from "@/hooks/useRelations";
 import type { ConsoleProfile } from "@/lib/services/console-profile";
+import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
+import type { KnowledgeGraphV2 } from "@/lib/types/synthesis-nucleus";
 import { SimpleDashboardView } from "./SimpleDashboardView";
 import { ProDashboardView } from "./ProDashboardView";
 import { ProcessingLog } from "@/components/templates/console/ProcessingLog";
@@ -116,7 +118,22 @@ export interface DashboardContainerProps {
 // Reference-stable empty fallback for displayGraph -- an inline `{nodes:[],
 // edges:[]}` literal would be a new object every render, defeating
 // displayGraph's own memoization in the no-data case.
-const EMPTY_GRAPH = { nodes: [], edges: [] };
+const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
+
+// nucleusKnowledgeGraph (KnowledgeGraphV2, the live-streaming source) and
+// `graph` (KnowledgeGraph, the Pro-only fetched/merged source) aren't
+// structurally compatible -- KGNodeV2 has no `inPersona` field, which
+// MergedGraphNode requires. Neither WordCloud nor copyPanelContent's
+// word-cloud branch ever reads `.inPersona`, so defaulting it false here is
+// a real, typed adapter rather than an `as any` cast past the mismatch
+// (Codacy ErrorProne review, PR #302).
+function toDisplayGraph(source: KnowledgeGraph | KnowledgeGraphV2): KnowledgeGraph {
+  return {
+    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+    edges: source.edges,
+    rootId: source.rootId,
+  };
+}
 
 function cleanDimensionContent(raw: string): string {
   if (!raw) return "";
@@ -275,7 +292,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         : nucleusKnowledgeGraph &&
             nucleusKnowledgeGraph.nodes &&
             nucleusKnowledgeGraph.nodes.length > 0
-          ? nucleusKnowledgeGraph
+          ? toDisplayGraph(nucleusKnowledgeGraph)
           : EMPTY_GRAPH,
     [graph, nucleusKnowledgeGraph],
   );
@@ -315,7 +332,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       // -- copying it from `graph` alone would silently produce empty text
       // during that fallback window (Sourcery review, PR #302).
       copyPanelContent(id as PanelId, {
-        graph: (id === "word-cloud" ? displayGraph : graph) as any,
+        graph: id === "word-cloud" ? displayGraph : graph,
         insights,
       });
     },
@@ -528,7 +545,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         defaultOpen: true,
         content: () => (
           <WordCloud
-            graph={displayGraph as any}
+            graph={displayGraph}
             selectedId={selectedNodeId}
             onSelect={handleSelectNode}
           />
