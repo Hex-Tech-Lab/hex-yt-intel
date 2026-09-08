@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Tooltip } from '@astryxdesign/core';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { useVideoStore } from '@/store/useVideoStore';
@@ -149,14 +150,26 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
   const progressPercent = maxTime > 0 ? (currentTime / maxTime) * 100 : 0;
   const clamped = Math.min(100, Math.max(0, progressPercent));
   return (
-    <div
-      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none transition-[left] duration-75 shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-      style={{ left: `${clamped}%` }}
+    // Real fix (live report, 2026-09-08): the pin (stem) and pin-head (dot)
+    // are one nested element, but the raw CSS `left` transition below
+    // restarted every ~250ms (VideoPlayerCard's own playback poll interval)
+    // with only a 75ms duration -- shorter than the poll interval, so each
+    // update snapped-then-eased rather than interpolating continuously,
+    // which read as the head and stem moving in separate discrete steps
+    // rather than as one smooth needle. Framer Motion's `animate` prop
+    // (already used elsewhere in this repo, e.g. DashboardContainer.tsx's
+    // AnimatePresence) drives the position via requestAnimationFrame and
+    // smoothly redirects mid-flight toward a new target instead of
+    // restarting a fixed-duration CSS transition on every poll tick.
+    <motion.div
+      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      animate={{ left: `${clamped}%` }}
+      transition={{ type: 'tween', duration: 0.2, ease: 'linear' }}
       aria-hidden="true"
       data-testid="playhead-needle"
     >
       <div className="absolute -top-1 -left-[3px] w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,1)]" />
-    </div>
+    </motion.div>
   );
 }
 
