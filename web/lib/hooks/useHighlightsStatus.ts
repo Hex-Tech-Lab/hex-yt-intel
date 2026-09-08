@@ -58,10 +58,12 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
 
     const controller = new AbortController();
     const requestAnalysisId = analysisId;
+    let attemptsMade = 0;
 
     (async () => {
       try {
         for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
+          attemptsMade = attempt + 1;
           const res = await fetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`, {
             signal: controller.signal,
           });
@@ -104,6 +106,14 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
         if ((err as Error)?.name === 'AbortError') return;
         console.warn(`[useHighlightsStatus] failed to load highlights status for ${requestAnalysisId}:`, err);
         setResult(IDLE);
+      } finally {
+        // Real diagnostic value, not a no-op: this is exactly the class of
+        // production race (highlights backfilled asynchronously, client
+        // polling) that motivated this hook's retry design in the first
+        // place -- knowing how many attempts a cycle actually took before
+        // settling (aborted, error, or resolved) is the fastest way to
+        // confirm the retry window is sized correctly without a DB query.
+        console.debug(`[useHighlightsStatus] fetch cycle settled for ${requestAnalysisId} after ${attemptsMade} attempt(s), aborted=${controller.signal.aborted}`);
       }
     })();
 
