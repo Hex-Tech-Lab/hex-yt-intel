@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getHighlightsRetryDelayMs, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 
 export interface HighlightsStatusResult {
@@ -26,6 +26,13 @@ const IDLE: HighlightsStatusResult = { hasHighlights: null, count: 0 };
  */
 export function useHighlightsStatus(analysisId: string | null, status: string, digestLoading?: boolean): HighlightsStatusResult {
   const [result, setResult] = useState<HighlightsStatusResult>(IDLE);
+  // Tracks which analysisId `result` actually belongs to. CodeRabbit finding
+  // (PR #294): checking `result.hasHighlights === true` alone, with no
+  // analysisId check, meant switching to a NEW analysisId while the OLD
+  // analysisId's result still had hasHighlights===true skipped the reset
+  // AND the fetch entirely -- exposing the previous analysis's "done" badge
+  // under the new one until something else happened to re-trigger the effect.
+  const loadedForAnalysisIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status !== 'complete' || !analysisId) {
@@ -33,12 +40,12 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
       return;
     }
 
-    // Already have real highlights -- a later digestLoading flip (e.g. a
-    // manual digest refresh) must not blank/reset the badge. Deliberately
-    // NOT in the dependency array: a guard read of the current value, not
-    // a re-trigger condition (see HighlightsScrubber.tsx for the same
-    // pattern).
-    if (result.hasHighlights === true) return;
+    // Already have real highlights for THIS analysisId -- a later
+    // digestLoading flip (e.g. a manual digest refresh) must not
+    // blank/reset the badge. Deliberately NOT in the dependency array: a
+    // guard read of the current value, not a re-trigger condition (see
+    // HighlightsScrubber.tsx for the same pattern).
+    if (loadedForAnalysisIdRef.current === analysisId && result.hasHighlights === true) return;
 
     // Reset immediately for the NEW analysisId, not the previous one's
     // result -- otherwise switching directly between two completed
@@ -67,16 +74,28 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
           const count = json.highlights.length;
           if (count > 0) {
             if (controller.signal.aborted) return;
+            loadedForAnalysisIdRef.current = requestAnalysisId;
             setResult({ hasHighlights: true, count });
             return;
           }
           if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
-            await new Promise((resolve) => setTimeout(resolve, getHighlightsRetryDelayMs(attempt)));
+            // Abort-aware wait: settle the moment the effect cleans up
+            // (analysisId changed again / unmount) instead of always
+            // sitting through the full backoff delay first (CodeRabbit
+            // review, PR #294).
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(resolve, getHighlightsRetryDelayMs(attempt));
+              controller.signal.addEventListener('abort', () => {
+                clearTimeout(timer);
+                resolve();
+              }, { once: true });
+            });
             if (controller.signal.aborted) return;
           }
         }
         // Still empty after every retry: a confirmed zero-result extraction.
         if (controller.signal.aborted) return;
+        loadedForAnalysisIdRef.current = requestAnalysisId;
         setResult({ hasHighlights: false, count: 0 });
       } catch (err) {
         if ((err as Error)?.name === 'AbortError') return;
