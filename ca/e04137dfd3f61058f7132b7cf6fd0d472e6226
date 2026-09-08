@@ -1,0 +1,37 @@
+.memory/AGENT_LEDGER.md
+  s_169eb30b067663::t_3d33fcb916980d 1378-1379
+  s_169eb30b067663::t_2eacdfa300b64b 1376-1377
+  s_169eb30b067663::t_f8c3bfe82cd083 1373-1375
+web/app/api/analyses/check/__tests__/route.test.ts
+  s_806c0f506228c0::t_1f52ba0bb84bd1 135-148,150-152
+  s_806c0f506228c0::t_91b0833724a0cb 149
+web/app/api/analyses/check/route.ts
+  s_806c0f506228c0::t_3de2a9e3925b53 64
+  s_806c0f506228c0::t_5f7498b1e6662e 90,121
+  s_806c0f506228c0::t_e320d42d0be4ca 120
+  s_806c0f506228c0::t_9e72b67a68d34a 80-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "cae04137dfd3f61058f7132b7cf6fd0d472e6226",
+  "prompts": {},
+  "sessions": {
+    "s_169eb30b067663": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7cf9b7ceffedxBZzSsc0kBmB6",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
