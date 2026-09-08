@@ -167,6 +167,12 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
     // original bug, just shifted from "restart" to "settle-then-wait".
     <motion.div
       className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      // Explicit (deeper review, PR #300): Framer Motion already defaults
+      // `initial` to the `animate` value on a plain (non-AnimatePresence)
+      // mount, so this doesn't change behavior -- it makes the "no sweep
+      // from a stale/default position on first paint" guarantee explicit
+      // and future-proof against this ever being wrapped in AnimatePresence.
+      initial={false}
       animate={{ left: `${clamped}%` }}
       // Cubic review, PR #300: a tween duration SHORTER than the poll
       // interval reaches its target ~50ms before the next update arrives,
