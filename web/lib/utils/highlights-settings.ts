@@ -3,6 +3,15 @@
  * was declared separately in the authenticated route and the public share
  * page (CodeRabbit review, PR #233); one source of truth now.
  */
+/** Playback-position poll cadence -- single source of truth for anything
+ *  that visualizes `currentPlaybackSeconds` (HighlightsTrack.tsx's playhead
+ *  needle). Lives here, not in VideoPlayerCard.tsx, deliberately: this file
+ *  is shared by the authenticated HighlightsScrubber AND the public,
+ *  store-free PublicHighlightsReel.tsx -- importing from VideoPlayerCard.tsx
+ *  would pull its whole module (including useVideoStore) into the public
+ *  share page's bundle (Cubic review, PR #300). */
+export const PLAYBACK_POLL_INTERVAL_MS = 250;
+
 export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   'highlights.segmentDurationSeconds': 10,
   'highlights.contextLeadSeconds': 2.5,

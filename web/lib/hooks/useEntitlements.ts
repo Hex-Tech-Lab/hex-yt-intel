@@ -7,7 +7,10 @@ import type { EntitlementState } from '@/lib/usecases/GetUserEntitlementsUseCase
 const globalCache = new Map<string, EntitlementState>();
 const globalPromises = new Map<string, Promise<EntitlementState>>();
 
-const defaultFree: EntitlementState = {
+// Exported for exact-value assertions in tests (Cubic review, PR #292) --
+// asserting `.not.toEqual(founderData.entitlements)` alone would still pass
+// on a regression to any other wrong value, not just the correct reset.
+export const defaultFree: EntitlementState = {
   tier: 'free',
   is_founder: false,
   is_enterprise: false,
@@ -28,6 +31,22 @@ export function useEntitlements() {
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSessionLoaded, setIsSessionLoaded] = useState<boolean>(false);
+  // Tracks the user id THIS hook instance last committed to React state --
+  // kept in sync both by the effect below (after every render) AND directly
+  // inside the auth listener (so the very next event sees an up-to-date
+  // value even before React has re-rendered). Used as the same-user
+  // comparison basis instead of the shared module-level `currentUserId`,
+  // which is ALSO mutated by a separate once-ever "global" onAuthStateChange
+  // listener registered below that Supabase invokes BEFORE this per-hook
+  // listener on every event (registration order). Comparing against
+  // `currentUserId` directly meant the global listener had already
+  // overwritten it to the NEW id by the time this check ran, making
+  // `id === currentUserId` true even for a genuine user change -- silently
+  // no-op'ing real sign-in/sign-out/account-switch events, not just the
+  // intended same-user token-refresh case (real bug caught by external
+  // review on the first version of this fix). A separate ref initialized
+  // once at first render has its own bug: it stays stale (null) until the
+  // async session bootstrap below resolves, so it must be updated there too.
   const activeUserIdRef = useRef<string | null>(currentUserId);
 
   useEffect(() => {
@@ -38,6 +57,7 @@ export function useEntitlements() {
     clientAuthAdapter.getSessionUserId().then((id) => {
       if (id !== currentUserId) {
         currentUserId = id;
+        activeUserIdRef.current = id;
         setUserId(id);
         setEntitlements(defaultFree);
         setIsLoading(true);
@@ -57,10 +77,21 @@ export function useEntitlements() {
     }
 
     const unsubscribe = clientAuthAdapter.onAuthStateChange((event, id) => {
+      // Same-id events (TOKEN_REFRESHED, USER_UPDATED, late INITIAL_SESSION) must
+      // not reset loaded entitlements: userId would stay unchanged so the fetch
+      // effect never re-runs, leaving isLoading stuck true and the view clamped
+      // to Simple permanently. Only a genuine user change may reset state.
+      // Compared against this hook's OWN activeUserIdRef, not the shared
+      // `currentUserId` (see the ref's declaration comment for why).
+      const isSameUser = id === activeUserIdRef.current;
+      activeUserIdRef.current = id;
+      currentUserId = id;
+      if (isSameUser) {
+        return;
+      }
       setEntitlements(defaultFree);
       setIsLoading(true);
       setUserId(id);
-      currentUserId = id;
       if (event === 'SIGNED_OUT') {
         setIsLoading(false);
       }
