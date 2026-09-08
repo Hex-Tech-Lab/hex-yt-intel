@@ -1,0 +1,19 @@
+web/app/api/analyses/[id]/status/route.ts
+  s_806c0f506228c0::t_543bf75eb9c9ad 59-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "662efa4119d34d57a11f31a2638f4aa56755d71d",
+  "prompts": {},
+  "sessions": {
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
