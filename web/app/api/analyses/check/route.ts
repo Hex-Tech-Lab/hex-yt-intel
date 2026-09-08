@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, channel_title, analysis_markdown, created_at, model_used, validation_report, billing_status')
+          .select('id, title, channel_title, analysis_markdown, created_at, updated_at, model_used, validation_report, billing_status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -77,9 +77,17 @@ export async function GET(request: NextRequest) {
     });
 
     const newestRow = recentAnalyses?.[0] ?? null;
+    // Staleness clock must be updated_at, not created_at (same class of bug
+    // independently fixed 2026-09-09 in /api/analyses/[id]/status/route.ts,
+    // commit 662efa41): the worker touches updated_at on every incremental
+    // dimension write, so a genuinely in-flight row keeps resetting this
+    // clock. created_at never changes, so any processing row older than
+    // PROCESSING_STALE_MS was always misreported as dead here too, even a
+    // healthy worker still streaming. Falls back to created_at only when
+    // updated_at is absent.
     const newestIsStale = !!newestRow &&
       newestRow.billing_status !== 'completed' &&
-      Date.now() - new Date(newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
+      Date.now() - new Date(newestRow.updated_at || newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
     const latestCompleted = recentAnalyses?.find((a) => a.billing_status === 'completed') ?? null;
 
     // A stale/dead newest row falls back to the last real completed
@@ -109,7 +117,8 @@ export async function GET(request: NextRequest) {
 
       // A processing row this old means its background generator was killed (Vercel
       // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
-      const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
+      // updated_at, not created_at -- see the newestIsStale comment above for the RCA.
+      const ageMs = Date.now() - new Date(existingAnalysis.updated_at || existingAnalysis.created_at).getTime();
 
       // ADR 021 Phase 2 (presence-check-on-resume): on a terminal-error state
       // (dead/stale/failed row), surface which dimensions are already durably

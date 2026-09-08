@@ -132,6 +132,24 @@ describe('GET /api/analyses/check', () => {
     expect(body.missingDimensions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
+  it('does NOT report a genuinely in-flight row as stale just because created_at is old (updated_at is the real clock)', async () => {
+    // Regression guard for the created_at-vs-updated_at staleness-clock bug
+    // (same class independently fixed 2026-09-09 in
+    // /api/analyses/[id]/status/route.ts, commit 662efa41): a row started
+    // >120s ago but whose updated_at was just touched by the worker's
+    // incremental dimension write is still healthy, not dead.
+    const oldCreatedAt = new Date(Date.now() - 121_000).toISOString();
+    const freshUpdatedAt = new Date(Date.now() - 1_000).toISOString();
+    mockAnalysesQuery([
+      { id: ANALYSIS_ID, title: 'T', channel_title: 'C', analysis_markdown: null, created_at: oldCreatedAt, updated_at: freshUpdatedAt, model_used: 'm', validation_report: { status: 'processing' }, billing_status: 'processing' },
+    ]);
+
+    const res = await GET(checkRequest());
+    const body = await res.json();
+    expect(body.status).toBe('processing');
+    expect(getMissingDimensionNumbers).not.toHaveBeenCalled();
+  });
+
   it('fail-opens when the presence check itself errors — the status contract stays intact without the field', async () => {
     const staleCreatedAt = new Date(Date.now() - 121_000).toISOString();
     mockAnalysesQuery([
