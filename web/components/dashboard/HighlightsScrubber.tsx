@@ -122,7 +122,26 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     stop();
   }, [analysisId, stop]);
 
+  // Tracks the previous digestLoading value seen by the effect below --
+  // real bug (deeper review, PR #298): the effect's dependency array
+  // includes `digestLoading`, so it re-ran on EVERY change, including
+  // false->true (a manual digest refresh starting), not just the actual
+  // true->false recovery signal. Restarting the whole retry cycle on
+  // false->true wastes a request and can overlap with an in-flight retry.
+  const prevDigestLoadingRef = useRef<boolean | undefined>(digestLoading);
+  // Marks that a fetch CYCLE has been STARTED for this analysisId --
+  // distinct from loadedForAnalysisIdRef, which only updates once the cycle
+  // fully completes. Using loadedForAnalysisIdRef alone to detect "is this
+  // an initial fetch" mis-classified a false->true flip arriving WHILE the
+  // retry loop was still exhausting attempts as "initial" (since the cycle
+  // hadn't finished yet), defeating the false->true no-op below.
+  const cycleStartedForAnalysisIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    const isNewCycle = cycleStartedForAnalysisIdRef.current !== analysisId;
+    const wasFalseNowTrue = prevDigestLoadingRef.current === false && digestLoading === true;
+    prevDigestLoadingRef.current = digestLoading;
+
     // Already have real highlights for THIS analysisId -- a later digestLoading
     // flip (e.g. a manual digest refresh) must not blank/refetch and cause a
     // visible flicker. Checking loadedForAnalysisIdRef (not just `data`) is
@@ -134,6 +153,14 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     // triggering on `data` changing would infinite-loop against this same
     // effect's own setData call below.
     if (loadedForAnalysisIdRef.current === analysisId && data && data.highlights.length > 0) return;
+
+    // Skip ONLY a false->true digestLoading flip (digest refresh starting,
+    // not the recovery signal) arriving on an already-started cycle for
+    // this analysisId -- a brand-new cycle (new analysisId, or the very
+    // first run) always proceeds regardless of the digestLoading value.
+    if (!isNewCycle && wasFalseNowTrue) return;
+
+    cycleStartedForAnalysisIdRef.current = analysisId;
 
     // AbortController: if analysisId changes again (or the component
     // unmounts) while this fetch is in flight, cancel the actual request --
@@ -152,6 +179,14 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
           const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
+          // Real bug (deeper review, PR #298): AbortController.abort() only
+          // cancels IN-FLIGHT network activity -- if the full response had
+          // already been buffered by the browser before abort() was called,
+          // `.json()` still resolves successfully. Without this check, a
+          // stale response for an old analysisId/cycle could still commit
+          // via setData(lastJson) below even though the request was
+          // "cancelled" from this effect's point of view.
+          if (controller.signal.aborted) return;
           if (!json || !Array.isArray(json.highlights)) {
             throw new Error('Invalid response format: expected highlights array');
           }
@@ -161,7 +196,15 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
           }
           lastJson = json;
           if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
-            await new Promise((r) => setTimeout(r, getHighlightsRetryDelayMs(attempt)));
+            // Abort-aware wait: settle the moment the effect cleans up
+            // instead of always sitting through the full backoff delay.
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(resolve, getHighlightsRetryDelayMs(attempt));
+              controller.signal.addEventListener('abort', () => {
+                clearTimeout(timer);
+                resolve();
+              }, { once: true });
+            });
             if (controller.signal.aborted) return;
           }
         }
@@ -175,7 +218,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
         console.warn(`[HighlightsScrubber] failed to load highlights for ${analysisId}:`, err);
         setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     loadHighlights();
@@ -187,7 +230,8 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     // read -- see highlights-settings.ts's retry-constants doc for why: a
     // digestLoading:true->false transition is the real signal that
     // scheduleHighlightsRecovery() has now been scheduled server-side, not
-    // a fixed timeout guessed from stream-completion.
+    // a fixed timeout guessed from stream-completion. The effect body above
+    // narrows this further to ignore false->true transitions.
   }, [analysisId, digestLoading]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;

@@ -152,6 +152,73 @@ describe('HighlightsScrubber', () => {
     expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
+  it('ignores a stale response that resolves AFTER the analysisId already changed, even if abort() cannot stop an already-buffered .json() (deeper review, PR #298)', async () => {
+    // AbortController.abort() only cancels in-flight network activity -- if
+    // the browser already fully buffered the response before abort() is
+    // called, .json() still resolves successfully. Without an explicit
+    // aborted-check after parsing, a late-resolving response for the OLD
+    // analysisId could still commit via setData and clobber the new
+    // analysis's (still-loading) state.
+    let resolveFirstJson: (value: unknown) => void;
+    const firstJsonPromise = new Promise((resolve) => { resolveFirstJson = resolve; });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => firstJsonPromise })
+      .mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 2, end: 6, label: 'Analysis 2 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-1" videoDurationSeconds={60} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Switch analysisId BEFORE the first request's json() resolves.
+    rerender(<HighlightsScrubber analysisId="analysis-2" videoDurationSeconds={60} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(container.firstChild?.textContent).toContain('keypoints ready to play'));
+
+    // NOW the stale first response "arrives" (already-buffered body parse
+    // completing after abort()) -- it must be ignored, not clobber the
+    // already-correct analysis-2 data.
+    resolveFirstJson!({ highlights: [{ idx: 0, start: 1, end: 5, label: 'Analysis 1 highlight (STALE)' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 });
+    await new Promise((resolveTick) => setTimeout(resolveTick, 10));
+
+    expect(container.firstChild?.textContent).not.toContain('Analysis 1 highlight');
+    expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+  });
+
+  it('does NOT restart the fetch cycle on a digestLoading false->true transition while highlights are still empty (deeper review, PR #298)', async () => {
+    // Only a true->false transition is the real recovery signal; false->true
+    // (a digest refresh merely STARTING) must be a no-op, even while data is
+    // still empty (no "already have highlights" guard to rely on here).
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = render(
+      <HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={false} />
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // false -> true: a digest refresh STARTING, not the recovery signal --
+    // must NOT trigger a second fetch even though data is still empty.
+    rerender(<HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={true} />);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // true -> false: the real recovery signal -- this SHOULD refetch.
+    rerender(<HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={false} />);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('fetches fresh highlights for a NEW analysisId even while the previous analysisId still has cached highlights (CodeRabbit, PR #298)', async () => {
     // Real bug: the "already have highlights, don't refetch on a digestLoading
     // flip" guard checked `data` alone, so switching analysisId while old
