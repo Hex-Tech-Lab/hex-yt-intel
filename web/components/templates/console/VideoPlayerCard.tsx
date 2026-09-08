@@ -7,6 +7,11 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
 import { HighlightsTransitionOverlay } from '@/components/dashboard/HighlightsTransitionOverlay';
+// PLAYBACK_POLL_INTERVAL_MS lives in highlights-settings.ts, not here --
+// HighlightsTrack.tsx (shared by the public, store-free PublicHighlightsReel)
+// needs it too, and importing this file's own useVideoStore dependency into
+// the public bundle was a real bug (Cubic review, PR #300).
+import { PLAYBACK_POLL_INTERVAL_MS } from '@/lib/utils/highlights-settings';
 
 import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
 
@@ -247,13 +252,12 @@ export function VideoPlayerCard() {
   // sufficient to stop polling on every real stop condition; the interval
   // itself is also cleared on unmount/ready/videoId change via this
   // effect's own cleanup + dependency array.
-  const POLL_INTERVAL_MS = 250;
   useEffect(() => {
     if (!ready || !playerRef.current || !isPlaying) return;
     const intervalId = setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.() ?? null;
       if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
-    }, POLL_INTERVAL_MS);
+    }, PLAYBACK_POLL_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 

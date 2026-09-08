@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Tooltip } from '@astryxdesign/core';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { useVideoStore } from '@/store/useVideoStore';
+import { PLAYBACK_POLL_INTERVAL_MS } from '@/lib/utils/highlights-settings';
 
 /**
  * Track height in px -- the single source of truth for the scrubber's own
@@ -149,14 +151,42 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
   const progressPercent = maxTime > 0 ? (currentTime / maxTime) * 100 : 0;
   const clamped = Math.min(100, Math.max(0, progressPercent));
   return (
-    <div
-      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none transition-[left] duration-75 shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-      style={{ left: `${clamped}%` }}
+    // Real fix (live report, 2026-09-08): the pin (stem) and pin-head (dot)
+    // are one nested element, but the ORIGINAL raw CSS `left` transition
+    // restarted every ~250ms (PLAYBACK_POLL_INTERVAL_MS) with only a 75ms
+    // duration -- shorter than the poll interval, so each update
+    // snapped-then-eased rather than interpolating continuously, which read
+    // as the head and stem moving in separate discrete steps rather than as
+    // one smooth needle. Framer Motion's `animate` prop (already used
+    // elsewhere in this repo, e.g. DashboardContainer.tsx's AnimatePresence)
+    // drives the position via requestAnimationFrame and smoothly redirects
+    // mid-flight toward a new target instead of restarting from scratch.
+    // The tween duration below must ALSO be >= the poll interval (Cubic
+    // review, PR #300) -- an animation that finishes before the next poll
+    // tick arrives visibly pauses between updates, the same symptom as the
+    // original bug, just shifted from "restart" to "settle-then-wait".
+    <motion.div
+      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      // Explicit (deeper review, PR #300): Framer Motion already defaults
+      // `initial` to the `animate` value on a plain (non-AnimatePresence)
+      // mount, so this doesn't change behavior -- it makes the "no sweep
+      // from a stale/default position on first paint" guarantee explicit
+      // and future-proof against this ever being wrapped in AnimatePresence.
+      initial={false}
+      animate={{ left: `${clamped}%` }}
+      // Cubic review, PR #300: a tween duration SHORTER than the poll
+      // interval reaches its target ~50ms before the next update arrives,
+      // so the needle visibly pauses between ticks instead of moving
+      // continuously. Must be >= PLAYBACK_POLL_INTERVAL_MS; +10ms margin
+      // so the animation is still gently in motion (not already settled)
+      // when the next target lands, per Framer Motion's smooth mid-flight
+      // redirect (no restart-from-zero like a CSS transition would).
+      transition={{ type: 'tween', duration: (PLAYBACK_POLL_INTERVAL_MS + 10) / 1000, ease: 'linear' }}
       aria-hidden="true"
       data-testid="playhead-needle"
     >
       <div className="absolute -top-1 -left-[3px] w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,1)]" />
-    </div>
+    </motion.div>
   );
 }
 
