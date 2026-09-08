@@ -10,6 +10,14 @@ import { HighlightsTransitionOverlay } from '@/components/dashboard/HighlightsTr
 
 import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
 
+/** Playback-position poll cadence -- single source of truth, hoisted to
+ *  module level so other components that visualize `currentPlaybackSeconds`
+ *  (e.g. HighlightsTrack.tsx's playhead needle) can size their own
+ *  animation durations against the real interval instead of duplicating
+ *  "250ms" as an independent guess (Cubic review, PR #300: an animation
+ *  duration shorter than this poll interval visibly pauses between ticks). */
+export const PLAYBACK_POLL_INTERVAL_MS = 250;
+
 export function VideoPlayerCard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<VideoPlayerPort | null>(null);
@@ -247,13 +255,12 @@ export function VideoPlayerCard() {
   // sufficient to stop polling on every real stop condition; the interval
   // itself is also cleared on unmount/ready/videoId change via this
   // effect's own cleanup + dependency array.
-  const POLL_INTERVAL_MS = 250;
   useEffect(() => {
     if (!ready || !playerRef.current || !isPlaying) return;
     const intervalId = setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.() ?? null;
       if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
-    }, POLL_INTERVAL_MS);
+    }, PLAYBACK_POLL_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
