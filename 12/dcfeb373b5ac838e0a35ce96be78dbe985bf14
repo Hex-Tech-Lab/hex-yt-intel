@@ -1,0 +1,27 @@
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_27a98410ea5034::t_3779436a15895b 193-197,200,207
+  s_27a98410ea5034::t_ef3f65c44c3803 204-206,209-219
+  s_27a98410ea5034::t_882a1a2af87c41 155-186,188-192,198-199,201-203,208,220-221
+  s_27a98410ea5034::t_caa521e0d05b77 187
+web/components/dashboard/HighlightsScrubber.tsx
+  s_27a98410ea5034::t_a1e0bf4a31f490 132-138,141-142
+  s_27a98410ea5034::t_74c91d1548bc7d 125-131,139,143-144,182-189,199-207,221,233-234
+  s_27a98410ea5034::t_876845bdb64cc9 157-163
+  s_27a98410ea5034::t_1fb4d55a0d03e2 164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "12dcfeb373b5ac838e0a35ce96be78dbe985bf14",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
