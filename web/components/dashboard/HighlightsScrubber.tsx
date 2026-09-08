@@ -186,8 +186,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
         setData(lastJson);
         loadedForAnalysisIdRef.current = id;
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
+        // Cubic review, PR #298: check the SIGNAL first, not just the error's
+        // shape -- a superseded cycle's fetch/json() can reject with an
+        // error that isn't a DOMException named 'AbortError' in every
+        // environment (e.g. mid-stream abort in some fetch polyfills), which
+        // would otherwise slip past the type check below and collapse the
+        // component via setError even though the REPLACEMENT cycle is about
+        // to succeed.
+        if (controller.signal.aborted) {
           console.debug(`[HighlightsScrubber] fetch aborted for ${id} (analysisId changed, unmounted, or superseded by a new cycle)`);
+          return;
+        }
+        if (err instanceof DOMException && err.name === 'AbortError') {
           return;
         }
         console.warn(`[HighlightsScrubber] failed to load highlights for ${id}:`, err);
@@ -220,10 +230,17 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
   // merely STARTING -- is correctly a no-op, since neither branch below
   // matches it).
   const prevDigestLoadingRef = useRef<boolean | undefined>(digestLoading);
+  // Cubic review, PR #298: if analysisId ALSO changed in the same render as
+  // the true->false digestLoading transition, Effect A already started a
+  // fresh cycle for the new id -- this effect firing too would abort that
+  // brand-new cycle and start a needless duplicate for the exact same id.
+  const prevAnalysisIdForDigestEffectRef = useRef<string>(analysisId);
   useEffect(() => {
     const wasTrueNowFalse = prevDigestLoadingRef.current === true && digestLoading === false;
+    const analysisIdChangedThisRender = prevAnalysisIdForDigestEffectRef.current !== analysisId;
     prevDigestLoadingRef.current = digestLoading;
-    if (!wasTrueNowFalse) return;
+    prevAnalysisIdForDigestEffectRef.current = analysisId;
+    if (!wasTrueNowFalse || analysisIdChangedThisRender) return;
 
     // Already have real highlights for THIS analysisId -- don't blank/
     // refetch and cause a visible flicker on a later digest refresh.

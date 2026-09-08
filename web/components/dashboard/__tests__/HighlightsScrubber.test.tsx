@@ -258,6 +258,27 @@ describe('HighlightsScrubber', () => {
     expect(fetchMock.mock.calls[1]![0]).toContain('analysisId=analysis-2');
   });
 
+  it('does not issue a duplicate fetch when analysisId and a true->false digestLoading transition change in the same render (Cubic, PR #298)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ highlights: [{ idx: 0, start: 1, end: 5, label: 'x' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = render(
+      <HighlightsScrubber analysisId="analysis-a" videoDurationSeconds={60} digestLoading={true} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Both analysisId AND digestLoading (true->false) change together --
+    // Effect A's analysisId-triggered fetch is the only one that should fire.
+    rerender(<HighlightsScrubber analysisId="analysis-b" videoDurationSeconds={60} digestLoading={false} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    // Give any erroneous duplicate a chance to fire before asserting it didn't.
+    await new Promise((resolveTick) => setTimeout(resolveTick, 10));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('collapses gracefully on fetch error without throwing', async () => {
     vi.stubGlobal(
       'fetch',
