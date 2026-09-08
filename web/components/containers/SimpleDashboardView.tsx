@@ -2,12 +2,10 @@ import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
 import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
-import { Icon } from "@/components/templates/_shared/primitives";
-
-interface PartialInfo {
-  presentCount: number;
-  missing: number[];
-}
+import {
+  PartialAnalysisWarning,
+  type PartialAnalysisInfo,
+} from "@/components/dashboard/PartialAnalysisWarning";
 
 interface SimpleDashboardViewProps {
   status: string;
@@ -16,7 +14,7 @@ interface SimpleDashboardViewProps {
   digest: any;
   digestLoading: boolean;
   mappedDigestData: any;
-  partialInfo: PartialInfo | null;
+  partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
   hasHadVideo: boolean;
 }
@@ -41,6 +39,7 @@ export function SimpleDashboardView({
             <HighlightsScrubber
               analysisId={analysisId}
               videoDurationSeconds={videoMetadata?.duration ?? null}
+              digestLoading={digestLoading}
             />
           )}
           {videoMetadata && (
@@ -72,28 +71,10 @@ export function SimpleDashboardView({
             />
           )}
 
-          {partialInfo && (
-            <div
-              role="status"
-              className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
-            >
-              <Icon
-                icon="solar:danger-triangle-linear"
-                size={16}
-                className="text-[var(--warn)] flex-shrink-0"
-              />
-              <div>
-                <span className="font-mono font-bold text-[var(--warn)]">
-                  Partial analysis warning
-                </span>
-                {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                <span className="text-[var(--ink-muted)]">
-                  Missing: {partialInfo.missing.join(", ")}.
-                </span>
-                {" Use Re-analyze to attempt the rest."}
-              </div>
-            </div>
-          )}
+          <PartialAnalysisWarning
+            partialInfo={partialInfo}
+            totalDimensions={TOTAL_DIMENSIONS}
+          />
         </div>
       )}
     </>

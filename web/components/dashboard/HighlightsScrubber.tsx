@@ -1,11 +1,11 @@
 'use client';
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Card, IconButton, Spinner } from '@astryxdesign/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Card, IconButton, Spinner, Tooltip } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
@@ -52,10 +52,16 @@ interface HighlightsResponse {
  * docs/agent-prompts/2026-08-20-cc-simplify-shared-playback-hook.md) --
  * this component only supplies the store-backed primitives and renders.
  */
-export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analysisId: string; videoDurationSeconds: number | null }) {
+export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoading }: { analysisId: string; videoDurationSeconds: number | null; digestLoading?: boolean }) {
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Tracks which analysisId `data` actually belongs to -- CodeRabbit finding
+  // on PR #298: `data` alone isn't enough to guard the fetch effect below,
+  // since switching to a NEW analysisId while the OLD analysisId's `data`
+  // still has highlights.length > 0 would skip fetching entirely and leave
+  // the previous analysis's highlights displayed under the new one.
+  const loadedForAnalysisIdRef = useRef<string | null>(null);
 
   const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
@@ -110,15 +116,33 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   useEffect(() => {
     // Stop any in-progress playback from the previous analysisId -- otherwise
     // switching videos mid-playback keeps auto-seeking a now-different
-    // player against stale timestamps from the old video's highlights.
+    // player against stale timestamps from the old video's highlights. Kept
+    // in its own effect (analysisId-only) so it does NOT re-fire on every
+    // digestLoading flip below.
     stop();
+  }, [analysisId, stop]);
 
-    // AbortController: if analysisId changes again (or the component
-    // unmounts) while this fetch is in flight, cancel the actual request --
-    // not just an ignore-flag -- so an older response can never clobber
-    // `data` with the wrong analysis's highlights, and the browser doesn't
-    // keep a now-pointless request alive.
+  // Real P1 (Cubic review, PR #298): a SINGLE effect keyed on
+  // [analysisId, digestLoading] cannot selectively ignore a false->true
+  // transition -- React always runs the effect's OWN cleanup (which
+  // aborted the controller) before re-running the body, regardless of any
+  // early-return guard inside that body. A guard that "skips" false->true
+  // still let the cleanup kill the active cycle and started nothing to
+  // replace it, leaving highlights permanently stuck mid-retry. Fixed by
+  // splitting into two effects with genuinely different lifecycles: one
+  // OWNS the abort/cleanup lifecycle (keyed on analysisId only, never torn
+  // down by a digestLoading change), the other only ever STARTS a new
+  // cycle on a real true->false transition and has no cleanup of its own
+  // to accidentally abort anything.
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const runFetchCycle = useCallback((id: string) => {
+    // Cancel whatever cycle (if any) is currently running before starting
+    // a new one -- this is what makes runFetchCycle itself safe to call
+    // from either effect below without duplicate concurrent fetches.
+    abortControllerRef.current?.abort();
     const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     async function loadHighlights() {
       setData(null);
@@ -126,11 +150,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       setLoading(true);
       try {
         let lastJson: HighlightsResponse | null = null;
-        const maxAttempts = 3;
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
+        for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
+          const res = await fetch(`/api/analyses/highlights?analysisId=${id}`, { signal: controller.signal });
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
+          // Real bug (deeper review, PR #298): AbortController.abort() only
+          // cancels IN-FLIGHT network activity -- if the full response had
+          // already been buffered by the browser before abort() was called,
+          // `.json()` still resolves successfully. Without this check, a
+          // stale response for an old analysisId/cycle could still commit
+          // via setData(lastJson) below even though the request was
+          // "cancelled" from this effect's point of view.
+          if (controller.signal.aborted) return;
           if (!json || !Array.isArray(json.highlights)) {
             throw new Error('Invalid response format: expected highlights array');
           }
@@ -139,37 +170,91 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             break;
           }
           lastJson = json;
-          if (attempt < maxAttempts - 1) {
-            const delayMs = 2500 * Math.pow(2, attempt);
-            await new Promise((r) => setTimeout(r, delayMs));
+          if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
+            // Abort-aware wait: settle the moment this cycle is cancelled
+            // instead of always sitting through the full backoff delay.
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(resolve, getHighlightsRetryDelayMs(attempt));
+              controller.signal.addEventListener('abort', () => {
+                clearTimeout(timer);
+                resolve();
+              }, { once: true });
+            });
             if (controller.signal.aborted) return;
           }
         }
         setData(lastJson);
+        loadedForAnalysisIdRef.current = id;
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          console.debug(`[HighlightsScrubber] fetch aborted for ${analysisId} (analysisId changed or unmounted)`);
+        // Cubic review, PR #298: check the SIGNAL first, not just the error's
+        // shape -- a superseded cycle's fetch/json() can reject with an
+        // error that isn't a DOMException named 'AbortError' in every
+        // environment (e.g. mid-stream abort in some fetch polyfills), which
+        // would otherwise slip past the type check below and collapse the
+        // component via setError even though the REPLACEMENT cycle is about
+        // to succeed.
+        if (controller.signal.aborted) {
+          console.debug(`[HighlightsScrubber] fetch aborted for ${id} (analysisId changed, unmounted, or superseded by a new cycle)`);
           return;
         }
-        console.warn(`[HighlightsScrubber] failed to load highlights for ${analysisId}:`, err);
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        console.warn(`[HighlightsScrubber] failed to load highlights for ${id}:`, err);
         setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     loadHighlights();
+  }, []);
 
+  // Effect A: owns the fetch cycle's start/abort lifecycle. Keyed ONLY on
+  // analysisId -- a digestLoading change must never trigger this effect's
+  // cleanup, or it would abort an active recovery-triggered cycle (see
+  // Effect B) with nothing left to replace it.
+  useEffect(() => {
+    runFetchCycle(analysisId);
     return () => {
-      controller.abort();
+      abortControllerRef.current?.abort();
     };
-  }, [analysisId, stop]);
+  }, [analysisId, runFetchCycle]);
+
+  // Effect B: the digestLoading:true->false recovery trigger --
+  // scheduleHighlightsRecovery() is scheduled server-side AFTER digest
+  // generation completes, which can land well after Effect A's own retry
+  // budget has already given up. This effect has NO cleanup function, so a
+  // digestLoading change (in either direction) can never abort Effect A's
+  // in-flight cycle -- it can only ever START a new one, and only on a
+  // genuine true->false transition (a false->true flip -- a digest refresh
+  // merely STARTING -- is correctly a no-op, since neither branch below
+  // matches it).
+  const prevDigestLoadingRef = useRef<boolean | undefined>(digestLoading);
+  // Cubic review, PR #298: if analysisId ALSO changed in the same render as
+  // the true->false digestLoading transition, Effect A already started a
+  // fresh cycle for the new id -- this effect firing too would abort that
+  // brand-new cycle and start a needless duplicate for the exact same id.
+  const prevAnalysisIdForDigestEffectRef = useRef<string>(analysisId);
+  useEffect(() => {
+    const wasTrueNowFalse = prevDigestLoadingRef.current === true && digestLoading === false;
+    const analysisIdChangedThisRender = prevAnalysisIdForDigestEffectRef.current !== analysisId;
+    prevDigestLoadingRef.current = digestLoading;
+    prevAnalysisIdForDigestEffectRef.current = analysisId;
+    if (!wasTrueNowFalse || analysisIdChangedThisRender) return;
+
+    // Already have real highlights for THIS analysisId -- don't blank/
+    // refetch and cause a visible flicker on a later digest refresh.
+    if (loadedForAnalysisIdRef.current === analysisId && data && data.highlights.length > 0) return;
+
+    runFetchCycle(analysisId);
+  }, [digestLoading, analysisId, runFetchCycle]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
   const activeDuration = activeHighlight
     ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur) + (data?.contextLeadSeconds ?? 0)
     : segDurFallback;
-  const { revealedText } = useHighlightTicker(
+  const { revealedText, usingVerbatim } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
     activeDuration,
@@ -281,7 +366,21 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
             <span className="font-mono text-emerald-400 font-semibold mr-2">
               [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
             </span>
-            <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt || activeSegment.label || 'No transcript excerpt available.'}</span>
+            <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt?.trim() || activeSegment.label || 'No transcript excerpt available.'}</span>
+            {/* UI-truthfulness fix (2026-09-07, live user report): when the
+                verbatim excerpt is missing (legacy rows pre-2026-08-25, or a
+                window that matched no transcript segments), this line silently
+                showed the LLM-synthesized label with zero visual distinction.
+                A paraphrase must never pass itself off as verbatim transcript.
+                Trimmed before the truthiness check -- a whitespace-only
+                verbatimExcerpt (external review finding) was treated as a
+                real excerpt, hiding the badge while rendering a blank/
+                whitespace caption instead of the label fallback. */}
+            {!activeSegment.verbatimExcerpt?.trim() && activeSegment.label ? (
+              <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+                <span className="ml-1.5 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">summarized</span>
+              </Tooltip>
+            ) : null}
           </div>
         ) : null;
       })()}
@@ -289,13 +388,27 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
       {/* Footer row: live transcript ticker (left, grows/truncates) +
           Speed cycle-pill + relocated moment stepper (right). */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
-          {activeHighlight ? (
+        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug flex items-center gap-1" aria-live="polite">
+          {activeHighlight && playingIdx !== null ? (
             <>
-              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
-                {playingIdx! + 1}/{data.highlights.length}
+              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1 shrink-0">
+                {playingIdx + 1}/{data.highlights.length}
               </span>
-              {revealedText || activeHighlight.label}
+              {/* Label text gets its own min-w-0/truncate child so long
+                  fallback labels clip on their own line instead of pushing
+                  the badge below out of the flex box entirely (external
+                  review finding) -- the badge is a shrink-0 sibling, never
+                  inside the truncated span. */}
+              <span className="truncate min-w-0">{revealedText || activeHighlight.label}</span>
+              {/* Same UI-truthfulness fix as the banner above: the hook's
+                  usingVerbatim flag is exactly "the revealed text comes from
+                  the verbatim excerpt" -- false here means the LLM label
+                  paraphrase is on screen and must be marked as such. */}
+              {!usingVerbatim && activeHighlight.label ? (
+                <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+                  <span className="shrink-0 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--ink-muted)] border border-dashed border-[var(--line)] px-1">summarized</span>
+                </Tooltip>
+              ) : null}
             </>
           ) : nextHighlight ? (
             <span className="italic text-[var(--ink-muted)]">Up next: {previewWords(nextHighlight.label)}</span>

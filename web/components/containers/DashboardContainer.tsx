@@ -104,6 +104,7 @@ import {
   type PanelId,
 } from "@/lib/dashboard/export";
 import { parseUcisDimensionNumbers } from "@/lib/utils/count-ucis-dimensions";
+import { signOutWithTimeout } from "@/lib/utils/sign-out-with-timeout";
 import { Avatar } from "@astryxdesign/core";
 
 // See /docs/ui/dashboard-container.md
@@ -111,6 +112,11 @@ import { Avatar } from "@astryxdesign/core";
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
 }
+
+// Reference-stable empty fallback for displayGraph -- an inline `{nodes:[],
+// edges:[]}` literal would be a new object every render, defeating
+// displayGraph's own memoization in the no-data case.
+const EMPTY_GRAPH = { nodes: [], edges: [] };
 
 function cleanDimensionContent(raw: string): string {
   if (!raw) return "";
@@ -214,7 +220,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Live user report (2026-09-08): clicking Sign Out hung indefinitely --
+    // signOut() has no timeout of its own, and if the underlying network
+    // call (or a stuck GoTrue client, a documented past issue in this repo,
+    // see commit 5114483a "enforce gotrue singleton") never resolves, the
+    // button sits forever with no feedback. Staying signed-in-looking after
+    // the user explicitly asked to sign out is worse than a slow/failed
+    // server-side revoke -- race it against a timeout and navigate away
+    // regardless, so the UI never blocks on this specific call. Shared with
+    // UserMenu.tsx's handleSignOut (deeper review, PR #299: the duplicated
+    // per-file version also silently treated a RESOLVED `{ error }` as
+    // success, since signOut() resolves rather than rejects on failure).
+    await signOutWithTimeout(supabase, '[DashboardContainer]');
     router.push("/");
   }, [supabase, router]);
 
@@ -244,14 +261,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // alongside generation in both view modes, not just after status ===
   // "complete" (explicit product intent: it's meant to be an engaging
   // while-you-wait visualization, not a post-hoc summary widget).
-  const displayGraph =
-    graph && graph.nodes && graph.nodes.length > 0
-      ? graph
-      : nucleusKnowledgeGraph &&
-          nucleusKnowledgeGraph.nodes &&
-          nucleusKnowledgeGraph.nodes.length > 0
-        ? nucleusKnowledgeGraph
-        : { nodes: [], edges: [] };
+  // Memoized on [graph, nucleusKnowledgeGraph] -- both are reference-stable
+  // (useKnowledgeGraph's useState only re-sets on real content change;
+  // nucleusKnowledgeGraph's store setter gates on a nodes/edges length
+  // check before calling set()) -- so without this memo, displayGraph would
+  // be a fresh object every render, needlessly invalidating rightPanelItems'
+  // own memo (which depends on it) on every unrelated re-render (/simplify
+  // efficiency-lens finding, PR #302 review).
+  const displayGraph = useMemo(
+    () =>
+      graph && graph.nodes && graph.nodes.length > 0
+        ? graph
+        : nucleusKnowledgeGraph &&
+            nucleusKnowledgeGraph.nodes &&
+            nucleusKnowledgeGraph.nodes.length > 0
+          ? nucleusKnowledgeGraph
+          : EMPTY_GRAPH,
+    [graph, nucleusKnowledgeGraph],
+  );
   const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
   // switch via in-page `activeNav` state (not a route change), so the layout's
@@ -282,9 +309,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleCopy = useCallback(
     (id: string) => {
-      copyPanelContent(id as PanelId, { graph, insights });
+      // word-cloud is fed `displayGraph` (falls back to the streaming
+      // nucleusKnowledgeGraph while the Pro-only `graph` fetch hasn't
+      // resolved, or in Simple mode where `graph` is never fetched at all)
+      // -- copying it from `graph` alone would silently produce empty text
+      // during that fallback window (Sourcery review, PR #302).
+      copyPanelContent(id as PanelId, {
+        graph: (id === "word-cloud" ? displayGraph : graph) as any,
+        insights,
+      });
     },
-    [graph, insights],
+    [graph, displayGraph, insights],
   );
 
   const handlePanelExport = useCallback(
@@ -303,8 +338,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       if (!id) return;
 
       const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
-      if (entityTimeSeekEnabled && graph.nodes) {
-        const node = graph.nodes.find((n) => n.id === id);
+      // displayGraph, not graph: WordCloud renders displayGraph (which can
+      // be the streaming nucleusKnowledgeGraph while graph is still empty --
+      // see displayGraph's own comment above), so a click there must resolve
+      // against the same graph it was rendered from, or the id it emits
+      // can't be found (Sourcery review, PR #302). displayGraph is always a
+      // superset of graph's own nodes when graph is populated, so this is
+      // safe for the KnowledgeGraphCanvas/MindMap/Insights callers too.
+      if (entityTimeSeekEnabled && displayGraph.nodes) {
+        const node = displayGraph.nodes.find((n) => n.id === id);
         if (node) {
           const dim = useAnalysisDimensionsStore
             .getState()
@@ -389,7 +431,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         }
       }
     },
-    [graph.nodes, chapters],
+    [displayGraph.nodes, chapters],
   );
 
   // Cubic review, PR #224: this previously read
@@ -571,6 +613,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     handleExpandPanel,
     handleSelectNode,
   ]);
+  // rightPanelItems can transition between populated and empty at runtime in
+  // BOTH modes now (WordCloud appears/disappears with displayGraph; Pro's
+  // extra items depend on async data too) -- AnimatePresence in the render
+  // below must stay mounted regardless of mode so it can always play the
+  // exit animation. (Previously Simple's rightPanelItems was hardcoded to
+  // `[]` and never transitioned, so this alias existed only to skip
+  // AnimatePresence for Simple -- no longer valid now that Simple has a
+  // right panel too.)
+  const hasRightPanel = rightPanelItems.length > 0;
 
   useEffect(() => {
     if (activeNav !== "console") {
@@ -601,7 +652,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
-  // user can decide whether to re-analyze (a re-run bypasses the cache).
+  // user can decide whether to re-analyze (a re-run skips the cache).
   //
   // Derived from `analysis.analysis_markdown` via `parseUcisDimensionNumbers` --
   // the SAME canonical, content-based presence check AnalysisHistory's WIP card
@@ -912,27 +963,39 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             onSearchSubmit={handleSearchSubmit}
             onExport={handleExport}
             tier={tierLabel}
-            hasRightPanel={rightPanelItems.length > 0}
+            hasRightPanel={hasRightPanel}
             account={
               <Avatar name={accountAvatarName} alt={profile.email} size={32} />
             }
           />
         }
         rightPanel={
-          <AnimatePresence mode="wait">
-            {rightPanelItems.length > 0 && (
-              <motion.div
-                key="right-panel"
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 20, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full overflow-y-auto"
-              >
-                <RightPanelAccordion items={rightPanelItems} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          // `rightPanel` itself must be null (not a truthy-but-empty
+          // AnimatePresence) whenever there's nothing to show, so
+          // DashboardLayout's grid collapses to 2 columns in Simple mode
+          // instead of reserving an empty 390px column. But AnimatePresence
+          // must stay MOUNTED across that same rightPanelItems transition
+          // whenever there IS content to animate -- unmounting the
+          // AnimatePresence wrapper itself (not just its child) skips exit
+          // animations entirely on populated -> empty (Cubic review,
+          // PR #291): Framer Motion can only animate a child's exit while
+          // AnimatePresence remains mounted to detect its removal.
+          hasRightPanel ? (
+            <AnimatePresence mode="wait">
+              {rightPanelItems.length > 0 && (
+                <motion.div
+                  key="right-panel"
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 20, opacity: 0 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full overflow-y-auto"
+                >
+                  <RightPanelAccordion items={rightPanelItems} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          ) : null
         }
         dock={
           <ChatDock

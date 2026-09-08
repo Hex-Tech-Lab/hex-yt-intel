@@ -8,10 +8,15 @@ import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard"
 import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
 import {
-  Icon,
   StatusBadge,
   ChapterChip,
+  HighlightsChip,
 } from "@/components/templates/_shared/primitives";
+import {
+  PartialAnalysisWarning,
+  type PartialAnalysisInfo,
+} from "@/components/dashboard/PartialAnalysisWarning";
+import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
 
@@ -22,19 +27,19 @@ interface ProDashboardViewProps {
   timelineEntityData: any;
   setSelectedNodeId: (id: string | null) => void;
   consoleTab: "synthesis" | "graph";
-  setConsoleTab: (t: "synthesis" | "graph") => void;
+  setConsoleTab: (tab: "synthesis" | "graph") => void;
   graph: KnowledgeGraph;
   digest: any;
   digestLoading: boolean;
   mappedDigestData: any;
-  partialInfo: any;
+  partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
   auxStatus: any;
   chaptersStatus: string;
   chapters: any[];
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
-  setSelectedDimensionKey: (k: string | null) => void;
+  setSelectedDimensionKey: (dimensionKey: string | null) => void;
   selectedNodeId: string | null;
   handleSelectNode: (id: string | null) => void;
   hasHadVideo: boolean;
@@ -64,6 +69,7 @@ export function ProDashboardView({
   handleSelectNode,
   hasHadVideo,
 }: ProDashboardViewProps) {
+  const { hasHighlights, count: highlightsCount } = useHighlightsStatus(analysisId, status, digestLoading);
   return (
     <>
       {hasHadVideo && (
@@ -73,6 +79,7 @@ export function ProDashboardView({
             <HighlightsScrubber
               analysisId={analysisId}
               videoDurationSeconds={videoMetadata?.duration ?? null}
+              digestLoading={digestLoading}
             />
           )}
           {timelineEntityData && (
@@ -119,28 +126,10 @@ export function ProDashboardView({
                   loading={digestLoading}
                 />
               )}
-              {partialInfo && (
-                <div
-                  role="status"
-                  className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
-                >
-                  <Icon
-                    icon="solar:danger-triangle-linear"
-                    size={16}
-                    className="text-[var(--warn)] flex-shrink-0"
-                  />
-                  <div>
-                    <span className="font-mono font-bold text-[var(--warn)]">
-                      Partial analysis warning
-                    </span>
-                    {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                    <span className="text-[var(--ink-muted)]">
-                      Missing: {partialInfo.missing.join(", ")}.
-                    </span>
-                    {" Use Re-analyze to attempt the rest."}
-                  </div>
-                </div>
-              )}
+              <PartialAnalysisWarning
+                partialInfo={partialInfo}
+                totalDimensions={TOTAL_DIMENSIONS}
+              />
               {status === "complete" && auxStatus && (
                 <div
                   className="flex flex-wrap gap-2"
@@ -172,6 +161,7 @@ export function ProDashboardView({
                       chaptersStatus === "loaded" ? chapters.length > 0 : null
                     }
                   />
+                  <HighlightsChip hasHighlights={hasHighlights} count={highlightsCount} />
                 </div>
               )}
               <DimensionAccordion

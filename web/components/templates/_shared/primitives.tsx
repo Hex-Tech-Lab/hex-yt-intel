@@ -215,3 +215,30 @@ export function ChapterChip({ hasChapters }: { hasChapters: boolean | null }) {
     </Tooltip>
   );
 }
+
+/**
+ * 3-state Highlights Chip, same pattern as ChapterChip above: green
+ * (highlights present) | orange (extraction ran, zero highlights returned)
+ * | grey (not yet known -- fetch pending, failed, or analysis not complete).
+ * Added 2026-09-07 to surface ADR-021-adjacent pipeline-stage status for
+ * highlights alongside Digest/Description/Channel Meta/Comments/Chapters,
+ * closing the one gap in that row (see THOS_2026-09-07 handover, "Highlights
+ * status badge" follow-up).
+ */
+export function HighlightsChip({ hasHighlights, count }: { hasHighlights: boolean | null; count: number }) {
+  const config =
+    hasHighlights === true
+      ? { label: `Highlights (${count})`, cls: 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40', title: `${count} keypoint highlight${count === 1 ? '' : 's'} extracted for this analysis` }
+      : hasHighlights === false
+      ? { label: 'No Highlights', cls: 'bg-[var(--warn)]/15 text-[var(--warn)] border border-[var(--warn)]/40', title: 'Highlights extraction ran but returned zero keypoints for this video' }
+      : { label: 'Highlights N/A', cls: 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]', title: 'Highlights status still loading, unavailable, or not yet attempted for this video' };
+
+  return (
+    <Tooltip content={config.title}>
+      <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded ${config.cls}`}>
+        <Icon icon="solar:checklist-minimalistic-linear" size={11} />
+        {config.label}
+      </span>
+    </Tooltip>
+  );
+}

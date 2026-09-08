@@ -69,10 +69,13 @@ describe('HighlightsScrubber', () => {
       // Empty state banner is now rendered instead of collapsing to null
       expect(container.firstChild).not.toBeNull();
       expect(container.firstChild?.textContent).toContain('No highlights yet');
-    }, { timeout: 10000 });
-  }, 15000);
+    }, { timeout: 40000 });
+  }, 45000);
 
   it('bounded polling retries on empty before showing empty state banner', async () => {
+    // 5 attempts, capped-exponential backoff (2.5s/5s/10s/15s -- see
+    // highlights-settings.ts's HIGHLIGHTS_STATUS_RETRY_* constants and their
+    // doc comment for why this window widened from the original 3/2.5s/5s).
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -88,10 +91,192 @@ describe('HighlightsScrubber', () => {
     await vi.advanceTimersByTimeAsync(5100);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
+    await vi.advanceTimersByTimeAsync(10100);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await vi.advanceTimersByTimeAsync(15100);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+
     await vi.advanceTimersByTimeAsync(100);
     // Empty state banner is now rendered instead of collapsing to null
     expect(container.firstChild).not.toBeNull();
     expect(container.firstChild?.textContent).toContain('No highlights yet');
+  });
+
+  it('re-triggers the highlights fetch when digestLoading transitions to false, even after the initial retry budget was FULLY exhausted', async () => {
+    // The real bug this covers (live production repro, 2026-09-08): a fresh
+    // analysis's highlights are backfilled by scheduleHighlightsRecovery()
+    // AFTER digest generation, which can land well after this component's
+    // own retry budget gives up. digestLoading:true->false is the real
+    // signal that recovery has now been scheduled server-side -- verify it
+    // actually restarts the fetch cycle AFTER the full 5-attempt schedule
+    // has already run out (CodeRabbit review, PR #298: the original version
+    // of this test only exercised 1 fetch call before switching
+    // digestLoading, never proving recovery works post-exhaustion).
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={true} />
+    );
+
+    // Run through the complete 5-attempt retry schedule (2.5s/5s/10s/15s).
+    await vi.advanceTimersByTimeAsync(2600);
+    await vi.advanceTimersByTimeAsync(5100);
+    await vi.advanceTimersByTimeAsync(10100);
+    await vi.advanceTimersByTimeAsync(15100);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(container.firstChild?.textContent).toContain('No highlights yet');
+
+    // Now the recovery response is available -- simulate digest finishing.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          highlights: [{ idx: 0, start: 10, end: 15, label: 'Recovered highlight' }],
+          segmentDurationSeconds: 5,
+          contextLeadSeconds: 2,
+        }),
+    });
+    rerender(<HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={false} />);
+    // First attempt of the new fetch cycle resolves with real highlights --
+    // no retry delay needed, but a microtask flush is required under fake timers.
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(container.firstChild?.textContent).not.toContain('No highlights yet');
+    expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('ignores a stale response that resolves AFTER the analysisId already changed, even if abort() cannot stop an already-buffered .json() (deeper review, PR #298)', async () => {
+    // AbortController.abort() only cancels in-flight network activity -- if
+    // the browser already fully buffered the response before abort() is
+    // called, .json() still resolves successfully. Without an explicit
+    // aborted-check after parsing, a late-resolving response for the OLD
+    // analysisId could still commit via setData and clobber the new
+    // analysis's (still-loading) state.
+    let resolveFirstJson: (value: unknown) => void;
+    const firstJsonPromise = new Promise((resolve) => { resolveFirstJson = resolve; });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => firstJsonPromise })
+      .mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 2, end: 6, label: 'Analysis 2 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-1" videoDurationSeconds={60} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Switch analysisId BEFORE the first request's json() resolves.
+    rerender(<HighlightsScrubber analysisId="analysis-2" videoDurationSeconds={60} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(container.firstChild?.textContent).toContain('keypoints ready to play'));
+
+    // NOW the stale first response "arrives" (already-buffered body parse
+    // completing after abort()) -- it must be ignored, not clobber the
+    // already-correct analysis-2 data.
+    resolveFirstJson!({ highlights: [{ idx: 0, start: 1, end: 5, label: 'Analysis 1 highlight (STALE)' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 });
+    await new Promise((resolveTick) => setTimeout(resolveTick, 10));
+
+    expect(container.firstChild?.textContent).not.toContain('Analysis 1 highlight');
+    expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+  });
+
+  it('does NOT restart the fetch cycle on a digestLoading false->true transition while highlights are still empty (deeper review, PR #298)', async () => {
+    // Only a true->false transition is the real recovery signal; false->true
+    // (a digest refresh merely STARTING) must be a no-op, even while data is
+    // still empty (no "already have highlights" guard to rely on here).
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = render(
+      <HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={false} />
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // false -> true: a digest refresh STARTING, not the recovery signal --
+    // must NOT trigger a second fetch even though data is still empty.
+    rerender(<HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={true} />);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Real P1 (Cubic review, PR #298): the false->true flip above must NOT
+    // silently kill the ALREADY-RUNNING retry cycle -- it should keep
+    // polling on its own schedule exactly as if digestLoading had never
+    // changed. Advancing past the first retry delay must still produce a
+    // SECOND fetch call from the continuing cycle itself, not a dead cycle
+    // waiting for something that will never come.
+    await vi.advanceTimersByTimeAsync(2600);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // true -> false: the real recovery signal -- this SHOULD start a fresh
+    // cycle (3rd call), on top of the still-alive one above.
+    rerender(<HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={false} />);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('fetches fresh highlights for a NEW analysisId even while the previous analysisId still has cached highlights (CodeRabbit, PR #298)', async () => {
+    // Real bug: the "already have highlights, don't refetch on a digestLoading
+    // flip" guard checked `data` alone, so switching analysisId while old
+    // `data` still had highlights.length > 0 skipped the fetch entirely,
+    // leaving the PREVIOUS analysis's highlights rendered under the new one.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 1, end: 5, label: 'Analysis 1 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 2, end: 6, label: 'Analysis 2 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-1" videoDurationSeconds={60} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(container.firstChild?.textContent).toContain('keypoints ready to play'));
+
+    rerender(<HighlightsScrubber analysisId="analysis-2" videoDurationSeconds={60} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]![0]).toContain('analysisId=analysis-2');
+  });
+
+  it('does not issue a duplicate fetch when analysisId and a true->false digestLoading transition change in the same render (Cubic, PR #298)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ highlights: [{ idx: 0, start: 1, end: 5, label: 'x' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = render(
+      <HighlightsScrubber analysisId="analysis-a" videoDurationSeconds={60} digestLoading={true} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // Both analysisId AND digestLoading (true->false) change together --
+    // Effect A's analysisId-triggered fetch is the only one that should fire.
+    rerender(<HighlightsScrubber analysisId="analysis-b" videoDurationSeconds={60} digestLoading={false} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    // Give any erroneous duplicate a chance to fire before asserting it didn't.
+    await new Promise((resolveTick) => setTimeout(resolveTick, 10));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('collapses gracefully on fetch error without throwing', async () => {
@@ -125,5 +310,53 @@ describe('HighlightsScrubber', () => {
       expect(container.firstChild).toBeNull();
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // --- UI-truthfulness fix (2026-09-07, live user report): when a highlight
+  // row has no verbatim transcript excerpt (legacy rows pre-2026-08-25, or a
+  // window matching no transcript segments), the caption banner and footer
+  // ticker silently showed the LLM-synthesized label paraphrase with zero
+  // visual distinction. A paraphrase must be badged, never passed off as
+  // verbatim transcript text. ---
+  it('shows the summarized badge when verbatimExcerpt is missing and the label paraphrase is displayed', async () => {
+    // The shared beforeEach fixture has no verbatimExcerpt on either row.
+    render(<HighlightsScrubber analysisId="analysis-noexcerpt" videoDurationSeconds={60} />);
+
+    const playButton = await screen.findByRole('button', { name: 'Play highlights' });
+    fireEvent.click(playButton);
+
+    const caption = await screen.findByTestId('verbatim-caption');
+    expect(caption.textContent).toContain('First moment');
+    // Exactly 2 render sites badge a fallback: the banner (verbatim-caption)
+    // and the footer ticker. A bare >= 1 assertion (the original version of
+    // this test) would still pass if one site silently regressed and lost
+    // its badge while the other kept working -- external review finding.
+    expect(screen.getAllByText('summarized')).toHaveLength(2);
+  });
+
+  it('shows no summarized badge when a verbatim transcript excerpt is displayed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => ({
+          highlights: [
+            { idx: 0, start: 10, end: 15, label: 'First moment', verbatimExcerpt: 'exact transcript words spoken here' },
+            { idx: 1, start: 30, end: 35, label: 'Second moment', verbatimExcerpt: 'more verbatim speech' },
+          ],
+          segmentDurationSeconds: 5,
+          contextLeadSeconds: 2,
+        }),
+      })
+    );
+
+    render(<HighlightsScrubber analysisId="analysis-verbatim" videoDurationSeconds={60} />);
+
+    const playButton = await screen.findByRole('button', { name: 'Play highlights' });
+    fireEvent.click(playButton);
+
+    const caption = await screen.findByTestId('verbatim-caption');
+    expect(caption.textContent).toContain('exact transcript words spoken here');
+    expect(screen.queryByText('summarized')).toBeNull();
   });
 });

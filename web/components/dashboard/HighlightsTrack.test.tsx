@@ -90,4 +90,24 @@ describe('HighlightsTrack', () => {
     // confirm those classes now live on the inner mark, not the button.
     expect(marker.className).not.toMatch(/\bw-1\b|\bw-0\.5\b/);
   });
+
+  // Real regression test (live report, 2026-09-08): the playhead needle's
+  // pin-head previously lived as a separate nested child <div>, which could
+  // visibly desync from the animating parent's own paint. Fixed by moving
+  // the head to a CSS ::after pseudo-element -- structurally a single host
+  // DOM element with no child to desync from. jsdom/happy-dom doesn't
+  // compute Tailwind's real generated ::after styles, so this test asserts
+  // what CAN be verified in this environment: no child element exists, and
+  // the host element's own className declares the after: utilities.
+  it('playhead needle is a single DOM element with the head as a CSS ::after pseudo-element, not a child div', () => {
+    const highlights = makeHighlights(2);
+    const { container } = render(
+      <HighlightsTrack highlights={highlights} activeIndex={0} onSelect={() => {}} videoDurationSeconds={100} segmentDurationSeconds={5} />
+    );
+    const needle = container.querySelector('[data-testid="playhead-needle"]');
+    expect(needle).not.toBeNull();
+    expect(needle!.children).toHaveLength(0);
+    expect(needle!.className).toMatch(/after:content-\[['"]{2}\]/);
+    expect(needle!.className).toMatch(/after:rounded-full/);
+  });
 });
