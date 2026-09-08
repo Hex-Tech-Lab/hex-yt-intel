@@ -1,0 +1,18 @@
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 169
+web/components/containers/ProDashboardView.tsx
+  h_60000122af7b55 58
+web/components/containers/SimpleDashboardView.tsx
+  h_60000122af7b55 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "261895a1cd4eb20d1a94879363185f2a7ef95163",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
