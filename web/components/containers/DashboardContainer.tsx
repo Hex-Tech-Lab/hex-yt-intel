@@ -438,6 +438,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, []);
 
+  // Simple mode's rightPanelItems is always [] and never transitions (there
+  // is nothing to animate an exit for), so the right column is fully
+  // omitted there. Any other mode's rightPanelItems CAN transition between
+  // populated and empty at runtime (async data, mode toggles) -- for those,
+  // AnimatePresence must stay mounted so it can play the exit animation.
+  const hasRightPanel = effectiveViewMode !== "simple";
   const rightPanelItems = useMemo(
     () =>
       effectiveViewMode === "simple"
@@ -546,7 +552,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
-  // user can decide whether to re-analyze (a re-run bypasses the cache).
+  // user can decide whether to re-analyze (a re-run skips the cache).
   //
   // Derived from `analysis.analysis_markdown` via `parseUcisDimensionNumbers` --
   // the SAME canonical, content-based presence check AnalysisHistory's WIP card
@@ -864,20 +870,32 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
         }
         rightPanel={
-          <AnimatePresence mode="wait">
-            {rightPanelItems.length > 0 && (
-              <motion.div
-                key="right-panel"
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 20, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full overflow-y-auto"
-              >
-                <RightPanelAccordion items={rightPanelItems} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          // `rightPanel` itself must be null (not a truthy-but-empty
+          // AnimatePresence) whenever there's nothing to show, so
+          // DashboardLayout's grid collapses to 2 columns in Simple mode
+          // instead of reserving an empty 390px column. But AnimatePresence
+          // must stay MOUNTED across that same rightPanelItems transition
+          // whenever there IS content to animate -- unmounting the
+          // AnimatePresence wrapper itself (not just its child) skips exit
+          // animations entirely on populated -> empty (Cubic review,
+          // PR #291): Framer Motion can only animate a child's exit while
+          // AnimatePresence remains mounted to detect its removal.
+          hasRightPanel ? (
+            <AnimatePresence mode="wait">
+              {rightPanelItems.length > 0 && (
+                <motion.div
+                  key="right-panel"
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 20, opacity: 0 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full overflow-y-auto"
+                >
+                  <RightPanelAccordion items={rightPanelItems} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          ) : null
         }
         dock={
           <ChatDock
