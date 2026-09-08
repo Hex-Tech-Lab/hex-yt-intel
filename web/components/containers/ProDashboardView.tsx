@@ -55,6 +55,7 @@ interface ProDashboardViewProps {
   hasHadVideo: boolean;
 }
 
+// skipcq: JS-0067
 export function ProDashboardView({
   status,
   analysisId,

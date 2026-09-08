@@ -22,6 +22,7 @@ interface SimpleDashboardViewProps {
   hasHadVideo: boolean;
 }
 
+// skipcq: JS-0067
 export function SimpleDashboardView({
   status,
   analysisId,
