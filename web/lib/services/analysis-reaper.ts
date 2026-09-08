@@ -20,8 +20,20 @@ import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+// ADR 021 Phase 3 — the requeue-partial middle branch lives in its sibling
+// module (same "kept as a sibling, not merged" split dimension-remediation.ts
+// documents); the reaper owns terminal settlement, the sibling owns the
+// non-terminal requeue bookkeeping.
+import { REMEDIATION_MAX_RETRIES_FALLBACK, tryRequeuePartial } from '@/lib/services/analysis-requeue';
+import type { ReapOutcome, SettlePatch } from '@/lib/services/analysis-requeue';
 import type { BillingStatus, ValidationReportStatus, DimensionStatus } from '@/lib/types/validation-report';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
+
+// Back-compat re-exports: the requeue-partial outcome and the shared patch
+// shape are part of this module's public surface (existing consumers import
+// them from here).
+export type { ReapOutcome, SettlePatch } from '@/lib/services/analysis-requeue';
 
 /**
  * Minimum dimensions for a partial analysis to be salvaged as `completed`.
@@ -63,14 +75,20 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
   throw lastError;
 };
 
-export type ReapOutcome = 'completed' | 'failed';
-
 /**
  * Pure decision — given a stuck row's markdown, decide salvage-vs-fail and
  * report the derived dimension count. Exported for unit testing.
+ *
+ * Return type is deliberately the narrow terminal subset of ReapOutcome: the
+ * markdown alone can never justify a requeue (requeue needs per-chunk
+ * checkpoint data + the retry count, neither of which lives in the markdown).
+ * The requeue-partial branch is decided by analysis-requeue.ts's
+ * decideRequeuePartial, fed by analysis_chunks — keeping the two decisions'
+ * data sources separate means no consumer of this function can silently fall
+ * through requeue-partial to a terminal state at the type level.
  */
 export function decideReapOutcome(analysisMarkdown: string | null | undefined): {
-  outcome: ReapOutcome;
+  outcome: Exclude<ReapOutcome, 'requeue-partial'>;
   dimensionCount: number;
 } {
   // Count across BOTH persisted formats (```json-fenced payload and stitched
@@ -87,6 +105,8 @@ export interface SweepResult {
   scanned: number;
   completed: number;
   failed: number;
+  /** ADR 021 Phase 3: rows requeued as partial-and-retryable (NOT settled — still `processing`). */
+  requeued: number;
   raced: number; // rows a concurrent settle won before us
 }
 
@@ -94,13 +114,6 @@ interface StuckRow {
   id: string;
   analysis_markdown: string | null;
   validation_report: Record<string, unknown> | null;
-}
-
-export interface SettlePatch {
-  billing_status: BillingStatus;
-  validation_passed: boolean;
-  validation_report: Record<string, unknown>;
-  updated_at: string;
 }
 
 /**
@@ -233,7 +246,7 @@ export async function tryChunkRecovery(
   analysisId: string,
   existingReport: unknown,
   persistenceAdapter: SupabasePersistenceAdapter
-): Promise<{ outcome: ReapOutcome } | null> {
+): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
   const service = getSupabaseServiceClient();
   const { data, error } = await service
     .from('analysis_chunks')
@@ -333,7 +346,23 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
   if (error) throw error;
 
   const stuck = (data ?? []) as StuckRow[];
-  const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, raced: 0 };
+  const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, requeued: 0, raced: 0 };
+
+  // `remediation.maxRetries` (the shared requeue/remediation ceiling) is
+  // resolved at most once per sweep, and only if some row actually needs it —
+  // the same "resolve once per run" convention the remediation harness applies
+  // to its cascade/budget resolution.
+  let maxRetriesCache: number | null = null;
+  const resolveMaxRetries = async (): Promise<number> => {
+    if (maxRetriesCache === null) {
+      const settings = await SupabaseSettingsAdapter.getRegistrySettings(
+        ['remediation.maxRetries'],
+        { 'remediation.maxRetries': REMEDIATION_MAX_RETRIES_FALLBACK }
+      );
+      maxRetriesCache = Number(settings['remediation.maxRetries']) || REMEDIATION_MAX_RETRIES_FALLBACK;
+    }
+    return maxRetriesCache;
+  };
 
   for (const row of stuck) {
     // Chunk-based recovery is tried FIRST and is strictly additive: on any
@@ -357,6 +386,33 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     }
 
     const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
+
+    // ADR 021 Phase 3 — requeue-partial middle branch, evaluated only for a
+    // row the markdown path would fail: it may still hold genuinely-persisted
+    // dimensions in analysis_chunks (Phase 1's checkpoint) that the
+    // markdown-only decision cannot see. Strictly additive — 0-covered and
+    // ceiling-hit rows return null and fall through to the EXISTING failed
+    // settle unchanged, same philosophy as chunk recovery above.
+    if (outcome === 'failed') {
+      try {
+        const requeued = await tryRequeuePartial(row, persistenceAdapter, await resolveMaxRetries());
+        if (requeued === 'requeued') {
+          result.requeued++;
+          continue;
+        }
+        if (requeued === 'raced') {
+          result.raced++;
+          continue;
+        }
+        // null → not a requeue candidate; fall through to the existing failed settle
+      } catch (requeueErr) {
+        Sentry.captureException(requeueErr, {
+          tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
+          extra: { analysisId: row.id },
+        });
+        // fall through intentionally — the terminal settle below still runs
+      }
+    }
 
     // Single-winner UPDATE: only mutate rows STILL `processing`, so a concurrent
     // legitimate settle (which also writes billing_status) wins the race and we
