@@ -10,7 +10,9 @@ import {
   Icon,
   StatusBadge,
   ChapterChip,
+  HighlightsChip,
 } from "@/components/templates/_shared/primitives";
+import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
 
@@ -21,7 +23,7 @@ interface ProDashboardViewProps {
   timelineEntityData: any;
   setSelectedNodeId: (id: string | null) => void;
   consoleTab: "synthesis" | "graph";
-  setConsoleTab: (t: "synthesis" | "graph") => void;
+  setConsoleTab: (tab: "synthesis" | "graph") => void;
   graph: KnowledgeGraph;
   digest: any;
   digestLoading: boolean;
@@ -33,7 +35,7 @@ interface ProDashboardViewProps {
   chapters: any[];
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
-  setSelectedDimensionKey: (k: string | null) => void;
+  setSelectedDimensionKey: (dimensionKey: string | null) => void;
   selectedNodeId: string | null;
   handleSelectNode: (id: string | null) => void;
   hasHadVideo: boolean;
@@ -63,6 +65,7 @@ export function ProDashboardView({
   handleSelectNode,
   hasHadVideo,
 }: ProDashboardViewProps) {
+  const { hasHighlights, count: highlightsCount } = useHighlightsStatus(analysisId, status, digestLoading);
   return (
     <>
       {hasHadVideo && (
@@ -165,6 +168,7 @@ export function ProDashboardView({
                       chaptersStatus === "loaded" ? chapters.length > 0 : null
                     }
                   />
+                  <HighlightsChip hasHighlights={hasHighlights} count={highlightsCount} />
                 </div>
               )}
               <DimensionAccordion
