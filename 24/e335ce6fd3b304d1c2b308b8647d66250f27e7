@@ -1,0 +1,21 @@
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_27a98410ea5034::t_bc0ecd49c704a8 93-112
+web/components/dashboard/HighlightsTrack.tsx
+  s_27a98410ea5034::t_535d179a23afb3 162-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "24e335ce6fd3b304d1c2b308b8647d66250f27e7",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
