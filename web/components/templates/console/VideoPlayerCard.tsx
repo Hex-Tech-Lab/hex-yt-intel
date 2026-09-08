@@ -7,16 +7,13 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
 import { HighlightsTransitionOverlay } from '@/components/dashboard/HighlightsTransitionOverlay';
+// PLAYBACK_POLL_INTERVAL_MS lives in highlights-settings.ts, not here --
+// HighlightsTrack.tsx (shared by the public, store-free PublicHighlightsReel)
+// needs it too, and importing this file's own useVideoStore dependency into
+// the public bundle was a real bug (Cubic review, PR #300).
+import { PLAYBACK_POLL_INTERVAL_MS } from '@/lib/utils/highlights-settings';
 
 import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
-
-/** Playback-position poll cadence -- single source of truth, hoisted to
- *  module level so other components that visualize `currentPlaybackSeconds`
- *  (e.g. HighlightsTrack.tsx's playhead needle) can size their own
- *  animation durations against the real interval instead of duplicating
- *  "250ms" as an independent guess (Cubic review, PR #300: an animation
- *  duration shorter than this poll interval visibly pauses between ticks). */
-export const PLAYBACK_POLL_INTERVAL_MS = 250;
 
 export function VideoPlayerCard() {
   const containerRef = useRef<HTMLDivElement>(null);

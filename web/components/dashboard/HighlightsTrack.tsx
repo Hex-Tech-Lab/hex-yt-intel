@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Tooltip } from '@astryxdesign/core';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { useVideoStore } from '@/store/useVideoStore';
-import { PLAYBACK_POLL_INTERVAL_MS } from '@/components/templates/console/VideoPlayerCard';
+import { PLAYBACK_POLL_INTERVAL_MS } from '@/lib/utils/highlights-settings';
 
 /**
  * Track height in px -- the single source of truth for the scrubber's own
