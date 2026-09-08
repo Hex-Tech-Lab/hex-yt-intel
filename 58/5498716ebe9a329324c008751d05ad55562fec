@@ -1,0 +1,16 @@
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  h_60000122af7b55 174-226,228
+web/hooks/useAutoRestoreAnalysis.ts
+  h_60000122af7b55 76-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "585498716ebe9a329324c008751d05ad55562fec",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
