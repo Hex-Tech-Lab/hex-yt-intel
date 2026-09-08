@@ -171,4 +171,58 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
     unmountAux();
     unmount();
   });
+
+  it('pasting a URL for a stale/dead analysis (check route status=error) sets error state immediately without fetching the full analysis', async () => {
+    // Negative test for the early-bail guard added 2026-09-08.
+    // Reproduces: analysis 32aeeb78, billing_status='processing', worker died
+    // mid-stream (2/5 chunks), check route returns status='error' (row > 120s
+    // old). Before the fix, the hook would enter reattach mode via
+    // `restoreData.analysisStatus === 'incomplete'`, then useStreamReattach
+    // would immediately fire the error — "Re-attached → 0/11 → error".
+    // After the fix, the hook bails at the check-route error, sets status='error'
+    // directly, and never issues the full-analysis fetch.
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'Analysis generation timed out. Please try again.' }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+      // Full-analysis fetch must NOT be called — if this branch is hit, the
+      // test will still resolve (to avoid hanging), but the assertion below
+      // that fetchMock was only called once will catch the regression.
+      return Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
+      initialProps: { url: '' },
+    });
+
+    rerender({ url: PASTED_URL });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/analyses/check'));
+    });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('error');
+    });
+
+    // Guard: the full-analysis fetch must NOT have fired — the hook should
+    // have bailed immediately after the check-route error response.
+    const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = typeof args[0] === 'string' ? args[0] : String(args[0]);
+      return url.includes(`/api/analyses/${ANALYSIS_ID}`) && !url.includes('/check') && !url.includes('/status');
+    });
+    expect(fullFetchCalls).toHaveLength(0);
+
+    unmount();
+  });
 });
+

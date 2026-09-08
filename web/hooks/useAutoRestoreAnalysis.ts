@@ -73,6 +73,20 @@ export function useAutoRestoreAnalysis(url: string) {
         if (data.exists && data.analysisId) {
           console.log('[AutoRestore] Existing analysis detected for video, fetching details:', data.analysisId);
 
+          // Early bail: the check route already determined this row is terminal
+          // (stale processing row > 120s with no completed fallback — billing_status
+          // stuck at 'processing', analysis_markdown null, worker died before
+          // persist finalized). Without this guard, the `restoreData.analysisStatus
+          // === 'incomplete'` branch below would enter reattach mode and immediately
+          // error via useStreamReattach (confusing "Re-attached → 0/11 → error"
+          // sequence confirmed in production, analysis 32aeeb78, 2026-09-08).
+          if (data.status === 'error') {
+            startTransition(() => {
+              setStatus('error');
+            });
+            return;
+          }
+
           // Trigger the restoration flow just like history restoration
           let restoreRes;
           try {
