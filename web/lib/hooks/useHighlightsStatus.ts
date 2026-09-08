@@ -116,7 +116,10 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
   // effect's own re-trigger -- if analysisId changed but this render still
   // runs before the effect above has fired (React renders synchronously,
   // effects run after paint), `result` could briefly still hold the
-  // PREVIOUS analysisId's settled value.
-  if (loadedForAnalysisIdRef.current !== analysisId) return IDLE;
+  // PREVIOUS analysisId's settled value. Must also check `status` (second
+  // CodeRabbit round): if the SAME analysisId re-analyzes (status flips
+  // complete->processing), loadedForAnalysisIdRef still matches, so the
+  // ownership check alone wouldn't catch the now-stale settled result.
+  if (status !== 'complete' || loadedForAnalysisIdRef.current !== analysisId) return IDLE;
   return result;
 }
