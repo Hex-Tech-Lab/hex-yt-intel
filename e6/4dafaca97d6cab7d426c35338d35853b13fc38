@@ -1,0 +1,23 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_27a98410ea5034::t_3b644fec8f74ca 177
+web/lib/hooks/useHighlightsStatus.ts
+  s_27a98410ea5034::t_c763ea89dffdf9 1
+  s_27a98410ea5034::t_f817f022116185 77,82-92,98
+  s_27a98410ea5034::t_8fd7a8d78a8dee 29-35,43-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e64dafaca97d6cab7d426c35338d35853b13fc38",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
