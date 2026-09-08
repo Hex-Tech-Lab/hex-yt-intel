@@ -3,15 +3,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SimpleDashboardView } from "../SimpleDashboardView";
 
-// Mock dynamic WordCloud
-vi.mock("next/dynamic", () => ({
-  default: () => {
-    return function MockWordCloud() {
-      return <div data-testid="mock-word-cloud">WordCloud</div>;
-    };
-  },
-}));
-
 // Mock other components to simplify test
 vi.mock("@/components/organisms/ExecutiveSummary", () => ({
   ExecutiveSummary: () => <div data-testid="mock-executive-summary" />,
@@ -27,27 +18,58 @@ vi.mock("@/components/templates/console/BentoMetadata", () => ({
 }));
 
 describe("SimpleDashboardView", () => {
-  it("renders WordCloud when status is complete and graph nodes exist", () => {
-    const mockGraph = {
-      nodes: [{ id: "1", label: "Test", weight: 0.5 }],
-      edges: []
-    };
-
+  it("renders the executive summary when status is complete", () => {
     render(
       <SimpleDashboardView
         status="complete"
         analysisId="test-1"
-        videoMetadata={{}}
-        digest={{}}
+        videoMetadata={null}
+        digest={{ overview: "", snapshot: "", takeaways: [] }}
         digestLoading={false}
-        mappedDigestData={[]}
-        graph={mockGraph}
-        selectedNodeId={null}
-        onSelectNode={vi.fn()}
-        hasHadVideo={true}
-      />
+        mappedDigestData={null}
+        partialInfo={null}
+        TOTAL_DIMENSIONS={11}
+        hasHadVideo
+      />,
     );
 
-    expect(screen.getByTestId("mock-word-cloud")).toBeTruthy();
+    expect(screen.getByTestId("mock-executive-summary")).toBeTruthy();
+  });
+
+  it("renders the partial-analysis warning when partialInfo is present (parity with Pro)", () => {
+    render(
+      <SimpleDashboardView
+        status="complete"
+        analysisId="test-1"
+        videoMetadata={null}
+        digest={null}
+        digestLoading={false}
+        mappedDigestData={null}
+        partialInfo={{ presentCount: 10, missing: [5] }}
+        TOTAL_DIMENSIONS={11}
+        hasHadVideo
+      />,
+    );
+
+    expect(screen.getByText(/Partial analysis warning/)).toBeTruthy();
+    expect(screen.getByText(/10 of 11 dimensions generated/)).toBeTruthy();
+  });
+
+  it("omits the partial-analysis warning when partialInfo is null", () => {
+    render(
+      <SimpleDashboardView
+        status="complete"
+        analysisId="test-1"
+        videoMetadata={null}
+        digest={null}
+        digestLoading={false}
+        mappedDigestData={null}
+        partialInfo={null}
+        TOTAL_DIMENSIONS={11}
+        hasHadVideo
+      />,
+    );
+
+    expect(screen.queryByText(/Partial analysis warning/)).toBeNull();
   });
 });

@@ -59,6 +59,16 @@ const MindMap = dynamic(
     loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
   },
 );
+const WordCloud = dynamic(
+  () =>
+    import("@/components/templates/console/WordCloud").then((mod) => ({
+      default: mod.WordCloud,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
+  },
+);
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
@@ -82,6 +92,8 @@ import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
 import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
 import { useRelations } from "@/hooks/useRelations";
 import type { ConsoleProfile } from "@/lib/services/console-profile";
+import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
+import type { KnowledgeGraphV2 } from "@/lib/types/synthesis-nucleus";
 import { SimpleDashboardView } from "./SimpleDashboardView";
 import { ProDashboardView } from "./ProDashboardView";
 import { ProcessingLog } from "@/components/templates/console/ProcessingLog";
@@ -103,6 +115,30 @@ export interface DashboardContainerProps {
   profile: ConsoleProfile;
 }
 
+// Reference-stable empty fallback for displayGraph -- an inline `{nodes:[],
+// edges:[]}` literal would be a new object every render, defeating
+// displayGraph's own memoization in the no-data case.
+const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
+
+// nucleusKnowledgeGraph (KnowledgeGraphV2, the live-streaming source) and
+// `graph` (KnowledgeGraph, the Pro-only fetched/merged source) aren't
+// structurally compatible -- KGNodeV2 has no `inPersona` field, which
+// MergedGraphNode requires. Neither WordCloud nor copyPanelContent's
+// word-cloud branch ever reads `.inPersona`, so defaulting it false here is
+// a real, typed adapter rather than an `as any` cast past the mismatch
+// (Codacy ErrorProne review, PR #302).
+// skipcq: JS-0067
+function toDisplayGraph(
+  source: KnowledgeGraph | KnowledgeGraphV2,
+): KnowledgeGraph {
+  return {
+    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+    edges: source.edges,
+    rootId: source.rootId,
+  };
+}
+
+// skipcq: JS-0067
 function cleanDimensionContent(raw: string): string {
   if (!raw) return "";
   let content = raw.trim();
@@ -130,6 +166,7 @@ function cleanDimensionContent(raw: string): string {
   return content.trim();
 }
 
+// skipcq: JS-0067, JS-R1005
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
   // this store now also carries currentPlaybackSeconds, updated 4x/sec
@@ -239,6 +276,29 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     nucleusAnalysis?.id ?? null,
     status === "complete" && effectiveViewMode === "pro",
   );
+  // Word Cloud's data source. `graph` is only fetched in Pro mode (see
+  // useKnowledgeGraph above), so Simple mode -- and Pro before that fetch
+  // resolves -- falls back to nucleusKnowledgeGraph, which streams in
+  // incrementally during analysis. This lets the Word Cloud build live
+  // alongside generation in both view modes, not just after status ===
+  // "complete" (explicit product intent: it's meant to be an engaging
+  // while-you-wait visualization, not a post-hoc summary widget).
+  // Memoized on [graph, nucleusKnowledgeGraph] -- both are reference-stable
+  // (useKnowledgeGraph's useState only re-sets on real content change;
+  // nucleusKnowledgeGraph's store setter gates on a nodes/edges length
+  // check before calling set()) -- so without this memo, displayGraph would
+  // be a fresh object every render, needlessly invalidating rightPanelItems'
+  // own memo (which depends on it) on every unrelated re-render (/simplify
+  // efficiency-lens finding, PR #302 review).
+  const displayGraph = useMemo(
+    () =>
+      graph?.nodes?.length
+        ? graph
+        : nucleusKnowledgeGraph?.nodes?.length
+          ? toDisplayGraph(nucleusKnowledgeGraph)
+          : EMPTY_GRAPH,
+    [graph, nucleusKnowledgeGraph],
+  );
   const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
   // switch via in-page `activeNav` state (not a route change), so the layout's
@@ -269,9 +329,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleCopy = useCallback(
     (id: string) => {
-      copyPanelContent(id as PanelId, { graph, insights });
+      // word-cloud is fed `displayGraph` (falls back to the streaming
+      // nucleusKnowledgeGraph while the Pro-only `graph` fetch hasn't
+      // resolved, or in Simple mode where `graph` is never fetched at all)
+      // -- copying it from `graph` alone would silently produce empty text
+      // during that fallback window (Sourcery review, PR #302).
+      copyPanelContent(id as PanelId, {
+        graph: id === "word-cloud" ? displayGraph : graph,
+        insights,
+      });
     },
-    [graph, insights],
+    [graph, displayGraph, insights],
   );
 
   const handlePanelExport = useCallback(
@@ -290,8 +358,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       if (!id) return;
 
       const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
-      if (entityTimeSeekEnabled && graph.nodes) {
-        const node = graph.nodes.find((n) => n.id === id);
+      // displayGraph, not graph: WordCloud renders displayGraph (which can
+      // be the streaming nucleusKnowledgeGraph while graph is still empty --
+      // see displayGraph's own comment above), so a click there must resolve
+      // against the same graph it was rendered from, or the id it emits
+      // can't be found (Sourcery review, PR #302). displayGraph is always a
+      // superset of graph's own nodes when graph is populated, so this is
+      // safe for the KnowledgeGraphCanvas/MindMap/Insights callers too.
+      if (entityTimeSeekEnabled && displayGraph.nodes) {
+        const node = displayGraph.nodes.find((n) => n.id === id);
         if (node) {
           const dim = useAnalysisDimensionsStore
             .getState()
@@ -376,7 +451,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         }
       }
     },
-    [graph.nodes, chapters],
+    [displayGraph.nodes, chapters],
   );
 
   // Cubic review, PR #224: this previously read
@@ -450,90 +525,123 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, []);
 
-  // Simple mode's rightPanelItems is always [] and never transitions (there
-  // is nothing to animate an exit for), so the right column is fully
-  // omitted there. Any other mode's rightPanelItems CAN transition between
-  // populated and empty at runtime (async data, mode toggles) -- for those,
-  // AnimatePresence must stay mounted so it can play the exit animation.
-  const hasRightPanel = effectiveViewMode !== "simple";
-  const rightPanelItems = useMemo(
-    () =>
-      effectiveViewMode === "simple"
-        ? []
-        : [
-            {
-              id: "insights",
-              title: "Insights",
-              defaultOpen: true,
-              content: () => (
-                <IntelligencePanel
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                  insights={insights}
-                  insightsLoading={insightsLoading}
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("insights");
-                else if (action === "export") handlePanelExport("insights");
-                else handleExpandPanel("insights", action);
-              },
-            },
-            {
-              id: "knowledge-graph",
-              title: "Knowledge Graph",
-              content: () => (
-                <KnowledgeGraphCanvas
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                  onFocus={(id) => startTransition(() => setSelectedNodeId(id))}
-                  compact
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("knowledge-graph");
-                else if (action === "export")
-                  handlePanelExport("knowledge-graph");
-                else handleExpandPanel("knowledge-graph", action);
-              },
-            },
-            {
-              id: "mind-map",
-              title: "Mind Map",
-              content: () => (
-                <MindMap
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("mind-map");
-                else if (action === "export") handlePanelExport("mind-map");
-                else handleExpandPanel("mind-map", action);
-              },
-            },
-          ],
-    [
-      effectiveViewMode,
-      graph,
-      selectedNodeId,
-      insights,
-      insightsLoading,
-      handleCopy,
-      handlePanelExport,
-      handleExpandPanel,
-      handleSelectNode,
-    ],
-  );
+  const rightPanelItems = useMemo(() => {
+    // Word Cloud lives in the right panel in BOTH Simple and Pro, and builds
+    // live during analysis (displayGraph, not gated on status === "complete")
+    // -- it's the intended while-you-wait engagement visualization, not a
+    // Pro-only or post-hoc widget. Only collapsed when there's genuinely
+    // nothing to show yet.
+    const items: {
+      id: string;
+      title: string;
+      defaultOpen?: boolean;
+      content: () => React.ReactNode;
+      onAction: (
+        action: "vertical" | "left" | "diagonal" | "copy" | "export",
+      ) => void;
+    }[] = [];
+
+    if (displayGraph.nodes.length > 0) {
+      items.push({
+        id: "word-cloud",
+        title: "Word Cloud",
+        defaultOpen: true,
+        content: () => (
+          <WordCloud
+            graph={displayGraph}
+            selectedId={selectedNodeId}
+            onSelect={handleSelectNode}
+          />
+        ),
+        onAction: (action) => {
+          if (action === "copy") handleCopy("word-cloud");
+          else if (action === "export") handlePanelExport("word-cloud");
+          else handleExpandPanel("word-cloud", action);
+        },
+      });
+    }
+
+    if (effectiveViewMode === "pro") {
+      items.push(
+        {
+          id: "insights",
+          title: "Insights",
+          defaultOpen: true,
+          content: () => (
+            <IntelligencePanel
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+              insights={insights}
+              insightsLoading={insightsLoading}
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("insights");
+            else if (action === "export") handlePanelExport("insights");
+            else handleExpandPanel("insights", action);
+          },
+        },
+        {
+          id: "knowledge-graph",
+          title: "Knowledge Graph",
+          content: () => (
+            <KnowledgeGraphCanvas
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+              onFocus={(id) => startTransition(() => setSelectedNodeId(id))}
+              compact
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("knowledge-graph");
+            else if (action === "export")
+              handlePanelExport("knowledge-graph");
+            else handleExpandPanel("knowledge-graph", action);
+          },
+        },
+        {
+          id: "mind-map",
+          title: "Mind Map",
+          content: () => (
+            <MindMap
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("mind-map");
+            else if (action === "export") handlePanelExport("mind-map");
+            else handleExpandPanel("mind-map", action);
+          },
+        },
+      );
+    }
+
+    return items;
+  }, [
+    effectiveViewMode,
+    displayGraph,
+    graph,
+    selectedNodeId,
+    insights,
+    insightsLoading,
+    handleCopy,
+    handlePanelExport,
+    handleExpandPanel,
+    handleSelectNode,
+  ]);
+  // rightPanelItems can transition between populated and empty at runtime in
+  // BOTH modes now (WordCloud appears/disappears with displayGraph; Pro's
+  // extra items depend on async data too) -- AnimatePresence in the render
+  // below must stay mounted regardless of mode so it can always play the
+  // exit animation. (Previously Simple's rightPanelItems was hardcoded to
+  // `[]` and never transitioned, so this alias existed only to skip
+  // AnimatePresence for Simple -- no longer valid now that Simple has a
+  // right panel too.)
+  const hasRightPanel = rightPanelItems.length > 0;
 
   useEffect(() => {
     if (activeNav !== "console") {
@@ -875,7 +983,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             onSearchSubmit={handleSearchSubmit}
             onExport={handleExport}
             tier={tierLabel}
-            hasRightPanel={rightPanelItems.length > 0}
+            hasRightPanel={hasRightPanel}
             account={
               <Avatar name={accountAvatarName} alt={profile.email} size={32} />
             }
@@ -940,28 +1048,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   isRepeat={status === "complete" || hasExistingAnalysis}
                 />
 
-                {effectiveViewMode === "simple" ? (() => {
-                  const simpleViewGraph = (graph && graph.nodes && graph.nodes.length > 0)
-                    ? graph
-                    : (nucleusKnowledgeGraph && nucleusKnowledgeGraph.nodes && nucleusKnowledgeGraph.nodes.length > 0)
-                      ? nucleusKnowledgeGraph
-                      : { nodes: [], edges: [] };
-                  
-                  return (
-                    <SimpleDashboardView
-                      status={status}
-                      analysisId={analysisId}
-                      videoMetadata={videoMetadata}
-                      digest={digest}
-                      digestLoading={digestLoading}
-                      mappedDigestData={mappedDigestData}
-                      graph={simpleViewGraph as any}
-                      selectedNodeId={selectedNodeId}
-                      onSelectNode={handleSelectNode}
-                      hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
-                    />
-                  );
-                })() : (
+                {effectiveViewMode === "simple" ? (
+                  <SimpleDashboardView
+                    status={status}
+                    analysisId={analysisId}
+                    videoMetadata={videoMetadata}
+                    digest={digest}
+                    digestLoading={digestLoading}
+                    mappedDigestData={mappedDigestData}
+                    partialInfo={partialInfo}
+                    TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
+                    hasHadVideo={Boolean(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                  />
+                ) : (
                   <ProDashboardView
                     status={status}
                     analysisId={analysisId}
@@ -984,7 +1083,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     setSelectedDimensionKey={(k) => startTransition(() => setSelectedDimensionKey(k))}
                     selectedNodeId={selectedNodeId}
                     handleSelectNode={handleSelectNode}
-                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                    hasHadVideo={Boolean(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
                   />
                 )}
               </div>

@@ -1,34 +1,28 @@
-import dynamic from "next/dynamic";
 import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
 import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
-import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
-
-const WordCloud = dynamic(
-  () =>
-    import("@/components/templates/console/WordCloud").then((mod) => ({
-      default: mod.WordCloud,
-    })),
-  {
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
-  },
-);
+import {
+  PartialAnalysisWarning,
+  type PartialAnalysisInfo,
+} from "@/components/dashboard/PartialAnalysisWarning";
+import type { VideoMetadata } from "@/lib/types";
+import type { StoredExecutiveDigest } from "@/lib/ports/ExecutiveDigestPorts";
+import type { ExecutiveSummaryData } from "@/components/organisms/ExecutiveSummary";
 
 interface SimpleDashboardViewProps {
   status: string;
   analysisId: string | null;
-  videoMetadata: any;
-  digest: any;
+  videoMetadata: VideoMetadata | null;
+  digest: StoredExecutiveDigest | null;
   digestLoading: boolean;
-  mappedDigestData: any;
-  graph: KnowledgeGraph;
-  selectedNodeId: string | null;
-  onSelectNode: (id: string | null) => void;
+  mappedDigestData: ExecutiveSummaryData | null;
+  partialInfo: PartialAnalysisInfo | null;
+  TOTAL_DIMENSIONS: number;
   hasHadVideo: boolean;
 }
 
+// skipcq: JS-0067, JS-R1005
 export function SimpleDashboardView({
   status,
   analysisId,
@@ -36,9 +30,8 @@ export function SimpleDashboardView({
   digest,
   digestLoading,
   mappedDigestData,
-  graph,
-  selectedNodeId,
-  onSelectNode,
+  partialInfo,
+  TOTAL_DIMENSIONS,
   hasHadVideo,
 }: SimpleDashboardViewProps) {
   return (
@@ -81,16 +74,11 @@ export function SimpleDashboardView({
               loading={digestLoading}
             />
           )}
-          
-          {status === "complete" && graph.nodes.length > 0 && (
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 h-[400px]">
-              <WordCloud
-                graph={graph}
-                selectedId={selectedNodeId}
-                onSelect={onSelectNode}
-              />
-            </div>
-          )}
+
+          <PartialAnalysisWarning
+            partialInfo={partialInfo}
+            totalDimensions={TOTAL_DIMENSIONS}
+          />
         </div>
       )}
     </>

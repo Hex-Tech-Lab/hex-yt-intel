@@ -5,34 +5,48 @@ import { VisualizationPanel } from "@/components/dashboard/VisualizationPanel";
 import { DimensionAccordion } from "@/components/dashboard/DimensionAccordion";
 import { ShareButton } from "@/components/dashboard/ShareButton";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
+import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
 import {
-  Icon,
   StatusBadge,
   ChapterChip,
   HighlightsChip,
 } from "@/components/templates/_shared/primitives";
+import {
+  PartialAnalysisWarning,
+  type PartialAnalysisInfo,
+} from "@/components/dashboard/PartialAnalysisWarning";
 import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
+import type { VideoMetadata } from "@/lib/types";
+import type { StoredExecutiveDigest } from "@/lib/ports/ExecutiveDigestPorts";
+import type { ExecutiveSummaryData } from "@/components/organisms/ExecutiveSummary";
+import type { AuxElementStatus } from "@/hooks/useAuxElementStatus";
+import type { ChapterEntry } from "@/store/useChaptersStore";
+import type { RankedEntityMention } from "@/lib/utils/entity-time-seek";
 
 interface ProDashboardViewProps {
   status: string;
   analysisId: string | null;
-  videoMetadata: any;
-  timelineEntityData: any;
+  videoMetadata: VideoMetadata | null;
+  timelineEntityData: {
+    entityId: string;
+    entityLabel: string;
+    mentions: RankedEntityMention[];
+  } | null;
   setSelectedNodeId: (id: string | null) => void;
   consoleTab: "synthesis" | "graph";
   setConsoleTab: (tab: "synthesis" | "graph") => void;
   graph: KnowledgeGraph;
-  digest: any;
+  digest: StoredExecutiveDigest | null;
   digestLoading: boolean;
-  mappedDigestData: any;
-  partialInfo: any;
+  mappedDigestData: ExecutiveSummaryData | null;
+  partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
-  auxStatus: any;
+  auxStatus: AuxElementStatus | null;
   chaptersStatus: string;
-  chapters: any[];
+  chapters: ChapterEntry[];
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
   setSelectedDimensionKey: (dimensionKey: string | null) => void;
@@ -41,6 +55,7 @@ interface ProDashboardViewProps {
   hasHadVideo: boolean;
 }
 
+// skipcq: JS-0067, JS-R1005
 export function ProDashboardView({
   status,
   analysisId,
@@ -71,6 +86,13 @@ export function ProDashboardView({
       {hasHadVideo && (
         <div className="flex flex-col gap-1">
           <VideoPlayerCard />
+          {status === "complete" && analysisId && (
+            <HighlightsScrubber
+              analysisId={analysisId}
+              videoDurationSeconds={videoMetadata?.duration ?? null}
+              digestLoading={digestLoading}
+            />
+          )}
           {timelineEntityData && (
             <EntityMentionTimeline
               entityId={timelineEntityData.entityId}
@@ -115,28 +137,10 @@ export function ProDashboardView({
                   loading={digestLoading}
                 />
               )}
-              {partialInfo && (
-                <div
-                  role="status"
-                  className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
-                >
-                  <Icon
-                    icon="solar:danger-triangle-linear"
-                    size={16}
-                    className="text-[var(--warn)] flex-shrink-0"
-                  />
-                  <div>
-                    <span className="font-mono font-bold text-[var(--warn)]">
-                      Partial analysis warning
-                    </span>
-                    {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                    <span className="text-[var(--ink-muted)]">
-                      Missing: {partialInfo.missing.join(", ")}.
-                    </span>
-                    {" Use Re-analyze to attempt the rest."}
-                  </div>
-                </div>
-              )}
+              <PartialAnalysisWarning
+                partialInfo={partialInfo}
+                totalDimensions={TOTAL_DIMENSIONS}
+              />
               {status === "complete" && auxStatus && (
                 <div
                   className="flex flex-wrap gap-2"
