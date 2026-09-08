@@ -140,6 +140,35 @@ describe('HighlightsScrubber', () => {
     });
   });
 
+  it('fetches fresh highlights for a NEW analysisId even while the previous analysisId still has cached highlights (CodeRabbit, PR #298)', async () => {
+    // Real bug: the "already have highlights, don't refetch on a digestLoading
+    // flip" guard checked `data` alone, so switching analysisId while old
+    // `data` still had highlights.length > 0 skipped the fetch entirely,
+    // leaving the PREVIOUS analysis's highlights rendered under the new one.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 1, end: 5, label: 'Analysis 1 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ highlights: [{ idx: 0, start: 2, end: 6, label: 'Analysis 2 highlight' }], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, rerender } = render(
+      <HighlightsScrubber analysisId="analysis-1" videoDurationSeconds={60} />
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(container.firstChild?.textContent).toContain('keypoints ready to play'));
+
+    rerender(<HighlightsScrubber analysisId="analysis-2" videoDurationSeconds={60} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]![0]).toContain('analysisId=analysis-2');
+  });
+
   it('collapses gracefully on fetch error without throwing', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1,7 +1,7 @@
 'use client';
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Spinner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
@@ -56,6 +56,12 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Tracks which analysisId `data` actually belongs to -- CodeRabbit finding
+  // on PR #298: `data` alone isn't enough to guard the fetch effect below,
+  // since switching to a NEW analysisId while the OLD analysisId's `data`
+  // still has highlights.length > 0 would skip fetching entirely and leave
+  // the previous analysis's highlights displayed under the new one.
+  const loadedForAnalysisIdRef = useRef<string | null>(null);
 
   const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
@@ -117,13 +123,17 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
   }, [analysisId, stop]);
 
   useEffect(() => {
-    // Already have real highlights for this analysis -- a later digestLoading
+    // Already have real highlights for THIS analysisId -- a later digestLoading
     // flip (e.g. a manual digest refresh) must not blank/refetch and cause a
-    // visible flicker. `data` is deliberately NOT in the dependency array:
-    // this is a guard read of the current value, not a re-trigger condition
-    // -- re-triggering on `data` changing would infinite-loop against this
-    // same effect's own setData call below.
-    if (data && data.highlights.length > 0) return;
+    // visible flicker. Checking loadedForAnalysisIdRef (not just `data`) is
+    // required: switching to a new analysisId while the old one's `data`
+    // still has highlights.length > 0 must NOT skip the fetch, or the new
+    // analysis would render the previous one's highlights (CodeRabbit, PR
+    // #298). `data` is deliberately NOT in the dependency array: this is a
+    // guard read of the current value, not a re-trigger condition -- re-
+    // triggering on `data` changing would infinite-loop against this same
+    // effect's own setData call below.
+    if (loadedForAnalysisIdRef.current === analysisId && data && data.highlights.length > 0) return;
 
     // AbortController: if analysisId changes again (or the component
     // unmounts) while this fetch is in flight, cancel the actual request --
@@ -156,6 +166,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
           }
         }
         setData(lastJson);
+        loadedForAnalysisIdRef.current = analysisId;
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           console.debug(`[HighlightsScrubber] fetch aborted for ${analysisId} (analysisId changed or unmounted)`);
