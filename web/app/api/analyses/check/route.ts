@@ -6,6 +6,8 @@ import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 import { VideoIdSchema } from '@/lib/types/contracts';
+import { getMissingDimensionNumbers } from '@/lib/services/chunk-presence';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export const runtime = 'edge';
 
@@ -109,12 +111,36 @@ export async function GET(request: NextRequest) {
       // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
       const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
 
+      // ADR 021 Phase 2 (presence-check-on-resume): on a terminal-error state
+      // (dead/stale/failed row), surface which dimensions are already durably
+      // covered by completed analysis_chunks rows, so a client retry can know
+      // what an LLM re-run would actually need to regenerate instead of
+      // blindly redoing all of it (live incident, analysis 32aeeb78:
+      // 2/5 chunks durable, a retry would re-pay all 5). Read-only surfacing —
+      // the selective-dispatch behavior change is Phase 4. Deliberately NOT
+      // computed on the 'processing' poll loop (hot path, reattach handles it)
+      // nor the 'complete' branch (definitionally empty). Fail-open: a
+      // presence-check failure must never break the check route's own
+      // status contract — omit the field and let the client proceed as before.
+      const isTerminalError =
+        validationReport.status === 'error' ||
+        existingAnalysis.billing_status === 'failed' ||
+        ageMs >= PROCESSING_STALE_MS;
+      let missingDimensions: number[] | undefined;
+      if (isTerminalError) {
+        missingDimensions = await getMissingDimensionNumbers(existingAnalysis.id, TOTAL_DIMENSIONS).catch((presenceError) => {
+          addBreadcrumb('Presence check (missing dimensions) failed', { analysisId: existingAnalysis.id, error: String(presenceError) }, 'database');
+          return undefined;
+        });
+      }
+
       if (validationReport.status === 'error' || existingAnalysis.billing_status === 'failed') {
         return NextResponse.json({
           status: 'error',
           exists: true,
           analysisId: existingAnalysis.id,
           error: validationReport.error || 'Analysis generation failed',
+          missingDimensions,
         }, { status: 200 });
       }
 
@@ -124,6 +150,7 @@ export async function GET(request: NextRequest) {
           exists: true,
           analysisId: existingAnalysis.id,
           error: 'Analysis generation timed out. Please try again.',
+          missingDimensions,
         }, { status: 200 });
       }
 

@@ -81,6 +81,14 @@ export function useAutoRestoreAnalysis(url: string) {
           // error via useStreamReattach (confusing "Re-attached → 0/11 → error"
           // sequence confirmed in production, analysis 32aeeb78, 2026-09-08).
           if (data.status === 'error') {
+            // ADR 021 Phase 2 (presence-check-on-resume): the check route
+            // surfaces which dimensions are already durably covered by
+            // completed analysis_chunks rows for this dead analysis. Log it
+            // so the retry decision is observable client-side (the selective
+            // "only fetch missing bundles" dispatch is Phase 4, not here).
+            if (Array.isArray(data.missingDimensions) && data.missingDimensions.length > 0) {
+              console.log('[AutoRestore] Analysis dead — dimensions still missing after salvageable chunks:', data.missingDimensions);
+            }
             startTransition(() => {
               setStatus('error');
             });

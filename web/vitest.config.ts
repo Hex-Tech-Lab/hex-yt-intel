@@ -48,6 +48,12 @@ export default defineConfig({
       'store/**/*.test.{ts,tsx}',
       'app/api/admin/logs/**/*.test.ts',
       'app/api/test-auth/**/*.test.ts',
+      // ADR 021 Phase 2: the analyses/check route gained an auth-bearing
+      // sibling test (qa-intel high finding: authorization-relevant file
+      // with no sibling regression test). Named explicitly, same rationale
+      // as the two app/api globs above -- a broad app/api glob would
+      // silently pick up unrelated future fixtures.
+      'app/api/analyses/check/**/*.test.ts',
       // Real coverage gap found 2026-08-20 (automated PR review P1): a
       // top-level web/middleware.test.ts matched none of the globs above --
       // same class of silent-non-execution as the .tsx gap documented
