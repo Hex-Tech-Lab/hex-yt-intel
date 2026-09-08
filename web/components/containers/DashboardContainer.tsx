@@ -59,6 +59,16 @@ const MindMap = dynamic(
     loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
   },
 );
+const WordCloud = dynamic(
+  () =>
+    import("@/components/templates/console/WordCloud").then((mod) => ({
+      default: mod.WordCloud,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
+  },
+);
 import { useEffectiveViewMode } from "@/lib/hooks/useEffectiveViewMode";
 import type { ConsoleViewMode } from "@/lib/stores/useConsoleViewStore";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
@@ -227,6 +237,21 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     nucleusAnalysis?.id ?? null,
     status === "complete" && effectiveViewMode === "pro",
   );
+  // Word Cloud's data source. `graph` is only fetched in Pro mode (see
+  // useKnowledgeGraph above), so Simple mode -- and Pro before that fetch
+  // resolves -- falls back to nucleusKnowledgeGraph, which streams in
+  // incrementally during analysis. This lets the Word Cloud build live
+  // alongside generation in both view modes, not just after status ===
+  // "complete" (explicit product intent: it's meant to be an engaging
+  // while-you-wait visualization, not a post-hoc summary widget).
+  const displayGraph =
+    graph && graph.nodes && graph.nodes.length > 0
+      ? graph
+      : nucleusKnowledgeGraph &&
+          nucleusKnowledgeGraph.nodes &&
+          nucleusKnowledgeGraph.nodes.length > 0
+        ? nucleusKnowledgeGraph
+        : { nodes: [], edges: [] };
   const [search, setSearch] = useState("");
   // Closes the mobile/tablet nav drawer. The console/history/settings views
   // switch via in-page `activeNav` state (not a route change), so the layout's
@@ -438,84 +463,114 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, []);
 
-  const rightPanelItems = useMemo(
-    () =>
-      effectiveViewMode === "simple"
-        ? []
-        : [
-            {
-              id: "insights",
-              title: "Insights",
-              defaultOpen: true,
-              content: () => (
-                <IntelligencePanel
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                  insights={insights}
-                  insightsLoading={insightsLoading}
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("insights");
-                else if (action === "export") handlePanelExport("insights");
-                else handleExpandPanel("insights", action);
-              },
-            },
-            {
-              id: "knowledge-graph",
-              title: "Knowledge Graph",
-              content: () => (
-                <KnowledgeGraphCanvas
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                  onFocus={(id) => startTransition(() => setSelectedNodeId(id))}
-                  compact
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("knowledge-graph");
-                else if (action === "export")
-                  handlePanelExport("knowledge-graph");
-                else handleExpandPanel("knowledge-graph", action);
-              },
-            },
-            {
-              id: "mind-map",
-              title: "Mind Map",
-              content: () => (
-                <MindMap
-                  graph={graph}
-                  selectedId={selectedNodeId}
-                  onSelect={handleSelectNode}
-                />
-              ),
-              onAction: (
-                action: "vertical" | "left" | "diagonal" | "copy" | "export",
-              ) => {
-                if (action === "copy") handleCopy("mind-map");
-                else if (action === "export") handlePanelExport("mind-map");
-                else handleExpandPanel("mind-map", action);
-              },
-            },
-          ],
-    [
-      effectiveViewMode,
-      graph,
-      selectedNodeId,
-      insights,
-      insightsLoading,
-      handleCopy,
-      handlePanelExport,
-      handleExpandPanel,
-      handleSelectNode,
-    ],
-  );
+  const rightPanelItems = useMemo(() => {
+    // Word Cloud lives in the right panel in BOTH Simple and Pro, and builds
+    // live during analysis (displayGraph, not gated on status === "complete")
+    // -- it's the intended while-you-wait engagement visualization, not a
+    // Pro-only or post-hoc widget. Only collapsed when there's genuinely
+    // nothing to show yet.
+    const items: {
+      id: string;
+      title: string;
+      defaultOpen?: boolean;
+      content: () => React.ReactNode;
+      onAction: (
+        action: "vertical" | "left" | "diagonal" | "copy" | "export",
+      ) => void;
+    }[] = [];
+
+    if (displayGraph.nodes.length > 0) {
+      items.push({
+        id: "word-cloud",
+        title: "Word Cloud",
+        defaultOpen: true,
+        content: () => (
+          <WordCloud
+            graph={displayGraph as any}
+            selectedId={selectedNodeId}
+            onSelect={handleSelectNode}
+          />
+        ),
+        onAction: (action) => {
+          if (action === "copy") handleCopy("word-cloud");
+          else if (action === "export") handlePanelExport("word-cloud");
+          else handleExpandPanel("word-cloud", action);
+        },
+      });
+    }
+
+    if (effectiveViewMode === "pro") {
+      items.push(
+        {
+          id: "insights",
+          title: "Insights",
+          defaultOpen: true,
+          content: () => (
+            <IntelligencePanel
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+              insights={insights}
+              insightsLoading={insightsLoading}
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("insights");
+            else if (action === "export") handlePanelExport("insights");
+            else handleExpandPanel("insights", action);
+          },
+        },
+        {
+          id: "knowledge-graph",
+          title: "Knowledge Graph",
+          content: () => (
+            <KnowledgeGraphCanvas
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+              onFocus={(id) => startTransition(() => setSelectedNodeId(id))}
+              compact
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("knowledge-graph");
+            else if (action === "export")
+              handlePanelExport("knowledge-graph");
+            else handleExpandPanel("knowledge-graph", action);
+          },
+        },
+        {
+          id: "mind-map",
+          title: "Mind Map",
+          content: () => (
+            <MindMap
+              graph={graph}
+              selectedId={selectedNodeId}
+              onSelect={handleSelectNode}
+            />
+          ),
+          onAction: (action) => {
+            if (action === "copy") handleCopy("mind-map");
+            else if (action === "export") handlePanelExport("mind-map");
+            else handleExpandPanel("mind-map", action);
+          },
+        },
+      );
+    }
+
+    return items;
+  }, [
+    effectiveViewMode,
+    displayGraph,
+    graph,
+    selectedNodeId,
+    insights,
+    insightsLoading,
+    handleCopy,
+    handlePanelExport,
+    handleExpandPanel,
+    handleSelectNode,
+  ]);
 
   useEffect(() => {
     if (activeNav !== "console") {
@@ -910,28 +965,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   isRepeat={status === "complete" || hasExistingAnalysis}
                 />
 
-                {effectiveViewMode === "simple" ? (() => {
-                  const simpleViewGraph = (graph && graph.nodes && graph.nodes.length > 0)
-                    ? graph
-                    : (nucleusKnowledgeGraph && nucleusKnowledgeGraph.nodes && nucleusKnowledgeGraph.nodes.length > 0)
-                      ? nucleusKnowledgeGraph
-                      : { nodes: [], edges: [] };
-                  
-                  return (
-                    <SimpleDashboardView
-                      status={status}
-                      analysisId={analysisId}
-                      videoMetadata={videoMetadata}
-                      digest={digest}
-                      digestLoading={digestLoading}
-                      mappedDigestData={mappedDigestData}
-                      graph={simpleViewGraph as any}
-                      selectedNodeId={selectedNodeId}
-                      onSelectNode={handleSelectNode}
-                      hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
-                    />
-                  );
-                })() : (
+                {effectiveViewMode === "simple" ? (
+                  <SimpleDashboardView
+                    status={status}
+                    analysisId={analysisId}
+                    videoMetadata={videoMetadata}
+                    digest={digest}
+                    digestLoading={digestLoading}
+                    mappedDigestData={mappedDigestData}
+                    partialInfo={partialInfo}
+                    TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
+                    hasHadVideo={!!(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}
+                  />
+                ) : (
                   <ProDashboardView
                     status={status}
                     analysisId={analysisId}

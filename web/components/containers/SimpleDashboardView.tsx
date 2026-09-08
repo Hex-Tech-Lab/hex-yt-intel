@@ -2,19 +2,12 @@ import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
 import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
-import dynamic from "next/dynamic";
-import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
+import { Icon } from "@/components/templates/_shared/primitives";
 
-const WordCloud = dynamic(
-  () =>
-    import("@/components/templates/console/WordCloud").then((mod) => ({
-      default: mod.WordCloud,
-    })),
-  {
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" />,
-  },
-);
+interface PartialInfo {
+  presentCount: number;
+  missing: number[];
+}
 
 interface SimpleDashboardViewProps {
   status: string;
@@ -23,9 +16,8 @@ interface SimpleDashboardViewProps {
   digest: any;
   digestLoading: boolean;
   mappedDigestData: any;
-  graph: KnowledgeGraph;
-  selectedNodeId: string | null;
-  onSelectNode: (id: string | null) => void;
+  partialInfo: PartialInfo | null;
+  TOTAL_DIMENSIONS: number;
   hasHadVideo: boolean;
 }
 
@@ -36,9 +28,8 @@ export function SimpleDashboardView({
   digest,
   digestLoading,
   mappedDigestData,
-  graph,
-  selectedNodeId,
-  onSelectNode,
+  partialInfo,
+  TOTAL_DIMENSIONS,
   hasHadVideo,
 }: SimpleDashboardViewProps) {
   return (
@@ -80,14 +71,27 @@ export function SimpleDashboardView({
               loading={digestLoading}
             />
           )}
-          
-          {status === "complete" && graph.nodes.length > 0 && (
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 h-[400px]">
-              <WordCloud
-                graph={graph}
-                selectedId={selectedNodeId}
-                onSelect={onSelectNode}
+
+          {partialInfo && (
+            <div
+              role="status"
+              className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
+            >
+              <Icon
+                icon="solar:danger-triangle-linear"
+                size={16}
+                className="text-[var(--warn)] flex-shrink-0"
               />
+              <div>
+                <span className="font-mono font-bold text-[var(--warn)]">
+                  Partial analysis warning
+                </span>
+                {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
+                <span className="text-[var(--ink-muted)]">
+                  Missing: {partialInfo.missing.join(", ")}.
+                </span>
+                {" Use Re-analyze to attempt the rest."}
+              </div>
             </div>
           )}
         </div>

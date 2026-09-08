@@ -5,6 +5,7 @@ import { VisualizationPanel } from "@/components/dashboard/VisualizationPanel";
 import { DimensionAccordion } from "@/components/dashboard/DimensionAccordion";
 import { ShareButton } from "@/components/dashboard/ShareButton";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
+import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
 import {
   Icon,
@@ -68,6 +69,12 @@ export function ProDashboardView({
       {hasHadVideo && (
         <div className="flex flex-col gap-1">
           <VideoPlayerCard />
+          {status === "complete" && analysisId && (
+            <HighlightsScrubber
+              analysisId={analysisId}
+              videoDurationSeconds={videoMetadata?.duration ?? null}
+            />
+          )}
           {timelineEntityData && (
             <EntityMentionTimeline
               entityId={timelineEntityData.entityId}
