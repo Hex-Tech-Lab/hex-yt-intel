@@ -213,10 +213,20 @@ describe('HighlightsScrubber', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // true -> false: the real recovery signal -- this SHOULD refetch.
+    // Real P1 (Cubic review, PR #298): the false->true flip above must NOT
+    // silently kill the ALREADY-RUNNING retry cycle -- it should keep
+    // polling on its own schedule exactly as if digestLoading had never
+    // changed. Advancing past the first retry delay must still produce a
+    // SECOND fetch call from the continuing cycle itself, not a dead cycle
+    // waiting for something that will never come.
+    await vi.advanceTimersByTimeAsync(2600);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // true -> false: the real recovery signal -- this SHOULD start a fresh
+    // cycle (3rd call), on top of the still-alive one above.
     rerender(<HighlightsScrubber analysisId="analysis-digest-flip" videoDurationSeconds={60} digestLoading={false} />);
     await vi.advanceTimersByTimeAsync(0);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('fetches fresh highlights for a NEW analysisId even while the previous analysisId still has cached highlights (CodeRabbit, PR #298)', async () => {
