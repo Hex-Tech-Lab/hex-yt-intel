@@ -1,0 +1,36 @@
+web/hooks/useAutoRestoreAnalysis.ts
+  s_169eb30b067663::t_5ea09d6c193ae5 84-91
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_169eb30b067663::t_bd263a97ced87b 227-279
+web/app/api/analyses/check/__tests__/route.test.ts
+  s_169eb30b067663::t_d3e39de417d70e 1-148
+web/lib/services/chunk-presence.ts
+  s_169eb30b067663::t_d7a496be590441 1-35,37-64,66-92
+  s_169eb30b067663::t_429103dc9f093c 36
+  s_169eb30b067663::t_1de3b3579a7454 65
+web/vitest.config.ts
+  s_169eb30b067663::t_62c7af8a2bf975 51-56
+web/lib/__tests__/chunk-presence.test.ts
+  s_169eb30b067663::t_5b12d43b804b47 1-36,38-110,112-113
+  s_169eb30b067663::t_7753f1da06e41c 111
+  s_169eb30b067663::t_2ae20c8e90b9d7 37
+web/app/api/analyses/check/route.ts
+  s_169eb30b067663::t_7be75ee6937c85 114-136,143,153
+  s_169eb30b067663::t_c06ea73c9495ec 9-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "f9c9ca60ec0a3a849eaebcc16b6c8a3416a475f6",
+  "prompts": {},
+  "sessions": {
+    "s_169eb30b067663": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7cf9b7ceffedxBZzSsc0kBmB6",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
