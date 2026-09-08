@@ -7,7 +7,10 @@ import type { EntitlementState } from '@/lib/usecases/GetUserEntitlementsUseCase
 const globalCache = new Map<string, EntitlementState>();
 const globalPromises = new Map<string, Promise<EntitlementState>>();
 
-const defaultFree: EntitlementState = {
+// Exported for exact-value assertions in tests (Cubic review, PR #292) --
+// asserting `.not.toEqual(founderData.entitlements)` alone would still pass
+// on a regression to any other wrong value, not just the correct reset.
+export const defaultFree: EntitlementState = {
   tier: 'free',
   is_founder: false,
   is_enterprise: false,

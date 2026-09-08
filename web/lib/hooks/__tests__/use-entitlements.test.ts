@@ -2,7 +2,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { useEntitlements, clearEntitlementsCache } from '../useEntitlements';
+import { useEntitlements, clearEntitlementsCache, defaultFree } from '../useEntitlements';
 import { clientAuthAdapter } from '@/lib/adapters/SupabaseClientAuthAdapter';
 
 vi.mock('@/lib/adapters/SupabaseClientAuthAdapter', () => ({
@@ -119,7 +119,7 @@ describe('useEntitlements hook', () => {
     // fired the local listener passed even when the production code had a
     // real race (the global listener's currentUserId mutation ran first and
     // made the local listener's guard always see "same user"), giving false
-    // confidence. See useEntitlements.ts's lastObservedIdRef comment.
+    // confidence. See useEntitlements.ts's activeUserIdRef comment.
     const listeners = vi.mocked(clientAuthAdapter.onAuthStateChange).mock.calls.map((call) => call[0]);
     expect(listeners.length).toBeGreaterThanOrEqual(2);
     act(() => {
@@ -135,7 +135,7 @@ describe('useEntitlements hook', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('Test 5: SIGNED_OUT and a late INITIAL_SESSION for the same new user both correctly reset+refetch, dispatched in real registration order', async () => {
+  it('Test 5: SIGNED_OUT resets to defaultFree, then a late INITIAL_SESSION for a genuinely different user refetches, dispatched in real registration order', async () => {
     const founderData = {
       success: true,
       entitlements: { tier: 'founder', canAnalyzeVideo: true, canAccessKnowledgeGraph: true, canUseExtendedChat: true },
@@ -156,7 +156,10 @@ describe('useEntitlements hook', () => {
       for (const listener of listeners) listener('SIGNED_OUT', null);
     });
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.entitlements).not.toEqual(founderData.entitlements);
+    // Exact reset value, not just "no longer the founder payload" -- a
+    // regression to any other wrong non-founder value would still pass a
+    // weaker `.not.toEqual` check (Cubic review, PR #292).
+    expect(result.current.entitlements).toEqual(defaultFree);
 
     // A late INITIAL_SESSION for a genuinely different user must still trigger a real refetch.
     act(() => {
