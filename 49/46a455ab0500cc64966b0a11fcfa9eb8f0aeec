@@ -1,0 +1,51 @@
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 72-73,76-78,94-99,106-280
+  s_27a98410ea5034::t_b2a803cdbfc7e9 281
+web/lib/hooks/useEntitlements.ts
+  s_27a98410ea5034::t_8b6bf7e95dca15 10-13,34-49,60,80-91
+web/lib/utils/__tests__/sign-out-with-timeout.test.ts
+  s_27a98410ea5034::t_87c2fda707d4a2 1-87
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 93-112
+web/lib/utils/sign-out-with-timeout.ts
+  s_27a98410ea5034::t_87c2fda707d4a2 1-83
+web/components/dashboard/HighlightsTrack.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 4,8,154-183,186
+web/components/templates/console/VideoPlayerCard.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 10-14,260
+web/components/containers/DashboardContainer.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 97,208-219,453-458,567,885-910
+web/components/dashboard/HighlightsScrubber.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 4,8,55,59-64,119-121,123-137,139-143,145,153-154,157-164,173-182,187,189-199,203,206,210,212-217,219,221-250
+.github/workflows/ci-cd.yml
+  s_27a98410ea5034::t_8b6bf7e95dca15 543-558,560,562
+web/components/UserMenu.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 6,14-18
+web/lib/hooks/__tests__/use-entitlements.test.ts
+  s_27a98410ea5034::t_8b6bf7e95dca15 2,5-6,62-170
+.mcp.json
+  s_27a98410ea5034::t_8b6bf7e95dca15 2-10
+web/components/containers/SimpleDashboardView.tsx
+  s_27a98410ea5034::t_8b6bf7e95dca15 1,53
+web/lib/utils/highlights-settings.ts
+  s_27a98410ea5034::t_8b6bf7e95dca15 6-14,40-87
+  s_27a98410ea5034::t_1d7b445a00f003 88
+web/lib/hooks/__tests__/use-effective-view-mode.test.ts
+  s_27a98410ea5034::t_8b6bf7e95dca15 2-3,5,42-44,46,50-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4946a455ab0500cc64966b0a11fcfa9eb8f0aeec",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
