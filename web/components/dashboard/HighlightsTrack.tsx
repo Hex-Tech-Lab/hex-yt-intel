@@ -151,22 +151,21 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
   const progressPercent = maxTime > 0 ? (currentTime / maxTime) * 100 : 0;
   const clamped = Math.min(100, Math.max(0, progressPercent));
   return (
-    // Real fix (live report, 2026-09-08): the pin (stem) and pin-head (dot)
-    // are one nested element, but the ORIGINAL raw CSS `left` transition
-    // restarted every ~250ms (PLAYBACK_POLL_INTERVAL_MS) with only a 75ms
-    // duration -- shorter than the poll interval, so each update
-    // snapped-then-eased rather than interpolating continuously, which read
-    // as the head and stem moving in separate discrete steps rather than as
-    // one smooth needle. Framer Motion's `animate` prop (already used
-    // elsewhere in this repo, e.g. DashboardContainer.tsx's AnimatePresence)
-    // drives the position via requestAnimationFrame and smoothly redirects
-    // mid-flight toward a new target instead of restarting from scratch.
-    // The tween duration below must ALSO be >= the poll interval (Cubic
-    // review, PR #300) -- an animation that finishes before the next poll
-    // tick arrives visibly pauses between updates, the same symptom as the
-    // original bug, just shifted from "restart" to "settle-then-wait".
+    // Real fix, round 2 (live report, 2026-09-08): switching to Framer
+    // Motion (PR #300) fixed the STEP/RESTART stutter but the head kept
+    // visibly lagging the stem regardless -- because they were still two
+    // SEPARATE DOM nodes (parent div + nested child div), each independently
+    // painted. A parent animating a layout property (`left`) plus a
+    // box-shadow-heavy child can genuinely paint on different frames in some
+    // browsers/compositor states, even though both derive from the same
+    // position -- a real, if subtle, browser quirk, not a logic bug.
+    // Fixed by making the head a CSS ::after PSEUDO-ELEMENT instead of a
+    // child DOM node: this guarantees a single host DOM element and a single
+    // positioning context (not a separate browser paint-scheduling
+    // guarantee, which is outside the application's control) -- there is no
+    // longer a second element for a layout/paint order to desync from.
     <motion.div
-      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+      className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] after:content-[''] after:absolute after:-top-1 after:-left-[3px] after:w-2 after:h-2 after:rounded-full after:bg-red-500 after:shadow-[0_0_6px_rgba(239,68,68,1)]"
       // Explicit (deeper review, PR #300): Framer Motion already defaults
       // `initial` to the `animate` value on a plain (non-AnimatePresence)
       // mount, so this doesn't change behavior -- it makes the "no sweep
@@ -184,9 +183,7 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
       transition={{ type: 'tween', duration: (PLAYBACK_POLL_INTERVAL_MS + 10) / 1000, ease: 'linear' }}
       aria-hidden="true"
       data-testid="playhead-needle"
-    >
-      <div className="absolute -top-1 -left-[3px] w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,1)]" />
-    </motion.div>
+    />
   );
 }
 
