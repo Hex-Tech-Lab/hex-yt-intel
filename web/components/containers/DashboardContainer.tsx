@@ -166,7 +166,7 @@ function cleanDimensionContent(raw: string): string {
   return content.trim();
 }
 
-// skipcq: JS-0067
+// skipcq: JS-0067, JS-R1005
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
   // this store now also carries currentPlaybackSeconds, updated 4x/sec
