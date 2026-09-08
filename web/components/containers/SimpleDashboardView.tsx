@@ -1,8 +1,8 @@
+import dynamic from "next/dynamic";
 import { ExecutiveSummary } from "@/components/organisms/ExecutiveSummary";
 import { HighlightsScrubber } from "@/components/dashboard/HighlightsScrubber";
 import { VideoPlayerCard } from "@/components/templates/console/VideoPlayerCard";
 import { BentoMetadata } from "@/components/templates/console/BentoMetadata";
-import dynamic from "next/dynamic";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 
 const WordCloud = dynamic(
@@ -50,6 +50,7 @@ export function SimpleDashboardView({
             <HighlightsScrubber
               analysisId={analysisId}
               videoDurationSeconds={videoMetadata?.duration ?? null}
+              digestLoading={digestLoading}
             />
           )}
           {videoMetadata && (
