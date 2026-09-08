@@ -94,6 +94,7 @@ import {
   type PanelId,
 } from "@/lib/dashboard/export";
 import { parseUcisDimensionNumbers } from "@/lib/utils/count-ucis-dimensions";
+import { signOutWithTimeout } from "@/lib/utils/sign-out-with-timeout";
 import { Avatar } from "@astryxdesign/core";
 
 // See /docs/ui/dashboard-container.md
@@ -211,17 +212,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     // button sits forever with no feedback. Staying signed-in-looking after
     // the user explicitly asked to sign out is worse than a slow/failed
     // server-side revoke -- race it against a timeout and navigate away
-    // regardless, so the UI never blocks on this specific call.
-    try {
-      await Promise.race([
-        supabase.auth.signOut(),
-        new Promise((_resolve, reject) => setTimeout(() => reject(new Error('signOut timed out')), 5000)),
-      ]);
-    } catch (err) {
-      console.warn('[DashboardContainer] signOut did not complete cleanly, navigating away regardless:', err);
-    } finally {
-      router.push("/");
-    }
+    // regardless, so the UI never blocks on this specific call. Shared with
+    // UserMenu.tsx's handleSignOut (deeper review, PR #299: the duplicated
+    // per-file version also silently treated a RESOLVED `{ error }` as
+    // success, since signOut() resolves rather than rejects on failure).
+    await signOutWithTimeout(supabase, '[DashboardContainer]');
+    router.push("/");
   }, [supabase, router]);
 
   // Track if we've ever had a video and sync input URL box
