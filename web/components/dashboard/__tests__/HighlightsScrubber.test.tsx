@@ -103,41 +103,53 @@ describe('HighlightsScrubber', () => {
     expect(container.firstChild?.textContent).toContain('No highlights yet');
   });
 
-  it('re-triggers the highlights fetch when digestLoading transitions to false, even after the initial retry budget was exhausted', async () => {
+  it('re-triggers the highlights fetch when digestLoading transitions to false, even after the initial retry budget was FULLY exhausted', async () => {
     // The real bug this covers (live production repro, 2026-09-08): a fresh
     // analysis's highlights are backfilled by scheduleHighlightsRecovery()
     // AFTER digest generation, which can land well after this component's
     // own retry budget gives up. digestLoading:true->false is the real
     // signal that recovery has now been scheduled server-side -- verify it
-    // actually restarts the fetch cycle rather than leaving the empty state
-    // permanent until an unrelated page refresh.
+    // actually restarts the fetch cycle AFTER the full 5-attempt schedule
+    // has already run out (CodeRabbit review, PR #298: the original version
+    // of this test only exercised 1 fetch call before switching
+    // digestLoading, never proving recovery works post-exhaustion).
+    vi.useFakeTimers();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }) })
-      .mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            highlights: [{ idx: 0, start: 10, end: 15, label: 'Recovered highlight' }],
-            segmentDurationSeconds: 5,
-            contextLeadSeconds: 2,
-          }),
-      });
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }) });
     vi.stubGlobal('fetch', fetchMock);
 
     const { container, rerender } = render(
       <HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={true} />
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Run through the complete 5-attempt retry schedule (2.5s/5s/10s/15s).
+    await vi.advanceTimersByTimeAsync(2600);
+    await vi.advanceTimersByTimeAsync(5100);
+    await vi.advanceTimersByTimeAsync(10100);
+    await vi.advanceTimersByTimeAsync(15100);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(container.firstChild?.textContent).toContain('No highlights yet');
 
-    // Simulate digest finishing -- this is the real trigger, not a timeout.
-    rerender(<HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={false} />);
-
-    await waitFor(() => {
-      expect(container.firstChild?.textContent).not.toContain('No highlights yet');
-      expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    // Now the recovery response is available -- simulate digest finishing.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          highlights: [{ idx: 0, start: 10, end: 15, label: 'Recovered highlight' }],
+          segmentDurationSeconds: 5,
+          contextLeadSeconds: 2,
+        }),
     });
+    rerender(<HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={false} />);
+    // First attempt of the new fetch cycle resolves with real highlights --
+    // no retry delay needed, but a microtask flush is required under fake timers.
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(container.firstChild?.textContent).not.toContain('No highlights yet');
+    expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('fetches fresh highlights for a NEW analysisId even while the previous analysisId still has cached highlights (CodeRabbit, PR #298)', async () => {
