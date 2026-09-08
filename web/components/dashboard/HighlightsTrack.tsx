@@ -159,10 +159,11 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
     // box-shadow-heavy child can genuinely paint on different frames in some
     // browsers/compositor states, even though both derive from the same
     // position -- a real, if subtle, browser quirk, not a logic bug.
-    // Eliminated entirely by making the head a CSS ::after PSEUDO-ELEMENT
-    // instead of a child DOM node: a pseudo-element is guaranteed to be part
-    // of its host's own box/paint operation, so there is structurally
-    // nothing left that CAN desync -- one element, one paint, one needle.
+    // Fixed by making the head a CSS ::after PSEUDO-ELEMENT instead of a
+    // child DOM node: this guarantees a single host DOM element and a single
+    // positioning context (not a separate browser paint-scheduling
+    // guarantee, which is outside the application's control) -- there is no
+    // longer a second element for a layout/paint order to desync from.
     <motion.div
       className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] after:content-[''] after:absolute after:-top-1 after:-left-[3px] after:w-2 after:h-2 after:rounded-full after:bg-red-500 after:shadow-[0_0_6px_rgba(239,68,68,1)]"
       // Explicit (deeper review, PR #300): Framer Motion already defaults
