@@ -1,0 +1,24 @@
+web/lib/hooks/__tests__/use-entitlements.test.ts
+  s_27a98410ea5034::t_f2498c4ac8dd83 122
+  s_27a98410ea5034::t_fc7dbdb5f3e60f 5
+  s_27a98410ea5034::t_619d0e744e9f9f 138
+  s_27a98410ea5034::t_b9cf9f5966fecd 159-162
+web/lib/hooks/useEntitlements.ts
+  s_27a98410ea5034::t_cdaf9ea39cd502 10-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "fee959d0734c471431e666fff3eb6b14dd1cc251",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
