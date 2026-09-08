@@ -127,13 +127,13 @@ const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 // word-cloud branch ever reads `.inPersona`, so defaulting it false here is
 // a real, typed adapter rather than an `as any` cast past the mismatch
 // (Codacy ErrorProne review, PR #302).
-function toDisplayGraph(source: KnowledgeGraph | KnowledgeGraphV2): KnowledgeGraph {
-  return {
-    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
-    edges: source.edges,
-    rootId: source.rootId,
-  };
-}
+const toDisplayGraph = (
+  source: KnowledgeGraph | KnowledgeGraphV2,
+): KnowledgeGraph => ({
+  nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+  edges: source.edges,
+  rootId: source.rootId,
+});
 
 function cleanDimensionContent(raw: string): string {
   if (!raw) return "";
