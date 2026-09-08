@@ -1,0 +1,23 @@
+web/lib/utils/__tests__/sign-out-with-timeout.test.ts
+  s_27a98410ea5034::t_c50a1fb7fa0492 54-86
+web/lib/utils/sign-out-with-timeout.ts
+  s_27a98410ea5034::t_df308911dc338f 12-23,39-41,43-49
+  s_27a98410ea5034::t_7f2f7c4582e8e5 42
+  s_27a98410ea5034::t_42b804fce3e306 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "1b0bd76c26f7f4af7204b27a03a3464d030617b5",
+  "prompts": {},
+  "sessions": {
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
