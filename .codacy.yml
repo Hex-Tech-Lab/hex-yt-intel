@@ -13,6 +13,8 @@ engines:
       - "*.js"
       - "test-proxy.ts"
       - "instrumentation.ts"
+  biome:
+    enabled: false
 exclude_paths:
   - "worker/**"
   - "skill/**"
