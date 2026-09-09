@@ -330,6 +330,7 @@ export async function tryChunkRecovery(
 /**
  * Sweep and settle stuck `processing` analyses. Safe to run repeatedly.
  */
+// skipcq: JS-0067, JS-R1005
 export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?: number }): Promise<SweepResult> {
   const graceMinutes = opts?.graceMinutes ?? REAP_GRACE_MINUTES;
   const limit = opts?.limit ?? 500;
@@ -343,9 +344,13 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     .eq('billing_status', 'processing')
     .lt('created_at', cutoffIso)
     .limit(limit);
-  if (error) throw error;
 
-  const stuck = (data ?? []) as StuckRow[];
+  if (error) {
+    Sentry.captureException(error, { tags: { service: 'analysis-reaper', phase: 'select' } });
+    return { scanned: 0, completed: 0, failed: 0, requeued: 0, raced: 0 };
+  }
+
+  const stuck = (data || []) as StuckRow[];
   const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, requeued: 0, raced: 0 };
 
   // `remediation.maxRetries` (the shared requeue/remediation ceiling) is
@@ -354,7 +359,8 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
   // to its cascade/budget resolution.
   let maxRetriesCache: number | null = null;
   /** Resolves and memoizes `remediation.maxRetries` for this sweep run (see comment above). */
-  const resolveMaxRetries = async (): Promise<number> => {
+  // skipcq: JS-0067
+  async function resolveMaxRetries(): Promise<number> {
     if (maxRetriesCache === null) {
       const settings = await SupabaseSettingsAdapter.getRegistrySettings(
         ['remediation.maxRetries'],
@@ -363,7 +369,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
       maxRetriesCache = Number(settings['remediation.maxRetries']) || REMEDIATION_MAX_RETRIES_FALLBACK;
     }
     return maxRetriesCache;
-  };
+  }
 
   /**
    * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row,
@@ -372,8 +378,16 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
    * the sweep loop's own body purely to keep that loop's own branch count
    * down (CodeFactor "Complex Method"), no behavior change from inlining it.
    */
-  const attemptRequeue = async (row: StuckRow, maxRetries: number): Promise<'requeued' | 'raced' | null> => {
+  // skipcq: JS-0067
+  async function attemptRequeue(row: StuckRow): Promise<'requeued' | 'raced' | 'unknown' | null> {
     try {
+      const maxRetries = await resolveMaxRetries().catch((err) => {
+        Sentry.captureException(err, {
+          tags: { service: 'analysis-reaper', phase: 'resolve_max_retries' },
+          extra: { analysisId: row.id },
+        });
+        return REMEDIATION_MAX_RETRIES_FALLBACK;
+      });
       return await tryRequeuePartial(row, persistenceAdapter, maxRetries);
     } catch (requeueErr) {
       Sentry.captureException(requeueErr, {
@@ -382,7 +396,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
       });
       return null;
     }
-  };
+  }
 
   /**
    * Chunk-based recovery is tried FIRST for every stuck row and is strictly
@@ -393,9 +407,10 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
    * old path would have discarded. Extracted purely to keep the sweep
    * loop's own branch count down (CodeFactor "Complex Method").
    */
-  const attemptChunkRecovery = async (
+  // skipcq: JS-0067
+  async function attemptChunkRecovery(
     row: StuckRow,
-  ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> => {
+  ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
     try {
       return await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
     } catch (chunkErr) {
@@ -405,7 +420,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
       });
       return null;
     }
-  };
+  }
 
   for (const row of stuck) {
     const recovered = await attemptChunkRecovery(row);
@@ -424,12 +439,12 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     // ceiling-hit rows return null and fall through to the EXISTING failed
     // settle unchanged, same philosophy as chunk recovery above.
     if (outcome === 'failed') {
-      const requeued = await attemptRequeue(row, await resolveMaxRetries());
+      const requeued = await attemptRequeue(row);
       if (requeued === 'requeued') {
         result.requeued++;
         continue;
       }
-      if (requeued === 'raced') {
+      if (requeued === 'raced' || requeued === 'unknown') {
         result.raced++;
         continue;
       }

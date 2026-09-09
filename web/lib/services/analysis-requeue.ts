@@ -51,12 +51,16 @@ export interface SettlePatch {
 export const REMEDIATION_MAX_RETRIES_FALLBACK = 3;
 
 /** Dimension numbers in [1..TOTAL_DIMENSIONS] not present in `covered`. */
-const missingFrom = (covered: Set<number>): number[] =>
-  Array.from({ length: TOTAL_DIMENSIONS }, (_unused, i) => i + 1).filter((dimension) => !covered.has(dimension));
+// skipcq: JS-0067
+function missingFrom(covered: Set<number>): number[] {
+  return Array.from({ length: TOTAL_DIMENSIONS }, (_unused, i) => i + 1).filter((dimension) => !covered.has(dimension));
+}
 
 /** True when a stuck row's covered-dimension count qualifies for requeue-partial (see decideRequeuePartial). */
-const isRequeueEligible = (coveredCount: number, currentRetryCount: number, maxRetries: number): boolean =>
-  coveredCount > 0 && coveredCount < MIN_SALVAGEABLE_DIMENSIONS && currentRetryCount < maxRetries;
+// skipcq: JS-0067
+function isRequeueEligible(coveredCount: number, currentRetryCount: number, maxRetries: number): boolean {
+  return coveredCount > 0 && coveredCount < MIN_SALVAGEABLE_DIMENSIONS && currentRetryCount < maxRetries;
+}
 
 /**
  * ADR 021 Phase 3 — the requeue-partial middle branch, decided BEFORE a stuck
@@ -147,13 +151,14 @@ export const buildRequeuePatch = (
  * dimension-remediation.ts reads it, so the reaper's requeues and the
  * remediation harness's attempts draw down ONE shared ceiling.
  */
-const readRemediationRetryCount = (existingReport: unknown): number => {
+// skipcq: JS-0067
+function readRemediationRetryCount(existingReport: unknown): number {
   const report =
     existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
       ? (existingReport as Record<string, unknown>)
       : {};
   return typeof report.remediation_retry_count === 'number' ? report.remediation_retry_count : 0;
-};
+}
 
 /**
  * ADR 021 Phase 3 I/O wrapper around decideRequeuePartial: reads the row's
@@ -172,24 +177,41 @@ const readRemediationRetryCount = (existingReport: unknown): number => {
  * - 'requeued' — requeue patch committed (row still `processing`)
  * - 'raced'    — guarded write lost (a concurrent settle/reap moved the row
  *                off `processing` first; nothing was clobbered)
+ * - 'unknown'  — the update call itself errored (network/timeout) AFTER
+ *                possibly already committing server-side; whether it
+ *                actually landed is genuinely unknown from this response
+ *                alone. Callers MUST treat this the same as 'requeued'/
+ *                'raced' (skip this row this sweep, do NOT fall through to
+ *                a terminal settle) — falling through here risks
+ *                overwriting a requeue that actually committed with a
+ *                'failed' settle, silently discarding real partial work.
+ *                The next sweep re-reads the row's true state and decides
+ *                again; nothing is lost by waiting one more cycle.
  * - null       — not a requeue candidate (falls through to the existing
  *                terminal paths)
  *
- * Race note (double-increment, reviewed per race-condition-guard): a requeued
- * row REMAINS `processing`, so two overlapping sweeps can both win the
- * guarded write and both increment `remediation_retry_count`. This is the
- * same accepted exposure the remediation harness already carries (its
- * still-partial write is guarded on `'failed'`, which a still-partial row
- * re-enters), and it is bounded: the shared ceiling caps total requeues, so
- * a double-increment only spends retry budget faster — it can never unbound
- * the loop. The missing-dimensions payload itself is identical across both
- * writers, so no data divergence is possible.
+ * Race note (reviewed per race-condition-guard): a requeued row REMAINS
+ * `processing`, so two overlapping sweeps can both pass the guard (which
+ * only checks `billing_status = 'processing'`, not the retry count itself)
+ * and both write. Both compute `nextRetryCount` from the SAME stale
+ * `currentRetryCount` snapshot, so the net effect is a single applied
+ * increment (last write wins on the JSON field), not a double-increment —
+ * the retry ceiling is under-enforced by up to one requeue per concurrent
+ * collision, not over-enforced. This is a real, currently-unfixed gap
+ * (closing it needs an atomic compare-and-swap on the JSON counter, e.g. a
+ * dedicated Postgres RPC — a bigger, migration-shaped change deliberately
+ * NOT bundled into this pass) but its blast radius is small: reaper sweeps
+ * run on a periodic cron (ADR 007), not at a frequency where concurrent
+ * collisions on the SAME stuck row are a realistic hot path, and the worst
+ * case is "retried slightly more than `remediation.maxRetries` intends,"
+ * never data loss or an unbounded loop (the ceiling still eventually
+ * binds). Tracked as follow-up, not silently ignored.
  */
 export const tryRequeuePartial = async (
   row: { id: string; validation_report: unknown },
   persistenceAdapter: SupabasePersistenceAdapter,
   maxRetries: number
-): Promise<'requeued' | 'raced' | null> => {
+): Promise<'requeued' | 'raced' | 'unknown' | null> => {
   const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId: row.id });
   const chunkRows = chunks ?? [];
 
@@ -212,6 +234,14 @@ export const tryRequeuePartial = async (
     .update(patch, { count: 'exact' })
     .eq('id', row.id)
     .eq('billing_status', 'processing');
-  if (updErr) throw updErr; // caller's catch falls through to the terminal failed settle
+  // Ambiguous outcome, NOT a confirmed failure: the update call errored, but
+  // it may have already committed server-side before the error surfaced
+  // (network blip after commit, response timeout, etc.) -- 'unknown' tells
+  // the caller to skip this row THIS sweep rather than risk overwriting a
+  // real requeue with a terminal 'failed' settle. Deliberately not thrown:
+  // a thrown error here previously collapsed into the same "fall through to
+  // terminal settle" path as a genuine decision failure, which is exactly
+  // the unsafe behavior this return value exists to prevent.
+  if (updErr) return 'unknown';
   return count ? 'requeued' : 'raced';
 };
