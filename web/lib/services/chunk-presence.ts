@@ -67,17 +67,18 @@ function isValidDimensionNumber(candidate: unknown, totalDimensions: number): ca
  *   are ignored; a null `dimensions_covered` array covers nothing.
  * - Failed/interrupted rows NEVER contribute coverage — see TRUST RULE above.
  */
-export const computeMissingChunkDimensions = (
+// skipcq: JS-0067
+export function computeMissingChunkDimensions(
   chunkRows: ChunkPresenceRow[] | null | undefined,
   totalDimensions: number
-): number[] => {
+): number[] {
   const completedRows = (chunkRows ?? []).filter((row) => row.status === 'completed');
   const coveredNumbers = completedRows.flatMap((row) => row.dimensions_covered ?? []);
   const covered = new Set(coveredNumbers.filter((candidate) => isValidDimensionNumber(candidate, totalDimensions)));
 
   const allDimensions = Array.from({ length: totalDimensions }, (_unused, i) => i + 1);
   return allDimensions.filter((dimension) => !covered.has(dimension));
-};
+}
 
 /**
  * Presence check for one analysis: which dimension numbers are NOT yet
@@ -88,10 +89,12 @@ export const computeMissingChunkDimensions = (
  * policy. `totalDimensions` defaults to the canonical TOTAL_DIMENSIONS so a
  * caller on the standard 11-dimension pipeline can omit it.
  */
-export const getMissingDimensionNumbers = async (
+// skipcq: JS-0067
+export async function getMissingDimensionNumbers(
   analysisId: string,
   totalDimensions: number = TOTAL_DIMENSIONS
-): Promise<number[]> => {
+): Promise<number[]> {
   const chunks = await new SupabasePersistenceAdapter().findAnalysisChunkCoverage({ analysisId });
   return computeMissingChunkDimensions(chunks, totalDimensions);
-};
+}
+
