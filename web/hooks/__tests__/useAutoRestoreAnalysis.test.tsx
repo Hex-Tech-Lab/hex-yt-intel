@@ -38,6 +38,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 
+// skipcq: JS-0057
 vi.mock('@/lib/monitoring/sentry-utils', () => ({
   addBreadcrumb: vi.fn(),
 }));

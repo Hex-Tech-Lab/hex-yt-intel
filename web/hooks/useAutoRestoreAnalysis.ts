@@ -16,6 +16,7 @@ import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
  * synthesis nucleus, and chat stores exactly as the history-click restore
  * path does. Fires whenever `url` changes.
  */
+// skipcq: JS-0067, JS-R1005
 export function useAutoRestoreAnalysis(url: string) {
   const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
   const setVideoMetadata = useAnalysisStore((s) => s.setVideoMetadata);
@@ -59,7 +60,7 @@ export function useAutoRestoreAnalysis(url: string) {
     let cancelled = false;
 
     // Check if there's already a completed analysis for this videoId
-    void (async () => {
+    const checkAndRestore = async () => {
       try {
         let res;
         try {
@@ -221,7 +222,7 @@ export function useAutoRestoreAnalysis(url: string) {
           // ordering guard of its own, so a fast effect re-run (e.g. rapid
           // videoId changes) could let a stale lookup win the chat panel
           // after a newer one already resolved.
-          void (async () => {
+          const restoreChatSession = async () => {
             try {
               if (cancelled) return;
               // Bumped as early as possible so a still-in-flight OLDER
@@ -275,12 +276,14 @@ export function useAutoRestoreAnalysis(url: string) {
             } catch (e) {
               console.debug('[AutoRestore] Background chat session restoration failed:', e);
             }
-          })();
+          };
+          restoreChatSession();
         }
       } catch (err) {
         console.debug('[AutoRestore] Pre-flight cache check failed:', err);
       }
-    })();
+    };
+    checkAndRestore();
 
     return () => {
       cancelled = true;

@@ -440,23 +440,6 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   /**
-   * Narrow projection of findAnalysisChunks for presence-check-only callers
-   * (ADR 021 Phase 2, chunk-presence.ts) — maps chunk coverage fields without
-   * exposing unnecessary payload data. Delegates to this.findAnalysisChunks.
-   */
-  async findAnalysisChunkCoverage(params: {
-    analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[] | null; status: 'completed' | 'failed' | 'interrupted' }> | null> {
-    const chunks = await this.findAnalysisChunks(params);
-    if (!chunks) return null;
-    return chunks.map((c) => ({
-      chunk_index: c.chunk_index,
-      dimensions_covered: c.dimensions_covered,
-      status: c.status,
-    }));
-  }
-
-  /**
    * Check if a chunk has already been persisted (idempotency check).
    * Returns true if the chunk exists with status='completed' or 'failed'.
    * @param analysisId - Analysis ID to check

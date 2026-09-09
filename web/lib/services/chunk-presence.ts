@@ -94,7 +94,7 @@ export async function getMissingDimensionNumbers(
   analysisId: string,
   totalDimensions: number = TOTAL_DIMENSIONS
 ): Promise<number[]> {
-  const chunks = await new SupabasePersistenceAdapter().findAnalysisChunkCoverage({ analysisId });
+  const chunks = await new SupabasePersistenceAdapter().findAnalysisChunks({ analysisId });
   return computeMissingChunkDimensions(chunks, totalDimensions);
 }
 

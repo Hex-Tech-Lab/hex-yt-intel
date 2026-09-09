@@ -193,16 +193,6 @@ export interface AnalysisPersistencePort {
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 
   /**
-   * Narrow projection of findAnalysisChunks for presence-check-only callers
-   * (ADR 021 Phase 2) — skips the (potentially large) `payload` JSONB column
-   * that other findAnalysisChunks callers (persist route, chat grounding)
-   * genuinely need but a presence check never reads.
-   */
-  findAnalysisChunkCoverage(params: {
-    analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[] | null; status: 'completed' | 'failed' | 'interrupted' }> | null>;
-
-  /**
    * Find analysis by share token for public view.
    */
   findAnalysisByShareToken(token: string): Promise<{

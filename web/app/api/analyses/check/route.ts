@@ -79,7 +79,11 @@ export async function GET(request: NextRequest) {
 
     const newestRow = recentAnalyses?.[0] ?? null;
     const newestReport = (newestRow?.validation_report as Record<string, unknown> | null) || {};
-    const isExplicitError = newestRow?.billing_status === 'failed' || newestReport.status === 'error';
+    const isExplicitError = newestRow?.billing_status === 'failed' ||
+      newestReport.status === 'error' ||
+      newestReport.status === 'failed' ||
+      (newestReport.validation_status as string | undefined) === 'error' ||
+      (newestReport.validation_status as string | undefined) === 'failed';
     // Staleness clock must be updated_at, not created_at (same class of bug
     // independently fixed 2026-09-09 in /api/analyses/[id]/status/route.ts,
     // commit 662efa41): the worker touches updated_at on every incremental
