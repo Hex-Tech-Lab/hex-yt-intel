@@ -27,4 +27,3 @@ exclude_paths:
   - "*.js"
   - "test-proxy.ts"
   - "instrumentation.ts"
-
