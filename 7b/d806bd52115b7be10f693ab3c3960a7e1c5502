@@ -1,0 +1,25 @@
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_814741664a33c5::t_932a4974c5f7f5 227,231-240,242,253-255,275
+  s_814741664a33c5::t_207dcc73d38c7a 74-98
+  s_814741664a33c5::t_923feb7b7cec36 226,228-230,241,243-252,256-274,276-277
+web/hooks/useSSEStream.ts
+  s_814741664a33c5::t_fa7d4e222e6027 297
+  s_814741664a33c5::t_0add1cf524fd64 330-339
+  s_814741664a33c5::t_7209d0ab1b45ca 502-508,522,529-530,532-535,537-538
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "7bd806bd52115b7be10f693ab3c3960a7e1c5502",
+  "prompts": {},
+  "sessions": {
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
