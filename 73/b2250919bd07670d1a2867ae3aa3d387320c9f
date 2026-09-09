@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1373-1374,1378-1380
+web/app/api/analyses/check/__tests__/route.test.ts
+  h_60000122af7b55 178-227
+web/app/api/analyses/check/route.ts
+  h_60000122af7b55 81-82,91-98,102-104
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  h_60000122af7b55 444-445,449-456
+web/lib/ports/AnalysisPersistencePort.ts
+  h_60000122af7b55 203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "73b2250919bd07670d1a2867ae3aa3d387320c9f",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
