@@ -75,7 +75,8 @@ function chunkIndexFromBody(init?: RequestInit): number | undefined {
   if (!init?.body) return undefined;
   try {
     return JSON.parse(init.body as string).chunkIndex;
-  } catch {
+  } catch (err) {
+    console.error('[useSSEStream test] failed to parse request body for chunkIndex', err);
     return undefined;
   }
 }
