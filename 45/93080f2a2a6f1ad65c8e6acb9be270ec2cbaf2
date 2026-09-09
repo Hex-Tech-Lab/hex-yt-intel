@@ -1,0 +1,20 @@
+web/app/api/analyses/check/route.ts
+  h_60000122af7b55 82-86
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  h_60000122af7b55 41
+web/hooks/useAutoRestoreAnalysis.ts
+  h_60000122af7b55 19,63,225,279-280,285-286
+web/lib/services/chunk-presence.ts
+  h_60000122af7b55 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4593080f2a2a6f1ad65c8e6acb9be270ec2cbaf2",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
