@@ -1,0 +1,21 @@
+.memory/AGENT_LEDGER.md
+  s_806c0f506228c0::t_ac614dd950ffe8 1373-1375
+  s_806c0f506228c0::t_63eddffae518ce 1376
+  s_806c0f506228c0::t_ad6f5617c00285 1377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "65b81e0ead1985ba87296f8f5df5337c0be320b3",
+  "prompts": {},
+  "sessions": {
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
