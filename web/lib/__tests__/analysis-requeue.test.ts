@@ -39,7 +39,7 @@ describe('decideRequeuePartial (ADR 021 Phase 3)', () => {
   });
 
   it('still finalizes (null) a row already meeting MIN_SALVAGEABLE_DIMENSIONS — existing salvage path unchanged', () => {
-    const covered = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_, i) => i + 1);
+    const covered = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_ignored, index) => index + 1);
     expect(decideRequeuePartial(covered, 0, MAX_RETRIES)).toBeNull();
   });
 

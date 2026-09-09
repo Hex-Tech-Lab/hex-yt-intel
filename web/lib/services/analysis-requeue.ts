@@ -196,8 +196,8 @@ export async function tryRequeuePartial(
   // dimensions worth counting — a chunk that never reached `completed`
   // (or lacks a dimensions array) must not vouch for its covered set.
   const coveredDimensions = chunkRows
-    .filter(c => c.status === 'completed' && Array.isArray((c.payload as { dimensions?: unknown } | null)?.dimensions))
-    .flatMap(c => (Array.isArray(c.dimensions_covered) ? c.dimensions_covered : []));
+    .filter(chunk => chunk.status === 'completed' && Array.isArray((chunk.payload as { dimensions?: unknown } | null)?.dimensions))
+    .flatMap(chunk => (Array.isArray(chunk.dimensions_covered) ? chunk.dimensions_covered : []));
 
   const currentRetryCount = readRemediationRetryCount(row.validation_report);
   const decision = decideRequeuePartial(coveredDimensions, currentRetryCount, maxRetries);
