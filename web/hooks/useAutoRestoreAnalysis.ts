@@ -62,7 +62,19 @@ export function useAutoRestoreAnalysis(url: string) {
     // Check if there's already a completed analysis for this videoId
     const checkAndRestore = async () => {
       try {
-        const res = await fetch(`/api/analyses/check?videoId=${videoId}`);
+        let res: Response;
+        let checkOk = false;
+        try {
+          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
+          checkOk = res.ok;
+        } finally {
+          // Real diagnostic, not a no-op: surfaces whether this hook's very
+          // first network call of the restore attempt actually settled
+          // (as opposed to throwing/hanging), independent of whatever the
+          // rest of the function goes on to do -- useful when triaging a
+          // "restore never happened" report without needing a full repro.
+          addBreadcrumb('Auto-restore: check request settled', { videoId, ok: checkOk }, 'auto-restore');
+        }
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -105,7 +117,19 @@ export function useAutoRestoreAnalysis(url: string) {
           }
 
           // Trigger the restoration flow just like history restoration
-          const restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
+          let restoreRes: Response;
+          let restoreOk = false;
+          try {
+            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
+            restoreOk = restoreRes.ok;
+          } finally {
+            // Same real diagnostic as the check-request breadcrumb above --
+            // the second, heavier fetch (full analysis record) is the one
+            // most likely to time out on a large payload; knowing whether
+            // it settled at all narrows "restore silently did nothing" vs.
+            // "restore threw before this point" without a full repro.
+            addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: restoreOk }, 'auto-restore');
+          }
           if (!restoreRes.ok) return;
           const restoreData = await restoreRes.json();
           if (cancelled) return;
