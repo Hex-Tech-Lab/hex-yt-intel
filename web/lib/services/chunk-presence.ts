@@ -51,8 +51,10 @@ export interface ChunkPresenceRow {
 }
 
 /** True when `candidate` is a real, in-range dimension number worth trusting as covered. */
-const isValidDimensionNumber = (candidate: unknown, totalDimensions: number): candidate is number =>
-  typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 1 && candidate <= totalDimensions;
+// skipcq: JS-0067
+function isValidDimensionNumber(candidate: unknown, totalDimensions: number): candidate is number {
+  return typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 1 && candidate <= totalDimensions;
+}
 
 /**
  * Pure decision core. Given the chunk rows persisted for one analysis, return

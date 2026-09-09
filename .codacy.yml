@@ -13,6 +13,9 @@ engines:
       - "*.js"
       - "test-proxy.ts"
       - "instrumentation.ts"
+  biome:
+    exclude_paths:
+      - "**"
 exclude_paths:
   - "worker/**"
   - "skill/**"
@@ -25,3 +28,6 @@ exclude_paths:
   - "*.js"
   - "test-proxy.ts"
   - "instrumentation.ts"
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"

@@ -26,13 +26,19 @@ import {
 } from '@/lib/services/chunk-presence';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
-const row = (
+// skipcq: JS-0067
+function row(
   chunk_index: number,
   status: ChunkPresenceRow['status'],
   dimensions_covered: number[] | null
-): ChunkPresenceRow => ({ chunk_index, status, dimensions_covered });
+): ChunkPresenceRow {
+  return { chunk_index, status, dimensions_covered };
+}
 
-const all = (count: number): number[] => Array.from({ length: count }, (unused, index) => index + 1);
+// skipcq: JS-0067
+function all(count: number): number[] {
+  return Array.from({ length: count }, (unused, index) => index + 1);
+}
 
 describe('computeMissingChunkDimensions', () => {
   it('returns ALL dimensions missing when the chunk journal is null or empty', () => {

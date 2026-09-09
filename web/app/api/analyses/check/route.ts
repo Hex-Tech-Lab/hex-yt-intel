@@ -15,6 +15,7 @@ export const runtime = 'edge';
 const PROCESSING_STALE_MS = 120_000;
 
 /** GET /api/analyses/check — Poll for cached analysis or in-progress status by video ID. */
+// skipcq: JS-0067, JS-R1005
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

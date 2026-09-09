@@ -317,9 +317,9 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
     });
 
     expect(addBreadcrumb).toHaveBeenCalledWith(
-      expect.stringContaining('dimensions still missing'),
+      'Analysis dead — all dimensions salvaged from completed chunks',
       { missingDimensions: [] },
-      'auto-restore'
+      'auto-restore',
     );
 
     unmount();

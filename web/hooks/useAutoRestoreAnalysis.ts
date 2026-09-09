@@ -95,7 +95,9 @@ export function useAutoRestoreAnalysis(url: string) {
             // from a presence-check failure in auto-restore telemetry).
             if (Array.isArray(data.missingDimensions)) {
               addBreadcrumb(
-                'Analysis dead — dimensions still missing after salvageable chunks',
+                data.missingDimensions.length === 0
+                  ? 'Analysis dead — all dimensions salvaged from completed chunks'
+                  : 'Analysis dead — dimensions still missing after salvageable chunks',
                 { missingDimensions: data.missingDimensions },
                 'auto-restore',
               );
