@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
     });
 
     const newestRow = recentAnalyses?.[0] ?? null;
+    const newestReport = (newestRow?.validation_report as Record<string, unknown> | null) || {};
+    const isExplicitError = newestRow?.billing_status === 'failed' || newestReport.status === 'error';
     // Staleness clock must be updated_at, not created_at (same class of bug
     // independently fixed 2026-09-09 in /api/analyses/[id]/status/route.ts,
     // commit 662efa41): the worker touches updated_at on every incremental
@@ -86,14 +88,20 @@ export async function GET(request: NextRequest) {
     // PROCESSING_STALE_MS was always misreported as dead here too, even a
     // healthy worker still streaming. Falls back to created_at only when
     // updated_at is absent.
-    const newestIsStale = newestRow !== null &&
-      newestRow.billing_status !== 'completed' &&
+    //
+    // Terminal failure safeguard: stale fallback to latestCompleted applies
+    // ONLY to genuinely in-flight processing rows that timed out. Explicit
+    // failures (billing_status='failed' or validation_report.status='error')
+    // must remain terminal errors and never be masked by an older completed row.
+    const newestIsStaleProcessing = newestRow !== null &&
+      newestRow.billing_status === 'processing' &&
+      !isExplicitError &&
       Date.now() - new Date(newestRow.updated_at || newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
     const latestCompleted = recentAnalyses?.find((a) => a.billing_status === 'completed') ?? null;
 
-    // A stale/dead newest row falls back to the last real completed
-    // analysis (if any) instead of surfacing a permanent error/ghost state.
-    const existingAnalysis = newestIsStale && latestCompleted ? latestCompleted : newestRow;
+    // A stale in-flight processing row falls back to the last real completed
+    // analysis (if any) instead of surfacing a permanent ghost state.
+    const existingAnalysis = newestIsStaleProcessing && latestCompleted ? latestCompleted : newestRow;
 
     if (existingAnalysis) {
       // Enforce compatibility with the PR #36 / PR #40 serialization structures
@@ -173,7 +181,6 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. No row at all → nothing in flight.
-    console.log('[analyses/check] NONE - no existing analysis', { videoId: normalizedVideoId });
     addBreadcrumb('Poll: none', { videoId: normalizedVideoId }, 'cache');
 
     return NextResponse.json({

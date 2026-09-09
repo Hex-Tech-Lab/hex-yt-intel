@@ -441,38 +441,19 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   /**
    * Narrow projection of findAnalysisChunks for presence-check-only callers
-   * (ADR 021 Phase 2, chunk-presence.ts) -- skips `payload`, which can be
-   * tens of KB per chunk and is never read by a presence check. Bounded by
-   * a short AbortSignal timeout: this backs a terminal-error response on the
-   * edge-runtime /api/analyses/check route, which exists specifically to
-   * stop a client from polling a dead analysis forever -- a slow presence
-   * query must never itself become the reason that response is delayed.
+   * (ADR 021 Phase 2, chunk-presence.ts) — maps chunk coverage fields without
+   * exposing unnecessary payload data. Delegates to this.findAnalysisChunks.
    */
-  // skipcq: JS-0105, JS-R1005
   async findAnalysisChunkCoverage(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null> {
-    if (!this.constructor) return null;
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analysis_chunks')
-        .select('chunk_index, dimensions_covered, status')
-        .eq('analysis_id', params.analysisId)
-        .abortSignal(AbortSignal.timeout(3000));
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAnalysisChunkCoverage failed:', error.message);
-        throw error;
-      }
-      return data || [];
-    } catch (error: unknown) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAnalysisChunkCoverage' },
-        extra: { analysisId: params.analysisId },
-      });
-      throw error;
-    }
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[] | null; status: 'completed' | 'failed' | 'interrupted' }> | null> {
+    const chunks = await this.findAnalysisChunks(params);
+    if (!chunks) return null;
+    return chunks.map((c) => ({
+      chunk_index: c.chunk_index,
+      dimensions_covered: c.dimensions_covered,
+      status: c.status,
+    }));
   }
 
   /**

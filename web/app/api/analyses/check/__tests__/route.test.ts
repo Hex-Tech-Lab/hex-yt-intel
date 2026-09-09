@@ -175,4 +175,54 @@ describe('GET /api/analyses/check', () => {
     expect(body.status).toBe('error');
     expect(body.missingDimensions).toBeUndefined();
   });
+
+  it('does NOT fall back to older completed analysis when newest row has billing_status=failed', async () => {
+    const oldDate = new Date(Date.now() - 200_000).toISOString();
+    const olderCompletedDate = new Date(Date.now() - 300_000).toISOString();
+    mockAnalysesQuery([
+      { id: 'failed-analysis', title: 'Failed T', channel_title: 'C', analysis_markdown: null, created_at: oldDate, updated_at: oldDate, model_used: 'm', validation_report: { status: 'processing' }, billing_status: 'failed' },
+      { id: 'older-completed', title: 'Completed T', channel_title: 'C', analysis_markdown: '# Done', created_at: olderCompletedDate, updated_at: olderCompletedDate, model_used: 'm', validation_report: {}, billing_status: 'completed' },
+    ]);
+    (getMissingDimensionNumbers as ReturnType<typeof vi.fn>).mockResolvedValue([1, 2]);
+
+    const res = await GET(checkRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('error');
+    expect(body.analysisId).toBe('failed-analysis');
+    expect(body.missingDimensions).toEqual([1, 2]);
+  });
+
+  it('does NOT fall back to older completed analysis when newest row has validation_report.status=error', async () => {
+    const oldDate = new Date(Date.now() - 200_000).toISOString();
+    const olderCompletedDate = new Date(Date.now() - 300_000).toISOString();
+    mockAnalysesQuery([
+      { id: 'error-analysis', title: 'Error T', channel_title: 'C', analysis_markdown: null, created_at: oldDate, updated_at: oldDate, model_used: 'm', validation_report: { status: 'error', error: 'LLM failed' }, billing_status: 'processing' },
+      { id: 'older-completed', title: 'Completed T', channel_title: 'C', analysis_markdown: '# Done', created_at: olderCompletedDate, updated_at: olderCompletedDate, model_used: 'm', validation_report: {}, billing_status: 'completed' },
+    ]);
+    (getMissingDimensionNumbers as ReturnType<typeof vi.fn>).mockResolvedValue([3, 4]);
+
+    const res = await GET(checkRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('error');
+    expect(body.analysisId).toBe('error-analysis');
+    expect(body.error).toBe('LLM failed');
+    expect(body.missingDimensions).toEqual([3, 4]);
+  });
+
+  it('falls back to older completed analysis when newest row is a genuinely stale in-flight processing row without explicit errors', async () => {
+    const staleProcessingDate = new Date(Date.now() - 200_000).toISOString();
+    const olderCompletedDate = new Date(Date.now() - 300_000).toISOString();
+    mockAnalysesQuery([
+      { id: 'stale-processing', title: 'Stale T', channel_title: 'C', analysis_markdown: null, created_at: staleProcessingDate, updated_at: staleProcessingDate, model_used: 'm', validation_report: { status: 'processing' }, billing_status: 'processing' },
+      { id: 'older-completed', title: 'Completed T', channel_title: 'C', analysis_markdown: '# Done', created_at: olderCompletedDate, updated_at: olderCompletedDate, model_used: 'm', validation_report: {}, billing_status: 'completed' },
+    ]);
+
+    const res = await GET(checkRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('complete');
+    expect(body.analysisId).toBe('older-completed');
+  });
 });

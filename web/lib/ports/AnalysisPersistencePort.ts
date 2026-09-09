@@ -200,7 +200,7 @@ export interface AnalysisPersistencePort {
    */
   findAnalysisChunkCoverage(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null>;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[] | null; status: 'completed' | 'failed' | 'interrupted' }> | null>;
 
   /**
    * Find analysis by share token for public view.
