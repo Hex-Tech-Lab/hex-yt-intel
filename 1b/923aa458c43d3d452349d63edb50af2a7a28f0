@@ -1,0 +1,33 @@
+web/lib/__tests__/analysis-requeue.test.ts
+  s_806c0f506228c0::t_1b6ef3eedc10d0 42
+.memory/AGENT_LEDGER.md
+  s_07c8ee8a00d4ae::t_13b87879bf2f8a 1377
+  s_07c8ee8a00d4ae::t_7321ee8cac775f 1376
+  s_07c8ee8a00d4ae::t_f59b3b73f597a0 1373-1375
+web/lib/services/analysis-requeue.ts
+  s_806c0f506228c0::t_1b6ef3eedc10d0 199-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "1b923aa458c43d3d452349d63edb50af2a7a28f0",
+  "prompts": {},
+  "sessions": {
+    "s_07c8ee8a00d4ae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7cf965eaffegZ98t892UFKAPC",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
