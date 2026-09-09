@@ -145,8 +145,12 @@ export function buildSettlePatch(
   const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
   const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
 
-  // Map ReapOutcome to valid BillingStatus enum values
-  const billingStatus = outcome === 'completed' ? 'completed' : 'failed';
+  // Map ReapOutcome to valid BillingStatus enum values. Billing rule (single
+  // source of truth, matches buildDimensionStatus/decideChunkSalvagePolicy):
+  // ONLY chargeable at 100% -- `outcome` alone used to gate this at
+  // MIN_SALVAGEABLE_DIMENSIONS (8/11), billing an 8-10/11 result as
+  // 'completed'. `isComplete` already requires the full TOTAL_DIMENSIONS.
+  const billingStatus = isComplete ? 'completed' : 'failed';
 
   // jsonb can decode to an array/scalar too; only spread a plain object so the
   // report shape stays consistent.
@@ -206,7 +210,12 @@ function decideChunkSalvagePolicy(
   return {
     dimensionStatus: extractDimensionStatus(stitchedPayload),
     validationStatus: dimensionCount >= TOTAL_DIMENSIONS ? 'done' : 'partial',
-    billingStatus: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed',
+    // Billing rule (single source of truth, matches buildDimensionStatus's
+    // own doc comment): ONLY chargeable at 100%. This used to bill at
+    // MIN_SALVAGEABLE_DIMENSIONS (8/11) -- confirmed live on 2 production
+    // rows (ef5c6f48/LTNVA2iP9YU -- the ORIGINAL incident this salvage path
+    // was built for -- and 114e7c1a), both billed 'completed' at 8/11.
+    billingStatus: dimensionCount >= TOTAL_DIMENSIONS ? 'completed' : 'failed',
   };
 }
 
@@ -235,16 +244,17 @@ function decideChunkSalvagePolicy(
  * until the final stitch commits, so that path saw 0 dimensions and reaped
  * the row as `failed` with nothing, discarding 10 genuinely-complete
  * dimensions sitting right there in `analysis_chunks`. This partial-recovery
- * branch mirrors `decideReapOutcome`'s existing MIN_SALVAGEABLE_DIMENSIONS
- * threshold (the same policy the markdown path already uses for a "usable
- * partial") so a majority-complete chunk set is salvaged into the row's own
- * markdown/payload instead of being silently thrown away.
+ * branch salvages ANY completed chunk data (down to a single dimension, see
+ * the 2026-09-09/10 RCA below) into the row's own markdown/payload instead of
+ * being silently thrown away -- billing still requires exactly
+ * TOTAL_DIMENSIONS (decideChunkSalvagePolicy), so persisting a sparse partial
+ * here never bills the customer; it only makes the real content visible to
+ * dimension-remediation.ts's cron instead of discarding it.
  *
- * Returns null when there is nothing worth salvaging (no completed chunks,
- * or a completed set below MIN_SALVAGEABLE_DIMENSIONS), or when the recovery
- * attempt itself fails for any reason -- the caller falls through to the
- * existing markdown-based decision in all cases, so this path can only ever
- * ADD a recovery option, never take one away.
+ * Returns null when there is nothing worth salvaging at all (zero completed
+ * chunks), or when the recovery attempt itself fails for any reason -- the
+ * caller falls through to the existing markdown-based decision in all cases,
+ * so this path can only ever ADD a recovery option, never take one away.
  */
 export async function tryChunkRecovery(
   analysisId: string,
@@ -277,10 +287,27 @@ export async function tryChunkRecovery(
   if (!stitchResult.payload) return null;
 
   const dimensionCount = stitchResult.payload.dimensions?.length ?? 0;
-  // Below salvage threshold: not enough content to be worth anything -- fall
-  // through to the markdown-based path, which will (correctly) also fail the
-  // row since analysis_markdown was never populated for chunked analyses.
-  if (!isFullSet && dimensionCount < MIN_SALVAGEABLE_DIMENSIONS) return null;
+  // Any real generated content (even 1 dimension) is now persisted as a
+  // partial rather than discarded below MIN_SALVAGEABLE_DIMENSIONS. Billing/
+  // completeness is decided separately (decideChunkSalvagePolicy, strict
+  // 100%) -- this only gates "is there anything at all worth stitching."
+  //
+  // RCA (2026-09-09/10, live production, video NE-62S4OYCg, analysis
+  // 32aeeb78): a row with 4/11 real dimensions genuinely completed in
+  // analysis_chunks ($0.065 of real spend) fell through this threshold,
+  // discarding that content entirely -- and because analysis_markdown is
+  // never populated for chunked analyses until THIS function commits it, the
+  // markdown-based fallback path also saw 0 dimensions and reaped the row as
+  // a bare 'failed' with nothing. That left the row invisible to
+  // dimension-remediation.ts's cron too (its candidate query requires
+  // validation_report.status='partial' AND non-empty analysis_markdown --
+  // neither of which this path ever produced below the old threshold),
+  // permanently stranding real, paid-for-in-compute content with no path
+  // back to the customer. Persisting it here (status='partial', billing
+  // still 'failed' per decideChunkSalvagePolicy) is what makes it visible to
+  // that EXISTING cron -- no new remediation entry point needed, just
+  // removing the discard that was hiding real rows from it.
+  if (!isFullSet && dimensionCount === 0) return null;
 
   const baseReport =
     existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
