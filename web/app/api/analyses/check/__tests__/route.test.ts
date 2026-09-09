@@ -46,7 +46,7 @@ const VIDEO_ID = 'dQw4w9WgXcQ';
 const ANALYSIS_ID = 'analysis-check-route-1';
 
 /** Build the minimal analyses-query builder the route's Supabase chain needs. */
-function mockAnalysesQuery(data: unknown[], error: unknown = null) {
+const mockAnalysesQuery = (data: unknown[], error: unknown = null) => {
   const builder = {
     select: vi.fn(),
     eq: vi.fn(),
@@ -63,11 +63,10 @@ function mockAnalysesQuery(data: unknown[], error: unknown = null) {
   };
   (getSupabaseClientWithAuth as ReturnType<typeof vi.fn>).mockResolvedValue(supabase);
   return builder;
-}
+};
 
-function checkRequest(): NextRequest {
-  return new NextRequest(`http://localhost/api/analyses/check?videoId=${VIDEO_ID}`);
-}
+const checkRequest = (): NextRequest =>
+  new NextRequest(`http://localhost/api/analyses/check?videoId=${VIDEO_ID}`);
 
 describe('GET /api/analyses/check', () => {
   beforeEach(() => vi.clearAllMocks());

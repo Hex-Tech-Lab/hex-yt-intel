@@ -26,13 +26,11 @@ import {
 } from '@/lib/services/chunk-presence';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
-function row(
+const row = (
   chunk_index: number,
   status: ChunkPresenceRow['status'],
   dimensions_covered: number[] | null
-): ChunkPresenceRow {
-  return { chunk_index, status, dimensions_covered };
-}
+): ChunkPresenceRow => ({ chunk_index, status, dimensions_covered });
 
 const all = (count: number): number[] => Array.from({ length: count }, (unused, index) => index + 1);
 

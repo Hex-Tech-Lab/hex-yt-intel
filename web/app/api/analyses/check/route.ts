@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     // PROCESSING_STALE_MS was always misreported as dead here too, even a
     // healthy worker still streaming. Falls back to created_at only when
     // updated_at is absent.
-    const newestIsStale = !!newestRow &&
+    const newestIsStale = newestRow !== null &&
       newestRow.billing_status !== 'completed' &&
       Date.now() - new Date(newestRow.updated_at || newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
     const latestCompleted = recentAnalyses?.find((a) => a.billing_status === 'completed') ?? null;

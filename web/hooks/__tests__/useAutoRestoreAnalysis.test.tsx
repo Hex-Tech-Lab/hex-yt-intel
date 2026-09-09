@@ -36,6 +36,11 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisMetadataStore } from '@/lib/stores/analysis-metadata-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
+import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+
+vi.mock('@/lib/monitoring/sentry-utils', () => ({
+  addBreadcrumb: vi.fn(),
+}));
 
 const VIDEO_ID = 'dQw4w9WgXcQ';
 const ANALYSIS_ID = 'analysis-autorestore-1';
@@ -248,7 +253,7 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
     const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
       initialProps: { url: '' },
@@ -260,12 +265,13 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       expect(useAnalysisStore.getState().status).toBe('error');
     });
 
-    // The presence-check field must reach the client log (the Phase 2
-    // surfacing contract) — logged verbatim, no re-mapping, so Phase 4 can
-    // trust the field's shape end-to-end.
-    expect(logSpy).toHaveBeenCalledWith(
+    // The presence-check field must reach observability (the Phase 2
+    // surfacing contract) — passed through verbatim, no re-mapping, so
+    // Phase 4 can trust the field's shape end-to-end.
+    expect(addBreadcrumb).toHaveBeenCalledWith(
       expect.stringContaining('dimensions still missing'),
-      MISSING_DIMENSIONS
+      { missingDimensions: MISSING_DIMENSIONS },
+      'auto-restore'
     );
 
     // Early-bail contract intact: no full-analysis fetch fired.

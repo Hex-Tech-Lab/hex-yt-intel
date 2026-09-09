@@ -7,6 +7,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 
 /**
  * Auto-restores an already-analyzed video from cache when a URL is pasted.
@@ -87,7 +88,11 @@ export function useAutoRestoreAnalysis(url: string) {
             // so the retry decision is observable client-side (the selective
             // "only fetch missing bundles" dispatch is Phase 4, not here).
             if (Array.isArray(data.missingDimensions) && data.missingDimensions.length > 0) {
-              console.log('[AutoRestore] Analysis dead — dimensions still missing after salvageable chunks:', data.missingDimensions);
+              addBreadcrumb(
+                'Analysis dead — dimensions still missing after salvageable chunks',
+                { missingDimensions: data.missingDimensions },
+                'auto-restore',
+              );
             }
             startTransition(() => {
               setStatus('error');

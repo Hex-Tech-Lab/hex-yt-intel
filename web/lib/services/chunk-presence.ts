@@ -56,10 +56,10 @@ export interface ChunkPresenceRow {
  *   are ignored; a null `dimensions_covered` array covers nothing.
  * - Failed/interrupted rows NEVER contribute coverage — see TRUST RULE above.
  */
-export function computeMissingChunkDimensions(
+export const computeMissingChunkDimensions = (
   chunkRows: ChunkPresenceRow[] | null | undefined,
   totalDimensions: number
-): number[] {
+): number[] => {
   const covered = new Set<number>();
   for (const row of chunkRows ?? []) {
     if (row.status !== 'completed') continue;
@@ -72,7 +72,7 @@ export function computeMissingChunkDimensions(
     if (!covered.has(n)) missing.push(n);
   }
   return missing;
-}
+};
 
 /**
  * Presence check for one analysis: which dimension numbers are NOT yet
@@ -83,10 +83,10 @@ export function computeMissingChunkDimensions(
  * policy. `totalDimensions` defaults to the canonical TOTAL_DIMENSIONS so a
  * caller on the standard 11-dimension pipeline can omit it.
  */
-export async function getMissingDimensionNumbers(
+export const getMissingDimensionNumbers = async (
   analysisId: string,
   totalDimensions: number = TOTAL_DIMENSIONS
-): Promise<number[]> {
+): Promise<number[]> => {
   const chunks = await new SupabasePersistenceAdapter().findAnalysisChunks({ analysisId });
   return computeMissingChunkDimensions(chunks, totalDimensions);
-}
+};
