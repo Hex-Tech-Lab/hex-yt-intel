@@ -36,6 +36,12 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisMetadataStore } from '@/lib/stores/analysis-metadata-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
+import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+
+// skipcq: JS-0057
+vi.mock('@/lib/monitoring/sentry-utils', () => ({
+  addBreadcrumb: vi.fn(),
+}));
 
 const VIDEO_ID = 'dQw4w9WgXcQ';
 const ANALYSIS_ID = 'analysis-autorestore-1';
@@ -221,6 +227,101 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       return url.includes(`/api/analyses/${ANALYSIS_ID}`) && !url.includes('/check') && !url.includes('/status');
     });
     expect(fullFetchCalls).toHaveLength(0);
+
+    unmount();
+  });
+
+  it('surfaces the check route error response missingDimensions field (ADR 021 Phase 2 presence-check) when bailing on a dead partial analysis', async () => {
+    // Partial-chunk fixture: analysis died with 2/5 bundle chunks durably
+    // completed (covering dimensions 1-5); the check route's Phase 2 field
+    // reports 6-11 as still missing. The hook must surface that field
+    // (console log) while keeping the early-bail contract from the test
+    // above — status='error', no full-analysis fetch, no reattach.
+    const MISSING_DIMENSIONS = [6, 7, 8, 9, 10, 11];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'Analysis generation timed out. Please try again.', missingDimensions: MISSING_DIMENSIONS }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
+      initialProps: { url: '' },
+    });
+
+    rerender({ url: PASTED_URL });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('error');
+    });
+
+    // The presence-check field must reach observability (the Phase 2
+    // surfacing contract) — passed through verbatim, no re-mapping, so
+    // Phase 4 can trust the field's shape end-to-end.
+    expect(addBreadcrumb).toHaveBeenCalledWith(
+      expect.stringContaining('dimensions still missing'),
+      { missingDimensions: MISSING_DIMENSIONS },
+      'auto-restore'
+    );
+
+    // Early-bail contract intact: no full-analysis fetch fired.
+    const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = typeof args[0] === 'string' ? args[0] : String(args[0]);
+      return url.includes(`/api/analyses/${ANALYSIS_ID}`) && !url.includes('/check') && !url.includes('/status');
+    });
+    expect(fullFetchCalls).toHaveLength(0);
+
+    unmount();
+  });
+
+  it('surfaces an empty missingDimensions array too — a fully-salvaged incident must stay distinguishable from a presence-check failure', async () => {
+    // [] is a real, distinct outcome (every dimension was actually
+    // salvaged) from `undefined` (the presence check never ran or itself
+    // failed) -- gating the breadcrumb on `.length > 0` would collapse both
+    // into "nothing logged," making a fully-salvaged incident invisible in
+    // auto-restore telemetry.
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'Analysis generation failed', missingDimensions: [] }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
+      initialProps: { url: '' },
+    });
+
+    rerender({ url: PASTED_URL });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('error');
+    });
+
+    expect(addBreadcrumb).toHaveBeenCalledWith(
+      'Analysis dead — all dimensions salvaged from completed chunks',
+      { missingDimensions: [] },
+      'auto-restore',
+    );
 
     unmount();
   });

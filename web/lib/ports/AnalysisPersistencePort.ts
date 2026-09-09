@@ -193,6 +193,22 @@ export interface AnalysisPersistencePort {
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 
   /**
+   * Narrow projection of findAnalysisChunks for presence-check-only callers
+   * (ADR 021 Phase 2, chunk-presence.ts) — skips the (potentially large)
+   * `payload` JSONB column that other findAnalysisChunks callers (persist
+   * route, chat grounding) genuinely need but a presence check never reads.
+   * Restored 2026-09-09 after being reverted while chasing a DeepSource
+   * class-methods-use-this false positive (JS-0105) — the narrow query and
+   * its bounded timeout are the real fix for a genuine reliability concern
+   * (an edge route whose whole purpose is stopping dead-analysis polling
+   * must never itself be slowed by its own diagnostic query); suppress the
+   * linter finding, don't delete the fix it flagged.
+   */
+  findAnalysisChunkCoverage(params: {
+    analysisId: string;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null>;
+
+  /**
    * Find analysis by share token for public view.
    */
   findAnalysisByShareToken(token: string): Promise<{

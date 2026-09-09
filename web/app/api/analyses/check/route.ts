@@ -6,6 +6,8 @@ import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 import { VideoIdSchema } from '@/lib/types/contracts';
+import { getMissingDimensionNumbers } from '@/lib/services/chunk-presence';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export const runtime = 'edge';
 
@@ -13,6 +15,7 @@ export const runtime = 'edge';
 const PROCESSING_STALE_MS = 120_000;
 
 /** GET /api/analyses/check — Poll for cached analysis or in-progress status by video ID. */
+// skipcq: JS-0067, JS-R1005
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -59,7 +62,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, channel_title, analysis_markdown, created_at, model_used, validation_report, billing_status')
+          .select('id, title, channel_title, analysis_markdown, created_at, updated_at, model_used, validation_report, billing_status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -75,14 +78,34 @@ export async function GET(request: NextRequest) {
     });
 
     const newestRow = recentAnalyses?.[0] ?? null;
-    const newestIsStale = !!newestRow &&
-      newestRow.billing_status !== 'completed' &&
-      Date.now() - new Date(newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
+    const newestReport = (newestRow?.validation_report as Record<string, unknown> | null) || {};
+    const isExplicitError = newestRow?.billing_status === 'failed' ||
+      newestReport.status === 'error' ||
+      newestReport.status === 'failed' ||
+      (newestReport.validation_status as string | undefined) === 'error' ||
+      (newestReport.validation_status as string | undefined) === 'failed';
+    // Staleness clock must be updated_at, not created_at (same class of bug
+    // independently fixed 2026-09-09 in /api/analyses/[id]/status/route.ts,
+    // commit 662efa41): the worker touches updated_at on every incremental
+    // dimension write, so a genuinely in-flight row keeps resetting this
+    // clock. created_at never changes, so any processing row older than
+    // PROCESSING_STALE_MS was always misreported as dead here too, even a
+    // healthy worker still streaming. Falls back to created_at only when
+    // updated_at is absent.
+    //
+    // Terminal failure safeguard: stale fallback to latestCompleted applies
+    // ONLY to genuinely in-flight processing rows that timed out. Explicit
+    // failures (billing_status='failed' or validation_report.status='error')
+    // must remain terminal errors and never be masked by an older completed row.
+    const newestIsStaleProcessing = newestRow !== null &&
+      newestRow.billing_status === 'processing' &&
+      !isExplicitError &&
+      Date.now() - new Date(newestRow.updated_at || newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
     const latestCompleted = recentAnalyses?.find((a) => a.billing_status === 'completed') ?? null;
 
-    // A stale/dead newest row falls back to the last real completed
-    // analysis (if any) instead of surfacing a permanent error/ghost state.
-    const existingAnalysis = newestIsStale && latestCompleted ? latestCompleted : newestRow;
+    // A stale in-flight processing row falls back to the last real completed
+    // analysis (if any) instead of surfacing a permanent ghost state.
+    const existingAnalysis = newestIsStaleProcessing && latestCompleted ? latestCompleted : newestRow;
 
     if (existingAnalysis) {
       // Enforce compatibility with the PR #36 / PR #40 serialization structures
@@ -107,7 +130,31 @@ export async function GET(request: NextRequest) {
 
       // A processing row this old means its background generator was killed (Vercel
       // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
-      const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
+      // updated_at, not created_at -- see the newestIsStale comment above for the RCA.
+      const ageMs = Date.now() - new Date(existingAnalysis.updated_at || existingAnalysis.created_at).getTime();
+
+      // ADR 021 Phase 2 (presence-check-on-resume): on a terminal-error state
+      // (dead/stale/failed row), surface which dimensions are already durably
+      // covered by completed analysis_chunks rows, so a client retry can know
+      // what an LLM re-run would actually need to regenerate instead of
+      // blindly redoing all of it (live incident, analysis 32aeeb78:
+      // 2/5 chunks durable, a retry would re-pay all 5). Read-only surfacing —
+      // the selective-dispatch behavior change is Phase 4. Deliberately NOT
+      // computed on the 'processing' poll loop (hot path, reattach handles it)
+      // nor the 'complete' branch (definitionally empty). Fail-open: a
+      // presence-check failure must never break the check route's own
+      // status contract — omit the field and let the client proceed as before.
+      const isTerminalError =
+        validationReport.status === 'error' ||
+        existingAnalysis.billing_status === 'failed' ||
+        ageMs >= PROCESSING_STALE_MS;
+      let missingDimensions: number[] | undefined;
+      if (isTerminalError) {
+        missingDimensions = await getMissingDimensionNumbers(existingAnalysis.id, TOTAL_DIMENSIONS).catch((presenceError) => {
+          addBreadcrumb('Presence check (missing dimensions) failed', { analysisId: existingAnalysis.id, error: String(presenceError) }, 'database');
+          return undefined;
+        });
+      }
 
       if (validationReport.status === 'error' || existingAnalysis.billing_status === 'failed') {
         return NextResponse.json({
@@ -115,6 +162,7 @@ export async function GET(request: NextRequest) {
           exists: true,
           analysisId: existingAnalysis.id,
           error: validationReport.error || 'Analysis generation failed',
+          missingDimensions,
         }, { status: 200 });
       }
 
@@ -124,6 +172,7 @@ export async function GET(request: NextRequest) {
           exists: true,
           analysisId: existingAnalysis.id,
           error: 'Analysis generation timed out. Please try again.',
+          missingDimensions,
         }, { status: 200 });
       }
 
@@ -136,7 +185,6 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. No row at all → nothing in flight.
-    console.log('[analyses/check] NONE - no existing analysis', { videoId: normalizedVideoId });
     addBreadcrumb('Poll: none', { videoId: normalizedVideoId }, 'cache');
 
     return NextResponse.json({

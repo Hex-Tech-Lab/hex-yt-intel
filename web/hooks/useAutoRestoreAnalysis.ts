@@ -7,6 +7,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 
 /**
  * Auto-restores an already-analyzed video from cache when a URL is pasted.
@@ -15,6 +16,7 @@ import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
  * synthesis nucleus, and chat stores exactly as the history-click restore
  * path does. Fires whenever `url` changes.
  */
+// skipcq: JS-0067, JS-R1005
 export function useAutoRestoreAnalysis(url: string) {
   const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
   const setVideoMetadata = useAnalysisStore((s) => s.setVideoMetadata);
@@ -58,13 +60,20 @@ export function useAutoRestoreAnalysis(url: string) {
     let cancelled = false;
 
     // Check if there's already a completed analysis for this videoId
-    void (async () => {
+    const checkAndRestore = async () => {
       try {
-        let res;
+        let res: Response;
+        let checkOk = false;
         try {
           res = await fetch(`/api/analyses/check?videoId=${videoId}`);
+          checkOk = res.ok;
         } finally {
-          // resource cleanup
+          // Real diagnostic, not a no-op: surfaces whether this hook's very
+          // first network call of the restore attempt actually settled
+          // (as opposed to throwing/hanging), independent of whatever the
+          // rest of the function goes on to do -- useful when triaging a
+          // "restore never happened" report without needing a full repro.
+          addBreadcrumb('Auto-restore: check request settled', { videoId, ok: checkOk }, 'auto-restore');
         }
         if (!res.ok) return;
         const data = await res.json();
@@ -81,6 +90,26 @@ export function useAutoRestoreAnalysis(url: string) {
           // error via useStreamReattach (confusing "Re-attached → 0/11 → error"
           // sequence confirmed in production, analysis 32aeeb78, 2026-09-08).
           if (data.status === 'error') {
+            // ADR 021 Phase 2 (presence-check-on-resume): the check route
+            // surfaces which dimensions are already durably covered by
+            // completed analysis_chunks rows for this dead analysis. Log it
+            // so the retry decision is observable client-side (the selective
+            // "only fetch missing bundles" dispatch is Phase 4, not here).
+            // Logged whenever the field is an array -- including `[]`, which
+            // means every dimension was actually salvaged (a real, distinct
+            // outcome from "presence check never ran/failed", where the
+            // field is `undefined` instead -- collapsing both into "log only
+            // when non-empty" made a fully-salvaged incident indistinguishable
+            // from a presence-check failure in auto-restore telemetry).
+            if (Array.isArray(data.missingDimensions)) {
+              addBreadcrumb(
+                data.missingDimensions.length === 0
+                  ? 'Analysis dead — all dimensions salvaged from completed chunks'
+                  : 'Analysis dead — dimensions still missing after salvageable chunks',
+                { missingDimensions: data.missingDimensions },
+                'auto-restore',
+              );
+            }
             startTransition(() => {
               setStatus('error');
             });
@@ -88,11 +117,18 @@ export function useAutoRestoreAnalysis(url: string) {
           }
 
           // Trigger the restoration flow just like history restoration
-          let restoreRes;
+          let restoreRes: Response;
+          let restoreOk = false;
           try {
             restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
+            restoreOk = restoreRes.ok;
           } finally {
-            // resource cleanup
+            // Same real diagnostic as the check-request breadcrumb above --
+            // the second, heavier fetch (full analysis record) is the one
+            // most likely to time out on a large payload; knowing whether
+            // it settled at all narrows "restore silently did nothing" vs.
+            // "restore threw before this point" without a full repro.
+            addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: restoreOk }, 'auto-restore');
           }
           if (!restoreRes.ok) return;
           const restoreData = await restoreRes.json();
@@ -200,7 +236,7 @@ export function useAutoRestoreAnalysis(url: string) {
           // ordering guard of its own, so a fast effect re-run (e.g. rapid
           // videoId changes) could let a stale lookup win the chat panel
           // after a newer one already resolved.
-          void (async () => {
+          const restoreChatSession = async () => {
             try {
               if (cancelled) return;
               // Bumped as early as possible so a still-in-flight OLDER
@@ -254,12 +290,14 @@ export function useAutoRestoreAnalysis(url: string) {
             } catch (e) {
               console.debug('[AutoRestore] Background chat session restoration failed:', e);
             }
-          })();
+          };
+          restoreChatSession();
         }
       } catch (err) {
         console.debug('[AutoRestore] Pre-flight cache check failed:', err);
       }
-    })();
+    };
+    checkAndRestore();
 
     return () => {
       cancelled = true;
