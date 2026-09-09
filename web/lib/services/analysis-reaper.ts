@@ -108,12 +108,16 @@ export interface SweepResult {
   /** ADR 021 Phase 3: rows requeued as partial-and-retryable (NOT settled — still `processing`). */
   requeued: number;
   raced: number; // rows a concurrent settle won before us
+  unknown?: number; // ambiguous transport/timeout writes skipped to prevent data loss
+  errors?: number; // chunk read or definitive DB errors skipped to prevent data loss
 }
 
 interface StuckRow {
   id: string;
   analysis_markdown: string | null;
   validation_report: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string | null;
 }
 
 /**
@@ -337,28 +341,30 @@ export async function tryChunkRecovery(
 async function attemptChunkRecovery(
   row: StuckRow,
   persistenceAdapter: SupabasePersistenceAdapter
-): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
+): Promise<{ status: 'recovered'; outcome: Exclude<ReapOutcome, 'requeue-partial'> } | { status: 'not_eligible' } | { status: 'error' }> {
   try {
-    return await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
+    const res = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
+    if (res) return { status: 'recovered', outcome: res.outcome };
+    return { status: 'not_eligible' };
   } catch (chunkErr) {
     Sentry.captureException(chunkErr, {
       tags: { service: 'analysis-reaper', phase: 'chunk_recovery' },
       extra: { analysisId: row.id },
     });
-    return null;
+    return { status: 'error' };
   }
 }
 
 /**
- * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row,
- * swallowing (and Sentry-capturing) any failure into a null result.
+ * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row.
+ * Distinguishes genuine ineligibility from read/write errors.
  */
 // skipcq: JS-0067
 async function attemptRequeue(
   row: StuckRow,
   persistenceAdapter: SupabasePersistenceAdapter,
   resolveMaxRetries: () => Promise<number>
-): Promise<'requeued' | 'raced' | 'unknown' | null> {
+): Promise<'requeued' | 'raced' | 'unknown' | 'not_eligible' | 'error'> {
   try {
     const maxRetries = await resolveMaxRetries().catch((err) => {
       Sentry.captureException(err, {
@@ -367,13 +373,15 @@ async function attemptRequeue(
       });
       return REMEDIATION_MAX_RETRIES_FALLBACK;
     });
-    return await tryRequeuePartial(row, persistenceAdapter, maxRetries);
+    const res = await tryRequeuePartial(row, persistenceAdapter, maxRetries);
+    if (res === null) return 'not_eligible';
+    return res;
   } catch (requeueErr) {
     Sentry.captureException(requeueErr, {
       tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
       extra: { analysisId: row.id },
     });
-    return null;
+    return 'error';
   }
 }
 
@@ -386,18 +394,19 @@ async function processStuckRow(
   service: ReturnType<typeof getSupabaseServiceClient>,
   persistenceAdapter: SupabasePersistenceAdapter,
   resolveMaxRetries: () => Promise<number>
-): Promise<'completed' | 'failed' | 'requeued' | 'raced' | 'skipped'> {
-  const recovered = await attemptChunkRecovery(row, persistenceAdapter);
-  if (recovered) {
-    return recovered.outcome;
-  }
+): Promise<'completed' | 'failed' | 'requeued' | 'raced' | 'unknown' | 'skipped'> {
+  const recovery = await attemptChunkRecovery(row, persistenceAdapter);
+  if (recovery.status === 'error') return 'skipped';
+  if (recovery.status === 'recovered') return recovery.outcome;
 
   const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
 
   if (outcome === 'failed') {
     const requeued = await attemptRequeue(row, persistenceAdapter, resolveMaxRetries);
+    if (requeued === 'error') return 'skipped';
     if (requeued === 'requeued') return 'requeued';
-    if (requeued === 'raced' || requeued === 'unknown') return 'raced';
+    if (requeued === 'raced') return 'raced';
+    if (requeued === 'unknown') return 'unknown';
   }
 
   const { error: updErr, count } = await service
@@ -427,18 +436,23 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
 
   const { data, error } = await service
     .from('analyses')
-    .select('id, analysis_markdown, validation_report')
+    .select('id, analysis_markdown, validation_report, created_at, updated_at')
     .eq('billing_status', 'processing')
-    .lt('created_at', cutoffIso)
+    .or(`updated_at.lt.${cutoffIso},and(updated_at.is.null,created_at.lt.${cutoffIso})`)
     .limit(limit);
 
   if (error) {
     Sentry.captureException(error, { tags: { service: 'analysis-reaper', phase: 'select' } });
-    return { scanned: 0, completed: 0, failed: 0, requeued: 0, raced: 0 };
+    throw error;
   }
 
-  const stuck = (data || []) as StuckRow[];
-  const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, requeued: 0, raced: 0 };
+  const cutoffMs = Date.now() - graceMinutes * 60_000;
+  const stuck = ((data || []) as StuckRow[]).filter((row) => {
+    const ts = row.updated_at || row.created_at;
+    return !ts || new Date(ts).getTime() <= cutoffMs;
+  });
+
+  const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, requeued: 0, raced: 0, unknown: 0, errors: 0 };
 
   let maxRetriesCache: number | null = null;
   // skipcq: JS-0067
@@ -459,6 +473,8 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     else if (status === 'failed') result.failed++;
     else if (status === 'requeued') result.requeued++;
     else if (status === 'raced') result.raced++;
+    else if (status === 'unknown') result.unknown!++;
+    else if (status === 'skipped') result.errors!++;
   }
 
   return result;

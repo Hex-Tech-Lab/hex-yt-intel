@@ -207,21 +207,64 @@ function readRemediationRetryCount(existingReport: unknown): number {
  * never data loss or an unbounded loop (the ceiling still eventually
  * binds). Tracked as follow-up, not silently ignored.
  */
+// skipcq: JS-0067
+export function extractPayloadDimensionNumbers(payload: unknown): Set<number> {
+  if (!payload || typeof payload !== 'object') return new Set();
+  const rawDimensions = (payload as { dimensions?: unknown }).dimensions;
+  if (!Array.isArray(rawDimensions)) return new Set();
+  const numbers = new Set<number>();
+  for (const item of rawDimensions) {
+    if (typeof item === 'object' && item !== null) {
+      const num =
+        (item as { number?: unknown; dimensionNumber?: unknown; dimension?: unknown }).number ??
+        (item as { number?: unknown; dimensionNumber?: unknown; dimension?: unknown }).dimensionNumber ??
+        (item as { number?: unknown; dimensionNumber?: unknown; dimension?: unknown }).dimension;
+      if (typeof num === 'number' && Number.isInteger(num)) {
+        numbers.add(num);
+      }
+    }
+  }
+  return numbers;
+}
+
+// skipcq: JS-0067
+export function isAmbiguousTransportError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : '';
+  return (
+    msg.includes('timeout') ||
+    msg.includes('network') ||
+    msg.includes('fetch failed') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout') ||
+    msg.includes('abort') ||
+    code === '504' ||
+    code === '502' ||
+    code === '503'
+  );
+}
+
 export const tryRequeuePartial = async (
   row: { id: string; validation_report: unknown },
   persistenceAdapter: SupabasePersistenceAdapter,
   maxRetries: number
-): Promise<'requeued' | 'raced' | 'unknown' | null> => {
+): Promise<'requeued' | 'raced' | 'unknown' | 'error' | null> => {
   const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId: row.id });
   const chunkRows = chunks ?? [];
 
-  // Same trust rule as tryChunkRecovery's usableRows: only chunks that
-  // individually completed WITH a dimensions payload carry checkpointed
-  // dimensions worth counting — a chunk that never reached `completed`
-  // (or lacks a dimensions array) must not vouch for its covered set.
+  // Strengthened trust rule: only chunks that individually completed WITH
+  // valid dimensions present in BOTH dimensions_covered AND the payload
+  // contribute coverage.
   const coveredDimensions = chunkRows
-    .filter(chunk => chunk.status === 'completed' && Array.isArray((chunk.payload as { dimensions?: unknown } | null)?.dimensions))
-    .flatMap(chunk => (Array.isArray(chunk.dimensions_covered) ? chunk.dimensions_covered : []));
+    .filter(chunk => chunk.status === 'completed')
+    .flatMap(chunk => {
+      const payloadNumbers = extractPayloadDimensionNumbers(chunk.payload);
+      const covered = Array.isArray(chunk.dimensions_covered) ? chunk.dimensions_covered : [];
+      return covered.filter(
+        num => Number.isInteger(num) && num >= 1 && num <= TOTAL_DIMENSIONS && payloadNumbers.has(num)
+      );
+    });
 
   const currentRetryCount = readRemediationRetryCount(row.validation_report);
   const decision = decideRequeuePartial(coveredDimensions, currentRetryCount, maxRetries);
@@ -229,19 +272,26 @@ export const tryRequeuePartial = async (
 
   const { patch } = buildRequeuePatch(decision.missingDimensions, row.validation_report, currentRetryCount + 1);
   const service = getSupabaseServiceClient();
-  const { error: updErr, count } = await service
+
+  // Atomic CAS: guard on billing_status='processing' AND expected retry count,
+  // preventing two concurrent sweeps from reading the same snapshot and overwriting.
+  let updateQuery = service
     .from('analyses')
     .update(patch, { count: 'exact' })
     .eq('id', row.id)
     .eq('billing_status', 'processing');
-  // Ambiguous outcome, NOT a confirmed failure: the update call errored, but
-  // it may have already committed server-side before the error surfaced
-  // (network blip after commit, response timeout, etc.) -- 'unknown' tells
-  // the caller to skip this row THIS sweep rather than risk overwriting a
-  // real requeue with a terminal 'failed' settle. Deliberately not thrown:
-  // a thrown error here previously collapsed into the same "fall through to
-  // terminal settle" path as a genuine decision failure, which is exactly
-  // the unsafe behavior this return value exists to prevent.
-  if (updErr) return 'unknown';
+
+  if (currentRetryCount === 0) {
+    updateQuery = updateQuery.or(
+      'validation_report->>remediation_retry_count.is.null,validation_report->>remediation_retry_count.eq.0'
+    );
+  } else {
+    updateQuery = updateQuery.eq('validation_report->>remediation_retry_count', String(currentRetryCount));
+  }
+
+  const { error: updErr, count } = await updateQuery;
+  if (updErr) {
+    return isAmbiguousTransportError(updErr) ? 'unknown' : 'error';
+  }
   return count ? 'requeued' : 'raced';
 };

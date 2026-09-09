@@ -312,5 +312,30 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     // Bounded retry (maxAttempts=2): exactly 2 attempts, not an unbounded loop.
     expect(updateAnalysisResultMock).toHaveBeenCalledTimes(2);
   });
+
+  it('propagates the error when initial chunk retrieval query fails', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: () => ({
+          select: () => ({
+            eq: () => Promise.resolve({ data: null, error: new Error('chunk select failed') }),
+          }),
+        }),
+      }),
+    }));
+    vi.doMock('@/lib/adapters', () => ({
+      SupabasePersistenceAdapter: class {
+        updateAnalysisResult = vi.fn();
+      },
+    }));
+
+    const mod = await import('@/lib/services/analysis-reaper');
+    const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
+    await expect(
+      mod.tryChunkRecovery('analysis-8', null, new SupabasePersistenceAdapter() as any)
+    ).rejects.toThrow('chunk select failed');
+  });
 });
+
 
