@@ -76,11 +76,11 @@ export const REMEDIATION_MAX_RETRIES_FALLBACK = 3;
  *
  * Pure. Exported for unit testing (same pattern as decideReapOutcome).
  */
-export function decideRequeuePartial(
+export const decideRequeuePartial = (
   coveredDimensions: number[],
   currentRetryCount: number,
   maxRetries: number,
-): { outcome: Extract<ReapOutcome, 'requeue-partial'>; missingDimensions: number[] } | null {
+): { outcome: Extract<ReapOutcome, 'requeue-partial'>; missingDimensions: number[] } | null => {
   const covered = new Set(coveredDimensions.filter(dim => Number.isInteger(dim) && dim >= 1 && dim <= TOTAL_DIMENSIONS));
   if (covered.size === 0) return null;
   if (covered.size >= MIN_SALVAGEABLE_DIMENSIONS) return null;
@@ -90,7 +90,7 @@ export function decideRequeuePartial(
     if (!covered.has(d)) missingDimensions.push(d);
   }
   return { outcome: 'requeue-partial', missingDimensions };
-}
+};
 
 /**
  * Build the requeue bookkeeping patch for a stuck-partial row (pure — no
@@ -111,12 +111,12 @@ export function decideRequeuePartial(
  *
  * Exported for unit testing.
  */
-export function buildRequeuePatch(
+export const buildRequeuePatch = (
   missingDimensions: number[],
   existingReport: unknown,
   nextRetryCount: number,
   nowIso: string = new Date().toISOString(),
-): { outcome: Extract<ReapOutcome, 'requeue-partial'>; patch: SettlePatch } {
+): { outcome: Extract<ReapOutcome, 'requeue-partial'>; patch: SettlePatch } => {
   const baseReport =
     existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
       ? (existingReport as Record<string, unknown>)
@@ -137,7 +137,7 @@ export function buildRequeuePatch(
       updated_at: nowIso,
     },
   };
-}
+};
 
 /**
  * The shared retry counter (ADR 021 open-question 4: reuse
@@ -145,13 +145,13 @@ export function buildRequeuePatch(
  * dimension-remediation.ts reads it, so the reaper's requeues and the
  * remediation harness's attempts draw down ONE shared ceiling.
  */
-function readRemediationRetryCount(existingReport: unknown): number {
+const readRemediationRetryCount = (existingReport: unknown): number => {
   const report =
     existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
       ? (existingReport as Record<string, unknown>)
       : {};
   return typeof report.remediation_retry_count === 'number' ? report.remediation_retry_count : 0;
-}
+};
 
 /**
  * ADR 021 Phase 3 I/O wrapper around decideRequeuePartial: reads the row's
@@ -183,11 +183,11 @@ function readRemediationRetryCount(existingReport: unknown): number {
  * the loop. The missing-dimensions payload itself is identical across both
  * writers, so no data divergence is possible.
  */
-export async function tryRequeuePartial(
+export const tryRequeuePartial = async (
   row: { id: string; validation_report: unknown },
   persistenceAdapter: SupabasePersistenceAdapter,
   maxRetries: number
-): Promise<'requeued' | 'raced' | null> {
+): Promise<'requeued' | 'raced' | null> => {
   const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId: row.id });
   const chunkRows = chunks ?? [];
 
@@ -212,4 +212,4 @@ export async function tryRequeuePartial(
     .eq('billing_status', 'processing');
   if (updErr) throw updErr; // caller's catch falls through to the terminal failed settle
   return count ? 'requeued' : 'raced';
-}
+};

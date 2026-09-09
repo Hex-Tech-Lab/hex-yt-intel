@@ -23,9 +23,9 @@ describe('decideRequeuePartial (ADR 021 Phase 3)', () => {
 
   it('requeues a stuck row with some (3/11) dimensions covered while retries remain', () => {
     const decision = decideRequeuePartial([1, 2, 3], 1, MAX_RETRIES);
-    expect(decision).not.toBeNull();
-    expect(decision!.outcome).toBe('requeue-partial');
-    expect(decision!.missingDimensions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
+    if (decision === null) throw new Error('expected a requeue-partial decision');
+    expect(decision.outcome).toBe('requeue-partial');
+    expect(decision.missingDimensions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
   it('still fails (null) a stuck row with 0/11 dimensions covered — unchanged behavior', () => {
@@ -45,15 +45,15 @@ describe('decideRequeuePartial (ADR 021 Phase 3)', () => {
 
   it('dedupes the covered set — duplicate covered numbers must not inflate the count', () => {
     const decision = decideRequeuePartial([3, 3, 1], 0, MAX_RETRIES);
-    expect(decision).not.toBeNull();
-    expect(decision!.missingDimensions).toEqual([2, 4, 5, 6, 7, 8, 9, 10, 11]);
+    if (decision === null) throw new Error('expected a requeue-partial decision');
+    expect(decision.missingDimensions).toEqual([2, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
   it('ignores out-of-range covered numbers — only 1..TOTAL_DIMENSIONS count as covered', () => {
     const decision = decideRequeuePartial([0, 12, 99, 1], 0, MAX_RETRIES);
-    expect(decision).not.toBeNull();
-    expect(decision!.missingDimensions).not.toContain(1);
-    expect(decision!.missingDimensions).toHaveLength(TOTAL_DIMENSIONS - 1);
+    if (decision === null) throw new Error('expected a requeue-partial decision');
+    expect(decision.missingDimensions).not.toContain(1);
+    expect(decision.missingDimensions).toHaveLength(TOTAL_DIMENSIONS - 1);
   });
 });
 

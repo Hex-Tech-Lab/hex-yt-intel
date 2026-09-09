@@ -353,6 +353,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
   // the same "resolve once per run" convention the remediation harness applies
   // to its cascade/budget resolution.
   let maxRetriesCache: number | null = null;
+  /** Resolves and memoizes `remediation.maxRetries` for this sweep run (see comment above). */
   const resolveMaxRetries = async (): Promise<number> => {
     if (maxRetriesCache === null) {
       const settings = await SupabaseSettingsAdapter.getRegistrySettings(
