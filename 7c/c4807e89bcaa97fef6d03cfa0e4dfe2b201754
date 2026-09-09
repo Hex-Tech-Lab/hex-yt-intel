@@ -1,0 +1,33 @@
+web/lib/services/chunk-presence.ts
+  s_806c0f506228c0::t_ec3f9c702ecbe2 35-40
+  s_806c0f506228c0::t_9d48101496f7f3 93
+  s_806c0f506228c0::t_4a8c0dcd1bb5c9 45
+web/lib/ports/AnalysisPersistencePort.ts
+  s_806c0f506228c0::t_a6ddf29c846005 196-204
+  s_806c0f506228c0::t_fb78a6ea376bb2 195
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_806c0f506228c0::t_35dd8ef013986d 443-475
+  s_806c0f506228c0::t_3a1b7a09130763 442
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_806c0f506228c0::t_caf39d0d2e33e8 286-326
+web/app/api/analyses/check/__tests__/route.test.ts
+  s_806c0f506228c0::t_87dbcbf6ded248 90-99
+web/hooks/useAutoRestoreAnalysis.ts
+  s_806c0f506228c0::t_0f2a37ff497a8b 90-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "7cc4807e89bcaa97fef6d03cfa0e4dfe2b201754",
+  "prompts": {},
+  "sessions": {
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
