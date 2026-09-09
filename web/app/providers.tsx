@@ -1,8 +1,10 @@
 'use client';
 
 import '../sentry.client.config';
+import '@astryxdesign/theme-neutral/theme.css';
 import { LayerProvider, Theme } from '@astryxdesign/core';
-import { neutralTheme } from '@astryxdesign/theme-neutral';
+import { neutralTheme } from '@astryxdesign/theme-neutral/built';
+
 import { SettingsProvider } from '@/lib/stores/settings-context';
 import { ToastBridge } from '@/lib/dashboard/toast-bridge';
 
