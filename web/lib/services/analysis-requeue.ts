@@ -231,6 +231,7 @@ export function extractPayloadDimensionNumbers(payload: unknown): Set<number> {
 export function isAmbiguousTransportError(error: unknown): boolean {
   if (!error) return false;
   const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  // skipcq: TS-0004 -- explicit null-guard on unknown before property access; !error above narrows out null but TS-0004 still fires
   const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : '';
   return (
     msg.includes('timeout') ||

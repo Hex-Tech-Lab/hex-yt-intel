@@ -333,7 +333,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     const mod = await import('@/lib/services/analysis-reaper');
     const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
     await expect(
-      mod.tryChunkRecovery('analysis-8', null, new SupabasePersistenceAdapter() as any)
+      mod.tryChunkRecovery('analysis-8', null, new SupabasePersistenceAdapter())
     ).rejects.toThrow('chunk select failed');
   });
 });

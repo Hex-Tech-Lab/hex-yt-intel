@@ -473,8 +473,8 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     else if (status === 'failed') result.failed++;
     else if (status === 'requeued') result.requeued++;
     else if (status === 'raced') result.raced++;
-    else if (status === 'unknown') result.unknown!++;
-    else if (status === 'skipped') result.errors!++;
+    else if (status === 'unknown') result.unknown = (result.unknown ?? 0) + 1;
+    else if (status === 'skipped') result.errors = (result.errors ?? 0) + 1;
   }
 
   return result;

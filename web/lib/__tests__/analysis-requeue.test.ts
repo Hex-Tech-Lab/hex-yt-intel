@@ -93,6 +93,7 @@ describe('buildRequeuePatch (ADR 021 Phase 3)', () => {
 describe('extractPayloadDimensionNumbers', () => {
   it('returns empty Set for null, non-objects, or missing dimensions', () => {
     expect(extractPayloadDimensionNumbers(null).size).toBe(0);
+    // skipcq: JS-0284 -- intentional: testing the undefined guard in extractPayloadDimensionNumbers
     expect(extractPayloadDimensionNumbers(undefined).size).toBe(0);
     expect(extractPayloadDimensionNumbers('not an object').size).toBe(0);
     expect(extractPayloadDimensionNumbers({}).size).toBe(0);
@@ -126,6 +127,7 @@ describe('isAmbiguousTransportError', () => {
     expect(isAmbiguousTransportError(new Error('duplicate key value violates unique constraint'))).toBe(false);
     expect(isAmbiguousTransportError({ message: 'permission denied', code: '42501' })).toBe(false);
     expect(isAmbiguousTransportError(null)).toBe(false);
+    // skipcq: JS-0284 -- intentional: testing the undefined guard in isAmbiguousTransportError
     expect(isAmbiguousTransportError(undefined)).toBe(false);
   });
 });
