@@ -448,6 +448,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
    * stop a client from polling a dead analysis forever -- a slow presence
    * query must never itself become the reason that response is delayed.
    */
+  // skipcq: JS-0105, JS-R1005
   async findAnalysisChunkCoverage(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null> {
