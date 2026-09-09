@@ -1,0 +1,26 @@
+.codacy.yml
+  h_60000122af7b55 16-18,31-33
+web/app/api/analyses/check/__tests__/route.test.ts
+  h_60000122af7b55 49-50,67,69-72
+web/app/api/analyses/check/route.ts
+  h_60000122af7b55 18
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  h_60000122af7b55 320,322
+web/hooks/useAutoRestoreAnalysis.ts
+  h_60000122af7b55 98-100
+web/lib/__tests__/chunk-presence.test.ts
+  h_60000122af7b55 29-30,34-36,38-41
+web/lib/services/chunk-presence.ts
+  h_60000122af7b55 54-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e2d669bc2c1d9716cdbebca65f494c5fd17ebdfd",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
