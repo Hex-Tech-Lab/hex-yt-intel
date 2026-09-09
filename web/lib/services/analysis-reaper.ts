@@ -380,7 +380,7 @@ async function attemptRequeue(
 /**
  * Settle or requeue a single stuck row during the sweep.
  */
-// skipcq: JS-0067
+// skipcq: JS-0067, JS-R1005
 async function processStuckRow(
   row: StuckRow,
   service: ReturnType<typeof getSupabaseServiceClient>,
