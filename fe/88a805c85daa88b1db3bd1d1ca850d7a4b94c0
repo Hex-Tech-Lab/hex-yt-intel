@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1373-1374,1376-1379
+web/lib/__tests__/analysis-reaper.test.ts
+  h_60000122af7b55 315-338,341
+web/lib/__tests__/analysis-requeue.test.ts
+  h_60000122af7b55 11-12,15-21,24,74-75,93-234,247-249,255,258,260,269,273-291,295,298,314-315,319,327-328,337,344,350,357,363,374,377,383-384,389-430,434,442,446,449,456
+web/lib/services/analysis-reaper.ts
+  h_60000122af7b55 111-112,119-120,344,346-348,354,359-360,367,376-378,384,397-400,406,408-409,439,441,446,449-455,476-477
+web/lib/services/analysis-requeue.ts
+  h_60000122af7b55 210-247,252,256-258,260-267,275-278,283-295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "fe88a805c85daa88b1db3bd1d1ca850d7a4b94c0",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
