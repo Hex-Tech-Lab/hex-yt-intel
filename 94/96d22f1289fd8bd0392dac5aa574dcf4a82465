@@ -1,0 +1,16 @@
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  h_60000122af7b55 455
+web/lib/services/chunk-presence.ts
+  h_60000122af7b55 70-71,74,81,92-93,96,99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "9496d22f1289fd8bd0392dac5aa574dcf4a82465",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
