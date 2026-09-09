@@ -521,7 +521,7 @@ export function useSSEStream() {
                     });
                     runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
-                      .catch((err: any) => resolveOnce({ ok: false, error: err.message }));
+                      .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                   });
                 };
 

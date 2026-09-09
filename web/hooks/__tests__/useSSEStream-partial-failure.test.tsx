@@ -30,6 +30,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useChaptersStore } from '@/store/useChaptersStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAdminSettings } from '@/lib/stores/settings-context';
+import type { AdminSettings } from '@/lib/types/settings';
 
 vi.mock('@/lib/stores/settings-context', () => ({
   useAdminSettings: vi.fn(),
@@ -116,7 +117,7 @@ describe('useSSEStream bundle-level retry and partial-failure settlement (ADR 02
     vi.mocked(useAdminSettings).mockReturnValue({
       streamBundles: [{ dimensions: [1] }, { dimensions: [2] }],
       abortOnPartialFailure: undefined,
-    } as any);
+    } as unknown as AdminSettings);
   });
 
   afterEach(() => {
