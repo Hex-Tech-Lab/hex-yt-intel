@@ -71,6 +71,31 @@ function completeFragmentPayload() {
   return { type: 'complete', model: 'test-model', valid: true, videoId: VIDEO_ID, analysisId: ANALYSIS_ID };
 }
 
+function errorFragmentPayload(error = 'model returned malformed JSON') {
+  return { type: 'error', error };
+}
+
+// Deliberately never closes the stream -- simulates a worker that sent a
+// mid-stream 'error' fragment but keeps the connection open past it (the
+// scenario a bare adapter.onError callback does NOT itself prove has
+// stopped). `onCancel` fires only if something explicitly cancels the
+// reader -- proving the retry logic actually tears down the failed
+// attempt's stream instead of leaving it running alongside the retry.
+function sseResponseNeverClosing(fragments: Record<string, unknown>[], onCancel: () => void): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    start(controller) {
+      for (const f of fragments) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(f)}\n\n`));
+      }
+    },
+    cancel() {
+      onCancel();
+    },
+  });
+  return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+}
+
 function chunkIndexFromBody(init?: RequestInit): number | undefined {
   if (!init?.body) return undefined;
   try {
@@ -197,5 +222,57 @@ describe('useSSEStream bundle-level retry and partial-failure settlement (ADR 02
     await waitFor(() => {
       expect(useAnalysisStore.getState().status).toBe('error');
     }, { timeout: 3000 });
+  });
+
+  it('aborts the failed attempt\'s own fetch signal before starting the retry on a mid-stream adapter error', async () => {
+    // Regression test for a real gap surfaced by external PR review: a bare
+    // adapter.onError callback firing is not itself proof the underlying
+    // fetch/reader has stopped -- the worker may keep the connection open
+    // past a mid-stream error fragment. runSingleStream's attemptSignal
+    // param exists exactly so a retry can explicitly abort the failed
+    // attempt's own fetch instead of leaving it running alongside a fresh
+    // one for the same bundle index.
+    //
+    // Asserts the directly-controlled guarantee (the first attempt's own
+    // AbortSignal ends up aborted) rather than the ReadableStream's
+    // cancel() hook -- that hook isn't reliably invoked by every fetch/
+    // undici polyfill on an aborted signal, so it's not a reliable signal
+    // in this test runtime even though the production abort wiring is real.
+    let bundle1Attempts = 0;
+    let firstAttemptSignal: AbortSignal | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/analyses') {
+        return Promise.resolve(new Response(JSON.stringify(PREP_JOB), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      if (url === WORKER_URL) {
+        const chunkIndex = chunkIndexFromBody(init);
+        if (chunkIndex === 1) {
+          bundle1Attempts++;
+          if (bundle1Attempts === 1) {
+            firstAttemptSignal = init?.signal ?? undefined;
+            // Never closes -- only an explicit abort of init.signal stops it.
+            return Promise.resolve(sseResponseNeverClosing([errorFragmentPayload()], () => {}));
+          }
+          return Promise.resolve(sseResponse([completeFragmentPayload()]));
+        }
+        return Promise.resolve(sseResponse([completeFragmentPayload()]));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useSSEStream());
+
+    await act(async () => {
+      await result.current.startAnalysis(YT_URL, 'UTC');
+    });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('complete');
+    }, { timeout: 3000 });
+
+    expect(firstAttemptSignal?.aborted).toBe(true);
+    expect(bundle1Attempts).toBe(2);
   });
 });

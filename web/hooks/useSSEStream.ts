@@ -294,7 +294,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -327,6 +327,16 @@ export function useSSEStream() {
                 const controller = new AbortController();
                 currentSignal.addEventListener('abort', () => controller.abort(), { once: true });
                 streamController.signal.addEventListener('abort', () => controller.abort(), { once: true });
+                // Lets a retry actively cancel THIS specific attempt's own
+                // fetch/reader (see attemptBundle/runBundleWithRetry below)
+                // instead of leaving it running in the background alongside
+                // a fresh attempt for the same bundle index once a mid-stream
+                // adapter onError fires -- a bare onError callback gives no
+                // guarantee the underlying stream has actually stopped.
+                if (attemptSignal) {
+                  if (attemptSignal.aborted) controller.abort();
+                  else attemptSignal.addEventListener('abort', () => controller.abort(), { once: true });
+                }
                 const combinedSignal = controller.signal;
 
                 let res;
@@ -489,7 +499,13 @@ export function useSSEStream() {
                 // 'error' before the retry had a chance to complete).
                 type BundleOutcome = { ok: true } | { ok: false; error: string; code?: string };
 
-                const attemptBundle = (i: number, dimensions: number[]): Promise<BundleOutcome> => {
+                // attemptController: caller-owned so a retry can explicitly
+                // abort THIS attempt's own fetch/reader (see runSingleStream's
+                // attemptSignal param) once its outcome is known, rather than
+                // leaving it running in the background alongside the fresh
+                // retry attempt -- an onError callback firing is not itself
+                // proof the underlying stream has stopped.
+                const attemptBundle = (i: number, dimensions: number[], attemptController: AbortController): Promise<BundleOutcome> => {
                   return new Promise<BundleOutcome>((resolve) => {
                     let settledLocal = false;
                     const resolveOnce = (result: BundleOutcome) => {
@@ -503,17 +519,23 @@ export function useSSEStream() {
                       onError: (error, code) => resolveOnce({ ok: false, error, code }),
                       onComplete: () => resolveOnce({ ok: true }),
                     });
-                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone)
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
                       .catch((err: any) => resolveOnce({ ok: false, error: err.message }));
                   });
                 };
 
                 const runBundleWithRetry = async (i: number, dimensions: number[]) => {
-                  let outcome = await attemptBundle(i, dimensions);
+                  let attemptController = new AbortController();
+                  let outcome = await attemptBundle(i, dimensions, attemptController);
                   if (!outcome.ok && !currentSignal.aborted && !hasSettled) {
+                    // Stop the failed attempt's own stream before starting a
+                    // fresh one for the same bundle index -- see the comment
+                    // above attemptBundle.
+                    attemptController.abort();
                     store.logError(`[Bundle ${i + 1}] failed, retrying once: ${outcome.error}`);
-                    outcome = await attemptBundle(i, dimensions);
+                    attemptController = new AbortController();
+                    outcome = await attemptBundle(i, dimensions, attemptController);
                   }
                   if (currentSignal.aborted || hasSettled) return;
                   if (outcome.ok) {
