@@ -1,0 +1,14 @@
+web/app/providers.tsx
+  h_60000122af7b55 4,6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "1a3453aa566d7569211dc86377e9dfe40d7b5adf",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
