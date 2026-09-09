@@ -1,0 +1,32 @@
+web/lib/services/analysis-reaper.ts
+  s_814741664a33c5::t_7152b5e94c6df1 247-252
+  s_814741664a33c5::t_6b1e8750f683a3 148-153
+  s_814741664a33c5::t_9b0f0c2e644b72 290-310
+  s_814741664a33c5::t_335cd5be19fbf9 254-257
+  s_814741664a33c5::t_f6aa6db3998cc1 213-218
+web/lib/__tests__/analysis-requeue.test.ts
+  s_814741664a33c5::t_62998c7f0b4d7d 314-327,338-339
+  s_814741664a33c5::t_32bae51e94c267 454,465-469
+  s_814741664a33c5::t_d4987b678325d1 332
+web/lib/__tests__/analysis-reaper.test.ts
+  s_814741664a33c5::t_de4ac607ebb11e 295-297,302
+  s_814741664a33c5::t_79038ab54edd63 205,207-209,220,224-225,230-237,243-249
+  s_814741664a33c5::t_a10cfc31c9a302 319-320
+  s_814741664a33c5::t_bdb501b26d84f1 72-78,80-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "3cd1a73b37a2775acb40a3525a3c1b8a86ea6ba7",
+  "prompts": {},
+  "sessions": {
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
