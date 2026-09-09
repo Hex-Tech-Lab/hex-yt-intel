@@ -328,6 +328,93 @@ export async function tryChunkRecovery(
 }
 
 /**
+ * Chunk-based recovery is tried FIRST for every stuck row and is strictly
+ * additive: any exception, or chunks not fully complete, or a lost
+ * concurrent race, all collapse to null here so the caller falls through
+ * to the exact same markdown-based path this reaper always used.
+ */
+// skipcq: JS-0067
+async function attemptChunkRecovery(
+  row: StuckRow,
+  persistenceAdapter: SupabasePersistenceAdapter
+): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
+  try {
+    return await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
+  } catch (chunkErr) {
+    Sentry.captureException(chunkErr, {
+      tags: { service: 'analysis-reaper', phase: 'chunk_recovery' },
+      extra: { analysisId: row.id },
+    });
+    return null;
+  }
+}
+
+/**
+ * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row,
+ * swallowing (and Sentry-capturing) any failure into a null result.
+ */
+// skipcq: JS-0067
+async function attemptRequeue(
+  row: StuckRow,
+  persistenceAdapter: SupabasePersistenceAdapter,
+  resolveMaxRetries: () => Promise<number>
+): Promise<'requeued' | 'raced' | 'unknown' | null> {
+  try {
+    const maxRetries = await resolveMaxRetries().catch((err) => {
+      Sentry.captureException(err, {
+        tags: { service: 'analysis-reaper', phase: 'resolve_max_retries' },
+        extra: { analysisId: row.id },
+      });
+      return REMEDIATION_MAX_RETRIES_FALLBACK;
+    });
+    return await tryRequeuePartial(row, persistenceAdapter, maxRetries);
+  } catch (requeueErr) {
+    Sentry.captureException(requeueErr, {
+      tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
+      extra: { analysisId: row.id },
+    });
+    return null;
+  }
+}
+
+/**
+ * Settle or requeue a single stuck row during the sweep.
+ */
+// skipcq: JS-0067
+async function processStuckRow(
+  row: StuckRow,
+  service: ReturnType<typeof getSupabaseServiceClient>,
+  persistenceAdapter: SupabasePersistenceAdapter,
+  resolveMaxRetries: () => Promise<number>
+): Promise<'completed' | 'failed' | 'requeued' | 'raced' | 'skipped'> {
+  const recovered = await attemptChunkRecovery(row, persistenceAdapter);
+  if (recovered) {
+    return recovered.outcome;
+  }
+
+  const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
+
+  if (outcome === 'failed') {
+    const requeued = await attemptRequeue(row, persistenceAdapter, resolveMaxRetries);
+    if (requeued === 'requeued') return 'requeued';
+    if (requeued === 'raced' || requeued === 'unknown') return 'raced';
+  }
+
+  const { error: updErr, count } = await service
+    .from('analyses')
+    .update(patch, { count: 'exact' })
+    .eq('id', row.id)
+    .eq('billing_status', 'processing');
+
+  if (updErr) {
+    Sentry.captureException(updErr, { tags: { service: 'analysis-reaper' }, extra: { analysisId: row.id } });
+    return 'skipped';
+  }
+  if (!count) return 'raced';
+  return outcome === 'completed' ? 'completed' : 'failed';
+}
+
+/**
  * Sweep and settle stuck `processing` analyses. Safe to run repeatedly.
  */
 // skipcq: JS-0067, JS-R1005
@@ -353,12 +440,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
   const stuck = (data || []) as StuckRow[];
   const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, requeued: 0, raced: 0 };
 
-  // `remediation.maxRetries` (the shared requeue/remediation ceiling) is
-  // resolved at most once per sweep, and only if some row actually needs it —
-  // the same "resolve once per run" convention the remediation harness applies
-  // to its cascade/budget resolution.
   let maxRetriesCache: number | null = null;
-  /** Resolves and memoizes `remediation.maxRetries` for this sweep run (see comment above). */
   // skipcq: JS-0067
   async function resolveMaxRetries(): Promise<number> {
     if (maxRetriesCache === null) {
@@ -371,105 +453,12 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     return maxRetriesCache;
   }
 
-  /**
-   * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row,
-   * swallowing (and Sentry-capturing) any failure into a null "not eligible,
-   * fall through to the existing terminal settle" result -- extracted out of
-   * the sweep loop's own body purely to keep that loop's own branch count
-   * down (CodeFactor "Complex Method"), no behavior change from inlining it.
-   */
-  // skipcq: JS-0067
-  async function attemptRequeue(row: StuckRow): Promise<'requeued' | 'raced' | 'unknown' | null> {
-    try {
-      const maxRetries = await resolveMaxRetries().catch((err) => {
-        Sentry.captureException(err, {
-          tags: { service: 'analysis-reaper', phase: 'resolve_max_retries' },
-          extra: { analysisId: row.id },
-        });
-        return REMEDIATION_MAX_RETRIES_FALLBACK;
-      });
-      return await tryRequeuePartial(row, persistenceAdapter, maxRetries);
-    } catch (requeueErr) {
-      Sentry.captureException(requeueErr, {
-        tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
-        extra: { analysisId: row.id },
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Chunk-based recovery is tried FIRST for every stuck row and is strictly
-   * additive: any exception, or chunks not fully complete, or a lost
-   * concurrent race, all collapse to null here so the caller falls through
-   * to the exact same markdown-based path this reaper always used -- never
-   * a behavior regression, only a new way to correctly recover a case the
-   * old path would have discarded. Extracted purely to keep the sweep
-   * loop's own branch count down (CodeFactor "Complex Method").
-   */
-  // skipcq: JS-0067
-  async function attemptChunkRecovery(
-    row: StuckRow,
-  ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
-    try {
-      return await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
-    } catch (chunkErr) {
-      Sentry.captureException(chunkErr, {
-        tags: { service: 'analysis-reaper', phase: 'chunk_recovery' },
-        extra: { analysisId: row.id },
-      });
-      return null;
-    }
-  }
-
   for (const row of stuck) {
-    const recovered = await attemptChunkRecovery(row);
-    if (recovered) {
-      if (recovered.outcome === 'completed') result.completed++;
-      else result.failed++;
-      continue;
-    }
-
-    const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
-
-    // ADR 021 Phase 3 — requeue-partial middle branch, evaluated only for a
-    // row the markdown path would fail: it may still hold genuinely-persisted
-    // dimensions in analysis_chunks (Phase 1's checkpoint) that the
-    // markdown-only decision cannot see. Strictly additive — 0-covered and
-    // ceiling-hit rows return null and fall through to the EXISTING failed
-    // settle unchanged, same philosophy as chunk recovery above.
-    if (outcome === 'failed') {
-      const requeued = await attemptRequeue(row);
-      if (requeued === 'requeued') {
-        result.requeued++;
-        continue;
-      }
-      if (requeued === 'raced' || requeued === 'unknown') {
-        result.raced++;
-        continue;
-      }
-      // null → not a requeue candidate; fall through to the existing failed settle
-    }
-
-    // Single-winner UPDATE: only mutate rows STILL `processing`, so a concurrent
-    // legitimate settle (which also writes billing_status) wins the race and we
-    // never clobber a real completion.
-    const { error: updErr, count } = await service
-      .from('analyses')
-      .update(patch, { count: 'exact' })
-      .eq('id', row.id)
-      .eq('billing_status', 'processing');
-
-    if (updErr) {
-      Sentry.captureException(updErr, { tags: { service: 'analysis-reaper' }, extra: { analysisId: row.id } });
-      continue;
-    }
-    if (!count) {
-      result.raced++;
-      continue;
-    }
-    if (outcome === 'completed') result.completed++;
-    else result.failed++;
+    const status = await processStuckRow(row, service, persistenceAdapter, resolveMaxRetries);
+    if (status === 'completed') result.completed++;
+    else if (status === 'failed') result.failed++;
+    else if (status === 'requeued') result.requeued++;
+    else if (status === 'raced') result.raced++;
   }
 
   return result;
