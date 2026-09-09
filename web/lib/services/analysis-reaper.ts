@@ -365,25 +365,54 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     return maxRetriesCache;
   };
 
-  for (const row of stuck) {
-    // Chunk-based recovery is tried FIRST and is strictly additive: on any
-    // exception, or when chunks aren't fully complete, or when this row lost
-    // a concurrent race, we fall through to the exact same markdown-based
-    // path this reaper always used -- never a behavior regression, only a
-    // new way to correctly recover a case the old path would have discarded.
+  /**
+   * ADR 021 Phase 3 wrapper: attempt a requeue-partial for one stuck row,
+   * swallowing (and Sentry-capturing) any failure into a null "not eligible,
+   * fall through to the existing terminal settle" result -- extracted out of
+   * the sweep loop's own body purely to keep that loop's own branch count
+   * down (CodeFactor "Complex Method"), no behavior change from inlining it.
+   */
+  const attemptRequeue = async (row: StuckRow, maxRetries: number): Promise<'requeued' | 'raced' | null> => {
     try {
-      const recovered = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
-      if (recovered) {
-        if (recovered.outcome === 'completed') result.completed++;
-        else result.failed++;
-        continue;
-      }
+      return await tryRequeuePartial(row, persistenceAdapter, maxRetries);
+    } catch (requeueErr) {
+      Sentry.captureException(requeueErr, {
+        tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
+        extra: { analysisId: row.id },
+      });
+      return null;
+    }
+  };
+
+  /**
+   * Chunk-based recovery is tried FIRST for every stuck row and is strictly
+   * additive: any exception, or chunks not fully complete, or a lost
+   * concurrent race, all collapse to null here so the caller falls through
+   * to the exact same markdown-based path this reaper always used -- never
+   * a behavior regression, only a new way to correctly recover a case the
+   * old path would have discarded. Extracted purely to keep the sweep
+   * loop's own branch count down (CodeFactor "Complex Method").
+   */
+  const attemptChunkRecovery = async (
+    row: StuckRow,
+  ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> => {
+    try {
+      return await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
     } catch (chunkErr) {
       Sentry.captureException(chunkErr, {
         tags: { service: 'analysis-reaper', phase: 'chunk_recovery' },
         extra: { analysisId: row.id },
       });
-      // fall through intentionally
+      return null;
+    }
+  };
+
+  for (const row of stuck) {
+    const recovered = await attemptChunkRecovery(row);
+    if (recovered) {
+      if (recovered.outcome === 'completed') result.completed++;
+      else result.failed++;
+      continue;
     }
 
     const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
@@ -395,24 +424,16 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
     // ceiling-hit rows return null and fall through to the EXISTING failed
     // settle unchanged, same philosophy as chunk recovery above.
     if (outcome === 'failed') {
-      try {
-        const requeued = await tryRequeuePartial(row, persistenceAdapter, await resolveMaxRetries());
-        if (requeued === 'requeued') {
-          result.requeued++;
-          continue;
-        }
-        if (requeued === 'raced') {
-          result.raced++;
-          continue;
-        }
-        // null → not a requeue candidate; fall through to the existing failed settle
-      } catch (requeueErr) {
-        Sentry.captureException(requeueErr, {
-          tags: { service: 'analysis-reaper', phase: 'requeue_partial' },
-          extra: { analysisId: row.id },
-        });
-        // fall through intentionally — the terminal settle below still runs
+      const requeued = await attemptRequeue(row, await resolveMaxRetries());
+      if (requeued === 'requeued') {
+        result.requeued++;
+        continue;
       }
+      if (requeued === 'raced') {
+        result.raced++;
+        continue;
+      }
+      // null → not a requeue candidate; fall through to the existing failed settle
     }
 
     // Single-winner UPDATE: only mutate rows STILL `processing`, so a concurrent

@@ -50,6 +50,14 @@ export interface SettlePatch {
  */
 export const REMEDIATION_MAX_RETRIES_FALLBACK = 3;
 
+/** Dimension numbers in [1..TOTAL_DIMENSIONS] not present in `covered`. */
+const missingFrom = (covered: Set<number>): number[] =>
+  Array.from({ length: TOTAL_DIMENSIONS }, (_unused, i) => i + 1).filter((dimension) => !covered.has(dimension));
+
+/** True when a stuck row's covered-dimension count qualifies for requeue-partial (see decideRequeuePartial). */
+const isRequeueEligible = (coveredCount: number, currentRetryCount: number, maxRetries: number): boolean =>
+  coveredCount > 0 && coveredCount < MIN_SALVAGEABLE_DIMENSIONS && currentRetryCount < maxRetries;
+
 /**
  * ADR 021 Phase 3 — the requeue-partial middle branch, decided BEFORE a stuck
  * row is discarded by the markdown path. Same binary salvage logic the reaper
@@ -82,14 +90,8 @@ export const decideRequeuePartial = (
   maxRetries: number,
 ): { outcome: Extract<ReapOutcome, 'requeue-partial'>; missingDimensions: number[] } | null => {
   const covered = new Set(coveredDimensions.filter(dim => Number.isInteger(dim) && dim >= 1 && dim <= TOTAL_DIMENSIONS));
-  if (covered.size === 0) return null;
-  if (covered.size >= MIN_SALVAGEABLE_DIMENSIONS) return null;
-  if (currentRetryCount >= maxRetries) return null;
-  const missingDimensions: number[] = [];
-  for (let d = 1; d <= TOTAL_DIMENSIONS; d++) {
-    if (!covered.has(d)) missingDimensions.push(d);
-  }
-  return { outcome: 'requeue-partial', missingDimensions };
+  if (!isRequeueEligible(covered.size, currentRetryCount, maxRetries)) return null;
+  return { outcome: 'requeue-partial', missingDimensions: missingFrom(covered) };
 };
 
 /**
