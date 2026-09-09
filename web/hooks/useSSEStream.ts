@@ -461,47 +461,83 @@ export function useSSEStream() {
                   }
                 };
 
-                const adapters: SynthesisStreamAdapter[] = [];
+                // One inline retry per bundle (same dimensions, same full
+                // transcript context -- not narrowed to a single dimension)
+                // before giving up on it. A bundle that fails twice stays out
+                // of failedIndexes' way of the OTHER bundles (ABORT_ON_PARTIAL_
+                // FAILURE default is now false, see synthesis.ts) and its
+                // dimensions surface as missing on the persisted row --
+                // dimension-remediation.ts's async cron (ADR 019) already
+                // scans for exactly that (billing_status='failed' AND
+                // validation_report.status='partial') and regenerates only
+                // the still-missing dimensions, so there is no need for a
+                // second, narrower-context retry mechanism here.
+                //
+                // attemptBundle resolves exactly once per attempt, from
+                // whichever of the 3 signals arrives first: the adapter's
+                // onComplete/onError callback (mid-stream, wire-level
+                // outcome), or runSingleStream's own promise settling
+                // (fetch/handshake failure, or -- rarely -- the reader
+                // reaching `done` without ever seeing a terminal fragment).
+                // runBundleWithRetry then AWAITS the (at most 2) attempts in
+                // sequence, so the Promise.all below genuinely waits for the
+                // retry to finish instead of racing an unawaited background
+                // retry against the "did every bundle settle" check (a real
+                // bug caught by this file's own regression test: the retry
+                // used to fire detached, so the outer "stream ended
+                // unexpectedly" fallback could settle the whole analysis
+                // 'error' before the retry had a chance to complete).
+                type BundleOutcome = { ok: true } | { ok: false; error: string; code?: string };
+
+                const attemptBundle = (i: number, dimensions: number[]): Promise<BundleOutcome> => {
+                  return new Promise<BundleOutcome>((resolve) => {
+                    let settledLocal = false;
+                    const resolveOnce = (result: BundleOutcome) => {
+                      if (settledLocal) return;
+                      settledLocal = true;
+                      resolve(result);
+                    };
+                    const adapter = new SynthesisStreamAdapter({
+                      isPartialStream: true,
+                      dimensions,
+                      onError: (error, code) => resolveOnce({ ok: false, error, code }),
+                      onComplete: () => resolveOnce({ ok: true }),
+                    });
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone)
+                      .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
+                      .catch((err: any) => resolveOnce({ ok: false, error: err.message }));
+                  });
+                };
+
+                const runBundleWithRetry = async (i: number, dimensions: number[]) => {
+                  let outcome = await attemptBundle(i, dimensions);
+                  if (!outcome.ok && !currentSignal.aborted && !hasSettled) {
+                    store.logError(`[Bundle ${i + 1}] failed, retrying once: ${outcome.error}`);
+                    outcome = await attemptBundle(i, dimensions);
+                  }
+                  if (currentSignal.aborted || hasSettled) return;
+                  if (outcome.ok) {
+                    completedIndexes.add(i);
+                    store.logOk(`[Bundle ${i + 1}] completed.`);
+                    checkSettleState();
+                    return;
+                  }
+                  Sentry.captureException(new Error(outcome.error), {
+                    tags: { component: 'useSSEStream', phase: 'stream-retry-exhausted' },
+                    extra: { bundleIndex: i, code: outcome.code },
+                  });
+                  store.logError(`[Bundle ${i + 1}] error after retry: ${outcome.error}`);
+                  handleStreamError(i, outcome.error, outcome.code);
+                };
+
                 const dimensionsList: number[][] = [];
                 for (let i = 0; i < TOTAL_STREAMS; i++) {
-                  const dimensions = STREAM_BUNDLES[i]!;
-                  dimensionsList.push(dimensions);
-                  adapters.push(new SynthesisStreamAdapter({
-                    isPartialStream: true,
-                    dimensions,
-                    onError: (error, code) => {
-                      if (currentSignal.aborted || hasSettled) return;
-                      store.logError(`[Bundle ${i + 1}] error: ${error}`);
-                      handleStreamError(i, error, code);
-                    },
-                    onComplete: () => {
-                      if (currentSignal.aborted || hasSettled) return;
-                      completedIndexes.add(i);
-                      store.logOk(`[Bundle ${i + 1}] completed.`);
-                      checkSettleState();
-                    },
-                  }));
+                  dimensionsList.push(STREAM_BUNDLES[i]!);
                 }
 
                 store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
-                const streamFetches = adapters.map((adapter, i) =>
-                  runSingleStream(i, dimensionsList[i]!, adapter, currentSignal, job, safeTimezone)
-                );
                 await Promise.all(
-                  streamFetches.map((p, idx) => p.catch((err) => {
-                    if (currentSignal.aborted || hasSettled) return;
-                    store.logError(`Stream ${idx + 1} failed: ${err.message}`);
-                    // Non-fetch failures (stream read errors, JSON parse
-                    // failures inside the reader loop) never pass through the
-                    // worker-fetch Sentry.captureException above -- capture
-                    // here too so every settle-on-error path has telemetry,
-                    // not just the initial connection.
-                    Sentry.captureException(err, {
-                      tags: { component: 'useSSEStream', phase: 'stream-runtime' },
-                      extra: { bundleIndex: idx },
-                    });
-                    handleStreamError(idx, err.message);
-                  }))
+                  dimensionsList.map((dimensions, i) => runBundleWithRetry(i, dimensions))
                 );
 
                 if (!hasSettled) checkSettleState();
