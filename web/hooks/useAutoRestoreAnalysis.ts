@@ -62,12 +62,7 @@ export function useAutoRestoreAnalysis(url: string) {
     // Check if there's already a completed analysis for this videoId
     const checkAndRestore = async () => {
       try {
-        let res;
-        try {
-          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
-        } finally {
-          // resource cleanup
-        }
+        const res = await fetch(`/api/analyses/check?videoId=${videoId}`);
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -110,12 +105,7 @@ export function useAutoRestoreAnalysis(url: string) {
           }
 
           // Trigger the restoration flow just like history restoration
-          let restoreRes;
-          try {
-            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
-          } finally {
-            // resource cleanup
-          }
+          const restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
           if (!restoreRes.ok) return;
           const restoreData = await restoreRes.json();
           if (cancelled) return;
