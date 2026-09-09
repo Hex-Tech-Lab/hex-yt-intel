@@ -87,7 +87,13 @@ export function useAutoRestoreAnalysis(url: string) {
             // completed analysis_chunks rows for this dead analysis. Log it
             // so the retry decision is observable client-side (the selective
             // "only fetch missing bundles" dispatch is Phase 4, not here).
-            if (Array.isArray(data.missingDimensions) && data.missingDimensions.length > 0) {
+            // Logged whenever the field is an array -- including `[]`, which
+            // means every dimension was actually salvaged (a real, distinct
+            // outcome from "presence check never ran/failed", where the
+            // field is `undefined` instead -- collapsing both into "log only
+            // when non-empty" made a fully-salvaged incident indistinguishable
+            // from a presence-check failure in auto-restore telemetry).
+            if (Array.isArray(data.missingDimensions)) {
               addBreadcrumb(
                 'Analysis dead — dimensions still missing after salvageable chunks',
                 { missingDimensions: data.missingDimensions },

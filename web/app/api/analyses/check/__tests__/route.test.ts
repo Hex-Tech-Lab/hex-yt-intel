@@ -87,6 +87,16 @@ describe('GET /api/analyses/check', () => {
     expect(res.status).toBe(400);
   });
 
+  it('selects updated_at — regression guard for the staleness-clock contract, so removing it can never silently restore the created_at-only bug', async () => {
+    const builder = mockAnalysesQuery([
+      { id: ANALYSIS_ID, title: 'T', channel_title: 'C', analysis_markdown: '# md', created_at: new Date().toISOString(), model_used: 'm', validation_report: { status: 'processing' }, billing_status: 'completed' },
+    ]);
+
+    await GET(checkRequest());
+
+    expect(builder.select).toHaveBeenCalledWith(expect.stringContaining('updated_at'));
+  });
+
   it('returns the complete cache-hit WITHOUT consulting the chunk journal', async () => {
     mockAnalysesQuery([
       { id: ANALYSIS_ID, title: 'T', channel_title: 'C', analysis_markdown: '# md', created_at: new Date().toISOString(), model_used: 'm', validation_report: { status: 'processing' }, billing_status: 'completed' },

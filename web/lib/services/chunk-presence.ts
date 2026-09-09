@@ -32,12 +32,17 @@
  * No new schema, no new Settings Registry key, no migration (per the ADR's
  * own Phase 1 note — existing infrastructure covers this once wired).
  */
-import { SupabasePersistenceAdapter } from '@/lib/adapters';
+// Direct file import, NOT the `@/lib/adapters` barrel: this route runs on
+// the edge runtime (see check/route.ts's `export const runtime = 'edge'`),
+// and the barrel re-exports ~20 adapters including Redis/Paddle/OpenRouter/
+// Upstash -- importing through it risks pulling those into the edge bundle
+// for a call site that only ever needs this one adapter.
+import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
  * Minimal structural view of one `analysis_chunks` row, matching the fields
- * `AnalysisPersistencePort.findAnalysisChunks` returns for this decision.
+ * `AnalysisPersistencePort.findAnalysisChunkCoverage` returns for this decision.
  */
 export interface ChunkPresenceRow {
   chunk_index: number;
@@ -85,6 +90,6 @@ export const getMissingDimensionNumbers = async (
   analysisId: string,
   totalDimensions: number = TOTAL_DIMENSIONS
 ): Promise<number[]> => {
-  const chunks = await new SupabasePersistenceAdapter().findAnalysisChunks({ analysisId });
+  const chunks = await new SupabasePersistenceAdapter().findAnalysisChunkCoverage({ analysisId });
   return computeMissingChunkDimensions(chunks, totalDimensions);
 };

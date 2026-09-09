@@ -283,5 +283,46 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
 
     unmount();
   });
+
+  it('surfaces an empty missingDimensions array too — a fully-salvaged incident must stay distinguishable from a presence-check failure', async () => {
+    // [] is a real, distinct outcome (every dimension was actually
+    // salvaged) from `undefined` (the presence check never ran or itself
+    // failed) -- gating the breadcrumb on `.length > 0` would collapse both
+    // into "nothing logged," making a fully-salvaged incident invisible in
+    // auto-restore telemetry.
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'Analysis generation failed', missingDimensions: [] }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
+      initialProps: { url: '' },
+    });
+
+    rerender({ url: PASTED_URL });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('error');
+    });
+
+    expect(addBreadcrumb).toHaveBeenCalledWith(
+      expect.stringContaining('dimensions still missing'),
+      { missingDimensions: [] },
+      'auto-restore'
+    );
+
+    unmount();
+  });
 });
 
