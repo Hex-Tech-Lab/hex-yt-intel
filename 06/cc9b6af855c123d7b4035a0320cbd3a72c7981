@@ -1,0 +1,28 @@
+web/lib/services/analysis-reaper.ts
+  s_806c0f506228c0::t_6a6092782ff451 356
+web/lib/__tests__/analysis-requeue.test.ts
+  s_806c0f506228c0::t_95be9a6718614c 26-28
+  s_806c0f506228c0::t_e1e74df5315cf7 48-49,54-56
+web/lib/services/analysis-requeue.ts
+  s_806c0f506228c0::t_1d5d1d1c608276 79,83,93
+  s_806c0f506228c0::t_cc96da1d66f65a 215
+  s_806c0f506228c0::t_c9a9f502dfeed0 114,119,140
+  s_806c0f506228c0::t_a8f24f86329143 186,190
+  s_806c0f506228c0::t_b00b05fb23b404 148,154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "06cc9b6af855c123d7b4035a0320cbd3a72c7981",
+  "prompts": {},
+  "sessions": {
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
