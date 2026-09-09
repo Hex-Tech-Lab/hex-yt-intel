@@ -452,7 +452,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   async findAnalysisChunkCoverage(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null> {
-    void this;
+    if (!this) return null;
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
