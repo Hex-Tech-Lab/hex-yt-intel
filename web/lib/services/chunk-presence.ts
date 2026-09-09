@@ -45,6 +45,10 @@ export interface ChunkPresenceRow {
   status: 'completed' | 'failed' | 'interrupted';
 }
 
+/** True when `candidate` is a real, in-range dimension number worth trusting as covered. */
+const isValidDimensionNumber = (candidate: unknown, totalDimensions: number): candidate is number =>
+  typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 1 && candidate <= totalDimensions;
+
 /**
  * Pure decision core. Given the chunk rows persisted for one analysis, return
  * the ascending dimension numbers in [1..totalDimensions] NOT covered by any
@@ -60,18 +64,12 @@ export const computeMissingChunkDimensions = (
   chunkRows: ChunkPresenceRow[] | null | undefined,
   totalDimensions: number
 ): number[] => {
-  const covered = new Set<number>();
-  for (const row of chunkRows ?? []) {
-    if (row.status !== 'completed') continue;
-    for (const n of row.dimensions_covered ?? []) {
-      if (Number.isInteger(n) && n >= 1 && n <= totalDimensions) covered.add(n);
-    }
-  }
-  const missing: number[] = [];
-  for (let n = 1; n <= totalDimensions; n++) {
-    if (!covered.has(n)) missing.push(n);
-  }
-  return missing;
+  const completedRows = (chunkRows ?? []).filter((row) => row.status === 'completed');
+  const coveredNumbers = completedRows.flatMap((row) => row.dimensions_covered ?? []);
+  const covered = new Set(coveredNumbers.filter((candidate) => isValidDimensionNumber(candidate, totalDimensions)));
+
+  const allDimensions = Array.from({ length: totalDimensions }, (_unused, i) => i + 1);
+  return allDimensions.filter((dimension) => !covered.has(dimension));
 };
 
 /**
