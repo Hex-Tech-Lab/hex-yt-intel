@@ -1,0 +1,34 @@
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_814741664a33c5::t_c62fe64e37bf16 346-399
+web/components/dashboard/__tests__/DimensionAccordion.test.tsx
+  s_814741664a33c5::t_19b19b617d0602 17-18
+  s_814741664a33c5::t_8cefb29e7d17d4 30,44,60
+web/hooks/useAutoRestoreAnalysis.ts
+  s_814741664a33c5::t_6659a1c25852eb 130-138,146-147
+web/lib/services/analysis-reaper.ts
+  s_814741664a33c5::t_2a0ba587dee93a 341
+  s_814741664a33c5::t_df488c36fc0b1b 289-296
+  s_814741664a33c5::t_024864684ccecd 242-246
+  s_814741664a33c5::t_8e78b680b0c03f 338-340
+  s_814741664a33c5::t_49c2927e5f29e8 148-149
+  s_814741664a33c5::t_da05772178b3aa 210-212
+  s_814741664a33c5::t_d770062795ce4e 248-251
+web/app/api/analyses/persist/route.ts
+  s_814741664a33c5::t_7ae846f5e76b7c 703-715,724,734
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "916afda0295346da974418c5ffdd2edbc13e652d",
+  "prompts": {},
+  "sessions": {
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
