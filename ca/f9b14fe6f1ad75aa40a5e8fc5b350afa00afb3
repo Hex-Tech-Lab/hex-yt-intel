@@ -1,0 +1,35 @@
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_814741664a33c5::t_77aa0d01d93157 282-291
+  s_814741664a33c5::t_56100f11591f6f 223-226
+  s_814741664a33c5::t_435b04ffa2af95 340-343
+web/lib/types.ts
+  s_814741664a33c5::t_acf5d9a284d4fa 48-59
+web/hooks/useAutoRestoreAnalysis.ts
+  s_814741664a33c5::t_fb184e71142232 25
+  s_814741664a33c5::t_6970ab18927378 329
+  s_814741664a33c5::t_592412a5899493 11
+  s_814741664a33c5::t_2ac2f4bba22fbd 115-128,130-137
+web/components/dashboard/__tests__/DimensionAccordion.test.tsx
+  s_814741664a33c5::t_55d397793c3a47 1-63
+web/components/dashboard/DimensionAccordion.tsx
+  s_814741664a33c5::t_f30152d3317571 5-6
+  s_814741664a33c5::t_12b4532a26f426 22-24
+  s_814741664a33c5::t_046562980bba8b 21
+  s_814741664a33c5::t_b0a54888164f94 42-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "caf9b14fe6f1ad75aa40a5e8fc5b350afa00afb3",
+  "prompts": {},
+  "sessions": {
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
