@@ -110,10 +110,18 @@ export const VariableNamingRule: IRule = {
             // exact codebase's own pervasive Zustand selector convention.)
             if (Node.isParameterDeclaration(node)) {
               const arrowFn = node.getParent();
+              const callExpr = arrowFn?.getParent();
               if (
                 Node.isArrowFunction(arrowFn) &&
                 arrowFn.getParameters().length === 1 &&
-                Node.isCallExpression(arrowFn.getParent())
+                Node.isCallExpression(callExpr) &&
+                // Must be an ARGUMENT of the call, not its callee -- an IIFE
+                // like `((q) => q.trim())()` also has a CallExpression as the
+                // arrow's parent, but the arrow IS the call being invoked,
+                // not a callback handed to something else. `q` there is a
+                // real, unclear single-letter name and must still be
+                // flagged. (2026-09-10 fix, external review on PR #307.)
+                callExpr.getArguments().includes(arrowFn)
               ) {
                 return;
               }

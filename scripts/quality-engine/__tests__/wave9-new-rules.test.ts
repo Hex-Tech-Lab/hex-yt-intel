@@ -111,6 +111,21 @@ describe('WAVE 9: New Quality Rules', () => {
     expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
   });
 
+  test('VariableNamingRule should still flag a single-letter parameter on an IMMEDIATELY-INVOKED arrow function (2026-09-10 fix, external review on PR #307)', () => {
+    // The arrow's parent IS a CallExpression here too (`((q) => q.trim())()`),
+    // but as the call's CALLEE, not as one of its arguments -- the exemption
+    // must check that the arrow appears in the call's own argument list, not
+    // just that its parent node-kind is a CallExpression. Without that
+    // distinction this exact IIFE shape was a false-negative: a genuinely
+    // unclear 'q' silently stopped being reported.
+    const code = `
+      const trimmed = ((q: string) => q.trim())('  hello  ');
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
   test('TimeoutCleanupRule should detect uncleared timeouts', () => {
     const code = `
       const timerId = setTimeout(() => {
