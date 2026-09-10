@@ -7,6 +7,7 @@
 
 import { test, describe, expect } from 'vitest';
 import { SourceFile, Project } from 'ts-morph';
+import { VariableNamingRule } from '../rules/quality';
 
 // Helper to create a test source file
 function createTestSource(code: string): SourceFile {
@@ -76,7 +77,38 @@ describe('WAVE 9: New Quality Rules', () => {
       const answer = processQuestion(q);
     `;
     const source = createTestSource(code);
-    expect(source.getText()).toContain('const q =');
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should NOT flag a single-letter callback-arrow parameter passed directly as a call argument (2026-09-10 fix)', () => {
+    // Confirmed false positive this exact codebase hit: Zustand selectors
+    // (`useFooStore((s) => s.bar)`) and array-method callbacks
+    // (`.map((x) => ...)`) are a near-universal functional idiom, not
+    // unclear naming -- the callback's whole referent is the call site's
+    // single argument.
+    const code = `
+      const error = useAnalysisStore((s) => s.error);
+      const doubled = items.map((n) => n * 2);
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'s'"))).toBe(false);
+    expect(findings.some(f => f.title.includes("'n'"))).toBe(false);
+  });
+
+  test('VariableNamingRule should still flag a single-letter parameter on a NAMED (non-inline-callback) function', () => {
+    // Guards against over-widening the exemption: a single-letter param on a
+    // function declaration (not an inline callback argument) is still
+    // genuinely unclear and must still fire.
+    const code = `
+      function process(q: string) {
+        return q.trim();
+      }
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
   });
 
   test('TimeoutCleanupRule should detect uncleared timeouts', () => {

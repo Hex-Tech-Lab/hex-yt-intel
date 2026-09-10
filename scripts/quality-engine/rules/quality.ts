@@ -98,6 +98,26 @@ export const VariableNamingRule: IRule = {
 
           // Flag single-letter variable names (except in loops or very short scopes)
           if (name.length === 1 && name !== 'i' && name !== 'j' && name !== 'x' && name !== 'y') {
+            // Exempt a single-letter PARAMETER that is the sole parameter of
+            // an arrow function passed directly as a callback argument to a
+            // call expression -- e.g. `useFooStore((s) => s.bar)`,
+            // `.map((x) => ...)`, `.then((r) => ...)`. This is a near-
+            // universal functional idiom (Zustand/Redux selectors, array
+            // methods, promise chains) across this codebase and the wider
+            // ecosystem, not an unclear-naming case: the parameter's whole
+            // referent is the single argument the call site already names.
+            // (2026-09-10 fix: false-positived on `(s) => s.error` in this
+            // exact codebase's own pervasive Zustand selector convention.)
+            if (Node.isParameterDeclaration(node)) {
+              const arrowFn = node.getParent();
+              if (
+                Node.isArrowFunction(arrowFn) &&
+                arrowFn.getParameters().length === 1 &&
+                Node.isCallExpression(arrowFn.getParent())
+              ) {
+                return;
+              }
+            }
             // Check if this is in a loop context
             let inLoop = false;
             let current = node.getParent();
