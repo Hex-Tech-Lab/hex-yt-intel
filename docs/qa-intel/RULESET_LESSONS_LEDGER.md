@@ -13,6 +13,23 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ---
 
+## Fixed this session (2026-09-10)
+
+### `VariableNamingRule` false-positived on single-letter callback-arrow parameters (Zustand selectors, `.map`/`.then` callbacks)
+- **File**: `scripts/quality-engine/rules/quality.ts` (`VariableNamingRule`)
+- **Symptom**: `useAnalysisStore((s) => s.error)` flagged "Unclear variable name 's'" -- this exact `(s) => s.foo` shape is this codebase's own pervasive Zustand selector convention, used dozens of times already.
+- **Root cause**: the rule flagged any single-letter variable/parameter name outside a loop (with a 4-letter literal allowlist: `i`,`j`,`x`,`y`), with no awareness that a single-param arrow function passed directly as a call argument is a distinct, near-universal functional idiom (selectors, `.map`, `.then`, etc.) where the parameter name is never read in isolation from the call site.
+- **Fixed at the rule level**: exempts a single-letter parameter only when it is the sole parameter of an arrow function that is itself the direct argument of a call expression -- structural (AST-shape), not a name allowlist, so it doesn't special-case `s` or weaken detection of a genuinely unclear parameter on a named function declaration.
+- **Also fixed**: the rule's own test (`wave9-new-rules.test.ts`) previously never called `VariableNamingRule.check()` at all -- it just asserted `source.getText()` contained the literal input string, which would pass regardless of whether the rule did anything. Replaced with 3 real invocations (genuine violation still fires, the new exemption suppresses it, a named-function parameter is unaffected).
+- **Commit**: `dc5c201e` (PR: fix/qa-intel-single-letter-callback-arg-false-positive)
+
+### File-size gate (500 lines) crept back up on `analysis-reaper.ts` mid-session
+- **File**: `web/lib/services/analysis-reaper.ts` -- grew to 520 lines purely from RCA/doc comments added while fixing a real billing bug in the same file, tripping qa-intel's "Complexity: Monolithic File" gate.
+- **Not a rule bug** -- the gate did its job. Trimmed comment verbosity back to 498 lines without losing the substantive RCA content. Logged here per the standing observation (see user directive below) that this project's own 500-line convention keeps getting silently exceeded across sessions with no periodic sweep catching it before a gate trips mid-task.
+- **Broader, not-yet-actioned observation** (2026-09-10, explicit user directive): multiple files are trending back toward 1000+ line monoliths (`web/app/api/analyses/persist/route.ts` is 1000+ lines with **zero test coverage** -- confirmed via `find`, no test file exists at all for it), and several other previously-untested files were found bare this session (`useSSEStream.ts`, `useAutoRestoreAnalysis.ts`'s newer branches, `DimensionAccordion.tsx`). This ledger's own stated cadence ("sweep at the end of every session") has not been happening in practice -- entries accumulate but aren't regularly folded back into rule fixes. Flagged as needing a dedicated wave (decomposition + test-coverage backfill), not a fix bundled into an unrelated billing PR.
+
+---
+
 ## Open
 
 ### 2026-08-14 — "Missing finally block for I/O" only recognizes try/finally block syntax, not Promise.finally()
