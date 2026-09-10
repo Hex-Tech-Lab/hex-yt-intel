@@ -14,6 +14,8 @@ import { render, cleanup, screen } from '@testing-library/react';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 
+const noop = () => undefined;
+
 describe('DimensionAccordion (dashboard) — partial-progress messaging', () => {
   beforeEach(() => {
     useAnalysisStore.getState().clearAnalysis();
@@ -25,7 +27,7 @@ describe('DimensionAccordion (dashboard) — partial-progress messaging', () => 
 
   it('shows the plain failure message for a genuine total loss (no missingDimensions)', () => {
     render(
-      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={() => {}} status="error" />
+      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={noop} status="error" />
     );
     expect(screen.getByText('Synthesis failed — see the log below.')).toBeTruthy();
   });
@@ -39,7 +41,7 @@ describe('DimensionAccordion (dashboard) — partial-progress messaging', () => 
     });
 
     render(
-      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={() => {}} status="error" />
+      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={noop} status="error" />
     );
 
     expect(screen.getByText(/5 of 11 sections finished/i)).toBeTruthy();
@@ -55,7 +57,7 @@ describe('DimensionAccordion (dashboard) — partial-progress messaging', () => 
     });
 
     render(
-      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={() => {}} status="error" />
+      <DimensionAccordion dimensions={[]} selectedDimensionKey={null} onSelectDimension={noop} status="error" />
     );
 
     expect(screen.getByText('Synthesis failed — see the log below.')).toBeTruthy();

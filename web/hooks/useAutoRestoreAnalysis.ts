@@ -127,6 +127,15 @@ export function useAutoRestoreAnalysis(url: string) {
               data.missingDimensions.length > 0 &&
               data.missingDimensions.length < TOTAL_DIMENSIONS;
             startTransition(() => {
+              // Each invocation of this branch is authoritative for its own
+              // result -- explicitly clearing on the non-partial paths
+              // (rather than only ever setting) prevents a stale
+              // missingDimensions from a PRIOR check of this same video
+              // (e.g. partial progress on an earlier poll) from surviving
+              // into a later check that comes back as a genuine total loss
+              // or a fully-salvaged (0 missing) row. clearAnalysis() only
+              // resets `error` when the videoId itself changes, not on a
+              // repeat check of the same one (PR #306 review).
               if (hasPartialProgress) {
                 setError({
                   code: 'ERR_ANALYSIS_PARTIAL',
@@ -134,6 +143,8 @@ export function useAutoRestoreAnalysis(url: string) {
                   message: 'Some sections finished before this analysis stopped. The rest are being completed automatically.',
                   missingDimensions: data.missingDimensions,
                 });
+              } else {
+                setError(null);
               }
               setStatus('error');
             });
