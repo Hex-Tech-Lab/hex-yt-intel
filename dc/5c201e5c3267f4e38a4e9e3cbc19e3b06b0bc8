@@ -1,0 +1,22 @@
+scripts/quality-engine/rules/quality.ts
+  s_814741664a33c5::t_5b46b25f37d4c7 101-120
+scripts/quality-engine/__tests__/wave9-new-rules.test.ts
+  s_814741664a33c5::t_0e698da81c1961 10
+  s_814741664a33c5::t_1ee37b91ce59cd 80-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "dc5c201e5c3267f4e38a4e9e3cbc19e3b06b0bc8",
+  "prompts": {},
+  "sessions": {
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
