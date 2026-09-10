@@ -220,6 +220,10 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       expect(useAnalysisStore.getState().status).toBe('error');
     });
 
+    // No missingDimensions field at all (undefined, not just empty) -- a
+    // genuine total loss with no partial-recovery data to show.
+    expect(useAnalysisStore.getState().error?.missingDimensions).toBeUndefined();
+
     // Guard: the full-analysis fetch must NOT have fired — the hook should
     // have bailed immediately after the check-route error response.
     const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
@@ -275,6 +279,16 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       'auto-restore'
     );
 
+    // 2026-09-10: real partial progress (5/11 recovered here) must ALSO
+    // reach the UI, not just Sentry -- DimensionAccordion reads this to show
+    // "N of 11 sections finished, completing the rest automatically" instead
+    // of the same bare "Synthesis failed" a total loss gets (the live-reported
+    // confusion this fix addresses, analysis 32aeeb78).
+    expect(useAnalysisStore.getState().error).toMatchObject({
+      code: 'ERR_ANALYSIS_PARTIAL',
+      missingDimensions: MISSING_DIMENSIONS,
+    });
+
     // Early-bail contract intact: no full-analysis fetch fired.
     const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
       const url = typeof args[0] === 'string' ? args[0] : String(args[0]);
@@ -322,6 +336,10 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       { missingDimensions: [] },
       'auto-restore',
     );
+
+    // 0 missing = nothing left to finish -- not a "partial progress" state,
+    // so no ERR_ANALYSIS_PARTIAL error should be surfaced to the UI here.
+    expect(useAnalysisStore.getState().error).toBeNull();
 
     unmount();
   });
