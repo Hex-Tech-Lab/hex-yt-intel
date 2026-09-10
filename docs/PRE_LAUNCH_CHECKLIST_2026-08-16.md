@@ -1,3 +1,13 @@
+## ⚠️ 2026-09-10 STATUS FLAG — read before trusting anything below
+
+This document's entire premise (pre-launch, targeting 08-24) is now **stale by ~3.5 weeks and likely moot**: the product is demonstrably already live in production as of today — this same session investigated a real customer's failed analysis on `getvintel.com` with real `billing_status`/quota/History-list behavior in play, not a staging environment. Nobody has gone back through §1-§8 below to confirm which items actually happened, which slipped, or whether "launch" as this document defines it already occurred. Runway context for whatever comes next: per a 2026-09-07 note, the user has ~1-2 hrs/day intermittently through ~2026-09-17, not the original 8-9 day full-time push this document was written for.
+
+**Added this session, still accurate**: §9 (monolith decomposition + zero-test-coverage backfill), directly below, added in response to a real bug (`validation_passed` misreporting partials as `'completed'`) found live in production and traced to an untested 1158-line file.
+
+**Not done this session**: a full re-audit of §1-§8 against current reality. That's a real, separate task — worth doing before treating any status in this document as current. Flagging rather than silently leaving it to look authoritative.
+
+---
+
 # hex-yt-intel Pre-Launch Checklist — LIVE DOCUMENT
 
 **Created**: 2026-08-16 (Council Wave 1 aftermath, hard-deadline discovery)
@@ -222,6 +232,37 @@ Both are real pre-launch gates, not nice-to-haves — a production failure on ei
 | 7.3 | Confidence bar for launch | **revised up from the prior pass's 65-70%, honest read**: ~75-78% | — | — | Why up: 7.1 now has real evidence — the public share-view path (used by the `/share/[token]` route, a real product surface) is confirmed working end-to-end by an independent automated tool, and the one real bug it surfaced (mislabeled sample button) is already fixed. Why not higher: 10/15 cases (everything behind Google auth — dashboard, chat, billing, saved analyses, search) remain functionally unverified by TestSprite tonight, blocked by Google's bot-detection rather than resolved; those flows still rely solely on the `/pr-review-workflow` gate and manual smoke-testing (§6.6), same as before. 7.2 still has zero automated pairwise coverage (confirmed not salvageable, not rebuilt). The `/pr-review-workflow` per-PR gate (≥85 confidence) remains real and running throughout. Before treating this as launch-ready, either get a non-Google auth path TestSprite can drive, or lean fully on §6.6's manual pass for the 10 blocked flows. |
 
 The 3-4 days for the unrelated project's presentation are now locked to Tue-Fri (08-19–08-22) per your decision above.
+
+---
+
+## 9. Monolith decomposition + zero-test-coverage backfill wave (added 2026-09-10, real inventory)
+
+**Why this is here, not just tech debt**: raised directly by the user after PR #306's review surfaced a live, real bug (`validation_passed` misreporting unbilled partials as `'completed'` in 3 production customers' History lists) sitting undetected in `persist/route.ts` — a 1158-line file with **zero test coverage**. That specific bug is fixed (PR #306), but the file itself, and several others of similar size/importance, remain untested. Real inventory below, not estimated.
+
+**Method**: `find` + `wc -l` across `web/` (excluding `.next/` generated output, `__tests__/`, `node_modules/`) for files >500 lines, cross-checked for a matching test file in the same directory or its `__tests__/` subfolder. Run 2026-09-10 against the `fix/reaper-strict-billing-and-partial-remediation` branch (does not yet include PR #305's `useSSEStream.ts` test, still unmerged as of this writing).
+
+| # | File | Lines | Test coverage | Launch relevance |
+|---|---|---|---|---|
+| 9.1 | `web/app/api/analyses/persist/route.ts` | 1158 | **0** | **Critical** — S2S persistence endpoint for every analysis; the exact file the live `validation_passed` bug was found in |
+| 9.2 | `web/lib/adapters/SupabasePersistenceAdapter.ts` | 582 | **0** | **Critical** — core write path used by persist route, reaper, and remediation |
+| 9.3 | `web/lib/adapters/SupabaseAnalysisAdapter.ts` | 1056 | **0** | **Critical** — `getUserHistory`'s buggy status mapper (the History-list `'completed'` misreport) lives here |
+| 9.4 | `web/hooks/useSSEStream.ts` | 599 | **0 on this branch** — PR #305 (unmerged) adds a real first test file here | High — main client-side streaming/retry hook, exact site of this session's other real bug (detached-retry race) |
+| 9.5 | `web/components/containers/DashboardContainer.tsx` | 1151 | **0** | High — main dashboard container, largest single UI file in the app |
+| 9.6 | `web/components/templates/console/ChatDock.tsx` | 866 | **0** | High — chat UI, user-facing core feature |
+| 9.7 | `web/store/useChatStore.ts` | 689 | **0** | High — core chat state store |
+| 9.8 | `web/lib/usecases/ProcessChatMessageUseCase.ts` | 574 | **0** | High — chat message processing use case |
+| 9.9 | `web/app/settings/logs/LogsViewerClient.tsx` | 625 | **0** | Low — admin-only, small blast radius |
+| — | `web/components/templates/console/AnalysisHistory.tsx` (818), `dimension-remediation.ts` (785), `WordCloud.tsx` (746), `ucis-v5.3.ts` (671), `admin-logs/fetchers.ts` (609), `wiki-builder.ts` (535) | — | ≥1 test file exists each | Not zero-coverage, but still over the 500-line convention — decomposition candidates, not urgent |
+
+**Recommendation, not yet actioned**: do not attempt full decomposition of all 15 files before launch — that's a multi-day effort this checklist's own runway (1-2h/day through ~2026-09-17, per the timeline-slip note) can't absorb alongside §2 (payments) and §6.3/6.4 (bug triage/PR gate). Minimum viable pre-launch action: **backfill a real test file for 9.1-9.3 only** (the 3 files directly implicated in a bug that already shipped to production once) — decomposition and the remaining 6 files are a post-launch fast-follow, tracked here so they don't silently vanish from view again.
+
+| # | Item | Status | Owner | Effort | Gate |
+|---|---|---|---|---|---|
+| 9.10 | Real test file for `persist/route.ts`'s chunked-finalize branch (the exact code path the `validation_passed` bug shipped from) | ⬜ | CC/OC | 1-2h | At minimum: a test proving `validationPassed`/`billing_status` stay consistent for a partial (1-10/11) result, matching the fix in PR #306 |
+| 9.11 | Real test file for `SupabasePersistenceAdapter.updateAnalysisResult` | ⬜ | CC/OC | 1h | Covers the guarded-write race behavior and the `validation_passed` DB-column write path |
+| 9.12 | Real test file for `SupabaseAnalysisAdapter.getUserHistory`'s status mapper | ⬜ | CC/OC | 30m | Locks in the fixed billing/validation_passed precedence so this exact bug class can't silently regress |
+| 9.13 | Decomposition pass for 9.1/9.3/9.5 (the three largest, >1000-line files) | ⬜ **post-launch, explicitly deferred** | — | multi-day | Not started — flagged so it isn't silently dropped, not committed to this window |
+| 9.14 | Ledger process fix: actually run the "sweep every session" cadence `docs/qa-intel/RULESET_LESSONS_LEDGER.md` already states as its own rule but hasn't been followed | 🔵 started 2026-09-10 (1 real rule fixed + logged same session, see ledger) | CC | ongoing habit, not a one-time task | At least 1 ledger entry resolved per session touching qa-intel findings, not just added |
 
 ---
 
