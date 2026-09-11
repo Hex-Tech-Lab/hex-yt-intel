@@ -98,6 +98,42 @@ export const VariableNamingRule: IRule = {
 
           // Flag single-letter variable names (except in loops or very short scopes)
           if (name.length === 1 && name !== 'i' && name !== 'j' && name !== 'x' && name !== 'y') {
+            // Exempt a single-letter PARAMETER that is the sole parameter of
+            // an arrow function passed directly as a callback argument to a
+            // call expression -- e.g. `useFooStore((s) => s.bar)`,
+            // `.map((x) => ...)`, `.then((r) => ...)`. This is a near-
+            // universal functional idiom (Zustand/Redux selectors, array
+            // methods, promise chains) across this codebase and the wider
+            // ecosystem, not an unclear-naming case: the parameter's whole
+            // referent is the single argument the call site already names.
+            // (2026-09-10 fix: false-positived on `(s) => s.error` in this
+            // exact codebase's own pervasive Zustand selector convention.)
+            if (Node.isParameterDeclaration(node)) {
+              const arrowFn = node.getParent();
+              const callExpr = arrowFn?.getParent();
+              if (
+                Node.isArrowFunction(arrowFn) &&
+                arrowFn.getParameters().length === 1 &&
+                // A rest parameter (`(...q) => q.length`) also satisfies
+                // `getParameters().length === 1`, but it represents a
+                // variable-length collection, not the single callback value
+                // this exemption is meant for -- it must still be flagged.
+                // (2026-09-11 fix, external review on PR #307 finding #1.)
+                !node.isRestParameter() &&
+                Node.isCallExpression(callExpr) &&
+                // Defensive guard: ensure the arrow is an ARGUMENT of the
+                // call, not its callee. In practice the TS AST always wraps
+                // an arrow-as-callee in a ParenthesizedExpression (so
+                // `Node.isCallExpression(callExpr)` already excludes IIFEs
+                // like `((q) => q.trim())()`), but this check is harmless
+                // belt-and-suspenders against any AST shape where the arrow
+                // somehow lands as the call's callee rather than an arg.
+                // (2026-09-10, external review on PR #307 finding #2.)
+                callExpr.getArguments().includes(arrowFn)
+              ) {
+                return;
+              }
+            }
             // Check if this is in a loop context
             let inLoop = false;
             let current = node.getParent();
