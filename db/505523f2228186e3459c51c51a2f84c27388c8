@@ -1,0 +1,20 @@
+scripts/quality-engine/__tests__/wave10-new-rules.test.ts
+  s_063531516ed0f0::t_a96dd986e1109e 33,47,71,123-124
+  s_063531516ed0f0::t_099f3cf2aff8a2 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "db505523f2228186e3459c51c51a2f84c27388c8",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
