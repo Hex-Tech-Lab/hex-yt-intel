@@ -1,0 +1,32 @@
+.memory/AGENT_LEDGER.md
+  s_18631d80d646a3::t_7c2ef9fbfaa7d1 1387
+web/lib/adapters/settings-adapter.ts
+  s_18631d80d646a3::t_7fb52a3673f1f0 196-205
+supabase/migrations/20260911120000_abort_on_partial_failure_default_false.sql
+  s_18631d80d646a3::t_088924cf786ece 1-18
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_18631d80d646a3::t_66e43767ce1073 440-441,445-448,451-452,454-456
+  s_18631d80d646a3::t_6304f273dd7b95 377-399,412-437,443-444,449-450,453,457-462,465
+  s_18631d80d646a3::t_c87d9523938875 438-439,442
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_18631d80d646a3::t_ba4f6955d137f3 28-34,37,40-42,44-45,48,52,54-59,61-63,65-68,70,103,113-121
+  s_18631d80d646a3::t_56b3e953f0b8c3 1-27,35-36,38-39,43,46-47,49-51,53,60,64,69,71-102,104-112,122-184
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_18631d80d646a3::t_52b341ab1064a0 279-406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3615975daae57ff0c71899a7c601767bc34a84ce",
+  "prompts": {},
+  "sessions": {
+    "s_18631d80d646a3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7231e052ffeXuc65ZYPFUNHZ1",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
