@@ -12,6 +12,7 @@ export interface Finding {
 
 export interface IRule {
   name: string;
+  allowSelfAnalysis?: boolean;
   check: (source: SourceFile) => Finding[];
 }
 
@@ -58,8 +59,8 @@ export class QualityIntelligenceEngine {
     const findings: Finding[] = [];
     // Only analyze files that exist in the project
     const files = changedFiles
-      .map(f => path.resolve(this.rootDir, f))
-      .filter(f => fs.existsSync(f));
+      .map(relativePath => path.resolve(this.rootDir, relativePath))
+      .filter(resolvedPath => fs.existsSync(resolvedPath));
 
     for (const filePath of files) {
       try {
@@ -68,11 +69,11 @@ export class QualityIntelligenceEngine {
           try {
             findings.push(...rule.check(source));
           } catch (error) {
-            console.error(`Rule "${rule.name}" failed on file ${source.getFilePath()}:`, error);
+            console.error(`Rule "${rule.name}" failed on a source file:`, error);
           }
         }
       } catch (error) {
-        console.error(`Failed to process file ${filePath}:`, error);
+        console.error("Failed to process a source file:", error);
       }
     }
     return findings;

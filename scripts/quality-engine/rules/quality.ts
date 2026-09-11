@@ -328,10 +328,159 @@ export const ErrorObservabilityRule: IRule = {
   }
 };
 
+// WAVE 10 rules (2026-09-11): mined from a retrospective sweep of 62 external
+// review findings (Cubic/CodeRabbit/Sourcery) across 58 merged PRs, grouped
+// into recurring bug classes. See docs/qa-intel/RETRO_WAVE_FINDINGS_2026-09-11.md
+// for the full inventory and docs/qa-intel/RULESET_LESSONS_LEDGER.md for the
+// per-rule inference notes. These three classes recurred (5, 5, 2 occurrences)
+// and had no existing rule coverage.
+
+export const ErrorNormalizationRule: IRule = {
+  name: "error-normalization-enforcer",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    source.forEachDescendant((node) => {
+      if (!Node.isCatchClause(node)) return;
+      const param = node.getVariableDeclaration();
+      if (!param) return;
+      const caughtName = param.getName();
+      const block = node.getBlock();
+      if (!block) return;
+      const bodyText = block.getText();
+
+      // Only care about catch bodies that actually forward the caught value
+      // somewhere observable (Sentry, console, thrown, or a template string).
+      const forwardsRaw =
+        new RegExp(`Sentry\\.[a-zA-Z]+\\(\\s*${caughtName}\\b`).test(bodyText) ||
+        new RegExp(`console\\.[a-zA-Z]+\\([^)]*\\$\\{${caughtName}\\}`).test(bodyText) ||
+        new RegExp(`throw\\s+${caughtName}\\b`).test(bodyText);
+
+      if (!forwardsRaw) return;
+
+      // A normalization guard looks like `X instanceof Error` or
+      // `String(X)` / `X.message` appearing anywhere in the block, applied
+      // to the caught variable before it's forwarded.
+      const isNormalized =
+        new RegExp(`${caughtName}\\s+instanceof\\s+Error`).test(bodyText) ||
+        new RegExp(`String\\(\\s*${caughtName}\\s*\\)`).test(bodyText) ||
+        new RegExp(`${caughtName}\\.message\\b`).test(bodyText) ||
+        new RegExp(`${caughtName}\\.stack\\b`).test(bodyText);
+
+      if (!isNormalized) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: `Code Quality: Catch variable '${caughtName}' forwarded without normalization`,
+          why: `'${caughtName}' is caught as 'unknown' and passed to Sentry/console/rethrow without an 'instanceof Error' guard or 'String()' coercion. Non-Error throws (strings, objects) render as '[object Object]' or lose their stack trace. (2026-09-11, mined from PR #268/#234 external review findings.)`,
+          fix: `Normalize before forwarding: const message = ${caughtName} instanceof Error ? ${caughtName}.message : String(${caughtName});`
+        });
+      }
+    });
+
+    return findings;
+  }
+};
+
+export const NumberCoercionGuardRule: IRule = {
+  name: "number-coercion-guard",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    source.forEachDescendant((node) => {
+      if (!Node.isCallExpression(node)) return;
+      const expr = node.getExpression();
+      if (!Node.isIdentifier(expr) || expr.getText() !== "Number") return;
+
+      const args = node.getArguments();
+      if (args.length !== 1) return;
+      const arg = args[0];
+      const argText = arg.getText();
+
+      // Skip obviously-safe cases: numeric/string literals, or an argument
+      // already guarded by a typeof/nullish check earlier in the same
+      // logical expression (e.g. `x != null ? Number(x) : fallback`).
+      if (Node.isNumericLiteral(arg) || Node.isStringLiteral(arg)) return;
+
+      const enclosingStatement = node.getFirstAncestor((a) =>
+        Node.isVariableStatement(a) || Node.isExpressionStatement(a) || Node.isReturnStatement(a) || Node.isIfStatement(a)
+      );
+      const context = (enclosingStatement ?? node).getText();
+      const hasGuard =
+        context.includes(`typeof ${argText}`) ||
+        context.includes(`${argText} != null`) ||
+        context.includes(`${argText} !== null`) ||
+        context.includes(`${argText} ??`) ||
+        context.includes(`${argText} ?.`);
+
+      if (!hasGuard) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: `Code Quality: Unguarded 'Number(${argText})' coercion`,
+          why: `'Number(null)' silently returns 0 and 'Number(undefined)' returns NaN — both pass a naive range check and produce silent wrong behavior instead of a visible error. External data (API responses, DB columns, registry values) should be type-narrowed before coercion. (2026-09-11, mined from PR #268 external review findings: a null highlight offset silently became 0 instead of its intended 2.5s fallback.)`,
+          fix: `Guard first: typeof ${argText} === 'number' || typeof ${argText} === 'string' ? Number(${argText}) : fallback`
+        });
+      }
+    });
+
+    return findings;
+  }
+};
+
+export const UnregisteredRuleExportRule: IRule = {
+  name: "unregistered-rule-export-detector",
+  allowSelfAnalysis: true,
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    // Only applicable to files inside scripts/quality-engine/rules/ that
+    // both export an IRule-typed const AND define a register*Rules function
+    // — this is the exact shape of the 2026-09-07 incident where
+    // AuthorizationRegexBypassRule was exported but never passed to
+    // e.addRule(...) in registerSecurityRules, so it silently never ran.
+    if (!filePath.includes("/scripts/quality-engine/rules/")) return findings;
+
+    const ruleConstNames: string[] = [];
+    source.forEachDescendant((node) => {
+      if (!Node.isVariableDeclaration(node)) return;
+      const typeNode = node.getTypeNode();
+      if (typeNode?.getText() !== "IRule") return;
+      ruleConstNames.push(node.getName());
+    });
+
+    if (ruleConstNames.length === 0) return findings;
+
+    const registerFn = source.getFunctions().find((fn) => /^register[A-Za-z]*Rules$/.test(fn.getName() ?? ""));
+    if (!registerFn) return findings; // this file doesn't define a registrar — nothing to check
+
+    const registerBody = registerFn.getBodyText() ?? "";
+
+    for (const ruleName of ruleConstNames) {
+      const isRegistered = new RegExp(`addRule\\(\\s*${ruleName}\\b`).test(registerBody);
+      if (!isRegistered) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: `Code Quality: Rule '${ruleName}' exported but not registered`,
+          why: `'${ruleName}' is defined as an IRule in this file, but '${registerFn.getName()}' never calls 'e.addRule(${ruleName})'. The rule is dead code — it will never run against any PR. (2026-09-11, mined from the real 2026-09-07 incident: AuthorizationRegexBypassRule shipped unregistered and a live auth bypass went undetected.)`,
+          fix: `Add 'e.addRule(${ruleName});' inside '${registerFn.getName()}'.`
+        });
+      }
+    }
+
+    return findings;
+  }
+};
+
 /**
  * Register all quality-related rules with the QA-Intel engine.
  * Includes rules for async/await clarity, dead code detection, naming, timeouts,
- * import ordering, and error observability.
+ * import ordering, error observability, error normalization, number coercion
+ * guards, and unregistered-rule detection (WAVE 10, 2026-09-11).
  * @param engine - The QA-Intel engine instance
  */
 export function registerQualityRules(engine: unknown) {
@@ -342,4 +491,7 @@ export function registerQualityRules(engine: unknown) {
   e.addRule(TimeoutCleanupRule);
   e.addRule(ImportOrderingRule);
   e.addRule(ErrorObservabilityRule);
+  e.addRule(ErrorNormalizationRule);
+  e.addRule(NumberCoercionGuardRule);
+  e.addRule(UnregisteredRuleExportRule);
 }
