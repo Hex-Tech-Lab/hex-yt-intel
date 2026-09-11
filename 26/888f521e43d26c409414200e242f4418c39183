@@ -1,0 +1,29 @@
+scripts/quality-engine/application/QualityEngine.ts
+  s_063531516ed0f0::t_925cf62bd2570b 45,48-51
+  s_063531516ed0f0::t_05f7ab5d602d9a 34
+scripts/quality-engine/engine.ts
+  s_063531516ed0f0::t_d959471f431e22 15
+  s_063531516ed0f0::t_6db43953746c35 62-63,72,76
+scripts/quality-engine/infra/LegacyRuleAdapter.ts
+  s_063531516ed0f0::t_cd5b95fa9a8878 7,15
+scripts/quality-engine/domain/Rule.ts
+  s_063531516ed0f0::t_af6b2863843a94 21-26
+scripts/quality-engine/rules/quality.ts
+  s_063531516ed0f0::t_ffcba46b09ec74 399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "26888f521e43d26c409414200e242f4418c39183",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
