@@ -1,0 +1,38 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0e34f426aa37c1::t_e72f487cbceb0c 23
+.memory/AGENT_LEDGER.md
+  s_0e34f426aa37c1::t_93e22183919413 1383
+scripts/quality-engine/rules/quality.ts
+  s_0e34f426aa37c1::t_2cf30b2ad69cd8 117-122,124-131
+scripts/quality-engine/__tests__/wave9-new-rules.test.ts
+  s_0e34f426aa37c1::t_4ad0f7940403a5 135-160
+  s_0e34f426aa37c1::t_5af885563da08d 90-93,97,103
+docs/agent-prompts/2026-09-11-oc-pr307-fix-rest-param-exemption-gap.md
+  s_063531516ed0f0::t_dd149b396a8902 1-85
+docs/agent-prompts/2026-09-11-pr307-external-review-findings.md
+  s_063531516ed0f0::t_cf9e2e4c744a27 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "63e64af1f7708d77840306d6cd963c51f721e645",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0e34f426aa37c1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7231b80effeq4aRd7oDafzVoJ",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
