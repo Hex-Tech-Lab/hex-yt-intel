@@ -294,6 +294,50 @@ export function computeMissingDimensions(markdown: string): number[] {
 }
 
 /**
+ * Pure: build the failure-recording report for a failed remediation attempt
+ * (worker call returned no usable fragments, or the stitch produced nothing).
+ * Mirrors analysis-requeue.ts's buildRequeuePatch shape-for-consistency.
+ * Bumps the ADR 021 shared `remediation_retry_count` ceiling — before
+ * 2026-09-11 only the StillPartial persist path incremented it, so a row
+ * whose worker calls persistently failed was retried every 5-minute tick
+ * forever (the 2026-09-01 incident burned the entire monthly $2.00 hardCap in
+ * 35 minutes on 12 such rows). Exported for unit testing.
+ */
+export function buildRemediationFailurePatch(
+  existingReport: unknown,
+  previousRetryCount: number,
+  failedStage: string,
+  nowIso: string
+): { validationReport: Record<string, unknown>; nextRetryCount: number } {
+  const nextRetryCount = previousRetryCount + 1;
+  return {
+    validationReport: {
+      ...asReportObject(existingReport),
+      remediation_retry_count: nextRetryCount,
+      remediation_last_failure_at: nowIso,
+      remediation_last_failure_stage: failedStage,
+    },
+    nextRetryCount,
+  };
+}
+
+/**
+ * Pure: keep only candidates whose `video_id` still has a transcripts row.
+ * A purged (72h retention) or never-fetched transcript means the worker can
+ * only run its placeholder-transcript path, which in practice yields zero
+ * usable dimension fragments — a silent null that retrying cannot fix.
+ * Before 2026-09-11 this population (archived July rows with purged
+ * transcripts + mangled `*_archived_*` video_ids that can never re-fetch)
+ * was retried into the 2026-09-01 35-minute budget drain. Exported for unit
+ * testing. Trade-off accepted (2026-09-11 dispatch): a real video_id whose
+ * transcript was purged but is still re-fetchable from YouTube is also
+ * excluded — a manual re-analyze is the recovery path for those rows.
+ */
+export function filterGapsWithTranscript(gaps: AnalysisGap[], transcriptVideoIds: Set<string>): AnalysisGap[] {
+  return gaps.filter((gap) => transcriptVideoIds.has(gap.videoId));
+}
+
+/**
  * Find analyses with real partial content and no path back to completion
  * except a full re-run. Deliberately narrow: `billing_status = 'failed'`
  * (NOT 'processing' -- that's the reaper's territory) AND
@@ -322,6 +366,24 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     .limit(limit);
   if (error) throw error;
 
+  // Transcript-presence gate (2026-09-11): fail closed — a transcripts query
+  // error throws (this sweep aborts, QStash retries) rather than spending
+  // reserved budget on unverified candidates.
+  const videoIds = Array.from(
+    new Set((data ?? []).map((row) => ((row as { video_id?: string }).video_id ?? '')).filter(Boolean))
+  );
+  const transcriptVideoIds = new Set<string>();
+  if (videoIds.length > 0) {
+    const { data: transcriptRows, error: transcriptError } = await service
+      .from('transcripts')
+      .select('video_id')
+      .in('video_id', videoIds);
+    if (transcriptError) throw transcriptError;
+    for (const t of transcriptRows ?? []) {
+      const vid = (t as { video_id?: string }).video_id;
+      if (vid) transcriptVideoIds.add(vid);
+    }
+  }
   const gaps: AnalysisGap[] = [];
   for (const row of data ?? []) {
     const markdown = (row as { analysis_markdown?: string }).analysis_markdown ?? '';
@@ -352,7 +414,13 @@ export async function findAnalysesWithMissingDimensions(opts?: {
       missingDimensions,
     });
   }
-  return gaps;
+  // Transcript-presence gate (2026-09-11): no transcripts row for a
+  // candidate's video_id (purged by the 72h retention pipeline, or an
+  // archived row's mangled `*_archived_*` video_id that never had one) means
+  // the worker's placeholder-transcript path — retrying it just burns
+  // reserved budget into a silent null. Excluded here, before any budget is
+  // reserved (see filterGapsWithTranscript).
+  return filterGapsWithTranscript(gaps, transcriptVideoIds);
 }
 
 /**
@@ -633,9 +701,40 @@ export async function remediateAnalysis(
   });
 
   const persistenceAdapter = new SupabasePersistenceAdapter();
+  // Shared ADR 021 ceiling snapshot, read fresh from this sweep's gap (the
+  // failure paths below burn against it — before 2026-09-11 only the
+  // StillPartial persist path incremented the counter, so a row whose worker
+  // calls persistently failed was retried every 5-minute tick forever).
+  const existingReport = asReportObject(gap.validationReport);
+  const currentRetryCount =
+    typeof existingReport.remediation_retry_count === 'number' ? existingReport.remediation_retry_count : 0;
+
+  /**
+   * Burn one shared-ceiling retry on a failed attempt (non-fatal: a failed
+   * counter write must not turn the attempt's own WorkerFailed/StitchFailed
+   * outcome into a sweep error — the row simply stays a candidate one more
+   * tick, same as pre-fix behavior for that tick).
+   */
+  const recordFailure = async (failedStage: 'worker_failed' | 'stitch_failed'): Promise<void> => {
+    try {
+      const failurePatch = buildRemediationFailurePatch(gap.validationReport, currentRetryCount, failedStage, new Date().toISOString());
+      await persistenceAdapter.recordRemediationFailure({
+        analysisId: gap.id,
+        validationReport: failurePatch.validationReport,
+        previousRetryCount: currentRetryCount,
+        guardBillingStatus: 'failed',
+      });
+    } catch (err) {
+      console.error('[dimension-remediation] failure-counter write failed (non-fatal):', {
+        analysisId: gap.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 
   const newChunk = await collectDimensionsFromWorker(gap, models, cascade);
   if (!newChunk) {
+    await recordFailure('worker_failed');
     return { analysisId: gap.id, stage: RemediationStage.WorkerFailed, dimensionsRequested: gap.missingDimensions };
   }
 
@@ -661,6 +760,7 @@ export async function remediateAnalysis(
       level: 'error',
       contexts: { remediation: { analysisId: gap.id } },
     });
+    await recordFailure('stitch_failed');
     return { analysisId: gap.id, stage: RemediationStage.StitchFailed, dimensionsRequested: gap.missingDimensions };
   }
 
@@ -668,8 +768,6 @@ export async function remediateAnalysis(
   const dimensionCountAfter = dimensionStatus.filter((d) => d.status === 'done').length;
   const nowIso = new Date().toISOString();
   const isStillPartial = dimensionCountAfter < TOTAL_DIMENSIONS;
-  const existingReport = asReportObject(gap.validationReport);
-  const currentRetryCount = typeof existingReport.remediation_retry_count === 'number' ? existingReport.remediation_retry_count : 0;
 
   const newReport = {
     ...existingReport,

@@ -174,6 +174,31 @@ export interface AnalysisPersistencePort {
     guardBillingStatus?: string;
   }): Promise<{ updated: boolean }>;
 
+  /**
+   * Record a failed remediation attempt on a partial row WITHOUT touching its
+   * content: bumps `remediation_retry_count` inside `validation_report` (the
+   * ADR 021 shared ceiling counter) so the dimension-remediation harness's
+   * candidate gate (`retryCount >= remediation.maxRetries`) actually bounds
+   * rows whose worker calls persistently fail. Before 2026-09-11 only the
+   * StillPartial persist path incremented the counter, so a row that never
+   * produced a usable worker response was retried every 5-minute tick forever
+   * — the 2026-09-01 live incident burned the entire monthly remediation
+   * hardCap ($2.00) in 35 minutes on 12 such rows (88 usage_log events) and
+   * every remediation tick since then silently no-op'd.
+   *
+   * `guardBillingStatus` + `previousRetryCount` make this a conditional
+   * double-guard (`billing_status = guardBillingStatus` AND the report's
+   * retry count still equal to the snapshot the caller read), the same race
+   * shape as the reaper's tryRequeuePartial — a concurrent legitimate change
+   * (re-analyze, reap) always wins and this write reports `updated: false`.
+   */
+  recordRemediationFailure(params: {
+    analysisId: string;
+    validationReport: Record<string, unknown>;
+    previousRetryCount: number;
+    guardBillingStatus: string;
+  }): Promise<{ updated: boolean }>;
+
   persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
