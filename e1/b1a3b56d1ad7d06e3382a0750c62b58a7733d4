@@ -1,0 +1,56 @@
+supabase/migrations/20260911201100_remediation_quarantine_ttl_setting.sql
+  s_30b93cea2f58f1::t_3c3e926ee83d07 1-32
+web/lib/services/dimension-remediation.ts
+  s_30b93cea2f58f1::t_a8f88b4f0d4e89 307-329,331-343,347-350,382-383,385
+  s_30b93cea2f58f1::t_ce4fa950e66ff2 807-813,816-830
+  s_30b93cea2f58f1::t_686153f3e64618 949-961
+  s_30b93cea2f58f1::t_4acb04b80d4040 221,227-228,234
+  s_30b93cea2f58f1::t_c3817c0df9c206 413-427,429-430,432,443-472,474-515,517
+  s_30b93cea2f58f1::t_b81dcb0f6f35c4 52
+  s_30b93cea2f58f1::t_d5bc7e85634c94 766
+  s_30b93cea2f58f1::t_dd48df0cfb2c10 358-372
+  s_30b93cea2f58f1::t_b7b171c529bfae 398-401,403-404
+  s_30b93cea2f58f1::t_bc163af01b37f7 88-95
+  s_30b93cea2f58f1::t_19cded0baf1c43 344-346,351-357,373-381,384
+supabase/migrations/20260911201000_record_remediation_failure_atomic.sql
+  s_30b93cea2f58f1::t_934611bc9bc662 1-83
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_30b93cea2f58f1::t_3c548c31e384c7 247-263,265-269,273-274,278-284,286
+.memory/AGENT_LEDGER.md
+  s_30b93cea2f58f1::t_d3899f2cfd871d 1395
+  s_30b93cea2f58f1::t_8faa5a4e2e4cc8 1396
+web/lib/ports/AnalysisPersistencePort.ts
+  s_30b93cea2f58f1::t_b3930bc4eb708d 189-194,200-203,208-209
+web/lib/__tests__/dimension-remediation.test.ts
+  s_30b93cea2f58f1::t_ea956df4172111 14,26,32-33,96,122,125-126,131-134,148,150-151,191-248
+  s_30b93cea2f58f1::t_e5b8e26219330f 2-5,7-13,15-19
+  s_30b93cea2f58f1::t_3aef9e90ae29a6 249,263-266,268-278,280-297,299-300,302,305-306,311-315,320,322,325-326,329,332-338
+  s_30b93cea2f58f1::t_8a8a15b5c7389f 123-124,127-130,137
+  s_30b93cea2f58f1::t_2ad74c19669437 301
+  s_30b93cea2f58f1::t_f4cd19cf8b64b6 250
+web/lib/__tests__/remediate-dimensions-route.test.ts
+  s_30b93cea2f58f1::t_f89d12f5db6959 1-61
+docs/agent-prompts/2026-09-11-oc-remediation-cron-not-wired.md
+  s_30b93cea2f58f1::t_60c47fd50c0210 1-33,43,45-50,55-77,79-81,83,85-100,106-111,113-119,122-124,128-150,164-165
+web/lib/__tests__/dimension-remediation-retry-burn.test.ts
+  s_30b93cea2f58f1::t_d35992fdc6aa5e 1-24,26-37,39-54,56-68,70-201,203-409
+  s_30b93cea2f58f1::t_2ad74c19669437 25,38,55,69,202
+.memory/ADRS.md
+  s_30b93cea2f58f1::t_761d27d1be3e80 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e1b1a3b56d1ad7d06e3382a0750c62b58a7733d4",
+  "prompts": {},
+  "sessions": {
+    "s_30b93cea2f58f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f6e783824ffeumveEgTNopiBce",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
