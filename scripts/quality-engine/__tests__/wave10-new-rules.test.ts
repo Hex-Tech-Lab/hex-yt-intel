@@ -8,12 +8,12 @@
 
 import { test, describe, expect } from 'vitest';
 import { Project } from 'ts-morph';
-import type { SourceFile } from 'ts-morph';
 import {
   ErrorNormalizationRule,
   NumberCoercionGuardRule,
   UnregisteredRuleExportRule,
 } from '../rules/quality';
+import type { SourceFile } from 'ts-morph';
 
 function createTestSource(code: string, path = 'test.ts'): SourceFile {
   const project = new Project({ useInMemoryFileSystem: true });
@@ -30,7 +30,7 @@ describe('WAVE 10: ErrorNormalizationRule', () => {
       }
     `;
     const findings = ErrorNormalizationRule.check(createTestSource(code));
-    expect(findings.some(f => f.title.includes("'err'"))).toBe(true);
+    expect(findings.some(finding => finding.title.includes("'err'"))).toBe(true);
   });
 
   test('does not flag a catch var normalized before forwarding', () => {
@@ -44,7 +44,7 @@ describe('WAVE 10: ErrorNormalizationRule', () => {
       }
     `;
     const findings = ErrorNormalizationRule.check(createTestSource(code));
-    expect(findings.some(f => f.title.includes("'err'"))).toBe(false);
+    expect(findings.some(finding => finding.title.includes("'err'"))).toBe(false);
   });
 
   test('does not flag a catch block that never forwards the caught value', () => {
@@ -68,7 +68,7 @@ describe('WAVE 10: ErrorNormalizationRule', () => {
       }
     `;
     const findings = ErrorNormalizationRule.check(createTestSource(code));
-    expect(findings.some(f => f.title.includes("'err'"))).toBe(true);
+    expect(findings.some(finding => finding.title.includes("'err'"))).toBe(true);
   });
 });
 
@@ -120,8 +120,8 @@ describe('WAVE 10: UnregisteredRuleExportRule', () => {
     const findings = UnregisteredRuleExportRule.check(
       createTestSource(code, 'scripts/quality-engine/rules/security.ts')
     );
-    expect(findings.some(f => f.title.includes("'SomeNewRule'"))).toBe(true);
-    expect(findings.some(f => f.title.includes("'OtherRule'"))).toBe(false);
+    expect(findings.some(finding => finding.title.includes("'SomeNewRule'"))).toBe(true);
+    expect(findings.some(finding => finding.title.includes("'OtherRule'"))).toBe(false);
   });
 
   test('does not flag anything when every rule is registered', () => {
