@@ -1,0 +1,94 @@
+name: Workers Observability Query (read-only, temporary)
+on:
+  workflow_dispatch:
+    inputs:
+      from_ms:
+        description: "window start (epoch ms)"
+        required: true
+      to_ms:
+        description: "window end (epoch ms)"
+        required: true
+      filter_value:
+        description: "substring to filter worker logs on (empty = no filter)"
+        required: false
+        default: ""
+      filter_key:
+        description: "observability filter key"
+        required: false
+        default: "$metadata.message"
+
+permissions:
+  contents: read
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Workers Observability
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FROM_MS: ${{ inputs.from_ms }}
+          TO_MS: ${{ inputs.to_ms }}
+          FILTER_VALUE: ${{ inputs.filter_value }}
+          FILTER_KEY: ${{ inputs.filter_key }}
+        run: |
+          set -euo pipefail
+          PAYLOAD_FILE=$(mktemp)
+          if [ -z "$FILTER_VALUE" ]; then
+            cat > "$PAYLOAD_FILE" <<EOF
+          {
+            "timeframe": {"from": $FROM_MS, "to": $TO_MS},
+            "parameters": {"datasets": ["cloudflare-workers"], "limit": 200, "offset": 0},
+            "view": "events"
+          }
+          EOF
+          else
+            cat > "$PAYLOAD_FILE" <<EOF
+          {
+            "timeframe": {"from": $FROM_MS, "to": $TO_MS},
+            "parameters": {
+              "datasets": ["cloudflare-workers"],
+              "filters": [{"key": "$FILTER_KEY", "type": "string", "operation": "includes", "value": "$FILTER_VALUE", "isRegex": false}],
+              "limit": 200,
+              "offset": 0
+            },
+            "view": "events"
+          }
+          EOF
+          fi
+          HTTP=$(curl -s -o result.json -w "%{http_code}" -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/observability/telemetry/query" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data @"$PAYLOAD_FILE")
+          echo "HTTP $HTTP"
+          rm -f "$PAYLOAD_FILE"
+          {
+            echo "### Workers Observability query result (HTTP $HTTP)"
+            echo '```'
+            python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open("result.json"))
+              events = ((d.get("result") or {}).get("events")) or []
+              print("events:", len(events))
+              for e in events:
+                  md = e.get("$metadata") or {}
+                  print("---")
+                  print("ts:", e.get("$rdf") or e.get("timestamp") or e.get("$cdf"))
+                  print("trigger:", md.get("$metadata.trigger") or md.get("trigger") or "")
+                  print("error:", (md.get("$metadata.error") or md.get("error") or "")[:300])
+                  print("msg:", str(e.get("$metadata.message") or e.get("message") or "")[:600])
+                  extras = {k: v for k, v in e.items() if k not in ("$metadata", "$rdf", "$cdf", "timestamp")}
+                  if extras:
+                      print("extra:", json.dumps(extras)[:400])
+              if not events:
+                  print("RAW:", json.dumps(d)[:2000])
+          except Exception as ex:
+              print("parse error:", ex)
+              print(open("result.json").read()[:2000])
+          PY
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
