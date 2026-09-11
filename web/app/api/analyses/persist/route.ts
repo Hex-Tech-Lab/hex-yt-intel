@@ -700,6 +700,19 @@ export async function POST(request: NextRequest) {
 
           const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(stitchedPayload);
           const finalStatus = isStitchedValid ? computedValidationStatus : 'partial';
+          // Completeness-gated, NOT the raw isStitchedValid -- isStitchedValid
+          // is schema validity alone (a single-dimension payload parses the
+          // schema fine), independent of dimension completeness. This value
+          // gets written straight to the analyses.validation_passed DB
+          // column (via updateAnalysisResult below), which
+          // SupabaseAnalysisAdapter.getUserHistory's status mapper checks
+          // via `!!analysis.validation_passed` as an OR alongside
+          // billing_status==='completed' -- passing the raw flag there
+          // reports a partial (even 1/11) analysis as 'completed' in the
+          // customer's History list despite billing_status correctly saying
+          // 'failed'. Confirmed live on 3 production rows before this fix
+          // (PR #306 review).
+          const isFullyValidated = isStitchedValid && finalStatus === 'done';
           const { channelMeta: _priorChannelMeta, comments: _priorComments, ...priorReportSansAux } = priorReport as any;
           const newReport: PersistedValidationReport = {
             ...priorReportSansAux,
@@ -708,7 +721,7 @@ export async function POST(request: NextRequest) {
             billing_status: resolveBillingStatus(cancelled, billingStatus),
             dimension_status: dimensionStatus,
             model_used: model || null,
-            valid: isStitchedValid && finalStatus === 'done',
+            valid: isFullyValidated,
             ...withFreshAuxMetadata(channelMeta, comments),
           };
 
@@ -718,7 +731,7 @@ export async function POST(request: NextRequest) {
               markdown: stitchedMarkdown,
               payload: stitchedPayload ?? null,
               model: model || null,
-              validationPassed: isStitchedValid,
+              validationPassed: isFullyValidated,
               validationReport: newReport,
             }),
             2
