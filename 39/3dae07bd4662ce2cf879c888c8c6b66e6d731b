@@ -1,0 +1,27 @@
+docs/agent-prompts/2026-09-11-pr305-external-review-findings.md
+  s_063531516ed0f0::t_00dadd67cf615c 1-76
+docs/agent-prompts/2026-09-11-oc-pr307-fix-rest-param-exemption-gap.md
+  s_063531516ed0f0::t_55abe3b9019053 1-85
+docs/agent-prompts/2026-09-11-pr307-external-review-findings.md
+  s_063531516ed0f0::t_55732c38a88292 1-53
+docs/agent-prompts/2026-09-11-oc-pr305-fix-stream-retry-race-and-config.md
+  s_063531516ed0f0::t_b3a293f18100fd 1-94
+.memory/AGENT_LEDGER.md
+  s_063531516ed0f0::t_bb78b27797c23b 1384
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "393dae07bd4662ce2cf879c888c8c6b66e6d731b",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
