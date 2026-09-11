@@ -220,6 +220,10 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       expect(useAnalysisStore.getState().status).toBe('error');
     });
 
+    // No missingDimensions field at all (undefined, not just empty) -- a
+    // genuine total loss with no partial-recovery data to show.
+    expect(useAnalysisStore.getState().error?.missingDimensions).toBeUndefined();
+
     // Guard: the full-analysis fetch must NOT have fired — the hook should
     // have bailed immediately after the check-route error response.
     const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
@@ -275,6 +279,16 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       'auto-restore'
     );
 
+    // 2026-09-10: real partial progress (5/11 recovered here) must ALSO
+    // reach the UI, not just Sentry -- DimensionAccordion reads this to show
+    // "N of 11 sections finished, completing the rest automatically" instead
+    // of the same bare "Synthesis failed" a total loss gets (the live-reported
+    // confusion this fix addresses, analysis 32aeeb78).
+    expect(useAnalysisStore.getState().error).toMatchObject({
+      code: 'ERR_ANALYSIS_PARTIAL',
+      missingDimensions: MISSING_DIMENSIONS,
+    });
+
     // Early-bail contract intact: no full-analysis fetch fired.
     const fullFetchCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
       const url = typeof args[0] === 'string' ? args[0] : String(args[0]);
@@ -322,6 +336,64 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
       { missingDimensions: [] },
       'auto-restore',
     );
+
+    // 0 missing = nothing left to finish -- not a "partial progress" state,
+    // so no ERR_ANALYSIS_PARTIAL error should be surfaced to the UI here.
+    expect(useAnalysisStore.getState().error).toBeNull();
+
+    unmount();
+  });
+
+  it('clears a stale partial-progress error when a later check of the SAME video comes back as a total loss (PR #306 review)', async () => {
+    // Two distinct URL strings for the SAME video (a trailing `&t=` param,
+    // same real-world shape a user re-pasting/re-visiting produces) so the
+    // effect re-fires for a second checkAndRestore call without the video-
+    // changed branch's clearAnalysis() resetting `error` first -- that guard
+    // only fires when the videoId itself changes, not on a repeat check of
+    // the same one, which is exactly the gap this test guards.
+    const SECOND_URL = `${PASTED_URL}&t=5s`;
+    let callCount = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'timed out', missingDimensions: [6, 7, 8, 9, 10, 11] }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+          );
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'error', error: 'permanently failed', missingDimensions: [] }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, unmount } = renderHook(({ url }) => useAutoRestoreAnalysis(url), {
+      initialProps: { url: '' },
+    });
+
+    rerender({ url: PASTED_URL });
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().error?.missingDimensions).toEqual([6, 7, 8, 9, 10, 11]);
+    });
+
+    rerender({ url: SECOND_URL });
+    await waitFor(() => {
+      expect(callCount).toBe(2);
+    });
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().error).toBeNull();
+    });
 
     unmount();
   });
