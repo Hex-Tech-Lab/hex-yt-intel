@@ -243,6 +243,50 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return { updated: true };
   }
 
+  /**
+   * CAS-guarded failure-counter bump for the dimension-remediation harness
+   * (see AnalysisPersistencePort.recordRemediationFailure for the RCA). The
+   * caller supplies the full merged report (it holds the fresh point-in-time
+   * read from the same sweep); this adapter only adds the double guard so a
+   * concurrent legitimate change (re-analyze, reap) can never be clobbered —
+   * the exact same conditional-update shape analysis-requeue.ts's
+   * tryRequeuePartial uses for its requeue bookkeeping. The known
+   * under-enforcement on a concurrent collision (both writers read the same
+   * snapshot, one increment effectively applied) is the same documented,
+   * accepted trade-off — it can only UNDER-count, never over-count, so the
+   * ceiling still binds eventually.
+   */
+  async recordRemediationFailure(params: {
+    analysisId: string;
+    validationReport: Record<string, unknown>;
+    previousRetryCount: number;
+    guardBillingStatus: string;
+  }): Promise<{ updated: boolean }> {
+    const service = getSupabaseServiceClient();
+    let updateQuery = service
+      .from('analyses')
+      .update(
+        { validation_report: params.validationReport, updated_at: new Date().toISOString() },
+        { count: 'exact' }
+      )
+      .eq('id', params.analysisId)
+      .eq('billing_status', params.guardBillingStatus);
+
+    // The retry count may be absent entirely (older rows predate the field) —
+    // mirror tryRequeuePartial's OR-filter so those rows are still eligible
+    // for exactly their first counted failure.
+    updateQuery =
+      params.previousRetryCount === 0
+        ? updateQuery.or(
+            'validation_report->>remediation_retry_count.is.null,validation_report->>remediation_retry_count.eq.0'
+          )
+        : updateQuery.eq('validation_report->>remediation_retry_count', String(params.previousRetryCount));
+
+    const { error, count } = await updateQuery;
+    if (error) throw error;
+    return { updated: (count ?? 0) > 0 };
+  }
+
   // --- Chat Adapter Delegation ---
   getConversations(userId: string): Promise<ChatConversation[]> {
     return SupabaseChatAdapter.getConversations(userId);
