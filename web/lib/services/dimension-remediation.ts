@@ -49,7 +49,7 @@ import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import { tryConsumeTokenBucket, incrementRedisValue } from '@/lib/redis';
+import { tryConsumeTokenBucket, incrementRedisValue, getRedisValue, setRedisValue } from '@/lib/redis';
 
 /**
  * Per-candidate outcome. Doubles as the tally key in RemediationSweepResult
@@ -85,6 +85,14 @@ const REGISTRY_FALLBACK = {
   'remediation.budgetPercentOfRemaining': 10,
   'remediation.hardCapUsdCents': 200,
   'remediation.maxRetries': 3,
+  // P1b (PR #310 post-merge review, 2026-09-11): how long a row stays
+  // quarantined after its failure-counter write failed persistently. Fallback
+  // outlasts typical Supabase incident windows (minutes-to-hours) while a
+  // still-broken write re-quarantines on the next 5-minute tick after expiry;
+  // seeded by 20260911201100_remediation_quarantine_ttl_setting.sql so admins
+  // can tune it live without a redeploy. No empirical incident-length data
+  // exists yet — revisit once a real quarantine window has been observed.
+  'remediation.quarantineTtlSeconds': 21_600,
 } as const;
 
 const TOKEN_BUCKET_KEY = 'budget:dimension-remediation';
@@ -210,18 +218,20 @@ function currentPeriodAnchorMs(): number {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
 }
 
-async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number }> {
+async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number; quarantineTtlSeconds: number }> {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
   const enabled = Boolean(settings['remediation.enabled']);
   const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
   const hardCapCents = Number(settings['remediation.hardCapUsdCents']) || 0;
   const maxRetries = Number(settings['remediation.maxRetries']) || REGISTRY_FALLBACK['remediation.maxRetries'];
+  const quarantineTtlSeconds =
+    Number(settings['remediation.quarantineTtlSeconds']) || REGISTRY_FALLBACK['remediation.quarantineTtlSeconds'];
 
   const remainingCents = await getRemainingBudgetCents();
   const percentDerivedCents = Math.floor((percent / 100) * remainingCents);
   const capacityCents = hardCapCents > 0 ? Math.min(percentDerivedCents, hardCapCents) : percentDerivedCents;
 
-  return { capacityCents, enabled, maxRetries };
+  return { capacityCents, enabled, maxRetries, quarantineTtlSeconds };
 }
 
 /**
@@ -294,32 +304,85 @@ export function computeMissingDimensions(markdown: string): number[] {
 }
 
 /**
- * Pure: build the failure-recording report for a failed remediation attempt
- * (worker call returned no usable fragments, or the stitch produced nothing).
- * Mirrors analysis-requeue.ts's buildRequeuePatch shape-for-consistency.
- * Bumps the ADR 021 shared `remediation_retry_count` ceiling — before
- * 2026-09-11 only the StillPartial persist path incremented it, so a row
- * whose worker calls persistently failed was retried every 5-minute tick
- * forever (the 2026-09-01 incident burned the entire monthly $2.00 hardCap in
- * 35 minutes on 12 such rows). Exported for unit testing.
+ * P1b (PR #310 post-merge review, 2026-09-11): make failure-counter
+ * persistence an ENFORCED invariant, not best-effort. The previous
+ * recordFailure caught adapter errors, logged "non-fatal", and returned —
+ * so if the counter write itself kept failing (e.g. a Supabase-side outage
+ * while the worker + OpenRouter stayed up), the row's retry count never
+ * incremented and it was retried unboundedly: the exact 2026-09-01
+ * budget-drain class of bug PR #310 was written to prevent, one layer down.
+ *
+ * Contract, in order:
+ * 1. `attempt()` succeeding with `updated: true`  → 'recorded' (done).
+ * 2. `attempt()` succeeding with `updated: false` → 'cas_lost': a concurrent
+ *    writer owns the row (re-analyze/reap) — fine, no quarantine, no retry.
+ * 3. `attempt()` throwing → genuine persistence error: retried after each
+ *    delay in `delaysMs`; if EVERY retry fails, `quarantine()` is invoked so
+ *    the row stops being selected by runRemediationHarness's gate even
+ *    though the counter never incremented, and 'quarantined' is returned.
+ *    The quarantine write itself failing is NOT allowed to throw (the money
+ *    gate still fails closed when Redis is unreachable — executeRedisScript
+ *    returns -1 and the token bucket denies) — it's captured to Sentry and
+ *    the residual risk is documented in the ADR.
+ *
+ * Exported for unit testing. `delaysMs` is injectable so tests don't sleep
+ * for the production defaults (see REMEDIATION_COUNTER_RETRY_DELAYS_MS).
  */
-export function buildRemediationFailurePatch(
-  existingReport: unknown,
-  previousRetryCount: number,
-  failedStage: string,
-  nowIso: string
-): { validationReport: Record<string, unknown>; nextRetryCount: number } {
-  const nextRetryCount = previousRetryCount + 1;
-  return {
-    validationReport: {
-      ...asReportObject(existingReport),
-      remediation_retry_count: nextRetryCount,
-      remediation_last_failure_at: nowIso,
-      remediation_last_failure_stage: failedStage,
-    },
-    nextRetryCount,
-  };
-}
+export const REMEDIATION_COUNTER_RETRY_DELAYS_MS = [1_000, 2_000] as const;
+/** Redis key prefix for the P1b quarantine marker; value = ISO timestamp of the quarantine write. */
+export const REMEDIATION_QUARANTINE_KEY_PREFIX = 'remediation:quarantine:';
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const persistRemediationFailureCounter = async (params: {
+  analysisId: string;
+  attempt: () => Promise<{ updated: boolean }>;
+  quarantine: (analysisId: string) => Promise<void>;
+  delaysMs?: readonly number[];
+}): Promise<'recorded' | 'cas_lost' | 'quarantined'> => {
+  const delaysMs = params.delaysMs ?? REMEDIATION_COUNTER_RETRY_DELAYS_MS;
+  // 1 initial attempt + one per retry delay; quarantine only after all fail.
+  const totalAttempts = delaysMs.length + 1;
+  for (let attemptIndex = 0; attemptIndex < totalAttempts; attemptIndex++) {
+    try {
+      const outcome = await params.attempt();
+      return outcome.updated ? 'recorded' : 'cas_lost';
+    } catch (err) {
+      const delayMs = delaysMs[attemptIndex];
+      if (delayMs !== undefined) {
+        await sleep(delayMs);
+        continue;
+      }
+      // Every retry failed — the counter write itself is broken. Quarantine
+      // so the row stops being selected even without the counter's help.
+        try {
+          await params.quarantine(params.analysisId);
+        } catch (quarantineErr) {
+          // Residual risk, bounded: with Redis also unreachable the token
+          // bucket fails CLOSED (executeRedisScript returns -1 → denied), so
+          // unbounded spend remains impossible; the sweep just keeps seeing
+          // the row until one of the two infrastructures recovers.
+          console.error('[dimension-remediation] quarantine write also failed (row remains selectable until Redis or Supabase recovers; token bucket still fails closed):', {
+            analysisId: params.analysisId,
+            err: quarantineErr instanceof Error ? quarantineErr.message : String(quarantineErr),
+          });
+          Sentry.captureException(quarantineErr, {
+            contexts: { remediation: { service: 'dimension-remediation', phase: 'quarantine_write_failed', analysisId: params.analysisId } },
+          });
+        }
+      console.error('[dimension-remediation] failure-counter write failed after retries, quarantining row:', {
+        analysisId: params.analysisId,
+        attempts: totalAttempts,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      Sentry.captureException(err, {
+        contexts: { remediation: { service: 'dimension-remediation', phase: 'failure_counter_persistence', analysisId: params.analysisId } },
+      });
+      return 'quarantined';
+    }
+  }
+  return 'quarantined'; // unreachable — the loop's last catch always returns
+};
 
 /**
  * Pure: keep only candidates whose `video_id` still has a transcripts row.
@@ -332,10 +395,13 @@ export function buildRemediationFailurePatch(
  * testing. Trade-off accepted (2026-09-11 dispatch): a real video_id whose
  * transcript was purged but is still re-fetchable from YouTube is also
  * excluded — a manual re-analyze is the recovery path for those rows.
+ * Converted from a function declaration to a const arrow (DeepSource:
+ * unexpected function declaration in module/global scope) — same conversion
+ * fetchKeyInfo/getRemainingBudgetCents above carry, no behavior change and
+ * the public export shape is identical.
  */
-export function filterGapsWithTranscript(gaps: AnalysisGap[], transcriptVideoIds: Set<string>): AnalysisGap[] {
-  return gaps.filter((gap) => transcriptVideoIds.has(gap.videoId));
-}
+export const filterGapsWithTranscript = (gaps: AnalysisGap[], transcriptVideoIds: Set<string>): AnalysisGap[] =>
+  gaps.filter((gap) => transcriptVideoIds.has(gap.videoId));
 
 /**
  * Find analyses with real partial content and no path back to completion
@@ -344,9 +410,26 @@ export function filterGapsWithTranscript(gaps: AnalysisGap[], transcriptVideoIds
  * `validation_report.status = 'partial'` AND non-empty markdown, so a total
  * loss (empty markdown, nothing to build on) is never mistaken for a
  * remediation candidate.
+ *
+ * P1a (PR #310 post-merge review, 2026-09-11): `limit` bounds ELIGIBLE
+ * candidates, not raw rows. The original single-page query truncated the
+ * population to the first `limit` rows BEFORE the in-memory filters ran, so
+ * a page consisting entirely of transcript-purged rows (exactly the
+ * population PR #310 was written to exclude) starved every legitimate
+ * candidate behind it indefinitely. There is no FK between analyses and
+ * transcripts for a PostgREST `!inner` embed, so the fix paginates: fetch a
+ * page, apply the filters, batch a transcripts presence lookup per page,
+ * keep eligible gaps until `limit` is reached. Two bounds keep this from
+ * running away: the loop stops once `limit` eligible gaps are collected, and
+ * MAX_CANDIDATE_PAGES caps total pages scanned. A page-boundary row skipped
+ * due to concurrent population churn (offset pagination over a shifting
+ * set) is transient and self-healing — the pendulum alternates asc/desc
+ * ordering each tick, so the row is re-examined next sweep.
  */
+export const MAX_CANDIDATE_PAGES = 5; // worst case: 5 x limit(100) = 500 rows scanned — the same scale analysis-reaper.ts's `limit ?? 500` precedent already accepts for one sweep.
+
 export async function findAnalysesWithMissingDimensions(opts?: {
-  /** DB fetch page size -- a query-size safety bound, not a processing-batch limit (that's budget-gated now, see runRemediationHarness). Same non-registry-backed precedent as analysis-reaper.ts's own `limit ?? 500`. */
+  /** Page size AND eligible-candidate cap -- a query-size safety bound, not a processing-batch limit (that's budget-gated now, see runRemediationHarness). Same non-registry-backed precedent as analysis-reaper.ts's own `limit ?? 500`. */
   limit?: number;
   /** Pendulum ordering (ADR 019): 'asc' = oldest-failed-first, 'desc' = newest-failed-first. Alternated per cycle by the caller so neither a long-stuck row nor a fresh failure is ever starved. */
   order?: 'asc' | 'desc';
@@ -357,70 +440,81 @@ export async function findAnalysesWithMissingDimensions(opts?: {
   const maxRetries = opts?.maxRetries ?? REGISTRY_FALLBACK['remediation.maxRetries'];
   const service = getSupabaseServiceClient();
 
-  const { data, error } = await service
-    .from('analyses')
-    .select('id, video_id, title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, user_id')
-    .eq('billing_status', 'failed')
-    .eq('validation_report->>status', 'partial')
-    .order('created_at', { ascending })
-    .limit(limit);
-  if (error) throw error;
+  const eligible: AnalysisGap[] = [];
+  for (let page = 0; page < MAX_CANDIDATE_PAGES && eligible.length < limit; page++) {
+    const { data, error } = await service
+      .from('analyses')
+      .select('id, video_id, title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, user_id')
+      .eq('billing_status', 'failed')
+      .eq('validation_report->>status', 'partial')
+      .order('created_at', { ascending })
+      .range(page * limit, (page + 1) * limit - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    if (rows.length === 0) break;
 
-  // Transcript-presence gate (2026-09-11): fail closed — a transcripts query
-  // error throws (this sweep aborts, QStash retries) rather than spending
-  // reserved budget on unverified candidates.
-  const videoIds = Array.from(
-    new Set((data ?? []).map((row) => ((row as { video_id?: string }).video_id ?? '')).filter(Boolean))
-  );
-  const transcriptVideoIds = new Set<string>();
-  if (videoIds.length > 0) {
-    const { data: transcriptRows, error: transcriptError } = await service
-      .from('transcripts')
-      .select('video_id')
-      .in('video_id', videoIds);
-    if (transcriptError) throw transcriptError;
-    for (const t of transcriptRows ?? []) {
-      const vid = (t as { video_id?: string }).video_id;
-      if (vid) transcriptVideoIds.add(vid);
+    // Transcript-presence gate (2026-09-11), batched per page: fail closed —
+    // a transcripts query error throws (this sweep aborts, QStash retries)
+    // rather than spending reserved budget on unverified candidates.
+    const videoIds = Array.from(
+      new Set(rows.map((row) => ((row as { video_id?: string }).video_id ?? '')).filter(Boolean))
+    );
+    const transcriptVideoIds = new Set<string>();
+    if (videoIds.length > 0) {
+      const { data: transcriptRows, error: transcriptError } = await service
+        .from('transcripts')
+        .select('video_id')
+        .in('video_id', videoIds);
+      if (transcriptError) throw transcriptError;
+      for (const t of transcriptRows ?? []) {
+        const vid = (t as { video_id?: string }).video_id;
+        if (vid) transcriptVideoIds.add(vid);
+      }
     }
+
+    const pageCandidates: AnalysisGap[] = [];
+    for (const row of rows) {
+      const markdown = (row as { analysis_markdown?: string }).analysis_markdown ?? '';
+      if (!markdown.trim()) continue; // total loss -- only a full re-run helps, not this path
+
+      const missingDimensions = computeMissingDimensions(markdown);
+      if (missingDimensions.length === 0) continue; // shouldn't happen given the status filter, but never remediate a row that's actually already whole
+
+      const report = (row as { validation_report?: unknown }).validation_report;
+      const reportObj = asReportObject(report);
+      const reportMetadata = reportObj.metadata as Record<string, unknown> | undefined;
+
+      // Exclude rows that have exceeded the retry limit to prevent unbounded
+      // LLM billing on persistently failing analyses
+      const retryCount = typeof reportObj.remediation_retry_count === 'number' ? reportObj.remediation_retry_count : 0;
+      if (retryCount >= maxRetries) continue;
+
+      pageCandidates.push({
+        id: (row as { id: string }).id,
+        userId: (row as { user_id: string }).user_id,
+        videoId: (row as { video_id: string }).video_id,
+        title: (row as { title?: string }).title ?? '',
+        channelTitle: (row as { channel_title?: string }).channel_title ?? '',
+        metadata: reportMetadata ?? {},
+        analysisMarkdown: markdown,
+        analysisPayload: (row as { analysis_payload?: Record<string, unknown> | null }).analysis_payload ?? null,
+        validationReport: report,
+        missingDimensions,
+      });
+    }
+    // Transcript-presence gate (2026-09-11): no transcripts row for a
+    // candidate's video_id (purged by the 72h retention pipeline, or an
+    // archived row's mangled `*_archived_*` video_id that never had one) means
+    // the worker's placeholder-transcript path — retrying it just burns
+    // reserved budget into a silent null. Excluded here, before any budget is
+    // reserved (see filterGapsWithTranscript).
+    for (const gap of filterGapsWithTranscript(pageCandidates, transcriptVideoIds)) {
+      if (eligible.length >= limit) break;
+      eligible.push(gap);
+    }
+    if (rows.length < limit) break; // last page — the population is exhausted
   }
-  const gaps: AnalysisGap[] = [];
-  for (const row of data ?? []) {
-    const markdown = (row as { analysis_markdown?: string }).analysis_markdown ?? '';
-    if (!markdown.trim()) continue; // total loss -- only a full re-run helps, not this path
-
-    const missingDimensions = computeMissingDimensions(markdown);
-    if (missingDimensions.length === 0) continue; // shouldn't happen given the status filter, but never remediate a row that's actually already whole
-
-    const report = (row as { validation_report?: unknown }).validation_report;
-    const reportObj = asReportObject(report);
-    const reportMetadata = reportObj.metadata as Record<string, unknown> | undefined;
-
-    // Exclude rows that have exceeded the retry limit to prevent unbounded
-    // LLM billing on persistently failing analyses
-    const retryCount = typeof reportObj.remediation_retry_count === 'number' ? reportObj.remediation_retry_count : 0;
-    if (retryCount >= maxRetries) continue;
-
-    gaps.push({
-      id: (row as { id: string }).id,
-      userId: (row as { user_id: string }).user_id,
-      videoId: (row as { video_id: string }).video_id,
-      title: (row as { title?: string }).title ?? '',
-      channelTitle: (row as { channel_title?: string }).channel_title ?? '',
-      metadata: reportMetadata ?? {},
-      analysisMarkdown: markdown,
-      analysisPayload: (row as { analysis_payload?: Record<string, unknown> | null }).analysis_payload ?? null,
-      validationReport: report,
-      missingDimensions,
-    });
-  }
-  // Transcript-presence gate (2026-09-11): no transcripts row for a
-  // candidate's video_id (purged by the 72h retention pipeline, or an
-  // archived row's mangled `*_archived_*` video_id that never had one) means
-  // the worker's placeholder-transcript path — retrying it just burns
-  // reserved budget into a silent null. Excluded here, before any budget is
-  // reserved (see filterGapsWithTranscript).
-  return filterGapsWithTranscript(gaps, transcriptVideoIds);
+  return eligible;
 }
 
 /**
@@ -669,7 +763,7 @@ export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  budget: { capacityCents: number; costPer1K: number }
+  budget: { capacityCents: number; costPer1K: number; quarantineTtlSeconds: number }
 ): Promise<RemediationResult> {
   const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, budget.costPer1K);
   const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, currentPeriodAnchorMs(), estimatedCostCents);
@@ -710,25 +804,30 @@ export async function remediateAnalysis(
     typeof existingReport.remediation_retry_count === 'number' ? existingReport.remediation_retry_count : 0;
 
   /**
-   * Burn one shared-ceiling retry on a failed attempt (non-fatal: a failed
-   * counter write must not turn the attempt's own WorkerFailed/StitchFailed
-   * outcome into a sweep error — the row simply stays a candidate one more
-   * tick, same as pre-fix behavior for that tick).
+   * Burn one shared-ceiling retry on a failed attempt. P1b (PR #310
+   * post-merge review): the counter write is an enforced invariant, not
+   * best-effort — persistRemediationFailureCounter retries a genuinely
+   * failing write with backoff and then quarantines the row, so a persistent
+   * write outage can never resurrect the 2026-09-01 unbounded-retry budget
+   * drain. (A CAS loss — another writer owns the row — is reported and
+   * deliberately NOT quarantined.)
    */
   const recordFailure = async (failedStage: 'worker_failed' | 'stitch_failed'): Promise<void> => {
-    try {
-      const failurePatch = buildRemediationFailurePatch(gap.validationReport, currentRetryCount, failedStage, new Date().toISOString());
-      await persistenceAdapter.recordRemediationFailure({
-        analysisId: gap.id,
-        validationReport: failurePatch.validationReport,
-        previousRetryCount: currentRetryCount,
-        guardBillingStatus: 'failed',
-      });
-    } catch (err) {
-      console.error('[dimension-remediation] failure-counter write failed (non-fatal):', {
-        analysisId: gap.id,
-        err: err instanceof Error ? err.message : String(err),
-      });
+    const outcome = await persistRemediationFailureCounter({
+      analysisId: gap.id,
+      attempt: () =>
+        persistenceAdapter.recordRemediationFailure({
+          analysisId: gap.id,
+          previousRetryCount: currentRetryCount,
+          failedStage,
+          failedAt: new Date().toISOString(),
+          guardBillingStatus: 'failed',
+        }),
+      quarantine: (id) =>
+        setRedisValue(`${REMEDIATION_QUARANTINE_KEY_PREFIX}${id}`, new Date().toISOString(), budget.quarantineTtlSeconds),
+    });
+    if (outcome === 'cas_lost') {
+      console.log('[dimension-remediation] failure-counter CAS lost (concurrent writer owns the row), not quarantining', { analysisId: gap.id });
     }
   };
 
@@ -847,6 +946,19 @@ export async function runRemediationHarness(): Promise<RemediationSweepResult> {
   const budgetWithCost = { ...budget, costPer1K: cheapestCostPer1K(cascade) };
 
   for (const gap of gaps) {
+    // P1b quarantine gate (PR #310 post-merge review): a row whose
+    // failure-counter write failed persistently is marked in Redis and stops
+    // being selected here — even though its DB retry counter could not be
+    // incremented — so a Supabase-side write outage can never resurrect the
+    // 2026-09-01 unbounded-retry budget drain. Skipped rows cost nothing
+    // (no budget, no worker call) and re-enter eligibility when the
+    // quarantine TTL expires (or the registry-tuned value is changed).
+    const quarantined = Boolean(await getRedisValue(`${REMEDIATION_QUARANTINE_KEY_PREFIX}${gap.id}`));
+    if (quarantined) {
+      console.log('[dimension-remediation] candidate quarantined (failure-counter persistence broken), skipping', { analysisId: gap.id });
+      result.skipped++;
+      continue;
+    }
     try {
       const outcome = await remediateAnalysis(gap, models, cascade, budgetWithCost);
       console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage, order });

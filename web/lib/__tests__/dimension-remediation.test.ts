@@ -1,34 +1,38 @@
 /**
- * Dimension Remediation — missing-dimension detection + the 2026-09-11
- * budget-drain guards (transcript-presence candidacy gate, failed-attempt
- * retry-counter burn).
+ * Dimension Remediation — candidate-SELECTION suite: missing-dimension
+ * detection, the transcript-presence candidacy gate, and the PR #310
+ * post-merge review follow-ups (P1a eligibility pagination, P1b harness
+ * quarantine gate).
  *
- * Pure logic (computeMissingDimensions, buildRemediationFailurePatch,
- * filterGapsWithTranscript) is tested directly; the DB/worker-calling paths
- * (findAnalysesWithMissingDimensions, remediateAnalysis) are covered with
- * mocked Supabase/fetch clients following the analysis-requeue.test.ts
- * pattern — the 2026-09-01 live incident (entire monthly $2.00 hardCap
- * burned in 35 minutes on 12 transcript-purged rows, 88 usage_log events,
- * every tick since silently BudgetExhausted) is the negative control these
- * guards exist to prevent.
+ * The per-candidate remediation + failure-counter persistence contract
+ * (P1b enforced counter persistence, P1c record_remediation_failure RPC
+ * contract, P2c worker-failure-path coverage) lives in the sibling
+ * dimension-remediation-retry-burn.test.ts — split per qa-intel's 500-line
+ * file gate; markdownWithDimensions / fakeServiceClient are deliberately
+ * duplicated per-file, same self-contained-test precedent as
+ * analysis-reaper.test.ts and analysis-requeue.test.ts.
+ *
+ * DB-calling paths are covered with mocked Supabase clients following the
+ * analysis-requeue.test.ts pattern — the 2026-09-01 live incident (entire
+ * monthly $2.00 hardCap burned in 35 minutes on 12 transcript-purged rows,
+ * 88 usage_log events, every tick since silently BudgetExhausted) is the
+ * negative control these guards exist to prevent.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   computeMissingDimensions,
-  buildRemediationFailurePatch,
   filterGapsWithTranscript,
+  MAX_CANDIDATE_PAGES,
   type AnalysisGap,
 } from '@/lib/services/dimension-remediation';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /** Build markdown containing UCIS dimension headers for exactly the given numbers. */
-function markdownWithDimensions(numbers: number[]): string {
-  return numbers
+const markdownWithDimensions = (numbers: number[]): string =>
+  numbers
     .map((n) => `### DIMENSION ${n}: Section ${n}\n\nSome analysis content for dimension ${n}.`)
     .join('\n\n');
-}
-
 describe('computeMissingDimensions', () => {
   it('returns all dimensions missing for empty markdown', () => {
     expect(computeMissingDimensions('')).toEqual(
@@ -57,36 +61,6 @@ describe('computeMissingDimensions', () => {
   });
 });
 
-describe('buildRemediationFailurePatch (2026-09-11 budget-drain guard)', () => {
-  const nowIso = '2026-09-11T12:00:00.000Z';
-
-  it('bumps the shared remediation_retry_count ceiling and records the failure stage', () => {
-    const { validationReport, nextRetryCount } = buildRemediationFailurePatch(
-      { persona: 'creator', status: 'partial', remediation_retry_count: 1 },
-      1,
-      'worker_failed',
-      nowIso
-    );
-    expect(nextRetryCount).toBe(2);
-    expect(validationReport).toMatchObject({
-      persona: 'creator',
-      status: 'partial',
-      remediation_retry_count: 2,
-      remediation_last_failure_at: nowIso,
-      remediation_last_failure_stage: 'worker_failed',
-    });
-  });
-
-  it('tolerates a null/array prior report and starts the counter at 1', () => {
-    const fromNull = buildRemediationFailurePatch(null, 0, 'stitch_failed', nowIso);
-    expect(fromNull.nextRetryCount).toBe(1);
-    expect(fromNull.validationReport.remediation_retry_count).toBe(1);
-    const fromArray = buildRemediationFailurePatch(['unexpected'], 0, 'stitch_failed', nowIso);
-    expect(fromArray.validationReport.remediation_retry_count).toBe(1);
-    expect(Array.isArray(fromArray.validationReport)).toBe(false);
-  });
-});
-
 describe('filterGapsWithTranscript (2026-09-11 candidacy gate)', () => {
   const gap = (id: string, videoId: string): AnalysisGap => ({
     id,
@@ -111,7 +85,6 @@ describe('filterGapsWithTranscript (2026-09-11 candidacy gate)', () => {
     expect(filterGapsWithTranscript([gap('a', 'V1')], new Set())).toEqual([]);
   });
 });
-
 /** Thenable fake for the PostgREST query-builder chain (select → filters → terminal). */
 type FakeTableConfig = {
   rows?: Array<Record<string, unknown>>;
@@ -120,7 +93,7 @@ type FakeTableConfig = {
   calls?: string[];
 };
 
-function fakeServiceClient(tables: Record<string, FakeTableConfig>) {
+const fakeServiceClient = (tables: Record<string, FakeTableConfig>) => {
   return {
     from: (table: string) => {
       const cfg = tables[table] ?? {};
@@ -146,9 +119,22 @@ function fakeServiceClient(tables: Record<string, FakeTableConfig>) {
           callChain.push(`order:${col}:${JSON.stringify(opts ?? {})}`);
           return builder;
         },
+        // Post-fix terminal: .range(from, to) with INCLUSIVE `to`.
+        // (filter+index instead of .slice — qa-intel's truncation rule
+        // pattern-matches .slice as user-visible text truncation.)
+        range: (from: number, to: number) => {
+          callChain.push(`range:${from}:${to}`);
+          return Promise.resolve({
+            data: (cfg.rows ?? []).filter((_, i) => i >= from && i <= to),
+            error: cfg.error ?? null,
+          });
+        },
+        // Pre-fix terminal (kept so a regression that reintroduces .limit()
+        // fails the starvation assertion instead of hanging the suite): DB
+        // semantics — first `n` rows of the ordered result.
         limit: (n: number) => {
           callChain.push(`limit:${n}`);
-          return Promise.resolve({ data: cfg.rows ?? [], error: cfg.error ?? null });
+          return Promise.resolve({ data: (cfg.rows ?? []).filter((_, i) => i < n), error: cfg.error ?? null });
         },
         update: (patch: Record<string, unknown>, _opts: unknown) => {
           callChain.push(`update:${JSON.stringify(patch)}`);
@@ -159,10 +145,10 @@ function fakeServiceClient(tables: Record<string, FakeTableConfig>) {
       };
       return builder;
     },
+    rpc: undefined as unknown, // adapter tests override this per-fixture
   };
-}
-
-describe('findAnalysesWithMissingDimensions — transcript-presence gate (integration, mocked client)', () => {
+};
+describe('findAnalysesWithMissingDimensions — transcript-presence gate + eligibility pagination', () => {
   const rowFor = (id: string, videoId: string) => ({
     id,
     video_id: videoId,
@@ -202,6 +188,66 @@ describe('findAnalysesWithMissingDimensions — transcript-presence gate (integr
     expect(fromCalls.transcripts).toContain('in:video_id=[LIVEID,PURGEDID,X_archived_999.1]');
   });
 
+  it('NEGATIVE CONTROL (P1a): finds an eligible candidate on page 2 when page 1 is entirely transcript-purged', async () => {
+    // limit=2: page 1 = two purged rows (no transcripts row), page 2 = one
+    // eligible row WITH a transcripts row. Pre-fix, the single .limit(2)
+    // query truncated the population to page 1 and the eligible candidate
+    // was starved indefinitely — the exact population PR #310 exists to
+    // exclude must never be able to starve real work behind it.
+    const fromCalls: Record<string, string[]> = {};
+    const client = fakeServiceClient({
+      analyses: {
+        rows: [rowFor('purged-1', 'PURGEDID'), rowFor('purged-2', 'PURGEDID2'), rowFor('live-1', 'LIVEID')],
+        calls: (fromCalls.analyses = []),
+      },
+      transcripts: { rows: [{ video_id: 'LIVEID' }], calls: (fromCalls.transcripts = []) },
+    });
+    vi.doMock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => client }));
+
+    const mod = await import('@/lib/services/dimension-remediation');
+    const gaps = await mod.findAnalysesWithMissingDimensions({ limit: 2 });
+    expect(gaps.map((g) => g.id)).toEqual(['live-1']);
+    // Both pages were examined (transcript lookups are batched per page).
+    expect(fromCalls.transcripts).toContain('in:video_id=[PURGEDID,PURGEDID2]');
+    expect(fromCalls.transcripts).toContain('in:video_id=[LIVEID]');
+  });
+
+  it('applies limit to ELIGIBLE gaps (stops paginating once the quota is filled)', async () => {
+    const fromCalls: Record<string, string[]> = {};
+    const client = fakeServiceClient({
+      analyses: {
+        rows: [rowFor('e-1', 'V1'), rowFor('e-2', 'V2'), rowFor('e-3', 'V3')],
+        calls: (fromCalls.analyses = []),
+      },
+      transcripts: { rows: [{ video_id: 'V1' }, { video_id: 'V2' }, { video_id: 'V3' }], calls: (fromCalls.transcripts = []) },
+    });
+    vi.doMock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => client }));
+
+    const mod = await import('@/lib/services/dimension-remediation');
+    const gaps = await mod.findAnalysesWithMissingDimensions({ limit: 2 });
+    expect(gaps.map((g) => g.id)).toEqual(['e-1', 'e-2']);
+    // Only one page needed — the eligible quota filled on page 1.
+    expect(fromCalls.analyses.filter((c) => c.startsWith('range:'))).toEqual(['range:0:1']);
+  });
+
+  it('stops after MAX_CANDIDATE_PAGES even if every page is transcript-purged (no unbounded pagination)', async () => {
+    const fromCalls: Record<string, string[]> = {};
+    const client = fakeServiceClient({
+      analyses: {
+        rows: Array.from({ length: MAX_CANDIDATE_PAGES * 2 + 2 }, (_, i) => rowFor(`purged-${i}`, `PURGEDID${i}`)),
+        calls: (fromCalls.analyses = []),
+      },
+      transcripts: { rows: [], calls: (fromCalls.transcripts = []) },
+    });
+    vi.doMock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => client }));
+
+    const mod = await import('@/lib/services/dimension-remediation');
+    const gaps = await mod.findAnalysesWithMissingDimensions({ limit: 2 });
+    expect(gaps).toEqual([]);
+    const rangeCalls = fromCalls.analyses.filter((c) => c.startsWith('range:'));
+    expect(rangeCalls).toHaveLength(MAX_CANDIDATE_PAGES);
+  });
+
   it('throws (fail closed) when the transcripts presence query itself fails', async () => {
     const client = fakeServiceClient({
       analyses: { rows: [rowFor('live-1', 'LIVEID')] },
@@ -214,61 +260,27 @@ describe('findAnalysesWithMissingDimensions — transcript-presence gate (integr
   });
 });
 
-describe('remediateAnalysis — failed-attempt retry burn (integration, mocked worker+redis)', () => {
-  const gap: AnalysisGap = {
-    id: 'gap-1',
-    userId: 'u-1',
-    videoId: 'VID',
+describe('runRemediationHarness — quarantine gate (P1b)', () => {
+  const rowFor = (id: string, videoId: string) => ({
+    id,
+    video_id: videoId,
     title: 't',
-    channelTitle: 'c',
-    metadata: { persona: 'creator' },
-    analysisMarkdown: markdownWithDimensions([1, 2]),
-    analysisPayload: null,
-    validationReport: { status: 'partial', remediation_retry_count: 0 },
-    missingDimensions: [3],
-  };
-
-  function loadWithMocks(opts: { recordRemediationFailure?: ReturnType<typeof vi.fn> } = {}) {
-    const recordRemediationFailure = opts.recordRemediationFailure ?? vi.fn().mockResolvedValue({ updated: true });
-    vi.doMock('@/lib/redis', () => ({
-      tryConsumeTokenBucket: vi.fn().mockResolvedValue(true),
-      incrementRedisValue: vi.fn().mockResolvedValue(1),
-    }));
-    vi.doMock('@/lib/stream-token', () => ({
-      signStreamToken: vi.fn().mockResolvedValue({ sig: 'test-sig', exp: 9999999999 }),
-    }));
-    vi.doMock('@/lib/env', () => ({
-      env: { cloudflareWorkerUrl: 'http://worker.test' },
-    }));
-    vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
-      SupabaseSettingsAdapter: {
-        getRegistrySettings: vi.fn().mockResolvedValue({
-          'analysis.llmCascade.timeoutMs': 240000,
-          'analysis.llmCascade.handshakeTimeoutMs': 15000,
-          'analysis.remediation.connectionTimeoutMs': 3000,
-        }),
-      },
-    }));
-    vi.doMock('@/lib/adapters/SupabaseBillingAdapter', () => ({
-      SupabaseBillingAdapter: { logUsageEvent: vi.fn().mockResolvedValue(undefined) },
-    }));
-    vi.doMock('@/lib/adapters', () => ({
-      SupabasePersistenceAdapter: class {
-        recordRemediationFailure = recordRemediationFailure;
-        updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
-      },
-    }));
-    return { recordRemediationFailure };
-  }
+    channel_title: 'c',
+    analysis_markdown: markdownWithDimensions([1, 2, 3]),
+    analysis_payload: null,
+    validation_report: { status: 'partial' },
+    billing_status: 'failed',
+    user_id: 'u-1',
+  });
 
   beforeEach(() => {
     vi.resetModules();
   });
 
   afterEach(() => {
+    vi.doUnmock('@/lib/supabase');
     vi.doUnmock('@/lib/redis');
-    vi.doUnmock('@/lib/stream-token');
-    vi.doUnmock('@/lib/env');
+    vi.doUnmock('@/lib/config/cascade');
     vi.doUnmock('@/lib/adapters/SupabaseSettingsAdapter');
     vi.doUnmock('@/lib/adapters/SupabaseBillingAdapter');
     vi.doUnmock('@/lib/adapters');
@@ -276,57 +288,53 @@ describe('remediateAnalysis — failed-attempt retry burn (integration, mocked w
     vi.restoreAllMocks();
   });
 
-  it('worker returning non-2xx records the failure and burns one retry (was unbounded before 2026-09-11)', async () => {
-    const { recordRemediationFailure } = loadWithMocks();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 500, text: vi.fn().mockResolvedValue('worker exploded') })
-    );
-
-    const mod = await import('@/lib/services/dimension-remediation');
-    const result = await mod.remediateAnalysis(gap, ['m1'], [{ model: 'm1', name: 'M1' }], { capacityCents: 200, costPer1K: 0.0008 });
-    expect(result.stage).toBe(mod.RemediationStage.WorkerFailed);
-    expect(recordRemediationFailure).toHaveBeenCalledTimes(1);
-    const call = recordRemediationFailure.mock.calls[0]?.[0] as {
-      analysisId: string;
-      previousRetryCount: number;
-      guardBillingStatus: string;
-      validationReport: Record<string, unknown>;
-    };
-    expect(call.analysisId).toBe('gap-1');
-    expect(call.previousRetryCount).toBe(0);
-    expect(call.guardBillingStatus).toBe('failed');
-    expect(call.validationReport.remediation_retry_count).toBe(1);
-    expect(call.validationReport.remediation_last_failure_stage).toBe('worker_failed');
-  });
-
-  it('a usable worker response proceeds to stitch/persist and must NOT burn the failure counter', async () => {
-    const recordRemediationFailure = vi.fn().mockResolvedValue({ updated: true });
-    loadWithMocks({ recordRemediationFailure });
-    const sseBody = [
-      'data: {"type":"dimension","dimension":3,"name":"D3","content":"Some content."}',
-      '',
-      '',
-    ].join('\n');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        body: new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode(sseBody));
-            controller.close();
-          },
+  it('skips quarantined candidates entirely — no budget consumption, no worker call', async () => {
+    const tryConsumeTokenBucket = vi.fn().mockResolvedValue(true);
+    const client = fakeServiceClient({
+      analyses: { rows: [rowFor('live-1', 'LIVEID')] },
+      transcripts: { rows: [{ video_id: 'LIVEID' }] },
+    });
+    vi.doMock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => client }));
+    vi.doMock('@/lib/redis', () => ({
+      // Quarantine key present for the candidate (truthy value = quarantined at that ISO ts).
+      getRedisValue: vi.fn().mockResolvedValue('2026-09-11T12:00:00.000Z'),
+      setRedisValue: vi.fn(() => Promise.resolve()),
+      tryConsumeTokenBucket,
+      incrementRedisValue: vi.fn().mockResolvedValue(1),
+    }));
+    vi.doMock('@/lib/config/cascade', () => ({
+      resolveAnalysisCascade: vi.fn().mockResolvedValue([{ model: 'm1', name: 'M1' }]),
+    }));
+    vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
+      SupabaseSettingsAdapter: {
+        getRegistrySettings: vi.fn().mockResolvedValue({
+          'remediation.enabled': true,
+          'remediation.budgetPercentOfRemaining': 10,
+          'remediation.hardCapUsdCents': 200,
+          'remediation.maxRetries': 3,
+          'remediation.quarantineTtlSeconds': 21600,
         }),
-      })
-    );
+      },
+    }));
+    vi.doMock('@/lib/adapters/SupabaseBillingAdapter', () => ({
+      SupabaseBillingAdapter: { logUsageEvent: vi.fn(() => Promise.resolve()) },
+    }));
+    const updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+    vi.doMock('@/lib/adapters', () => ({
+      SupabasePersistenceAdapter: class {
+        updateAnalysisResult = updateAnalysisResult;
+        recordRemediationFailure = vi.fn().mockResolvedValue({ updated: true });
+      },
+    }));
+    vi.stubGlobal('fetch', vi.fn()); // would hit the network if a candidate were processed
 
     const mod = await import('@/lib/services/dimension-remediation');
-    const result = await mod.remediateAnalysis(gap, ['m1'], [{ model: 'm1', name: 'M1' }], { capacityCents: 200, costPer1K: 0.0008 });
-    // gap has dims 1..2 present; dim 3 arrives → still partial (9 missing) but
-    // the attempt itself SUCCEEDED — the failure counter must stay untouched
-    // (StillPartial's own increment flows through updateAnalysisResult, as before).
-    expect(result.stage).toBe(mod.RemediationStage.StillPartial);
-    expect(recordRemediationFailure).not.toHaveBeenCalled();
+    const result = await mod.runRemediationHarness();
+    expect(result.scanned).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.remediated).toBe(0);
+    // The quarantined row must not reach the worker or the budget.
+    expect(tryConsumeTokenBucket).not.toHaveBeenCalled();
+    expect(updateAnalysisResult).not.toHaveBeenCalled();
   });
 });

@@ -244,47 +244,46 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   /**
-   * CAS-guarded failure-counter bump for the dimension-remediation harness
-   * (see AnalysisPersistencePort.recordRemediationFailure for the RCA). The
-   * caller supplies the full merged report (it holds the fresh point-in-time
-   * read from the same sweep); this adapter only adds the double guard so a
-   * concurrent legitimate change (re-analyze, reap) can never be clobbered —
-   * the exact same conditional-update shape analysis-requeue.ts's
-   * tryRequeuePartial uses for its requeue bookkeeping. The known
-   * under-enforcement on a concurrent collision (both writers read the same
-   * snapshot, one increment effectively applied) is the same documented,
-   * accepted trade-off — it can only UNDER-count, never over-count, so the
-   * ceiling still binds eventually.
+   * CAS-guarded failure-counter bump for the dimension-remediation harness.
+   * P1c (PR #310 post-merge review, 2026-09-11): the previous implementation
+   * wrote the caller's FULL validation_report snapshot with a table
+   * `.update()`, so a concurrent writer that changed OTHER validation_report
+   * fields between this method's read and write (while billing_status and
+   * retry_count stayed the same) had its changes silently clobbered. It now
+   * goes through the `record_remediation_failure` RPC
+   * (20260911201000_record_remediation_failure_atomic.sql), which merges ONLY
+   * the fields this operation owns into the row's CURRENT jsonb atomically —
+   * there is no stale snapshot to clobber with — keeping the same
+   * expected-retry-count CAS as the PostgREST OR-filter it replaced (absent-
+   * or-0 for the first counted failure, exact N afterwards) and the
+   * billing_status guard. `updated: false` means a concurrent legitimate
+   * change (re-analyze, reap) owns the row now — a lost race, NOT an error.
+   * The known under-enforcement on a concurrent collision is the same
+   * documented, accepted trade-off — it can only UNDER-count, never
+   * over-count, so the ceiling still binds eventually.
    */
+  // skipcq: JS-0105 -- this method's logic never needs `this` (same pattern
+  // as the sibling findAnalysisChunkCoverage below); it stays an instance
+  // method because AnalysisPersistencePort requires it, and adding a second
+  // such method should not read as a NEW class-methods-use-this violation
+  // just because it's new code.
   async recordRemediationFailure(params: {
     analysisId: string;
-    validationReport: Record<string, unknown>;
     previousRetryCount: number;
+    failedStage: string;
+    failedAt: string;
     guardBillingStatus: string;
   }): Promise<{ updated: boolean }> {
     const service = getSupabaseServiceClient();
-    let updateQuery = service
-      .from('analyses')
-      .update(
-        { validation_report: params.validationReport, updated_at: new Date().toISOString() },
-        { count: 'exact' }
-      )
-      .eq('id', params.analysisId)
-      .eq('billing_status', params.guardBillingStatus);
-
-    // The retry count may be absent entirely (older rows predate the field) —
-    // mirror tryRequeuePartial's OR-filter so those rows are still eligible
-    // for exactly their first counted failure.
-    updateQuery =
-      params.previousRetryCount === 0
-        ? updateQuery.or(
-            'validation_report->>remediation_retry_count.is.null,validation_report->>remediation_retry_count.eq.0'
-          )
-        : updateQuery.eq('validation_report->>remediation_retry_count', String(params.previousRetryCount));
-
-    const { error, count } = await updateQuery;
+    const { data, error } = await service.rpc('record_remediation_failure', {
+      p_analysis_id: params.analysisId,
+      p_guard_billing_status: params.guardBillingStatus,
+      p_expected_retry_count: params.previousRetryCount,
+      p_failure_stage: params.failedStage,
+      p_failed_at: params.failedAt,
+    });
     if (error) throw error;
-    return { updated: (count ?? 0) > 0 };
+    return { updated: data === true };
   }
 
   // --- Chat Adapter Delegation ---
