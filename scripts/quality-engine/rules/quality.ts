@@ -396,6 +396,7 @@ export const NumberCoercionGuardRule: IRule = {
 
 export const UnregisteredRuleExportRule: IRule = {
   name: "unregistered-rule-export-detector",
+  allowSelfAnalysis: true,
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");

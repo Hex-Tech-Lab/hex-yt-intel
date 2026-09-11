@@ -31,10 +31,7 @@ export class QualityEngine {
     const findings: Finding[] = [];
     const concurrency = this.config.concurrency ?? 3;
 
-    // Filter file queue to suppress self-analysis false positives
-    const fileQueue = existing.filter(file => {
-      return !(file.includes("scripts/quality-engine/rules/") || file.includes("scripts/verify-quality-engine.ts"));
-    });
+    const fileQueue = [...existing];
 
     // Bounded Async Concurrency: Worker pool runner to parse files safely and execute rule checks in parallel
     const worker = async (queue: string[]) => {
@@ -45,8 +42,13 @@ export class QualityEngine {
         try {
           console.log(`[QualityEngine] Processing: ${file} (Queue: ${queue.length})`);
           const ast = await this.loadAST(file);
+          const isSelfFile = file.includes("scripts/quality-engine/rules/") || file.includes("scripts/verify-quality-engine.ts");
 
           for (const rule of this.rules) {
+            // Suppress self-analysis false positives, except for rules that
+            // specifically opt in to auditing the quality-engine's own files.
+            if (isSelfFile && !rule.allowSelfAnalysis) continue;
+
             try {
               const scope = rule.scope ?? this.config.defaultScope ?? "file";
 

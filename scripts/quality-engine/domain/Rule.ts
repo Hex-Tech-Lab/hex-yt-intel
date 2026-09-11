@@ -18,5 +18,11 @@ export interface RuleContext {
 export interface Rule {
   name: string;
   scope?: RuleScope; // default = "file"
+  // Most rules are excluded from scripts/quality-engine/rules/** and
+  // scripts/verify-quality-engine.ts to suppress self-analysis false
+  // positives (see QualityEngine.analyze). A rule that specifically audits
+  // the quality-engine's own rule files (e.g. UnregisteredRuleExportRule)
+  // must opt in here, or it silently never runs against its own target.
+  allowSelfAnalysis?: boolean;
   check(ctx: RuleContext): Finding[];
 }
