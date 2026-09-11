@@ -30,8 +30,19 @@ export const STREAM_BUNDLES: number[][] = [
 /**
  * Whether to abort all parallel streams if a single stream fails.
  * If false, the system attempts to provide a partial synthesis.
+ *
+ * Was `true` until 2026-09-09 (ADR 021 Phase 4): that setting meant the
+ * FIRST bundle failure killed the whole analysis via settleAnalysis('error')
+ * before persist ever ran with partial coverage, even though useSSEStream.ts's
+ * own checkSettleState() already tolerates partial success and
+ * buildDimensionStatus (stitch-analysis-chunks.ts) already marks a
+ * partial-coverage row billing_status='failed' + validation_report.status=
+ * 'partial' on persist -- the exact contract dimension-remediation.ts's async
+ * cron (ADR 019) scans for. Flipping to `false` (paired with useSSEStream.ts's
+ * one-retry-per-bundle) lets that already-correct downstream machinery
+ * actually run instead of being starved by an all-or-nothing abort.
  */
-export const ABORT_ON_PARTIAL_FAILURE = true;
+export const ABORT_ON_PARTIAL_FAILURE = false;
 
 export interface DimensionConfig {
   number: number;
