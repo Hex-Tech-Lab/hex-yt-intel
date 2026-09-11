@@ -45,6 +45,18 @@ export interface AnalysisErrorState {
   code: string;
   status: number;
   message: string;
+  /**
+   * Set only for the "dead analysis with some dimensions already salvaged"
+   * case (ADR 021 Phase 2's /api/analyses/check presence-check, consumed by
+   * useAutoRestoreAnalysis.ts) -- the dimension numbers NOT yet recovered.
+   * Lets the UI distinguish "some real content exists and is being finished
+   * automatically by remediation" from a genuine total failure, instead of
+   * rendering the same bare "Synthesis failed" for both (live-reported
+   * confusion, video NE-62S4OYCg/analysis 32aeeb78, 2026-09-09/10: a user
+   * checking for a specific dimension found it silently missing with no
+   * indication anything was still in progress).
+   */
+  missingDimensions?: number[];
 }
 
 export interface UseAnalysisStreamState {
