@@ -52,7 +52,7 @@ function createMockClient() {
         return chainable;
       }),
       // Make it thenable so `await` works on the chain
-      then: vi.fn((resolve: (v: any) => void, reject?: (e: any) => void) => {
+      then: vi.fn((resolve: (value: any) => void, reject?: (error: any) => void) => {
         const result = nextResult;
         calls.push({ method, data, filters: [...filters], options, result });
         Promise.resolve().then(() => resolve(nextResult));
@@ -69,7 +69,7 @@ function createMockClient() {
 
   const client = { from: fromFn };
 
-  return { client, calls, setNextResult: (r: { error: unknown; count: number | null }) => { nextResult = r; } };
+  return { client, calls, setNextResult: (result: { error: unknown; count: number | null }) => { nextResult = result; } };
 }
 
 const BASE_PARAMS = {
@@ -110,14 +110,14 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'interrupted' });
 
     // Verify the guarded UPDATE was used (not a blind upsert)
-    const interruptedUpdateCall = calls.find(c => c.method === 'update' && c.data.status === 'interrupted');
+    const interruptedUpdateCall = calls.find(call => call.method === 'update' && call.data.status === 'interrupted');
     expect(interruptedUpdateCall).toBeDefined();
     expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
     expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
     expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: BASE_PARAMS.chunkIndex });
 
     // Verify the fallback upsert was called (count=0 triggered it)
-    const fallbackUpsertCall = calls.find(c => c.method === 'upsert' && c.data.status === 'interrupted');
+    const fallbackUpsertCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
     expect(fallbackUpsertCall).toBeDefined();
   });
 
@@ -134,7 +134,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'interrupted' });
 
     // The fallback upsert should have been called to insert the new row
-    const fallbackCall = calls.find(c => c.method === 'upsert' && c.data.status === 'interrupted');
+    const fallbackCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
     expect(fallbackCall).toBeDefined();
     expect(fallbackCall!.data.status).toBe('interrupted');
   });
@@ -154,11 +154,11 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'interrupted' });
 
     // The guarded UPDATE should have been called and succeeded
-    const updateCall = calls.find(c => c.method === 'update' && c.data.status === 'interrupted');
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'interrupted');
     expect(updateCall).toBeDefined();
 
     // No fallback upsert should have been called (count > 0)
-    const fallbackCall = calls.find(c => c.method === 'upsert' && c.data.status === 'interrupted');
+    const fallbackCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
     expect(fallbackCall).toBeUndefined();
   });
 
@@ -174,11 +174,11 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'completed' });
 
     // Should use blind upsert, NOT the guarded update path
-    const upsertCall = calls.find(c => c.method === 'upsert' && c.data.status === 'completed');
+    const upsertCall = calls.find(call => call.method === 'upsert' && call.data.status === 'completed');
     expect(upsertCall).toBeDefined();
 
     // No guarded update should have been called for 'completed'
-    const updateCall = calls.find(c => c.method === 'update' && c.data.status === 'completed');
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'completed');
     expect(updateCall).toBeUndefined();
   });
 });
