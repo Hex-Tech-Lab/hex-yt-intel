@@ -1,0 +1,19 @@
+.github/workflows/cf-observability-query.yml
+  s_e1cfd41b487d67::t_e95458e1dd385b 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b716372c513f78f22399c7421f87a1a4d5ac1f58",
+  "prompts": {},
+  "sessions": {
+    "s_e1cfd41b487d67": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f6eac3814ffePp1vHhcw60vITa",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
