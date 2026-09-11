@@ -114,13 +114,21 @@ export const VariableNamingRule: IRule = {
               if (
                 Node.isArrowFunction(arrowFn) &&
                 arrowFn.getParameters().length === 1 &&
+                // A rest parameter (`(...q) => q.length`) also satisfies
+                // `getParameters().length === 1`, but it represents a
+                // variable-length collection, not the single callback value
+                // this exemption is meant for -- it must still be flagged.
+                // (2026-09-11 fix, external review on PR #307 finding #1.)
+                !node.isRestParameter() &&
                 Node.isCallExpression(callExpr) &&
-                // Must be an ARGUMENT of the call, not its callee -- an IIFE
-                // like `((q) => q.trim())()` also has a CallExpression as the
-                // arrow's parent, but the arrow IS the call being invoked,
-                // not a callback handed to something else. `q` there is a
-                // real, unclear single-letter name and must still be
-                // flagged. (2026-09-10 fix, external review on PR #307.)
+                // Defensive guard: ensure the arrow is an ARGUMENT of the
+                // call, not its callee. In practice the TS AST always wraps
+                // an arrow-as-callee in a ParenthesizedExpression (so
+                // `Node.isCallExpression(callExpr)` already excludes IIFEs
+                // like `((q) => q.trim())()`), but this check is harmless
+                // belt-and-suspenders against any AST shape where the arrow
+                // somehow lands as the call's callee rather than an arg.
+                // (2026-09-10, external review on PR #307 finding #2.)
                 callExpr.getArguments().includes(arrowFn)
               ) {
                 return;

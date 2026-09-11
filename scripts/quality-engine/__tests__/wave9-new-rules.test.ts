@@ -87,14 +87,20 @@ describe('WAVE 9: New Quality Rules', () => {
     // (`.map((x) => ...)`) are a near-universal functional idiom, not
     // unclear naming -- the callback's whole referent is the call site's
     // single argument.
+    // Positive control (`const p = items.length;`) in the same fixture
+    // proves the rule engine actually traversed and ran -- a negative-only
+    // assertion can't distinguish "exemption worked" from "rule silently
+    // found nothing at all" (2026-09-11, external review finding #5).
     const code = `
       const error = useAnalysisStore((s) => s.error);
       const doubled = items.map((n) => n * 2);
+      const p = items.length;
     `;
     const source = createTestSource(code);
     const findings = VariableNamingRule.check(source);
     expect(findings.some(f => f.title.includes("'s'"))).toBe(false);
     expect(findings.some(f => f.title.includes("'n'"))).toBe(false);
+    expect(findings.some(f => f.title.includes("'p'"))).toBe(true);
   });
 
   test('VariableNamingRule should still flag a single-letter parameter on a NAMED (non-inline-callback) function', () => {
@@ -120,6 +126,32 @@ describe('WAVE 9: New Quality Rules', () => {
     // unclear 'q' silently stopped being reported.
     const code = `
       const trimmed = ((q: string) => q.trim())('  hello  ');
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter REST parameter in a callback arrow (2026-09-11 fix, external review finding #1)', () => {
+    // A rest parameter (`(...q) => q.length`) also satisfies
+    // `getParameters().length === 1`, but `q` represents a variable-length
+    // collection, not the single callback value the exemption covers -- it
+    // must still be flagged. The exemption explicitly excludes rest params.
+    const code = `
+      consume((...q) => q.length);
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter 2nd parameter in a multi-param callback (2026-09-11, external review finding #6)', () => {
+    // Proves the "exactly 1 parameter" requirement is actually enforced:
+    // `items.map((value, q) => value + q)` has 2 params, so `q` (the 2nd,
+    // non-callback-shape param) should still be flagged -- not just
+    // documented as excluded.
+    const code = `
+      items.map((value, q) => value + q);
     `;
     const source = createTestSource(code);
     const findings = VariableNamingRule.check(source);
