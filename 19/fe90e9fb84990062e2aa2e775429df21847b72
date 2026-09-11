@@ -1,0 +1,21 @@
+.memory/ADRS.md
+  s_e1cfd41b487d67::t_6ff4f6ed38b2b4 23
+.memory/AGENT_LEDGER.md
+  s_e1cfd41b487d67::t_155cd467816bc8 1386-1394
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "19fe90e9fb84990062e2aa2e775429df21847b72",
+  "prompts": {},
+  "sessions": {
+    "s_e1cfd41b487d67": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f6eac3814ffePp1vHhcw60vITa",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
