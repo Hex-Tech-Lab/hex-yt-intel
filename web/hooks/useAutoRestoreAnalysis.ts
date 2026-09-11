@@ -8,6 +8,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
  * Auto-restores an already-analyzed video from cache when a URL is pasted.
@@ -21,6 +22,7 @@ export function useAutoRestoreAnalysis(url: string) {
   const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
   const setVideoMetadata = useAnalysisStore((s) => s.setVideoMetadata);
   const setStatus = useAnalysisStore((s) => s.setStatus);
+  const setError = useAnalysisStore((s) => s.setError);
   const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
 
   // Auto-restore already analyzed videos
@@ -110,7 +112,40 @@ export function useAutoRestoreAnalysis(url: string) {
                 'auto-restore',
               );
             }
+            // Surface the partial-recovery state to the UI (not just Sentry)
+            // whenever real content exists -- some dimensions missing, but
+            // not all TOTAL_DIMENSIONS of them. Without this, DimensionAccordion
+            // rendered the identical "Synthesis failed" message for a genuine
+            // total loss and for a row with real, salvaged content that
+            // dimension-remediation.ts's cron is already working to complete
+            // (2026-09-09/10 live-reported confusion, analysis 32aeeb78: the
+            // customer checked for a specific dimension, found it silently
+            // missing, with nothing on screen indicating anything was still
+            // in progress).
+            const hasPartialProgress =
+              Array.isArray(data.missingDimensions) &&
+              data.missingDimensions.length > 0 &&
+              data.missingDimensions.length < TOTAL_DIMENSIONS;
             startTransition(() => {
+              // Each invocation of this branch is authoritative for its own
+              // result -- explicitly clearing on the non-partial paths
+              // (rather than only ever setting) prevents a stale
+              // missingDimensions from a PRIOR check of this same video
+              // (e.g. partial progress on an earlier poll) from surviving
+              // into a later check that comes back as a genuine total loss
+              // or a fully-salvaged (0 missing) row. clearAnalysis() only
+              // resets `error` when the videoId itself changes, not on a
+              // repeat check of the same one (PR #306 review).
+              if (hasPartialProgress) {
+                setError({
+                  code: 'ERR_ANALYSIS_PARTIAL',
+                  status: 0,
+                  message: 'Some sections finished before this analysis stopped. The rest are being completed automatically.',
+                  missingDimensions: data.missingDimensions,
+                });
+              } else {
+                setError(null);
+              }
               setStatus('error');
             });
             return;
@@ -302,5 +337,5 @@ export function useAutoRestoreAnalysis(url: string) {
     return () => {
       cancelled = true;
     };
-  }, [url, initializeAnalysis, initSynthesis, setStatus, setVideoMetadata]);
+  }, [url, initializeAnalysis, initSynthesis, setStatus, setError, setVideoMetadata]);
 }

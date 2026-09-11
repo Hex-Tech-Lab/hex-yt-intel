@@ -311,26 +311,33 @@ describe('sweepStuckAnalyses — requeue-partial wiring (ADR 021 Phase 3)', () =
     return { sweepStuckAnalyses: mod.sweepStuckAnalyses, updateCalls };
   }
 
-  it('requeues a would-be-failed row with 3/11 dimensions covered while retries remain', async () => {
+  it('2026-09-10: a row with 3/11 dimensions recoverable in analysis_chunks is now persisted by chunk-recovery directly, never reaching the requeue path', async () => {
+    // Superseded behavior: before the 2026-09-10 fix, tryChunkRecovery
+    // discarded anything below MIN_SALVAGEABLE_DIMENSIONS (returning null),
+    // falling through to buildSettlePatch/attemptRequeue -- which is the
+    // ONLY reason this exact scenario used to reach the requeue-partial
+    // branch at all. tryChunkRecovery now persists ANY dimensionCount > 0
+    // (unbilled, status='partial') itself, so it claims this row first and
+    // requeue-partial is never consulted. This is the intended, better
+    // outcome: the row becomes immediately visible to dimension-
+    // remediation.ts's cron instead of sitting in requeue-partial limbo
+    // (which -- per analysis-requeue.ts's own module doc -- never actually
+    // triggers regeneration itself; "wiring the retry is Phase 4's scope",
+    // never built). See analysis-reaper.test.ts for the persisted-partial
+    // assertions this path now produces.
     const belowThresholdChunk: ChunkRow = {
       chunk_index: 1, status: 'completed',
       payload: { dimensions: [1, 2, 3].map(dimNum => ({ number: dimNum, name: `D${dimNum}`, content: `Body ${dimNum}.` })) },
     };
-    const { sweepStuckAnalyses, updateCalls } = await loadWithSweepMocks({
+    const { sweepStuckAnalyses } = await loadWithSweepMocks({
       stuckRows: [{ id: 'a-1', analysis_markdown: null, validation_report: { persona: 'p1', remediation_retry_count: 1 } }],
       tryRecoveryChunkRows: [belowThresholdChunk], portChunkRows: [portChunk(1, [1, 2, 3])],
     });
 
     const result = await sweepStuckAnalyses();
-    expect(result.requeued).toBe(1);
-    expect(result.failed).toBe(0);
+    expect(result.requeued).toBe(0);
+    expect(result.failed).toBe(1); // persisted as an unbilled partial, not billed 'completed'
     expect(result.completed).toBe(0);
-    expect(updateCalls).toHaveLength(1);
-    expect(updateCalls[0]?.billing_status).toBe('processing');
-    const report = updateCalls[0]?.validation_report as Record<string, unknown>;
-    expect(report.requeue_partial).toBe(true);
-    expect(report.requeue_missing_dimensions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
-    expect(report.remediation_retry_count).toBe(2);
   });
 
   it('still fails (unchanged) a stuck row with 0/11 dimensions covered', async () => {
@@ -444,7 +451,7 @@ describe('sweepStuckAnalyses — requeue-partial wiring (ADR 021 Phase 3)', () =
     expect(updateCalls[0]?.billing_status).toBe('processing');
   });
 
-  it('never consults the requeue path for a row the markdown path salvages as completed', async () => {
+  it('never consults the requeue path for a row the markdown path salvages (outcome=completed still gates requeue-eligibility, independent of billing)', async () => {
     const md = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_unused, index) => `### DIMENSION ${index + 1}: X\n\nbody`).join('\n\n');
     const { sweepStuckAnalyses, updateCalls } = await loadWithSweepMocks({
       stuckRows: [{ id: 'a-5', analysis_markdown: md, validation_report: null }],
@@ -455,6 +462,10 @@ describe('sweepStuckAnalyses — requeue-partial wiring (ADR 021 Phase 3)', () =
     expect(result.completed).toBe(1);
     expect(result.requeued).toBe(0);
     expect(updateCalls).toHaveLength(1);
-    expect(updateCalls[0]?.billing_status).toBe('completed');
+    // 2026-09-10: billing requires exactly 100%, not this MIN_SALVAGEABLE_
+    // DIMENSIONS floor -- `outcome`/the sweep tally still flip 'completed'
+    // here (that's what correctly skips the requeue path), but billing_status
+    // must not follow it below TOTAL_DIMENSIONS.
+    expect(updateCalls[0]?.billing_status).toBe('failed');
   });
 });
