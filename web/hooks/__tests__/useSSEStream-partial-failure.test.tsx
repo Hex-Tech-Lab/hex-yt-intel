@@ -276,4 +276,132 @@ describe('useSSEStream bundle-level retry and partial-failure settlement (ADR 02
     expect(firstAttemptSignal?.aborted).toBe(true);
     expect(bundle1Attempts).toBe(2);
   });
+
+  // --- Fix A: ABORT_ON_PARTIAL_FAILURE settings precedence (PR #305 P1) ---
+  // The module constant in synthesis.ts was flipped to `false`, but the
+  // adapter default (settings-adapter.ts getDefaultAdminSettings) and DB
+  // column default (migration 20260712) were still `true` — so in production
+  // the module constant was dead code. These tests verify the full precedence
+  // chain: loaded settings value (true/false) is respected, and undefined
+  // (settings not loaded yet) falls back to the module constant `false`.
+
+  it('respects abortOnPartialFailure: true from loaded settings — still aborts on first bundle failure', async () => {
+    vi.mocked(useAdminSettings).mockReturnValue({
+      streamBundles: [{ dimensions: [1] }, { dimensions: [2] }],
+      abortOnPartialFailure: true,
+    } as unknown as AdminSettings);
+
+    let bundle1Attempts = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/analyses') {
+        return Promise.resolve(new Response(JSON.stringify(PREP_JOB), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      if (url === WORKER_URL) {
+        const chunkIndex = chunkIndexFromBody(init);
+        if (chunkIndex === 1) {
+          bundle1Attempts++;
+          return Promise.resolve(new Response('worker overloaded', { status: 503 }));
+        }
+        // bundle 2 would succeed — but with abortOnPartialFailure: true,
+        // bundle 1's exhausted-retry failure must settle the whole analysis
+        // 'error' before bundle 2 gets a chance to complete.
+        return Promise.resolve(sseResponse([completeFragmentPayload()]));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useSSEStream());
+
+    await act(async () => {
+      await result.current.startAnalysis(YT_URL, 'UTC');
+    });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('error');
+    }, { timeout: 3000 });
+
+    expect(bundle1Attempts).toBe(2); // initial + one retry, then aborted
+  });
+
+  it('respects abortOnPartialFailure: false from loaded settings — does not abort, other bundle completes', async () => {
+    vi.mocked(useAdminSettings).mockReturnValue({
+      streamBundles: [{ dimensions: [1] }, { dimensions: [2] }],
+      abortOnPartialFailure: false,
+    } as unknown as AdminSettings);
+
+    let bundle1Attempts = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/analyses') {
+        return Promise.resolve(new Response(JSON.stringify(PREP_JOB), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      if (url === WORKER_URL) {
+        const chunkIndex = chunkIndexFromBody(init);
+        if (chunkIndex === 1) {
+          bundle1Attempts++;
+          return Promise.resolve(new Response('worker overloaded', { status: 503 }));
+        }
+        return Promise.resolve(sseResponse([completeFragmentPayload()]));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useSSEStream());
+
+    await act(async () => {
+      await result.current.startAnalysis(YT_URL, 'UTC');
+    });
+
+    // With false, bundle 2 must complete even though bundle 1 permanently
+    // failed — the exact behavior the PR's module-constant flip intended
+    // but couldn't achieve while the adapter/DB default was still true.
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('complete');
+    }, { timeout: 3000 });
+
+    expect(bundle1Attempts).toBe(2);
+  });
+
+  it('falls back to module constant false when settings are undefined (not loaded yet) — does not abort', async () => {
+    // This is the "settings unavailable" case: useAdminSettings returns
+    // undefined (not yet loaded), so synthesis-with-settings.ts falls back
+    // to DEFAULT_ABORT_ON_PARTIAL_FAILURE (the module constant, now false).
+    // "Correctly" means: the analysis does NOT abort on partial failure,
+    // matching the deployed intent — not just that it doesn't throw.
+    vi.mocked(useAdminSettings).mockReturnValue(undefined as unknown as AdminSettings);
+
+    let bundle1Attempts = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/analyses') {
+        return Promise.resolve(new Response(JSON.stringify(PREP_JOB), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      if (url === WORKER_URL) {
+        const chunkIndex = chunkIndexFromBody(init);
+        if (chunkIndex === 1) {
+          bundle1Attempts++;
+          return Promise.resolve(new Response('worker overloaded', { status: 503 }));
+        }
+        return Promise.resolve(sseResponse([completeFragmentPayload()]));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useSSEStream());
+
+    await act(async () => {
+      await result.current.startAnalysis(YT_URL, 'UTC');
+    });
+
+    // Fallback is false (module constant) → other bundle must complete.
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('complete');
+    }, { timeout: 3000 });
+
+    expect(bundle1Attempts).toBe(2);
+  });
 });

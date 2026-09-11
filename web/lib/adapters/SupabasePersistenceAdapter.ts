@@ -374,6 +374,29 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   // --- Chunks ---
+
+  /**
+   * Persist a single analysis chunk with monotonic-status guard.
+   *
+   * ADR 021 Phase 4 (2026-09-11, PR #305 P1 fix): when a bundle's retry
+   * succeeds after the first attempt failed mid-stream, the worker's
+   * delayed `interrupted` persist (fired via `waitUntil` from the abort
+   * path) can land AFTER the retry's `completed` persist — both target the
+   * same `analysis_id` + `chunk_index`. A blind upsert would let the late
+   * `interrupted` write overwrite the good `completed` result, making a
+   * genuinely-recovered bundle invisible to (or falsely eligible for) the
+   * remediation cron.
+   *
+   * Guard: an `interrupted` write must never overwrite a row already at
+   * `completed`. Uses the same CAS-style guarded-update pattern as
+   * `analysis-requeue.ts`'s `tryRequeuePartial`:
+   *   1. UPDATE ... WHERE status != 'completed' (only updates non-completed rows)
+   *   2. If count=0 (row missing OR already completed): INSERT with
+   *      ignoreDuplicates so a race-inserted 'completed' row is silently
+   *      skipped instead of overwritten.
+   * `completed` and `failed` writes use the original blind upsert — a
+   * later completed result SHOULD replace an earlier interrupted one.
+   */
   async persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
@@ -386,19 +409,60 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
+      const rowData = {
+        analysis_id: params.analysisId,
+        chunk_index: params.chunkIndex,
+        dimensions_covered: params.dimensionsCovered,
+        payload: params.payload ?? {},
+        status: params.status,
+        tokens_used: params.tokensUsed ?? 0,
+        cost_usd: params.costUsd ?? 0,
+        openrouter_generation_id: params.generationId ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Monotonic guard: interrupted writes must not overwrite completed.
+      if (params.status === 'interrupted') {
+        const { error: updErr, count } = await service
+          .from('analysis_chunks')
+          .update(rowData, { count: 'exact' })
+          .eq('analysis_id', params.analysisId)
+          .eq('chunk_index', params.chunkIndex)
+          .neq('status', 'completed');
+
+        if (updErr) {
+          console.error('[SupabasePersistenceAdapter] persistAnalysisChunk guarded update failed:', updErr.message);
+          throw updErr;
+        }
+
+        // count truthy: row existed and was not 'completed' — updated successfully.
+        // !count (0 or null): row either doesn't exist (need INSERT) or is already
+        // 'completed' (must not overwrite). upsert with ignoreDuplicates
+        // handles both: inserts if missing, silently skips if a row exists.
+        if (!count) {
+          const { error: insErr } = await service
+            .from('analysis_chunks')
+            .upsert(rowData, {
+              onConflict: 'analysis_id,chunk_index',
+              ignoreDuplicates: true,
+            });
+
+          if (insErr) {
+            console.error('[SupabasePersistenceAdapter] persistAnalysisChunk insert-fallback failed:', insErr.message);
+            throw insErr;
+          }
+          // If the row already existed (completed), the upsert was silently
+          // skipped — the monotonic guarantee: interrupted must not overwrite
+          // completed.
+        }
+        return;
+      }
+
+      // completed / failed: blind upsert (later completed replaces earlier
+      // interrupted — the correct precedence direction).
       const { error } = await service
         .from('analysis_chunks')
-        .upsert({
-          analysis_id: params.analysisId,
-          chunk_index: params.chunkIndex,
-          dimensions_covered: params.dimensionsCovered,
-          payload: params.payload ?? {},
-          status: params.status,
-          tokens_used: params.tokensUsed ?? 0,
-          cost_usd: params.costUsd ?? 0,
-          openrouter_generation_id: params.generationId ?? null,
-          updated_at: new Date().toISOString(),
-        }, {
+        .upsert(rowData, {
           onConflict: 'analysis_id,chunk_index'
         });
 
