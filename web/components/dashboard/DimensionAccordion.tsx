@@ -22,6 +22,19 @@ export function DimensionAccordion({
   const missingDimensions = error?.missingDimensions;
   const hasPartialProgress = Array.isArray(missingDimensions) && missingDimensions.length > 0 && missingDimensions.length < TOTAL_DIMENSIONS;
 
+  // RCA (2026-09-13, live video gKgWYFOhZx0): this label was hardcoded to
+  // '100% complete' whenever status==='complete', regardless of how many
+  // dimensions actually carry content. The live stream settles 'complete'
+  // with as few as ONE successful bundle (useSSEStream's checkSettleState),
+  // and the persisted row for the reported incident held 6 of 11 dimensions
+  // (billing_status 'failed') — while this header simultaneously claimed
+  // '100% complete' and the aux chips showed their real gray/done states.
+  // Derive the label from the rendered list instead: only an actually-full
+  // analysis says '100% complete'; a partial one states its real coverage.
+  const completedCount = dimensions.filter(
+    (d) => d.status === 'done' || (typeof d.content === 'string' && d.content.trim().length > 0),
+  ).length;
+
   if (dimensions.length > 0) {
     return (
       <div className="flex flex-col gap-4">
@@ -29,7 +42,15 @@ export function DimensionAccordion({
           dimensions={dimensions}
           selectedDimensionKey={selectedDimensionKey}
           onSelectDimension={onSelectDimension}
-          progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+          progress={
+            status === 'analyzing'
+              ? 'Processing...'
+              : status === 'complete'
+                ? completedCount === TOTAL_DIMENSIONS
+                  ? '100% complete'
+                  : `${completedCount}/${TOTAL_DIMENSIONS} dimensions`
+                : undefined
+          }
         />
       </div>
     );

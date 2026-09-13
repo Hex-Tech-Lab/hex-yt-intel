@@ -464,8 +464,13 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         updated_at: new Date().toISOString(),
       };
 
-      // Monotonic guard: interrupted writes must not overwrite completed.
-      if (params.status === 'interrupted') {
+        // Monotonic guard: interrupted AND failed writes must not overwrite
+        // completed. ('failed' is sent by the persist route for payload-less
+        // chunk persists, RCA 2026-09-13 — a lost-response retry can never
+        // follow a successful same-index persist via the single-success
+        // atomicPersist caller, but the guard makes that invariant
+        // database-enforced instead of caller-trust.)
+        if (params.status !== 'completed') {
         const { error: updErr, count } = await service
           .from('analysis_chunks')
           .update(rowData, { count: 'exact' })
@@ -495,13 +500,13 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
             throw insErr;
           }
           // If the row already existed (completed), the upsert was silently
-          // skipped — the monotonic guarantee: interrupted must not overwrite
-          // completed.
+          // skipped — the monotonic guarantee: interrupted/failed must not
+          // overwrite completed.
         }
         return;
       }
 
-      // completed / failed: blind upsert (later completed replaces earlier
+      // completed: blind upsert (later completed replaces earlier
       // interrupted — the correct precedence direction).
       const { error } = await service
         .from('analysis_chunks')

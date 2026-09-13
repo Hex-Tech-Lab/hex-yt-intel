@@ -31,6 +31,13 @@ export const HighlightSegmentSchema = z.preprocess(
     end: z.number().min(0),
     title: z.string().min(1),
     summary: z.string().optional(),
+    // Explicit (not passthrough-only) so the response's camelCase wire
+    // contract with HighlightsScrubber is pinned where the boundary is
+    // validated. RCA 2026-09-13: these two keys silently dropped to
+    // snake_case in PR #281's route rewrite -- exactly the drift an
+    // implicit passthrough-only field cannot catch.
+    verbatimExcerpt: z.string().nullable().optional(),
+    takeawayIdx: z.number().int().nullable().optional(),
   }).passthrough().refine((data) => data.end > data.start, {
     message: 'end timestamp must be greater than start timestamp',
   })
