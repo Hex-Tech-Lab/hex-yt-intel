@@ -1,0 +1,70 @@
+.memory/ADRS.md
+  s_be8d4b6b06441e::t_f4404d4084df83 25
+.memory/AGENT_LEDGER.md
+  s_be8d4b6b06441e::t_68fb86bf038be7 1399
+  s_be8d4b6b06441e::t_dfc0eb6160fe4e 1400
+  s_be8d4b6b06441e::t_6278a71f9ccf94 1398
+web/lib/validators/highlights.ts
+  s_be8d4b6b06441e::t_8f26ae2c5774f2 34-40
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_be8d4b6b06441e::t_54be0758150c7d 1-20,26-85,88-190,192-195,197-245,247-248,254-271
+  s_be8d4b6b06441e::t_e232b9efec84b3 86-87
+  s_be8d4b6b06441e::t_d48d311fd9e5df 21-25
+  s_be8d4b6b06441e::t_a943b213133bdc 191,196
+  s_be8d4b6b06441e::t_b54c7d0d3c6e13 249-253
+  s_be8d4b6b06441e::t_d3a212d893335b 246
+web/hooks/useAuxElementStatus.ts
+  s_be8d4b6b06441e::t_a43be8832753b2 63-81
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_be8d4b6b06441e::t_1d232368e0ff35 184-218
+web/components/dashboard/DimensionAccordion.tsx
+  s_be8d4b6b06441e::t_d490e754168bb6 25-37,45-53
+web/app/api/analyses/highlights/route.ts
+  s_be8d4b6b06441e::t_de985f79c78eda 94-106
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_be8d4b6b06441e::t_d167dd06bb0499 467-473
+  s_be8d4b6b06441e::t_2db029b70d77eb 503-504,509
+web/components/dashboard/__tests__/DimensionAccordion.test.tsx
+  s_be8d4b6b06441e::t_adb73e8813c128 77
+  s_be8d4b6b06441e::t_52826fb690afde 66-76,78-109
+scripts/quality-engine/rules/persistence.ts
+  s_063531516ed0f0::t_c7a86777ef647f 10-14
+web/hooks/__tests__/useAuxElementStatus.test.tsx
+  s_be8d4b6b06441e::t_a943b213133bdc 90
+  s_be8d4b6b06441e::t_a079d85705a6a5 1-89,91-105
+docs/agent-prompts/2026-09-13-oc-highlights-transcript-and-status-chips-rca.md
+  s_063531516ed0f0::t_5c1ba1fb394a9b 1-46
+web/app/api/analyses/persist/route.ts
+  s_be8d4b6b06441e::t_b37d39367774bb 600
+  s_be8d4b6b06441e::t_6392e1c5b82f22 593-599,601-612
+  s_be8d4b6b06441e::t_6b4a07793e5c36 667,686-692
+  s_be8d4b6b06441e::t_5f3558dc6a4357 726-730
+  s_be8d4b6b06441e::t_d612313b21c208 436-460,462,466-472,474-491,505-510
+  s_be8d4b6b06441e::t_770a0480391e4d 615
+web/app/api/analyses/highlights/__tests__/route.test.ts
+  s_be8d4b6b06441e::t_18327ff5433f3b 1-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8ee8fba0333092eadf77eed3b5975c453c1e56f6",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be8d4b6b06441e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f63b8febcffeyV8IKBTlNf11xy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
