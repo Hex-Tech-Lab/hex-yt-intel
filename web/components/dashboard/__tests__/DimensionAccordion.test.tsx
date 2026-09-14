@@ -63,3 +63,47 @@ describe('DimensionAccordion (dashboard) — partial-progress messaging', () => 
     expect(screen.getByText('Synthesis failed — see the log below.')).toBeTruthy();
   });
 });
+
+describe('DimensionAccordion (dashboard) — progress label reflects real coverage (RCA 2026-09-13)', () => {
+  beforeEach(() => {
+    useAnalysisStore.getState().clearAnalysis();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  const partialDims = (count: number) =>
+    Array.from({ length: count }, (_unusedItem, i) => ({
+      key: `dim-${i + 1}`,
+      label: `Dimension ${i + 1}`,
+      icon: 'solar:bolt-linear',
+      status: 'done' as const,
+      content: `content ${i + 1}`,
+      span: 1 as const,
+    }));
+
+  it('a complete status with fewer than 11 dimensions states the real coverage, not "100% complete"', () => {
+    // The live incident: status settled 'complete' with 6/11 dimensions
+    // while the header claimed 100% (video gKgWYFOhZx0).
+    render(
+      <DimensionAccordion dimensions={partialDims(6)} selectedDimensionKey={null} onSelectDimension={noop} status="complete" />
+    );
+    expect(screen.getByText('6/11 dimensions')).toBeTruthy();
+    expect(screen.queryByText('100% complete')).toBeNull();
+  });
+
+  it('a complete status with all 11 dimensions still says "100% complete"', () => {
+    render(
+      <DimensionAccordion dimensions={partialDims(11)} selectedDimensionKey={null} onSelectDimension={noop} status="complete" />
+    );
+    expect(screen.getByText('100% complete')).toBeTruthy();
+  });
+
+  it('analyzing status keeps the "Processing..." label regardless of coverage', () => {
+    render(
+      <DimensionAccordion dimensions={partialDims(6)} selectedDimensionKey={null} onSelectDimension={noop} status="analyzing" />
+    );
+    expect(screen.getByText('Processing...')).toBeTruthy();
+  });
+});

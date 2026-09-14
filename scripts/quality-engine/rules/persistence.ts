@@ -7,6 +7,11 @@ export const PersistResilienceRule: IRule = {
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
+    // A test file exercising the persist route/service directly (mocked
+    // request/response, no real network retry loop) is not client-calling
+    // code and was never meant to be audited by this rule (same exemption
+    // shape as security.ts's isTestFile guard).
+    if (/\.(test|spec)\.[jt]sx?$/.test(filePath) || filePath.includes('__tests__/')) return findings;
     const text = source.getText();
 
     if (text.includes('/api/analyses/persist') || text.includes('persistAnalysis')) {

@@ -181,4 +181,39 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'completed');
     expect(updateCall).toBeUndefined();
   });
+
+  it('failed write uses the same guarded path as interrupted (RCA 2026-09-13 payload-less chunk persists)', async () => {
+    // 'failed' chunk rows come from the persist route's payload-less chunk
+    // path (RCA: video gKgWYFOhZx0). Same database-enforced monotonic
+    // guarantee as 'interrupted': a 'failed' write must never overwrite a
+    // row already at 'completed' — guarded UPDATE (.neq completed) first,
+    // ignoreDuplicates insert-fallback when the row is missing.
+    const { client, calls, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+
+    const adapter = new SupabasePersistenceAdapter();
+
+    // No row exists → guarded UPDATE count=0 → fallback insert.
+    setNextResult({ error: null, count: 0 });
+    await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'failed' });
+
+    const guardedUpdate = calls.find(call => call.method === 'update' && call.data.status === 'failed');
+    expect(guardedUpdate).toBeDefined();
+    expect(guardedUpdate!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
+
+    const fallbackUpsert = calls.find(call => call.method === 'upsert' && call.data.status === 'failed');
+    expect(fallbackUpsert).toBeDefined();
+
+    // A 'failed' write arriving when the row is already 'completed' must
+    // NOT blind-upsert over it.
+    const { client: client2, calls: calls2, setNextResult: setNext2 } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client2 as any);
+    setNext2({ error: null, count: 0 }); // .neq filter excludes the completed row → 0 matched
+    await adapter.persistAnalysisChunk({ ...BASE_PARAMS, status: 'failed' });
+
+    const secondUpsert = calls2.find(call => call.method === 'upsert' && call.data.status === 'failed');
+    expect(secondUpsert).toBeDefined();
+    // ignoreDuplicates: the upsert cannot overwrite the existing row.
+    expect((secondUpsert!.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
+  });
 });
