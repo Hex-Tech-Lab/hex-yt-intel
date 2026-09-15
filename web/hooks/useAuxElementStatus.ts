@@ -80,7 +80,6 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
       if (!looksLikeLiveStub) return;
     }
     if (fetchedForRef.current === analysisId) return;
-    fetchedForRef.current = analysisId;
 
     let cancelled = false;
     void (async () => {
@@ -98,6 +97,19 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         const payload = data.analysis_payload as RestoreAnalysisPayload | null | undefined;
         useSynthesisNucleus.getState().setRawAnalysisPayload(payload ?? null, analysisId);
         setAuxStatus(mapAuxStatus(payload));
+        // P2a (PR #312 post-merge review): the one-shot guard is consumed
+        // only AFTER a fetch has actually completed and stored its payload.
+        // Setting it before the fetch resolved consumed the guard without
+        // ever completing a real fetch under React StrictMode's intentional
+        // double-invoke (mount → cleanup cancels the in-flight fetch →
+        // remount sees the guard set and returns) and on a transient fetch
+        // failure — permanently suppressing the one legitimate retry this
+        // refetch exists to guarantee. Left unconsumed on cancellation,
+        // !ok, or rejection, the next relevant effect run (analysisId /
+        // status / payload change, or remount) retries; the effect's deps
+        // do not change on their own, so this stays a bounded single retry
+        // per relevant event, not an unbounded loop.
+        fetchedForRef.current = analysisId;
       } catch (err) {
         console.debug('[useAuxElementStatus] fetch failed:', err);
       }

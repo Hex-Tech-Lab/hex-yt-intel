@@ -384,6 +384,23 @@ export async function POST(request: NextRequest) {
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 
       let validPayload: UCISPayloadV2 | undefined;
+      // P1b (PR #312 post-merge review): payload validity for chunk requests
+      // is a three-way classification — 'valid' (parsed against the chunk
+      // schema), 'payload-less' (null/undefined), or 'malformed-object'
+      // (truthy but schema-invalid, e.g. {} or {foo:'bar'}). A malformed
+      // object used to 400 out of the route entirely, but the worker's
+      // PersistService treats every non-OK persist as retryable (3 attempts,
+      // then gives up) and that bundle's chunk row was NEVER written — so
+      // the completeness set could never close (isFullyReceived and
+      // isFullySettled both require every index 1..N to have a terminal
+      // row) and the parent row sat 'processing' until the stuck-analysis
+      // reaper's grace window: the same user-visible freeze PR #312 fixed
+      // for payload:null, just via a different malformed shape. A malformed
+      // object is now terminal-for-that-bundle exactly like payload-less:
+      // it persists as a terminal 'failed' chunk row (spend accounting +
+      // the reaper usability filter's expected shape) and can close the
+      // settled set. Non-chunk requests keep the existing fail-loud 400.
+      let chunkPayloadMalformed = false;
 
       if (payload !== undefined && payload !== null) {
         const isChunk = chunkIndex !== undefined;
@@ -399,15 +416,26 @@ export async function POST(request: NextRequest) {
           : UCISPayloadV2Schema.safeParse(payload);
 
         if (!parseResult.success) {
-          console.warn('[analyses/persist] Invalid payload schema', { 
-            analysisId, 
-            videoId, 
+          if (!isChunk) {
+            console.warn('[analyses/persist] Invalid payload schema', {
+              analysisId,
+              videoId,
+              chunkIndex,
+              errors: parseResult.error.flatten()
+            });
+            return { type: 'error' as const, error: 'Invalid payload schema', status: 400 };
+          }
+          console.warn('[analyses/persist] Malformed chunk payload (truthy but schema-invalid) — persisting as terminal failed chunk row', {
+            analysisId,
+            videoId,
             chunkIndex,
-            errors: parseResult.error.flatten() 
+            status,
+            errors: parseResult.error.flatten()
           });
-          return { type: 'error' as const, error: 'Invalid payload schema', status: 400 };
+          chunkPayloadMalformed = true;
+        } else {
+          validPayload = parseResult.data as any;
         }
-        validPayload = parseResult.data as any;
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
@@ -456,8 +484,16 @@ export async function POST(request: NextRequest) {
       // it would leave a disconnected client's row in 'processing' until the
       // reaper's grace window elapsed).
       const isPayloadlessChunk = chunkIndex !== undefined && !validPayload;
+      // P1b: a malformed-object chunk persist routes through the chunk
+      // workflow (as a terminal 'failed' chunk row) exactly like a
+      // payload-less one. Both stay exempt only for status='interrupted' —
+      // RCA 2026-09-13: rerouting an interrupted persist away from the
+      // parent-row write would leave a disconnected client's row
+      // 'processing' until the reaper's grace window elapsed, so the
+      // interrupted terminal write keeps its existing non-chunk path.
+      const isUnusableChunkPayload = (isPayloadlessChunk || chunkPayloadMalformed) && !isInterrupted;
 
-      if (chunkIndex !== undefined && ((validPayload && 'dimensions' in validPayload) || (isPayloadlessChunk && !isInterrupted))) {
+      if (chunkIndex !== undefined && ((validPayload && 'dimensions' in validPayload) || isUnusableChunkPayload)) {
         // Process this specific chunk; return early if chunk is complete or timeout detected.
         const dimensionsCovered = validPayload && Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
@@ -488,11 +524,12 @@ export async function POST(request: NextRequest) {
             });
           }
         } else {
-          console.warn('[analyses/persist] Payload-less chunk persist (markdown-only fallback) recorded as failed chunk, parent row not finalized from it', {
+          console.warn('[analyses/persist] Unusable chunk payload (payload-less or malformed) recorded as failed chunk, parent row not finalized from it', {
             analysisId,
             videoId,
             chunkIndex,
-            status
+            status,
+            reason: isPayloadlessChunk ? 'payload-less' : 'malformed-object'
           });
         }
 
@@ -502,12 +539,12 @@ export async function POST(request: NextRequest) {
             chunkIndex,
             dimensionsCovered,
             payload,
-            // A payload-less chunk never produced trustworthy dimension
-            // content — 'failed' keeps it out of the stitcher's completed
-            // set, out of the contract check, and inside the reaper's
-            // usability filter (completed-only), while still recording the
-            // bundle's real token spend on the chunk row.
-            status: isPayloadlessChunk ? 'failed' : status,
+            // A payload-less or malformed chunk never produced trustworthy
+            // dimension content — 'failed' keeps it out of the stitcher's
+            // completed set, out of the contract check, and inside the
+            // reaper's usability filter (completed-only), while still
+            // recording the bundle's real token spend on the chunk row.
+            status: isUnusableChunkPayload ? 'failed' : status,
             tokensUsed,
             costUsd,
             generationId,
@@ -657,6 +694,10 @@ export async function POST(request: NextRequest) {
               model: model || null,
               validationPassed: false,
               validationReport: incompletionReport,
+              // P0: every parent write in this route is a CAS transition —
+              // a stale timeout write must never clobber a terminal row a
+              // concurrent finalize already settled.
+              guardBillingStatus: 'processing',
             }),
             2
           );
@@ -669,6 +710,44 @@ export async function POST(request: NextRequest) {
           finalChunks.forEach(c => {
             chunkMap.set(c.chunk_index, c.payload);
           });
+
+          // P1a (PR #312 post-merge review): a chunk row can be nominally
+          // 'completed' yet carry a payload with no usable dimensions shape
+          // (legacy rows written before chunk-schema validation existed, or
+          // an out-of-band writer). The stitch below silently skips such
+          // payloads — real data loss with zero observability, and the
+          // reaper's completed-only usability filter keeps treating the row
+          // as recoverable forever. On the settled-partial path (the
+          // fully-received path's contract check below already fails
+          // loudly), detect them, reclassify the row 'failed' — the same
+          // accounting PR #312 gave payload-less chunks: the recorded spend
+          // stays on the row and the reaper filter stops treating it as
+          // recoverable — and exclude it from the stitch map so the
+          // finalize is honest about what it actually stitched. The
+          // reclassify is best-effort: a failure here must not lose the
+          // finalize this request is about to commit.
+          if (!isFullyReceived) {
+            const malformedCompletedChunks = finalChunks.filter(chunk =>
+              !chunk.payload || !('dimensions' in chunk.payload) || !Array.isArray((chunk.payload as any).dimensions)
+            );
+            for (const malformedChunk of malformedCompletedChunks) {
+              console.error('[analyses/persist] Completed chunk has malformed payload (no usable dimensions shape) — reclassifying to failed before stitch', {
+                analysisId,
+                videoId,
+                chunkIndex: malformedChunk.chunk_index
+              });
+              Sentry.captureMessage('analyses/persist: completed chunk had malformed payload, reclassified to failed', {
+                level: 'warning',
+                tags: { operation: 'analysis-persist', phase: 'settled_stitch' },
+                extra: { analysisId, videoId, chunkIndex: malformedChunk.chunk_index },
+              });
+              await persistenceAdapter.markChunkFailed({ analysisId, chunkIndex: malformedChunk.chunk_index }).catch(e => {
+                Sentry.captureException(e, { contexts: { persist: { phase: 'reclassify_malformed_chunk', analysisId } } });
+                console.warn('[analyses/persist] Failed to reclassify malformed completed chunk (finalize proceeds)', { analysisId, chunkIndex: malformedChunk.chunk_index, error: String(e) });
+              });
+              chunkMap.delete(malformedChunk.chunk_index);
+            }
+          }
 
           // CONTRACT VALIDATION: Verify all chunks have required payload structure
           // Each chunk MUST have a dimensions field (can be empty array, but field must exist)
@@ -715,6 +794,7 @@ export async function POST(request: NextRequest) {
                   model: model || null,
                   validationPassed: false,
                   validationReport: failureReport,
+                  guardBillingStatus: 'processing',
                 }),
                 2
               );
@@ -748,6 +828,7 @@ export async function POST(request: NextRequest) {
                 model: model || null,
                 validationPassed: false,
                 validationReport: safetyReport,
+                guardBillingStatus: 'processing',
               }),
               2
             );
@@ -791,7 +872,20 @@ export async function POST(request: NextRequest) {
             ...withFreshAuxMetadata(channelMeta, comments),
           };
 
-          await retryWithBackoff(
+          // P0 (PR #312 post-merge review): the parent finalize is a CAS
+          // transition ('processing' → terminal), not a blind write. Two
+          // concurrent requests can both reach this finalize for the same
+          // analysis (a real scenario under retry); without the guard both
+          // would stitch, both would write the parent (a stale result
+          // overwriting a fresher one), and both would fire the
+          // billing-adjacent side effects below — cache write, QStash
+          // publishes, quota consume. Same guarded-write shape as
+          // analysis-reaper.ts's tryRequeuePartial and
+          // dimension-remediation.ts's remediated finalize (the
+          // update_analysis_result_atomic RPC owns the conditional UPDATE).
+          // Losing the race is benign: the row IS settled, just by the
+          // other writer — return without any side effects.
+          const { updated: parentFinalized } = await retryWithBackoff(
             () => persistenceAdapter.updateAnalysisResult({
               analysisId,
               markdown: stitchedMarkdown,
@@ -799,9 +893,18 @@ export async function POST(request: NextRequest) {
               model: model || null,
               validationPassed: isFullyValidated,
               validationReport: newReport,
+              guardBillingStatus: 'processing',
             }),
             2
           );
+          if (!parentFinalized) {
+            console.warn('[analyses/persist] Parent finalize lost the processing-status CAS — row already settled by a concurrent writer; skipping cache writes, billing transition, and QStash publishes', {
+              analysisId,
+              videoId,
+              chunkIndex
+            });
+            return { type: 'chunk_saved' as const, analysisId, chunkIndex };
+          }
 
           // Cache any billing-complete result (ADR Law #1: prevent paid re-analysis on re-request).
           // Gate on billingStatus === 'completed' (dimension completeness), NOT isStitchedValid
@@ -1043,7 +1146,14 @@ export async function POST(request: NextRequest) {
         ...withFreshAuxMetadata(channelMeta, comments),
       };
 
-      await retryWithBackoff(
+      // P0: same CAS discipline as the chunk-path finalize above — this is
+      // the non-chunk path's only parent write, and everything after it
+      // (transcript/chapters upserts, cache write, QStash publishes, quota
+      // consume) must only run for the request that actually won the
+      // 'processing' → terminal transition. A stale interrupted or partial
+      // persist arriving after a concurrent finalize must not downgrade or
+      // re-mutate the terminal row, and must not duplicate the side effects.
+      const { updated: parentFinalizedNonChunk } = await retryWithBackoff(
         () => persistenceAdapter.updateAnalysisResult({
           analysisId,
           markdown: stitchedMarkdown,
@@ -1051,9 +1161,23 @@ export async function POST(request: NextRequest) {
           model: model || null,
           validationPassed,
           validationReport: newReport,
+          guardBillingStatus: 'processing',
         }),
         2
       );
+      if (!parentFinalizedNonChunk) {
+        console.warn('[analyses/persist] Non-chunk finalize lost the processing-status CAS — row already settled by a concurrent writer; skipping downstream writes', {
+          analysisId,
+          videoId,
+          finalStatus
+        });
+        // Same response the request would have returned, minus the side
+        // effects — the parent row's settlement is already owned by the
+        // winning writer, so the worker has nothing left to retry.
+        if (isInterrupted) return { type: 'interrupted' as const, analysisId };
+        if (finalStatus === 'partial') return { type: 'partial_timeout' as const, analysisId, missingChunks: finalMissingChunks };
+        return { type: 'ok' as const, analysisId };
+      }
 
       // AUTHORITATIVE WRITE — re-audit finding P1.2. When this runs, it's the
       // full stitched content across every chunk, and it runs after any

@@ -217,3 +217,48 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     expect((secondUpsert!.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
   });
 });
+
+describe('markChunkFailed CAS demotion (P1a, PR #312 post-merge review)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('flips a row only while it is still "completed" and reports whether the demotion happened', async () => {
+    const { client, calls, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 1 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 });
+    expect(demoted).toBe(true);
+
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'failed');
+    expect(updateCall).toBeDefined();
+    // The CAS precondition: only a row currently at 'completed' can be
+    // demoted — the payload-observing caller is the only legitimate source
+    // of this write, and a concurrent writer that already changed the row
+    // wins.
+    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'status', value: 'completed' });
+    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
+    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: 2 });
+  });
+
+  it('reports false (no demotion) when the row is no longer completed (concurrent writer won)', async () => {
+    const { client, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 0 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 });
+    expect(demoted).toBe(false);
+  });
+
+  it('throws (and captures) on a genuine query error — a silent false must not mask infra failure', async () => {
+    const { client, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: { message: 'db down' }, count: null });
+
+    const adapter = new SupabasePersistenceAdapter();
+    await expect(adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 })).rejects.toMatchObject({ message: 'db down' });
+  });
+});

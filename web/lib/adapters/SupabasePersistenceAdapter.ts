@@ -527,6 +527,54 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
   }
 
+  /**
+   * Demote a nominally-'completed' chunk row to 'failed' (P1a, PR #312
+   * post-merge review, 2026-09-15): the caller (persist route's
+   * settled-partial finalize) read the row's payload and observed it has no
+   * usable dimensions shape — the stitch would silently drop it, so the
+   * row's status must match what the stitch actually used (the same
+   * accounting PR #312 gave payload-less chunks: spend stays recorded on
+   * the row, and the stuck-analysis reaper's completed-only usability
+   * filter stops treating it as recoverable).
+   *
+   * CAS on `status = 'completed'`: the UPDATE only matches a row that is
+   * still completed; a concurrent writer that already changed it wins and
+   * the boolean tells the caller the demotion did not happen. This is a
+   * deliberate, narrowly-scoped exception to persistAnalysisChunk's
+   * monotonic guard (which forbids failed-over-completed writes to protect
+   * GOOD completed data): here the caller only invokes the demotion after
+   * observing the payload malformed, and chunk persists re-POST the same
+   * body per retry, so the payload cannot have become valid between the
+   * caller's read and this write. The payload itself is left untouched for
+   * RCA.
+   */
+  async markChunkFailed(params: {
+    analysisId: string;
+    chunkIndex: number;
+  }): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error, count } = await service
+        .from('analysis_chunks')
+        .update({ status: 'failed', updated_at: new Date().toISOString() }, { count: 'exact' })
+        .eq('analysis_id', params.analysisId)
+        .eq('chunk_index', params.chunkIndex)
+        .eq('status', 'completed');
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] markChunkFailed update failed:', error.message);
+        throw error;
+      }
+      return !!count;
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'markChunkFailed' },
+        extra: { analysisId: params.analysisId, chunkIndex: params.chunkIndex },
+      });
+      throw error;
+    }
+  }
+
   async findAnalysisChunks(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {

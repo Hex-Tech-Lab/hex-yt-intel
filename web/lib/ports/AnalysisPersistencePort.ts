@@ -224,6 +224,21 @@ export interface AnalysisPersistencePort {
     generationId?: string;
   }): Promise<void>;
 
+  /**
+   * Demote a nominally-'completed' chunk row to 'failed' (P1a, PR #312
+   * post-merge review): the caller read the row's payload during finalize
+   * and observed it has no usable dimensions shape — the stitch would
+   * silently drop it, so the row's status must be brought in line with what
+   * the stitch actually used (same accounting as the payload-less failed
+   * chunk rows from PR #312). CAS on `status = 'completed'`: returns
+   * whether the demotion actually happened; a concurrent writer that
+   * already changed the row wins and the row is left untouched.
+   */
+  markChunkFailed(params: {
+    analysisId: string;
+    chunkIndex: number;
+  }): Promise<boolean>;
+
   findAnalysisChunks(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;

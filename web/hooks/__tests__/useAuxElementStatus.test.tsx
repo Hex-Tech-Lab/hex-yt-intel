@@ -13,6 +13,7 @@
  * completion; a restored payload (dimensions present) keeps skipping.
  */
 // @vitest-environment happy-dom
+import { StrictMode } from 'react';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
@@ -101,5 +102,98 @@ describe('useAuxElementStatus — completion-time refetch for the live descripti
       expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('StrictMode double-invoke: a cancelled first attempt does NOT consume the guard — the second attempt fetches and lands (P2a)', async () => {
+    // P2a regression: the guard used to be set BEFORE the fetch resolved, so
+    // StrictMode's intentional double-invoke (mount → cleanup cancels the
+    // in-flight fetch → remount sees the guard consumed and returns)
+    // permanently suppressed the one legitimate refetch.
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    let calls = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (!url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+      }
+      calls += 1;
+      if (calls === 1) {
+        // The first (StrictMode-discarded) attempt never resolves — the
+        // cleanup's `cancelled` flag means its eventual settle is ignored.
+        return new Promise<Response>(() => {});
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'), {
+      wrapper: StrictMode,
+    });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
+    });
+    // The cancelled first attempt left the guard available, so the second
+    // effect invocation actually fetched.
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes(ANALYSIS_ID))).toHaveLength(2);
+    expect(useSynthesisNucleus.getState().rawAnalysisPayload).toEqual(FULL_PAYLOAD);
+  });
+
+  it('StrictMode double-invoke: a failed first attempt does NOT consume the guard — the second attempt retries and succeeds (P2a)', async () => {
+    // P2a regression: a transient fetch failure used to leave the guard
+    // consumed, permanently blocking the retry.
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    let calls = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (!url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+      }
+      calls += 1;
+      if (calls === 1) {
+        return Promise.reject(new TypeError('network down'));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'), {
+      wrapper: StrictMode,
+    });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
+    });
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes(ANALYSIS_ID))).toHaveLength(2);
+    expect(useSynthesisNucleus.getState().rawAnalysisPayload).toEqual(FULL_PAYLOAD);
+  });
+
+  it('StrictMode double-invoke with succeeding fetches stays bounded (exactly the double-invoke pair, no loop) (P2a)', async () => {
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    const fetchMock = mockFullPayloadFetch();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'), {
+      wrapper: StrictMode,
+    });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
+    });
+    await new Promise((settleTimer) => setTimeout(settleTimer, 25));
+    // Two effect invocations fired two fetches; once one lands and consumes
+    // the guard (and the payload is no longer the live stub), no further
+    // fetches fire despite the store-driven effect re-runs.
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes(ANALYSIS_ID))).toHaveLength(2);
   });
 });
