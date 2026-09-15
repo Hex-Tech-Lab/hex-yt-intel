@@ -1,0 +1,23 @@
+docs/agent-prompts/2026-09-15-oc-pr315-resilience-review-fix.md
+  s_be40705c213a3f::t_c86e7961e17d4a 1-219
+docs/agent-prompts/2026-09-15-oc-pr314-persist-route-review-fix.md
+  s_be40705c213a3f::t_f3f0e46f81bbd5 1-211
+.memory/AGENT_LEDGER.md
+  s_be40705c213a3f::t_5be41c7ff1ce82 1396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cb7d0d08489843067ace24e3085c8a2a43d6aa33",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
