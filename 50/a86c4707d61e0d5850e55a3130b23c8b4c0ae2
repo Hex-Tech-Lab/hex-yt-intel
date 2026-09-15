@@ -1,0 +1,21 @@
+web/package.json
+  s_be40705c213a3f::t_ee3c61e9ebc624 81
+pnpm-lock.yaml
+  s_be40705c213a3f::t_41109c84ff1122 85,109,112,235-236,1056-1057,1062-1063,1068-1069,1074-1075,1081-1082,1088-1089,1095-1096,1102-1103,1108-1109,4757-4758,6667,6738,6744,6747,6750,6753,6756,6759,6762,6765,7223,7236,7921,7923,8229,8231,10764,10766-10767,10775-10782
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "50a86c4707d61e0d5850e55a3130b23c8b4c0ae2",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
