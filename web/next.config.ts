@@ -13,7 +13,15 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   distDir: '.next',
-  output: 'standalone',
+  // 'standalone' is for non-Vercel (Docker) deploys only. Vercel's builder
+  // strips this config via its own modifyConfig pass and does its own
+  // function tracing -- but under Turbopack production builds, Next only
+  // emits .next/next-server.js.nft.json when 'standalone' is actually set,
+  // so leaving it unconditional makes Vercel's onBuildComplete ENOENT on
+  // that file post-build (real regression hit on the Next 16.3.3 bump,
+  // 2026-09-15 -- known Next 16.3.x + Vercel + Turbopack interaction, see
+  // https://community.vercel.com/t/next-js-16-3-1-preview-packaging-fails-in-onbuildcomplete-with-missing-next-server-js-nft-json/48121).
+  ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
   productionBrowserSourceMaps: false,
   turbopack: {
     root: path.resolve(__dirname, '..'),
