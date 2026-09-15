@@ -1,0 +1,66 @@
+.memory/ADRS.md
+  s_1d7b9038086d61::t_460b45afda7bae 26
+web/lib/__tests__/highlights-validator.test.ts
+  s_1d7b9038086d61::t_3b2c6d877da8fb 121-167
+  s_1d7b9038086d61::t_78c983253af3f8 11-12,25-26,38-39,51-52,63-64,71,74,79,82,91-92,99,105,175-176
+web/hooks/useAuxElementStatus.ts
+  s_1d7b9038086d61::t_ea04a2956790cd 100-112
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_1d7b9038086d61::t_f4b187d7de86d2 530-577
+web/lib/validators/highlights.ts
+  s_1d7b9038086d61::t_381f41560dda17 34-46
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_1d7b9038086d61::t_086e1a559cc4a8 159,161
+  s_1d7b9038086d61::t_71bab7a3e0e7fd 1-158,160,162-218
+docs/agent-prompts/2026-09-15-oc-pr312-review-findings.md
+  s_063531516ed0f0::t_9f1d4f04b0f9da 1-50
+web/vitest.config.ts
+  s_1d7b9038086d61::t_5eb98ec4329b93 57-63
+web/lib/__tests__/persist-chunk-payload-classification.test.ts
+  s_1d7b9038086d61::t_01cb286fa58c66 1-230,232-240,242,244-247,249-260
+  s_1d7b9038086d61::t_58b196b82e4e4a 231
+  s_1d7b9038086d61::t_7e116845ad825e 241,243,248
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_1d7b9038086d61::t_b9fc863b63f482 220-264
+web/hooks/__tests__/useAuxElementStatus.test.tsx
+  s_1d7b9038086d61::t_4c2456de408752 16
+  s_1d7b9038086d61::t_afb0787baf1c8f 106-198
+web/lib/ports/AnalysisPersistencePort.ts
+  s_1d7b9038086d61::t_d5ad9ec8791309 227-241
+web/app/api/analyses/persist/route.ts
+  s_1d7b9038086d61::t_3095d56114e445 797
+  s_1d7b9038086d61::t_e8129303cad69e 875-888,896,900-907
+  s_1d7b9038086d61::t_1309414947370c 714-729,732-751
+  s_1d7b9038086d61::t_21ad7b63260769 1149-1156,1164,1168-1180
+  s_1d7b9038086d61::t_fd689277fae5f7 487-496
+  s_1d7b9038086d61::t_9157b821edeee1 542-547
+  s_1d7b9038086d61::t_9ae41aa0a98269 831
+  s_1d7b9038086d61::t_ec05b9a8cfcda8 387-403,419-430,432-433,435-437
+  s_1d7b9038086d61::t_8cb1e5baf70af4 697-700
+  s_1d7b9038086d61::t_46bf5fe3896818 527,531-532
+  s_1d7b9038086d61::t_4a2ff8edcfb100 730-731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d34b50ec86dec810b5dfb037c99cec0be82831de",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_1d7b9038086d61": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5c88da80ffe8nOIS0BiN4zOWV",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": null
+    }
+  }
+}
