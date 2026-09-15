@@ -150,7 +150,7 @@ const chatMarkdownComponents: MarkdownComponents = {
  */
 function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const {
-    conversations, activeId, messagesByConv, sending, persistState,
+    conversations, activeId, messagesByConv, sending, persistState, error: chatError,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
     isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
@@ -764,6 +764,30 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         )}
         <div ref={messagesEndRef} />
       </ChatMessageList>
+
+      {/* Visible send/stream failure (2026-09-15, incident video rDhaCLrdWHk):
+          every chat failure path (bouncer 4xx/5xx, network drop, stream error,
+          failed newConversation) sets this store error, but no UI ever rendered
+          it — the user's typed message appeared to vanish with "no response and
+          no error shown". Rendered inline above the composer with role="alert";
+          cleared automatically on the next send attempt (deliver()'s optimistic
+          set resets it) or on click. */}
+      {chatError && !sending && (
+        <div
+          role="alert"
+          className="mx-3 lg:mx-4 mb-1 px-3 py-1.5 rounded-lg bg-[rgb(239_68_68_/_0.10)] border border-[rgb(239_68_68_/_0.30)] text-[var(--err)] font-mono text-[11px] flex items-center justify-between gap-2"
+        >
+          <span className="truncate">Chat error: {chatError}</span>
+          <button
+            type="button"
+            aria-label="Dismiss chat error"
+            onClick={() => useChatStore.setState({ error: null })}
+            className="bg-transparent border-none p-0.5 cursor-pointer flex-shrink-0 opacity-70 hover:opacity-100"
+          >
+            <Icon icon="solar:close-circle-linear" size={13} />
+          </button>
+        </div>
+      )}
 
       {/* Composer — ChatComposer is the layout shell (drawer/header/input/
           send-button slots); its context wires value/onChange/onSubmit/

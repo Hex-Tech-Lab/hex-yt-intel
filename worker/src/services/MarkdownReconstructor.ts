@@ -132,9 +132,15 @@ function safeParse(text: string, phase: string, finishReason?: string): { parsed
   try {
     return { parsed: JSON.parse(text) as Partial<UCISPayloadV2>, repaired: null };
   } catch (error) {
-    Sentry.captureException(error, { contexts: { extractJsonPayload: { phase, textLength: text.length, finishReason: finishReason || 'unknown' } } });
+    // NOT captured to Sentry here (2026-09-15 RCA, Sentry HEX-YT-INTEL-3E):
+    // this first-parse failure is an EXPECTED, recoverable state — the
+    // jsonrepair attempt below runs immediately after — but the capture made
+    // every recoverable case look like a data-loss error in Sentry (that
+    // issue accumulated 18 occurrences since 2026-07-24, which triage read
+    // as "silently losing data" when most/all were almost certainly repaired
+    // by jsonrepair). The terminal failure below is the real error signal.
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[extractJsonPayload]', { message, phase, finishReason });
+    console.warn('[extractJsonPayload] Initial parse failed, attempting jsonrepair', { message, phase, finishReason, textLength: text.length });
 
     // jsonrepair handles both real-world failure classes we've hit in
     // production: truncated/unclosed JSON (max_tokens cutoff) and
@@ -150,9 +156,21 @@ function safeParse(text: string, phase: string, finishReason?: string): { parsed
       const jsonrepaired = jsonrepair(text);
       const parsed = JSON.parse(jsonrepaired) as Partial<UCISPayloadV2>;
       console.warn('[extractJsonPayload] Recovered via jsonrepair', { phase, finishReason, originalLength: text.length });
+      Sentry.addBreadcrumb({
+        category: 'extractJsonPayload',
+        message: 'Payload recovered via jsonrepair after initial parse failure',
+        level: 'info',
+        data: { phase, finishReason: finishReason || 'unknown', originalLength: text.length },
+      });
       return { parsed, repaired: jsonrepaired };
     } catch (repairError) {
-      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'jsonrepair_failed', textLength: text.length, finishReason: finishReason || 'unknown' } } });
+      // Terminal parse failure — THIS is the error worth paging on. The
+      // downstream persist path handles it as a failed chunk (post-#312:
+      // payload-less chunk persist records the chunk row 'failed' and the
+      // isFullySettled finalize stitches the rest; missing dimensions are
+      // recoverable via the remediation cron), so this event measures real
+      // unparseable LLM output, not recoverable noise.
+      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'jsonrepair_failed', textLength: text.length, finishReason: finishReason || 'unknown', initialError: error instanceof Error ? error.message : String(error) } } });
       const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
       console.error('[extractJsonPayload]', { message: repairMessage, phase: 'jsonrepair_failed', finishReason });
       return { parsed: null, repaired: null };

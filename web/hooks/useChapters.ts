@@ -146,5 +146,34 @@ export function useChapters(videoId: string | null) {
     };
   }, [videoId, generation, setLoading, setLoaded, setError]);
 
+  // Recovery refetch (2026-09-15, incident video rDhaCLrdWHk): once the
+  // backoff loop above exhausts MAX_RETRIES, the entry is left in 'error'
+  // permanently for the rest of the session -- handledForRef blocks a
+  // same-generation restart, and the generation counter only moves via
+  // reset() (called by useSSEStream.startAnalysis on a re-analysis). During
+  // a real connection outage the 5 retries (~31s of backoff) all fail while
+  // the network is down, so the Chapters chip stayed grey for the whole
+  // session even though the chapters existed and a refresh after the outage
+  // fixed it -- the same "computed once, never refetches" bug class PR #312
+  // fixed in useAuxElementStatus for Channel Meta/Comments. Re-arm the
+  // fetch on each offline->online transition: bounded by real network
+  // events (no polling loop), and a no-op when the entry already settled or
+  // was reset by something else.
+  useEffect(() => {
+    if (!videoId || entry.status !== 'error') return;
+    let cancelled = false;
+    const attemptRecovery = () => {
+      if (cancelled) return;
+      const current = useChaptersStore.getState().entries[videoId];
+      if (current?.status !== 'error') return;
+      useChaptersStore.getState().reset(videoId);
+    };
+    window.addEventListener('online', attemptRecovery);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', attemptRecovery);
+    };
+  }, [videoId, entry.status]);
+
   return { chapters: entry.chapters, status: entry.status };
 }
