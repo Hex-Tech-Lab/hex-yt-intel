@@ -1,0 +1,52 @@
+web/hooks/__tests__/useChapters.test.tsx
+  s_60c0aff34eee31::t_1b7016391db07a 213-245
+web/hooks/useKnowledgeGraph.ts
+  s_60c0aff34eee31::t_28a4e041a201f7 13,33-40,94-98,102,104-112,114-117,119-140,142-144,146-216,219-240
+web/hooks/useAutoRestoreAnalysis.ts
+  s_60c0aff34eee31::t_28a4e041a201f7 10,81-87,175-177
+docs/agent-prompts/2026-09-15-oc-pr313-review-findings.md
+  s_063531516ed0f0::t_0bc00936e3a187 1-50
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_60c0aff34eee31::t_6bfa1b39796078 247-354
+web/hooks/__tests__/useAutoRestoreAnalysis-resilience.test.tsx
+  s_60c0aff34eee31::t_7c77ce7abc6bc3 1-212
+.memory/AGENT_LEDGER.md
+  s_60c0aff34eee31::t_5306e3d77981b5 1406
+web/hooks/useChapters.ts
+  s_60c0aff34eee31::t_28a4e041a201f7 4,94-99
+web/lib/admin-logs/fetchers.test.ts
+  s_60c0aff34eee31::t_025c1d2cbbf5b7 233-240,244-247
+  s_60c0aff34eee31::t_82c473b2fbb800 241-243
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_60c0aff34eee31::t_dd4a55b6f1d8ce 137-140
+  s_60c0aff34eee31::t_01076e7c16e89b 142,145,224
+  s_60c0aff34eee31::t_0bf2d3fad74adb 35
+  s_60c0aff34eee31::t_f6723913ad47db 26-29
+web/lib/utils/fetch-with-timeout.ts
+  s_60c0aff34eee31::t_d10fbf90002ab3 17
+  s_60c0aff34eee31::t_69b7add079090b 1-16,18-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "47eef47cc0c1329e6b35e41afa59d85ba6978c7a",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_60c0aff34eee31": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5c69937affe6zFFL6n6352NKJ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
