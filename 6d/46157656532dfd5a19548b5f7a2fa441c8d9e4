@@ -1,0 +1,74 @@
+web/hooks/__tests__/useChapters.test.tsx
+  s_55ddcff33128e6::t_3cf6de0f59c745 159-233
+web/store/useChatStore.ts
+  s_55ddcff33128e6::t_f561639fef8b6f 213-222,227
+  s_55ddcff33128e6::t_19c8a722c14d91 601-612
+web/components/templates/console/ChatDock.tsx
+  s_55ddcff33128e6::t_9e548fad8ecf94 768-777,779-780,789-791
+  s_55ddcff33128e6::t_1ad6dd9e664188 778,781-788
+  s_55ddcff33128e6::t_67fbf905609eaf 153
+web/hooks/useKnowledgeGraph.ts
+  s_55ddcff33128e6::t_1877e0db2fca84 25-35
+  s_55ddcff33128e6::t_cb811f625c086e 192,203-216,218-222
+  s_55ddcff33128e6::t_3e20b4f5c354c1 190,193-198
+  s_55ddcff33128e6::t_abb0ec23f499a8 82-104
+worker/src/__tests__/extract-json-payload-recovery.test.ts
+  s_55ddcff33128e6::t_f93757766d090f 38-39
+  s_55ddcff33128e6::t_3094e845206794 41
+  s_55ddcff33128e6::t_d49e37a2e71913 1-37,40,42-78
+.memory/AGENT_LEDGER.md
+  s_55ddcff33128e6::t_8cd2c4d83bb1f5 1402
+  s_55ddcff33128e6::t_b4e5ad89e35d07 1401
+  s_063531516ed0f0::t_98e6a902aa3002 1404
+  s_55ddcff33128e6::t_59eb7080737fcc 1403
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_55ddcff33128e6::t_97f0b954bb4d51 402,412-421,423-425,428-521
+  s_55ddcff33128e6::t_e003f36d6cda66 403-411
+  s_55ddcff33128e6::t_725c8b833a8c57 422,426-427
+  s_55ddcff33128e6::t_138904bd383095 31
+worker/src/services/MarkdownReconstructor.ts
+  s_55ddcff33128e6::t_421a16c45ce046 135-141,143,159-164,167-173
+web/hooks/useAutoRestoreAnalysis.ts
+  s_55ddcff33128e6::t_d24316fb3cbd12 340,342,345,348-385,389
+  s_55ddcff33128e6::t_b930f9efb395ee 64-75,90,92
+  s_55ddcff33128e6::t_9d97f13fece750 178,180
+  s_55ddcff33128e6::t_d28b0bb1cb7f26 161
+web/lib/admin-logs/fetchers.test.ts
+  s_063531516ed0f0::t_cf6a38d18b031d 206-236
+docs/agent-prompts/2026-09-15-oc-chat-wordcloud-stream-resilience-rca.md
+  s_063531516ed0f0::t_36b16c9a7f07a8 1-49
+web/hooks/useChapters.ts
+  s_55ddcff33128e6::t_0f9742ea173b6c 149-177
+web/lib/__tests__/useChatStore-resilience.test.ts
+  s_55ddcff33128e6::t_d9eb59bc03bea5 1-133
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_55ddcff33128e6::t_f0074f305b7397 164-280
+web/app/api/admin/logs/snapshot/route.ts
+  s_063531516ed0f0::t_e303219bb6ed53 57-66
+  s_063531516ed0f0::t_afda9a6d5a0981 83,91-93,105-107
+  s_063531516ed0f0::t_a0ba402c8e5983 14-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6d46157656532dfd5a19548b5f7a2fa441c8d9e4",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_55ddcff33128e6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5dd361ceffecPmRlqWQXKXH2w",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
