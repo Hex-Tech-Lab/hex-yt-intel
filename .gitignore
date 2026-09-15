@@ -17,6 +17,7 @@ test-results/
 playwright-report/
 docs/specs/.env_*
 .env*
+!.env.example
 
 # Windows/WSL filesystem metadata
 *:Zone.Identifier

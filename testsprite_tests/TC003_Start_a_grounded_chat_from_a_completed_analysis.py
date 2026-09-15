@@ -2,6 +2,20 @@ import asyncio
 import re
 from playwright import async_api
 from playwright.async_api import expect
+import os
+
+def _require_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(
+            "Missing required environment variable %r "
+            "(see testsprite_tests/.env.example and export it in your shell first)" % name
+        )
+    return value
+
+TEST_EMAIL = _require_env("TESTSPRITE_TEST_ACCOUNT_EMAIL")
+TEST_PASSWORD = _require_env("TESTSPRITE_TEST_ACCOUNT_PASSWORD")
+
 
 async def run_test():
     pw = None
@@ -45,19 +59,19 @@ async def run_test():
         elem = page.get_by_role('link', name='Sign in', exact=True)
         await elem.click(timeout=10000)
         
-        # -> Fill 'testsprite@getvintel.com' into the Email field, fill 'D4Q8FfRkEB82SMNKyCKT3ZMn' into the Password field, then click the 'Sign in with test account' button.
+        # -> Fill '<test-account email from TESTSPRITE_TEST_ACCOUNT_EMAIL>' into the Email field, fill '<test-account password from TESTSPRITE_TEST_ACCOUNT_PASSWORD>' into the Password field, then click the 'Sign in with test account' button.
         # email email field
         elem = page.get_by_label('Email', exact=True)
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("testsprite@getvintel.com")
+        await elem.fill(TEST_EMAIL)
         
-        # -> Fill 'testsprite@getvintel.com' into the Email field, fill 'D4Q8FfRkEB82SMNKyCKT3ZMn' into the Password field, then click the 'Sign in with test account' button.
+        # -> Fill '<test-account email from TESTSPRITE_TEST_ACCOUNT_EMAIL>' into the Email field, fill '<test-account password from TESTSPRITE_TEST_ACCOUNT_PASSWORD>' into the Password field, then click the 'Sign in with test account' button.
         # password password field
         elem = page.get_by_label('Password', exact=True)
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("D4Q8FfRkEB82SMNKyCKT3ZMn")
+        await elem.fill(TEST_PASSWORD)
         
-        # -> Fill 'testsprite@getvintel.com' into the Email field, fill 'D4Q8FfRkEB82SMNKyCKT3ZMn' into the Password field, then click the 'Sign in with test account' button.
+        # -> Fill '<test-account email from TESTSPRITE_TEST_ACCOUNT_EMAIL>' into the Email field, fill '<test-account password from TESTSPRITE_TEST_ACCOUNT_PASSWORD>' into the Password field, then click the 'Sign in with test account' button.
         # Sign in with test account button
         elem = page.get_by_role('button', name='Sign in with test account', exact=True)
         await elem.click(timeout=10000)
