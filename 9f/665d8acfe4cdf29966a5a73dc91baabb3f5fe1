@@ -1,0 +1,172 @@
+testsprite_tests/TC012_Cancel_a_subscription_and_confirm_the_status_changes.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+testsprite_tests/TC011_Review_a_saved_analysis_from_the_library.py
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+docs/history/THOS_2026-08-19_2358_DOMAIN_MIGRATION_TESTSPRITE_AUTH_BYPASS_DUB.md
+  s_a4df1639a5b66d::t_661404337db017 27,43,107
+  s_a4df1639a5b66d::t_b8b7f5ed578e80 34
+docs/ADR_029_LOCAL_EXTRACTION_FALLBACK_PROPOSAL.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-61
+docs/AUDIT_2026-09-05_10x_laneD_process.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-35
+docs/AUDIT_REPORT_2026-09-05_part3_ci_debt.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-45
+testsprite_tests/.env.example
+  s_a4df1639a5b66d::t_9c4b0eb5a13545 1-12
+docs/history/THOS_2026-08-20_2200_TECHNICAL_HANDOVER_SESSION_CONTINUITY.md
+  s_a4df1639a5b66d::t_661404337db017 99
+testsprite_tests/TC008_Keep_streamed_results_while_reopening_the_analysis_workspace.py
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+testsprite_tests/TC001_Submit_a_YouTube_video_for_live_analysis.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17,62,68,74
+docs/templates/THOS_SPEC.md
+  s_27a98410ea5034::t_71e2ff038bb096 1-220
+testsprite_tests/TC009_Search_for_a_prior_analysis_and_reopen_it.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17,62,68,74
+docs/history/THOS_2026-09-08_1700_9PR_BATCH_SKILL_GAP_SECURITY_TRIAGE_NEEDLE_FIX.md
+  s_27a98410ea5034::t_1fe8092e3af6cb 1-253
+docs/agent-prompts/2026-09-09-oc-adr021-phase3-reaper-requeue-partial.md
+  s_806c0f506228c0::t_bc662dbb6862af 1-205
+docs/history/THOS_2026-08-20_2123_TECHNICAL_HANDOVER_SESSION_CONTINUITY.md
+  s_a4df1639a5b66d::t_661404337db017 126
+testsprite_tests/TC003_Start_a_grounded_chat_from_a_completed_analysis.py
+  s_a4df1639a5b66d::t_701619bca398ec 16-17,62,68,74
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+docs/AUDIT_2026-09-05_10x_laneA_quality.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-50
+docs/agent-prompts/2026-09-13-oc-highlights-transcript-and-status-chips-rca.md
+  s_063531516ed0f0::t_166be04cd1da52 1-46
+docs/AUDIT_REPORT_2026-09-05_part2_adr_checklist.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-38
+docs/agent-prompts/2026-09-07-oc-glm-spark-model-routing-research.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-101
+docs/agent-prompts/2026-09-15-oc-pr313-review-findings.md
+  s_063531516ed0f0::t_d45c6758ceb1bc 1-50
+docs/agent-prompts/2026-09-09-oc-adr021-phase2-presence-check.md
+  s_806c0f506228c0::t_f28b812f4553c1 1-215
+.gitignore
+  s_a4df1639a5b66d::t_eab8e196284d39 20
+testsprite_tests/TC015_Search_for_a_previously_analyzed_video.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+docs/AUDIT_REPORT_2026-09-05_part4_risk_scan.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-39
+testsprite_tests/TC002_Sign_in_and_reach_the_dashboard.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+testsprite_tests/TC005_Search_saved_analyses_and_reopen_a_result.py
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+docs/AUDIT_REPORT_2026-09-05.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-146
+docs/AUDIT_REPORT_2026-09-05_part1_commits.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-60
+docs/agent-prompts/2026-09-07-oc-right-panel-empty-simple-mode.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-144
+docs/history/THOS_2026-09-08_0100_HIGHLIGHTS_RACE_CUBIC_RESPONSE_AND_9PR_BATCH.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-270
+docs/research/2026-09-model-routing-glm-spark-pricing.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-153
+docs/agent-prompts/2026-09-07-oc-pro-simple-toggle-stuck.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-142
+docs/testing/testsprite-first-regression-case.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-40
+docs/history/THOS_2026-09-10_2245_BILLING_FIX_UX_QA_INTEL_RULE_CHECKLIST_REDO_CREDENTIAL_LEAK.md
+  s_814741664a33c5::t_edeea0f2a1be27 1-85
+docs/agent-prompts/2026-09-10-oc-testsprite-credential-leak-remediation.md
+  s_814741664a33c5::t_2bbea32c8d49b7 1-144
+docs/AUDIT_2026-09-05_10x_laneB_frontend.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-34
+docs/history/THOS_2026-09-09_1802_ADR021_PHASE2_PHASE3_AUDIT_MERGE_AND_PHASE4_SCOPING.md
+  s_806c0f506228c0::t_e8424ad17e869c 1-238
+docs/AUDIT_2026-09-05_10x_MASTER.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-87
+docs/agent-prompts/2026-09-15-oc-chat-wordcloud-stream-resilience-rca.md
+  s_063531516ed0f0::t_21d89105f3c38c 1-49
+docs/AUDIT_2026-09-05_10x_laneC_database.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-63
+docs/agent-prompts/2026-09-07-oc-chat-citation-table-links.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-129
+docs/agent-prompts/2026-09-07-oc-highlights-transcript-fallback-indicator.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-122
+docs/research/2026-09-07-rag-graphrag-architecture-review.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-109
+docs/agent-prompts/2026-09-15-oc-pr312-review-findings.md
+  s_063531516ed0f0::t_2006a4aa0f50c1 1-50
+docs/agent-prompts/2026-09-07-oc-skill-sync-reconciliation.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-105
+docs/agent-prompts/2026-09-11-oc-remediation-cron-not-wired.md
+  s_063531516ed0f0::t_0843b61cf29c46 42-66
+  s_063531516ed0f0::t_07d2671a121a5e 1-41
+docs/agent-prompts/2026-09-11-oc-pr310-review-findings.md
+  s_063531516ed0f0::t_02da4ba2fdc2e1 1-54
+testsprite_tests/TC006_Complete_a_subscription_upgrade_and_see_the_updated_plan.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+testsprite_tests/TC004_Reuse_a_previously_analyzed_video_from_cache.py
+  s_a4df1639a5b66d::t_661404337db017 5-15,18,66,72
+  s_a4df1639a5b66d::t_701619bca398ec 16-17
+docs/AUDIT_2026-09-05_10x_laneE_risk.md
+  s_be40705c213a3f::t_c1bb25274f8ff5 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9f665d8acfe4cdf29966a5a73dc91baabb3f5fe1",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_27a98410ea5034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80a822fd-395c-4801-aa6d-79a3df49047c",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_806c0f506228c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fd6110b-fbec-49e3-9317-6eab1bdd4339",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_814741664a33c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6cb758f-a216-4127-b85c-6e3a94e35d35",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a4df1639a5b66d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f73734b28ffe94GD7kiQ0lp8r6",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
