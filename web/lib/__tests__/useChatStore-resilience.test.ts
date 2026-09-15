@@ -60,7 +60,7 @@ describe('useChatStore send resilience (2026-09-15 incident RCA)', () => {
     localStorage.clear();
   });
 
-  it('issues the bouncer fetch WITH a bounded abort signal (previously unbounded)', async () => {
+  it('issues the bouncer fetch WITH a bounded abort signal (previously unbounded)', () => {
     const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -72,8 +72,10 @@ describe('useChatStore send resilience (2026-09-15 incident RCA)', () => {
     expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
 
     // Detach: the hanging promise keeps the microtask queue idle; end the
-    // test without awaiting it.
-    void sendPromise.catch(() => {});
+    // test without awaiting it. Deliberately intentional no-op here (test
+    // cleanup for a promise this test never lets resolve) -- not a
+    // production error path, so nothing to log or surface.
+    void sendPromise.catch(() => undefined);
     useChatStore.setState({ sending: false });
   });
 

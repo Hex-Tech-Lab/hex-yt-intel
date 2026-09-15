@@ -22,9 +22,9 @@
  * persist-payloadless-chunk.test.ts on the web side; this file only owns
  * the extraction + telemetry contract.
  */
+import * as Sentry from '@sentry/cloudflare';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { extractJsonPayload } from '../services/MarkdownReconstructor';
-import * as Sentry from '@sentry/cloudflare';
 
 vi.mock('@sentry/cloudflare', () => ({
   captureException: vi.fn(),
