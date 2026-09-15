@@ -1,0 +1,28 @@
+.memory/AGENT_LEDGER.md
+  s_38790a3d42d002::t_39fa0a8c2863d1 1409
+web/hooks/useKnowledgeGraph.ts
+  s_38790a3d42d002::t_606876a380ed13 20
+  s_38790a3d42d002::t_cfb1627fec3d64 97-108,110-113,131,141-199,201-239,241
+  s_38790a3d42d002::t_f14c03ac71d28b 13
+  s_38790a3d42d002::t_f4aae8acaf7ff9 109,114,130
+web/hooks/useAutoRestoreAnalysis.ts
+  s_38790a3d42d002::t_c9c2bba3c27be6 174,184-185
+  s_38790a3d42d002::t_f54ef48f06f236 170-173,175-183
+  s_38790a3d42d002::t_c89fa0e59c9b4a 78-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6510a8957dd56bc5ef8d19d177a72d32a0d1b73c",
+  "prompts": {},
+  "sessions": {
+    "s_38790a3d42d002": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f599e9ef5ffeL6tN3Ex7Oqch55",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
