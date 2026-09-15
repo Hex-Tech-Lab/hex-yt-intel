@@ -61,8 +61,18 @@ export function useAutoRestoreAnalysis(url: string) {
 
     let cancelled = false;
 
-    // Check if there's already a completed analysis for this videoId
-    const checkAndRestore = async () => {
+    // Check if there's already a completed analysis for this videoId.
+    // Returns 'settled' when this attempt reached a terminal outcome for the
+    // session (restored, genuinely absent, dead row, auth/404) and
+    // 'retryable' when a transient failure (network error / 5xx) prevented
+    // it — the bounded retry driver below re-attempts and re-arms on
+    // offline->online transitions. (2026-09-15, incident video rDhaCLrdWHk:
+    // previously ANY transient failure here was terminal and silent —
+    // `if (!res.ok) return` / console.debug in the outer catch — so a first
+    // load during a connection outage never restored the analysis at all:
+    // no dimensions, no knowledge graph, no WordCloud panel, until a manual
+    // reload after the network returned, exactly the reported symptom.)
+    const checkAndRestore = async (): Promise<'settled' | 'retryable'> => {
       try {
         let res: Response;
         let checkOk = false;
@@ -77,9 +87,9 @@ export function useAutoRestoreAnalysis(url: string) {
           // "restore never happened" report without needing a full repro.
           addBreadcrumb('Auto-restore: check request settled', { videoId, ok: checkOk }, 'auto-restore');
         }
-        if (!res.ok) return;
+        if (!res.ok) return res.status >= 500 ? 'retryable' : 'settled';
         const data = await res.json();
-        if (cancelled) return;
+        if (cancelled) return 'settled';
 
         if (data.exists && data.analysisId) {
           console.log('[AutoRestore] Existing analysis detected for video, fetching details:', data.analysisId);
@@ -148,7 +158,7 @@ export function useAutoRestoreAnalysis(url: string) {
               }
               setStatus('error');
             });
-            return;
+            return 'settled';
           }
 
           // Trigger the restoration flow just like history restoration
@@ -165,9 +175,9 @@ export function useAutoRestoreAnalysis(url: string) {
             // "restore threw before this point" without a full repro.
             addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: restoreOk }, 'auto-restore');
           }
-          if (!restoreRes.ok) return;
+          if (!restoreRes.ok) return restoreRes.status >= 500 ? 'retryable' : 'settled';
           const restoreData = await restoreRes.json();
-          if (cancelled) return;
+          if (cancelled) return 'settled';
 
           let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
 
@@ -327,15 +337,56 @@ export function useAutoRestoreAnalysis(url: string) {
             }
           };
           restoreChatSession();
+          return 'settled';
         }
+        return 'settled';
       } catch (err) {
         console.debug('[AutoRestore] Pre-flight cache check failed:', err);
+        return 'retryable';
       }
     };
-    checkAndRestore();
+
+    // Bounded retry + network-recovery driver (2026-09-15, incident video
+    // rDhaCLrdWHk): both restore fetches previously gave up permanently on a
+    // transient failure, leaving the session without the analysis (no
+    // dimensions -> no WordCloud) until a manual reload. Every attempt is a
+    // pure read (idempotent), all store writes stay guarded by the same
+    // `cancelled` flag as before, and 'settled' outcomes (restored, absent,
+    // dead row, 401/404) are never retried. The 'online' recovery covers a
+    // longer outage than the bounded delays; `restoring` prevents an
+    // in-flight retry cycle and an online event from double-running.
+    const RESTORE_RETRY_DELAYS_MS = [5000, 15000, 60000];
+    let restoring = false;
+    let lastRetryable = false;
+    const runRestoreCycle = async (): Promise<void> => {
+      if (restoring) return;
+      restoring = true;
+      try {
+        let outcome = await checkAndRestore();
+        for (const delay of RESTORE_RETRY_DELAYS_MS) {
+          lastRetryable = outcome === 'retryable';
+          if (cancelled || outcome !== 'retryable') return;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (cancelled) return;
+          outcome = await checkAndRestore();
+        }
+        lastRetryable = outcome === 'retryable';
+      } finally {
+        restoring = false;
+      }
+    };
+    void runRestoreCycle();
+
+    const attemptRecovery = () => {
+      if (cancelled || restoring || !lastRetryable) return;
+      lastRetryable = false;
+      void runRestoreCycle();
+    };
+    window.addEventListener('online', attemptRecovery);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('online', attemptRecovery);
     };
   }, [url, initializeAnalysis, initSynthesis, setStatus, setError, setVideoMetadata]);
 }

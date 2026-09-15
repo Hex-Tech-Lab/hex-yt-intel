@@ -203,3 +203,34 @@ describe('fetchOpenRouterLogs (env.ts-adjacent finding: left as-is, documented n
     expect(documentedAnalyticsPath).not.toBe(currentCodePath);
   });
 });
+
+describe('snapshot route wiring — regression guard (2026-09-15)', () => {
+  it('every exported fetch*Logs/Logs-shaped function in this file is called by the aggregate snapshot route', async () => {
+    // Real incident (2026-09-15): fetchSentryLogs, fetchOpenRouterLogs, and
+    // fetchContractAuditLogs existed here for a real 500-incident RCA but
+    // were never wired into /api/admin/logs/snapshot's Promise.all fan-out,
+    // so the user's own "pull every log source" script silently missed 3 of
+    // 10 providers with no error, no warning -- the exact "exported but
+    // never registered" bug class this repo has hit before (see
+    // UnregisteredRuleExportRule in scripts/quality-engine). This test reads
+    // the actual source text of both files -- not a hardcoded list -- so a
+    // future new fetcher that's added to fetchers.ts but never wired into
+    // the route fails this test instead of silently missing forever.
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const fetchersSrc = fs.readFileSync(path.join(__dirname, 'fetchers.ts'), 'utf8');
+    const routeSrc = fs.readFileSync(
+      path.join(__dirname, '../../app/api/admin/logs/snapshot/route.ts'),
+      'utf8'
+    );
+
+    const exportedFetcherNames = Array.from(
+      fetchersSrc.matchAll(/^export async function (fetch[A-Za-z]+)\(/gm)
+    ).map((m) => m[1]);
+
+    expect(exportedFetcherNames.length).toBeGreaterThan(0);
+
+    const notWired = exportedFetcherNames.filter((name) => !routeSrc.includes(name));
+    expect(notWired).toEqual([]);
+  });
+});

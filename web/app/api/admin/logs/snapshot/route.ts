@@ -11,6 +11,9 @@ import {
   fetchVercelLogs,
   fetchSupabaseLogs,
   fetchCloudflareLogs,
+  fetchSentryLogs,
+  fetchOpenRouterLogs,
+  fetchContractAuditLogs,
 } from '@/lib/admin-logs/fetchers';
 
 const SIG_TTL_MS = 60_000;
@@ -51,10 +54,16 @@ async function verifySnapshotHmac(request: NextRequest): Promise<boolean> {
 /**
  * GET /api/admin/logs/snapshot — single-call aggregate of every admin log
  * provider (synthesis, QStash, Upstash Redis/Vector, Vercel, Supabase,
- * Cloudflare), fanned out in-process via Promise.all against the same
- * fetch/format functions the individual /api/admin/logs/<provider> routes
- * use (web/lib/admin-logs/fetchers.ts) -- no duplicated logic, no 8 separate
- * external round-trips from the caller.
+ * Cloudflare, Sentry, OpenRouter, Contract Audit), fanned out in-process via
+ * Promise.all against the same fetch/format functions the individual
+ * /api/admin/logs/<provider> routes use (web/lib/admin-logs/fetchers.ts) --
+ * no duplicated logic, no 10 separate external round-trips from the caller.
+ *
+ * 2026-09-15: Sentry/OpenRouter/Contract Audit were added here after a real
+ * incident RCA found they'd existed in fetchers.ts for a while but were
+ * never wired in -- see the regression-guard test in
+ * web/lib/admin-logs/fetchers.test.ts ("snapshot route wiring") that fails
+ * if a future new fetcher is added here without also being wired below.
  *
  * Auth: admin session (browser) OR a signed HMAC header pair
  * (X-Snapshot-Sig / X-Snapshot-Exp, see verifySnapshotHmac) for
@@ -71,7 +80,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = new URL(request.url);
 
-  const [synthesis, qstash, upstashRedis, upstashVector, vercel, supabase, cloudflare] = await Promise.all([
+  const [synthesis, qstash, upstashRedis, upstashVector, vercel, supabase, cloudflare, sentry, openRouter, contractAudit] = await Promise.all([
     fetchSynthesisLogs(searchParams),
     fetchQstashLogs(searchParams),
     fetchUpstashRedisLogs(searchParams),
@@ -79,6 +88,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     fetchVercelLogs(searchParams),
     fetchSupabaseLogs(searchParams),
     fetchCloudflareLogs(searchParams),
+    fetchSentryLogs(searchParams),
+    fetchOpenRouterLogs(searchParams),
+    fetchContractAuditLogs(searchParams),
   ]);
 
   return NextResponse.json({
@@ -90,5 +102,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     vercel: vercel.body,
     supabase: supabase.body,
     cloudflare: cloudflare.body,
+    sentry: sentry.body,
+    openRouter: openRouter.body,
+    contractAudit: contractAudit.body,
   });
 }

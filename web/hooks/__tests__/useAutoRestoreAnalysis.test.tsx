@@ -28,7 +28,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, cleanup, waitFor } from '@testing-library/react';
+import { renderHook, cleanup, waitFor, act } from '@testing-library/react';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -396,6 +396,126 @@ describe('useAutoRestoreAnalysis URL-paste auto-restore flow', () => {
     });
 
     unmount();
+  });
+});
+
+describe('useAutoRestoreAnalysis transient-failure retry (2026-09-15 incident RCA, video rDhaCLrdWHk)', () => {
+  beforeEach(() => {
+    // Same store hygiene as the main describe above -- without it, store
+    // state hydrated by earlier tests in this file leaks into these.
+    useAnalysisStore.getState().clearAnalysis();
+    useSynthesisNucleus.getState().reset();
+    useChatStore.getState().reset();
+    useVideoStore.getState().reset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function countCheckCalls(fetchMock: ReturnType<typeof vi.fn>): number {
+    return fetchMock.mock.calls.filter(([input]) => String(input).includes('/api/analyses/check')).length;
+  }
+
+  it('retries a transient 500 from the check route and completes the restore', async () => {
+    vi.useFakeTimers();
+    let checkCalls = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        checkCalls++;
+        if (checkCalls === 1) {
+          return Promise.resolve(new Response('{"error":"Internal server error"}', { status: 500 }));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'complete' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+      if (url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        return Promise.resolve(
+          new Response(JSON.stringify(RESTORE_RESPONSE), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAutoRestoreAnalysis(PASTED_URL));
+
+    // First attempt (500) fires immediately; the first retry delay is 5s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000);
+    });
+
+    expect(countCheckCalls(fetchMock)).toBe(2);
+    expect(useAnalysisStore.getState().analysis?.id).toBe(ANALYSIS_ID);
+    expect(useAnalysisStore.getState().status).toBe('complete');
+    expect(useSynthesisNucleus.getState().analysis?.id).toBe(ANALYSIS_ID);
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not retry a 401 from the check route (permanent by nature)', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(new Response('{"error":"Unauthorized"}', { status: 401 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAutoRestoreAnalysis(PASTED_URL));
+
+    // Advance past ALL retry delays — a 4xx must have ended the cycle.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+    });
+
+    expect(countCheckCalls(fetchMock)).toBe(1);
+    expect(useAnalysisStore.getState().analysis?.id).toBeUndefined();
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it('re-arms a full retry cycle on the online event after the bounded delays exhausted during a long outage', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(new Response('{"error":"Internal server error"}', { status: 500 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAutoRestoreAnalysis(PASTED_URL));
+
+    // Exhaust the bounded budget: 1 attempt + 3 retries at 5s/15s/60s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+    });
+    const checksAfterExhaustion = countCheckCalls(fetchMock);
+    expect(checksAfterExhaustion).toBe(4);
+
+    // Network returns: exactly one more attempt — bounded by the real
+    // offline->online transition, not a poll loop.
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(countCheckCalls(fetchMock)).toBe(checksAfterExhaustion + 1);
+
+    unmount();
+    vi.unstubAllGlobals();
   });
 });
 

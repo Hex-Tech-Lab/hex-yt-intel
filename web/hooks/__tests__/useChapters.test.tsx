@@ -157,3 +157,78 @@ describe('useChapters remount/reset behavior', () => {
     unmount();
   });
 });
+
+describe('useChapters network-recovery refetch (2026-09-15 incident RCA, video rDhaCLrdWHk)', () => {
+  beforeEach(() => {
+    useChaptersStore.setState({ entries: {}, generations: {} });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('retries exhausted during an outage re-arm a fresh fetch on the next online event', async () => {
+    // All MAX_RETRIES attempts fail with a network error (the connection is
+    // down) — the entry lands in 'error' permanently, exactly the incident
+    // shape: ~31s of backoff against an outage that lasted ~100 minutes, so
+    // the Chapters chip stayed grey for the whole session until a manual
+    // refresh after the network returned.
+    const fetchMock = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-outage'));
+
+    // Advance well past the full backoff schedule (1+2+4+8+16 = 31s).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(useChaptersStore.getState().entries['vid-outage']?.status).toBe('error');
+    const attemptsAfterError = fetchMock.mock.calls.length;
+    expect(attemptsAfterError).toBe(5); // MAX_RETRIES, then permanent
+
+    // Simulate the network returning: the hook must reset the errored
+    // entry (bumping generation), which restarts its own fetch.
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(10);
+    });
+
+    await vi.waitFor(() => {
+      expect(useChaptersStore.getState().entries['vid-outage']?.status).toBe('loading');
+    });
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(attemptsAfterError);
+
+    // A second online event while NOT in error must not spam extra fetches.
+    const attemptsAfterRecovery = fetchMock.mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(attemptsAfterRecovery);
+  });
+
+  it('online event does nothing when the entry already settled (loaded)', async () => {
+    let resolvePromise: (response: Response) => void = () => {};
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => { resolvePromise = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-ok'));
+    await act(() => {
+      resolvePromise(okResponse({ chapters: [{ idx: 0, start_seconds: 0, end_seconds: 10, label: 'Intro' }], confirmed: true }));
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    await vi.waitFor(() => {
+      expect(useChaptersStore.getState().entries['vid-ok']?.status).toBe('loaded');
+    });
+
+    const callsBefore = fetchMock.mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(fetchMock.mock.calls.length).toBe(callsBefore); // no spurious refetch
+  });
+});

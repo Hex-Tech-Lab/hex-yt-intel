@@ -210,10 +210,21 @@ export const useChatStore = create<ChatState>((set, get) => {
       // 1. Bouncer (Vercel): persists the user turn to Postgres, mints an HMAC token, and
       //    returns a descriptor for streaming the reply directly from the worker. Returns
       //    JSON (not SSE) — the LLM tokens no longer traverse this Vercel function.
+      //
+      //    Bounded (2026-09-15, incident video rDhaCLrdWHk): this fetch previously had no
+      //    timeout, so a stalled connection (mid-outage flapping connectivity) hung
+      //    deliver() forever with `sending: true` — ChatDock.submit's own
+      //    `if (!t || sending) return` guard then silently dropped every subsequent
+      //    message (input cleared, nothing sent, no error), and flushOutbox early-returned
+      //    on the same stuck flag, so the reconnect replay never fired either. Matches
+      //    the sibling bounded timeouts in this file (50s stream fetch / 25s SSE read);
+      //    the bouncer is a fast Vercel round-trip (persist user turn + mint token), so
+      //    a generous-but-finite ceiling is safe.
       const res = await fetch(`/api/chat/conversations/${convId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, clientMsgId }),
+        signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       const job = await res.json();
@@ -587,6 +598,18 @@ export const useChatStore = create<ChatState>((set, get) => {
         // Stays in outbox; user bubble kept, pending assistant bubble NOT stripped — retry loop needs full context.
         const { msg } = handleChatStreamError(e, { convId: convId!, clientMsgId, action: 'sendMessage' }, get().setPersistState);
         set({ error: msg || 'Send failed (queued for retry)' });
+        // The error text above promises "queued for retry" — honor it (2026-09-15,
+        // incident video rDhaCLrdWHk): the only automatic replay trigger previously
+        // was the window 'online' event, which does NOT fire for a failure that
+        // happened while already online (a 500, a timeout, a flapping connection
+        // that never dropped the browser's online flag), so a failed message sat in
+        // the outbox until the next reload with no retry. One bounded, delayed
+        // re-flush attempt covers that case; server-side dedupe on clientMsgId
+        // makes the replay idempotent (ProcessChatMessageUseCase returns the
+        // already-generated reply for a retry), and flushOutbox's own failures
+        // don't schedule further retries (only 'online' events do), so this stays
+        // bounded. Runs after the finally below cleared `sending`.
+        setTimeout(() => { void get().flushOutbox(); }, 3000);
       } finally {
         set({ sending: false });
       }
