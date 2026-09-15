@@ -174,6 +174,42 @@ export interface AnalysisPersistencePort {
     guardBillingStatus?: string;
   }): Promise<{ updated: boolean }>;
 
+  /**
+   * Record a failed remediation attempt on a partial row WITHOUT touching its
+   * content: bumps `remediation_retry_count` inside `validation_report` (the
+   * ADR 021 shared ceiling counter) so the dimension-remediation harness's
+   * candidate gate (`retryCount >= remediation.maxRetries`) actually bounds
+   * rows whose worker calls persistently fail. Before 2026-09-11 only the
+   * StillPartial persist path incremented the counter, so a row that never
+   * produced a usable worker response was retried every 5-minute tick forever
+   * — the 2026-09-01 live incident burned the entire monthly remediation
+   * hardCap ($2.00) in 35 minutes on 12 such rows (88 usage_log events) and
+   * every remediation tick since then silently no-op'd.
+   *
+   * P1c (PR #310 post-merge review, 2026-09-11): implemented as the
+   * `record_remediation_failure` RPC, which merges ONLY the fields this
+   * operation owns (retry count, last-failure-at/stage) into the row's
+   * CURRENT validation_report atomically — never a full-report overwrite,
+   * which could clobber a concurrent writer's unrelated-field changes.
+   *
+   * `guardBillingStatus` + `previousRetryCount` make this a conditional
+   * double-guard (`billing_status = guardBillingStatus` AND the report's
+   * retry count still equal to the snapshot the caller read), the same race
+   * shape as the reaper's tryRequeuePartial — a concurrent legitimate change
+   * (re-analyze, reap) always wins and this write reports `updated: false`.
+   * A thrown error is a GENUINE persistence failure (not a lost race): the
+   * caller (dimension-remediation.ts's persistRemediationFailureCounter)
+   * retries with backoff and then quarantines the row, so unbounded retries
+   * remain impossible even when the counter cannot be written (P1b).
+   */
+  recordRemediationFailure(params: {
+    analysisId: string;
+    previousRetryCount: number;
+    failedStage: string;
+    failedAt: string;
+    guardBillingStatus: string;
+  }): Promise<{ updated: boolean }>;
+
   persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;

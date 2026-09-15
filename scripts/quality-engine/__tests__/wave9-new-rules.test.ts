@@ -7,6 +7,7 @@
 
 import { test, describe, expect } from 'vitest';
 import { SourceFile, Project } from 'ts-morph';
+import { VariableNamingRule } from '../rules/quality';
 
 // Helper to create a test source file
 function createTestSource(code: string): SourceFile {
@@ -76,7 +77,85 @@ describe('WAVE 9: New Quality Rules', () => {
       const answer = processQuestion(q);
     `;
     const source = createTestSource(code);
-    expect(source.getText()).toContain('const q =');
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should NOT flag a single-letter callback-arrow parameter passed directly as a call argument (2026-09-10 fix)', () => {
+    // Confirmed false positive this exact codebase hit: Zustand selectors
+    // (`useFooStore((s) => s.bar)`) and array-method callbacks
+    // (`.map((x) => ...)`) are a near-universal functional idiom, not
+    // unclear naming -- the callback's whole referent is the call site's
+    // single argument.
+    // Positive control (`const p = items.length;`) in the same fixture
+    // proves the rule engine actually traversed and ran -- a negative-only
+    // assertion can't distinguish "exemption worked" from "rule silently
+    // found nothing at all" (2026-09-11, external review finding #5).
+    const code = `
+      const error = useAnalysisStore((s) => s.error);
+      const doubled = items.map((n) => n * 2);
+      const p = items.length;
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'s'"))).toBe(false);
+    expect(findings.some(f => f.title.includes("'n'"))).toBe(false);
+    expect(findings.some(f => f.title.includes("'p'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter parameter on a NAMED (non-inline-callback) function', () => {
+    // Guards against over-widening the exemption: a single-letter param on a
+    // function declaration (not an inline callback argument) is still
+    // genuinely unclear and must still fire.
+    const code = `
+      function process(q: string) {
+        return q.trim();
+      }
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter parameter on an IMMEDIATELY-INVOKED arrow function (2026-09-10 fix, external review on PR #307)', () => {
+    // The arrow's parent IS a CallExpression here too (`((q) => q.trim())()`),
+    // but as the call's CALLEE, not as one of its arguments -- the exemption
+    // must check that the arrow appears in the call's own argument list, not
+    // just that its parent node-kind is a CallExpression. Without that
+    // distinction this exact IIFE shape was a false-negative: a genuinely
+    // unclear 'q' silently stopped being reported.
+    const code = `
+      const trimmed = ((q: string) => q.trim())('  hello  ');
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter REST parameter in a callback arrow (2026-09-11 fix, external review finding #1)', () => {
+    // A rest parameter (`(...q) => q.length`) also satisfies
+    // `getParameters().length === 1`, but `q` represents a variable-length
+    // collection, not the single callback value the exemption covers -- it
+    // must still be flagged. The exemption explicitly excludes rest params.
+    const code = `
+      consume((...q) => q.length);
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
+  });
+
+  test('VariableNamingRule should still flag a single-letter 2nd parameter in a multi-param callback (2026-09-11, external review finding #6)', () => {
+    // Proves the "exactly 1 parameter" requirement is actually enforced:
+    // `items.map((value, q) => value + q)` has 2 params, so `q` (the 2nd,
+    // non-callback-shape param) should still be flagged -- not just
+    // documented as excluded.
+    const code = `
+      items.map((value, q) => value + q);
+    `;
+    const source = createTestSource(code);
+    const findings = VariableNamingRule.check(source);
+    expect(findings.some(f => f.title.includes("'q'"))).toBe(true);
   });
 
   test('TimeoutCleanupRule should detect uncleared timeouts', () => {

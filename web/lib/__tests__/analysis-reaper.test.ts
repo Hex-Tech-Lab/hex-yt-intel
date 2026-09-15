@@ -69,10 +69,17 @@ describe('buildSettlePatch', () => {
     expect(patch.validation_report.status).toBe('complete');
   });
 
-  it('marks a usable partial completed-but-not-passed (status partial)', () => {
+  it('marks a usable-but-partial analysis NOT billed (billing requires exactly 100%, 2026-09-10 fix)', () => {
+    // Confirmed live before this fix: 2 production rows (ef5c6f48/LTNVA2iP9YU
+    // -- the ORIGINAL chunk-recovery incident -- and 114e7c1a) were billed
+    // 'completed' at exactly MIN_SALVAGEABLE_DIMENSIONS (8/11). `outcome`
+    // still flips 'completed' at this threshold (it also gates the
+    // requeue-partial branch in processStuckRow -- unrelated to billing), but
+    // billing_status must never follow it below TOTAL_DIMENSIONS.
     const md = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
-    const { patch } = buildSettlePatch(md, null, nowIso);
-    expect(patch.billing_status).toBe('completed');
+    const { outcome, patch } = buildSettlePatch(md, null, nowIso);
+    expect(outcome).toBe('completed');
+    expect(patch.billing_status).toBe('failed');
     expect(patch.validation_passed).toBe(false);
     expect(patch.validation_report.status).toBe('partial');
   });
@@ -195,8 +202,11 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     return { tryChunkRecovery: mod.tryChunkRecovery, persistenceAdapter: new SupabasePersistenceAdapter() as any, updateAnalysisResultMock };
   }
 
-  it('salvages a 4/5-chunk (10/11-dimension) partial set that clears the salvage minimum', async () => {
+  it('salvages a 4/5-chunk (10/11-dimension) partial set into a persisted, unbilled partial (2026-09-10: billing now requires exactly 100%)', async () => {
     // Mirrors the live incident: chunk 2 missing, chunks 1/3/4/5 present.
+    // Confirmed live before this fix: this exact shape (8-10/11 dimensions)
+    // was billed 'completed' on 2 production rows (ef5c6f48/LTNVA2iP9YU --
+    // the ORIGINAL incident this salvage path was built for -- and 114e7c1a).
     const rows = [
       makeChunk(1, [1]),
       makeChunk(3, [2, 4, 6]),
@@ -207,25 +217,36 @@ describe('tryChunkRecovery — partial-set salvage', () => {
 
     const result = await tryChunkRecovery('analysis-1', { persona: 'creator' }, persistenceAdapter);
 
-    expect(result).toEqual({ outcome: 'completed' });
+    expect(result).toEqual({ outcome: 'failed' }); // salvaged content persisted, but not billed short of 100%
     expect(updateAnalysisResultMock).toHaveBeenCalledTimes(1);
     const callArgs = updateAnalysisResultMock.mock.calls[0][0];
     expect(callArgs.payload.dimensions).toHaveLength(TOTAL_DIMENSIONS - 1); // 10 dims recovered
-    expect(callArgs.validationReport.billing_status).toBe('completed');
-    expect(callArgs.validationReport.status).toBe('partial'); // not the full 11
+    expect(callArgs.validationReport.billing_status).toBe('failed');
+    expect(callArgs.validationReport.status).toBe('partial'); // not the full 11 -- remediation-eligible
     expect(callArgs.validationReport.reaped_via).toBe('chunk_recovery_partial');
     expect(callArgs.markdown.length).toBeGreaterThan(0); // content actually preserved, not discarded
   });
 
-  it('falls through (returns null) when the partial set is below the salvage minimum', async () => {
-    // Only 1 dimension recovered -- below MIN_SALVAGEABLE_DIMENSIONS.
+  it('persists even a single recovered dimension as an unbilled partial instead of discarding it (2026-09-10 fix)', async () => {
+    // RCA (video NE-62S4OYCg, analysis 32aeeb78): a row with only 4/11 real
+    // dimensions ($0.065 of genuine spend) used to be discarded entirely by
+    // the old >= MIN_SALVAGEABLE_DIMENSIONS gate here, and was ALSO invisible
+    // to dimension-remediation.ts's cron (status stayed 'failed', markdown
+    // stayed empty) -- permanently stranding real content. Any dimensionCount
+    // > 0 must now be persisted as status='partial' so remediation can see it,
+    // never billed short of 100%.
     const rows = [makeChunk(1, [1])];
     const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
 
     const result = await tryChunkRecovery('analysis-2', null, persistenceAdapter);
 
-    expect(result).toBeNull();
-    expect(updateAnalysisResultMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ outcome: 'failed' });
+    expect(updateAnalysisResultMock).toHaveBeenCalledTimes(1);
+    const callArgs = updateAnalysisResultMock.mock.calls[0][0];
+    expect(callArgs.payload.dimensions).toHaveLength(1);
+    expect(callArgs.validationReport.billing_status).toBe('failed');
+    expect(callArgs.validationReport.status).toBe('partial');
+    expect(callArgs.markdown.length).toBeGreaterThan(0);
   });
 
   it('returns null when there are no completed chunks at all (nothing to salvage)', async () => {
@@ -271,11 +292,14 @@ describe('tryChunkRecovery — partial-set salvage', () => {
 
     const result = await tryChunkRecovery('analysis-5', null, persistenceAdapter);
 
-    expect(result).toEqual({ outcome: 'completed' });
+    // 10/11 salvaged and persisted, but not billed (2026-09-10: billing
+    // requires exactly 100%, not the old MIN_SALVAGEABLE_DIMENSIONS floor).
+    expect(result).toEqual({ outcome: 'failed' });
     const callArgs = updateAnalysisResultMock.mock.calls[0][0];
     expect(callArgs.payload.dimensions).toHaveLength(TOTAL_DIMENSIONS - 1); // 10, not 11
     expect(callArgs.payload.dimensions.some((d: { number: number }) => d.number === 8)).toBe(false);
     expect(callArgs.validationReport.status).toBe('partial'); // not 'done' -- proves dim 8 didn't leak in
+    expect(callArgs.validationReport.billing_status).toBe('failed');
   });
 
   it('retries updateAnalysisResult on a transient failure and still salvages on the second attempt', async () => {
@@ -292,7 +316,8 @@ describe('tryChunkRecovery — partial-set salvage', () => {
 
     const result = await tryChunkRecovery('analysis-6', null, persistenceAdapter);
 
-    expect(result).toEqual({ outcome: 'completed' });
+    // 10/11 salvaged and persisted (retried once), not billed (100%-only rule).
+    expect(result).toEqual({ outcome: 'failed' });
     expect(updateAnalysisResultMock).toHaveBeenCalledTimes(2);
   });
 

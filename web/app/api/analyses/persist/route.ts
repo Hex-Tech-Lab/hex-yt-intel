@@ -433,33 +433,66 @@ export async function POST(request: NextRequest) {
       const priorPayload = (row.analysisPayload as Record<string, any>) || {};
       const isInterrupted = status === 'interrupted';
 
-      if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
+      // RCA (2026-09-13, live video gKgWYFOhZx0, analysis cc71afb9): a chunk
+      // persist whose structured payload extraction failed (the bundle's LLM
+      // output had no parseable JSON envelope and no BracketBuffer captures
+      // → PersistService's markdown-only fallback sends payload:null) used to
+      // FALL THROUGH the chunk-path guard below into the NON-CHUNK finalize
+      // path. That path stitched only the chunks that happened to exist at
+      // that instant (2 of 5 in the live incident) and finalized the parent
+      // row 'partial' — racing the still-streaming bundles. Chunks landing
+      // afterward could never re-finalize the row (isFullyReceived requires
+      // all 5 indices, and the payload-less bundle's index can never produce
+      // a completed chunk), so the row stayed permanently truncated at
+      // 2-chunk coverage — 6/11 dimensions — while 10/11 dimensions sat
+      // fully generated in analysis_chunks. A payload-less chunk persist is
+      // now terminal-for-that-bundle instead of a parent-row finalize: the
+      // chunk is recorded 'failed' (the spend-accounting row the stuck-
+      // analysis reaper's usability filter already expects to skip), and the
+      // completeness check below gains an isFullySettled finalize so the
+      // LAST terminal persist closes the set with the complete partial
+      // stitch. Deliberately NOT applied when status='interrupted' — that
+      // keeps its existing non-chunk interrupted terminal write (rerouting
+      // it would leave a disconnected client's row in 'processing' until the
+      // reaper's grace window elapsed).
+      const isPayloadlessChunk = chunkIndex !== undefined && !validPayload;
+
+      if (chunkIndex !== undefined && ((validPayload && 'dimensions' in validPayload) || (isPayloadlessChunk && !isInterrupted))) {
         // Process this specific chunk; return early if chunk is complete or timeout detected.
-        const dimensionsCovered = Array.isArray(validPayload.dimensions)
+        const dimensionsCovered = validPayload && Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
-        // Diagnostic logging for empty or sparse dimensions
-        const dimensionDetails = (validPayload.dimensions as any[]).map(d => ({
-          number: d.number,
-          hasContent: typeof d.content === 'string' && d.content.trim().length > 0,
-          contentLength: typeof d.content === 'string' ? d.content.length : 0
-        }));
+        if (!isPayloadlessChunk) {
+          // Diagnostic logging for empty or sparse dimensions
+          const dimensionDetails = (validPayload!.dimensions as any[]).map(d => ({
+            number: d.number,
+            hasContent: typeof d.content === 'string' && d.content.trim().length > 0,
+            contentLength: typeof d.content === 'string' ? d.content.length : 0
+          }));
 
-        if (dimensionsCovered.length === 0) {
-          console.warn('[analyses/persist] Chunk arrived with empty dimensions array', {
+          if (dimensionsCovered.length === 0) {
+            console.warn('[analyses/persist] Chunk arrived with empty dimensions array', {
+              analysisId,
+              videoId,
+              chunkIndex,
+              status
+            });
+          } else if (dimensionDetails.some(d => !d.hasContent)) {
+            console.warn('[analyses/persist] Chunk has dimensions with empty content', {
+              analysisId,
+              videoId,
+              chunkIndex,
+              status,
+              dimensionDetails
+            });
+          }
+        } else {
+          console.warn('[analyses/persist] Payload-less chunk persist (markdown-only fallback) recorded as failed chunk, parent row not finalized from it', {
             analysisId,
             videoId,
             chunkIndex,
             status
-          });
-        } else if (dimensionDetails.some(d => !d.hasContent)) {
-          console.warn('[analyses/persist] Chunk has dimensions with empty content', {
-            analysisId,
-            videoId,
-            chunkIndex,
-            status,
-            dimensionDetails
           });
         }
 
@@ -469,7 +502,12 @@ export async function POST(request: NextRequest) {
             chunkIndex,
             dimensionsCovered,
             payload,
-            status,
+            // A payload-less chunk never produced trustworthy dimension
+            // content — 'failed' keeps it out of the stitcher's completed
+            // set, out of the contract check, and inside the reaper's
+            // usability filter (completed-only), while still recording the
+            // bundle's real token spend on the chunk row.
+            status: isPayloadlessChunk ? 'failed' : status,
             tokensUsed,
             costUsd,
             generationId,
@@ -552,9 +590,29 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Set-closed finalize (same RCA as the isPayloadlessChunk comment
+        // above): once EVERY chunk index has a TERMINAL row — 'completed'
+        // OR 'failed' — no future persist can change the outcome, so this
+        // (last) persist finalizes immediately with a partial stitch of the
+        // completed chunks instead of leaving the row 'processing' until
+        // the reaper's grace window elapses. 'interrupted' chunk rows are
+        // deliberately NOT terminal (a retry may still complete them).
+        let isFullySettled = !isFullyReceived && !isInterrupted;
+        if (isFullySettled) {
+          const settledIndexSet = new Set(
+            (chunks ?? []).filter(c => c.status === 'completed' || c.status === 'failed').map(c => c.chunk_index)
+          );
+          for (let i = 1; i <= resolvedTotal; i++) {
+            if (!settledIndexSet.has(i)) {
+              isFullySettled = false;
+              break;
+            }
+          }
+        }
+
         // Check if we've exceeded the timeout window while waiting for chunks
         let exceedsTimeout = false;
-        if (!isFullyReceived && finalChunks.length > 0) {
+        if (!isFullyReceived && !isFullySettled && finalChunks.length > 0) {
           const minimumChunkThreshold = Math.ceil(resolvedTotal * 0.6);
           if (finalChunks.length >= minimumChunkThreshold) {
             const currentTime = Date.now();
@@ -606,7 +664,7 @@ export async function POST(request: NextRequest) {
           return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
         }
 
-        if (isFullyReceived) {
+        if (isFullyReceived || isFullySettled) {
           const chunkMap = new Map<number, any>();
           finalChunks.forEach(c => {
             chunkMap.set(c.chunk_index, c.payload);
@@ -625,8 +683,13 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // If any chunks missing or malformed, fail loudly
-          if (invalidChunks.length > 0) {
+          // If any chunks missing or malformed, fail loudly.
+          // Full-set only: an isFullySettled finalize is EXPECTED to be
+          // missing completed-chunk payloads for its failed indices (the
+          // same RCA as the isPayloadlessChunk comment above) — those come
+          // from the chunkMap lookup as undefined and must not trigger the
+          // row-failing contract path.
+          if (invalidChunks.length > 0 && isFullyReceived) {
             console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or have invalid dimensions field', {
               analysisId,
               videoId,
@@ -660,8 +723,11 @@ export async function POST(request: NextRequest) {
             return { type: 'error' as const, error: errorMsg, status: 400 };
           }
 
-          // CRITICAL SAFETY CHECK: Verify all expected chunks are present before stitching
-          if (finalChunks.length !== resolvedTotal) {
+          // CRITICAL SAFETY CHECK: Verify all expected chunks are present before stitching.
+          // Full-set only — an isFullySettled finalize legitimately stitches
+          // fewer than resolvedTotal completed chunks (see the RCA comment
+          // on isPayloadlessChunk above).
+          if (isFullyReceived && finalChunks.length !== resolvedTotal) {
             console.error('[analyses/persist] Safety halt: incomplete chunk set detected before stitching', {
               analysisId,
               persisted: finalChunks.length,
@@ -700,6 +766,19 @@ export async function POST(request: NextRequest) {
 
           const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(stitchedPayload);
           const finalStatus = isStitchedValid ? computedValidationStatus : 'partial';
+          // Completeness-gated, NOT the raw isStitchedValid -- isStitchedValid
+          // is schema validity alone (a single-dimension payload parses the
+          // schema fine), independent of dimension completeness. This value
+          // gets written straight to the analyses.validation_passed DB
+          // column (via updateAnalysisResult below), which
+          // SupabaseAnalysisAdapter.getUserHistory's status mapper checks
+          // via `!!analysis.validation_passed` as an OR alongside
+          // billing_status==='completed' -- passing the raw flag there
+          // reports a partial (even 1/11) analysis as 'completed' in the
+          // customer's History list despite billing_status correctly saying
+          // 'failed'. Confirmed live on 3 production rows before this fix
+          // (PR #306 review).
+          const isFullyValidated = isStitchedValid && finalStatus === 'done';
           const { channelMeta: _priorChannelMeta, comments: _priorComments, ...priorReportSansAux } = priorReport as any;
           const newReport: PersistedValidationReport = {
             ...priorReportSansAux,
@@ -708,7 +787,7 @@ export async function POST(request: NextRequest) {
             billing_status: resolveBillingStatus(cancelled, billingStatus),
             dimension_status: dimensionStatus,
             model_used: model || null,
-            valid: isStitchedValid && finalStatus === 'done',
+            valid: isFullyValidated,
             ...withFreshAuxMetadata(channelMeta, comments),
           };
 
@@ -718,7 +797,7 @@ export async function POST(request: NextRequest) {
               markdown: stitchedMarkdown,
               payload: stitchedPayload ?? null,
               model: model || null,
-              validationPassed: isStitchedValid,
+              validationPassed: isFullyValidated,
               validationReport: newReport,
             }),
             2

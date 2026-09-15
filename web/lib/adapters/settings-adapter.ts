@@ -193,7 +193,16 @@ function getDefaultAdminSettings(): AdminSettings {
     tokenStreamingWindowMs: 25000, // Vercel default
     maxRetries: 3,
     retryBackoffMs: 1000,
-    abortOnPartialFailure: true,
+    // ADR 021 Phase 4 (2026-09-11): flipped to `false` to match the module
+    // constant in synthesis.ts. Previously `true`, which meant the module
+    // constant flip to `false` was dead code in production — the adapter
+    // default `true` populated `adminSettings.abortOnPartialFailure` before
+    // the `?? DEFAULT_ABORT_ON_PARTIAL_FAILURE` fallback in
+    // synthesis-with-settings.ts could ever fire (true is not nullish).
+    // The DB column default (migration 20260712) was also `true`; a new
+    // migration (20260911120000) updates existing rows and changes the
+    // column default to `false` so both code and DB agree.
+    abortOnPartialFailure: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

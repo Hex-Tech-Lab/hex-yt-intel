@@ -161,3 +161,120 @@ describe('useKnowledgeGraph client-side fallback', () => {
     unmount();
   });
 });
+
+describe('useKnowledgeGraph fetch resilience (2026-09-15 incident RCA, video rDhaCLrdWHk)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    cleanup();
+    useSynthesisNucleus.getState().reset();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  function seedAnalysis(id: string) {
+    useSynthesisNucleus.getState().initializeAnalysis({
+      id,
+      videoId: `${id}-video`,
+      title: 'Fetch resilience test',
+      dimensions: {},
+    });
+  }
+
+  it('retries a transient 5xx with backoff and renders the graph when a retry succeeds', async () => {
+    seedAnalysis('analysis-kg-retry-5xx');
+    const okBody = { entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }], relations: [] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{"error":"Internal server error"}', { status: 500 }))
+      .mockResolvedValueOnce(new Response('{"error":"Internal server error"}', { status: 500 }))
+      .mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-retry-5xx'));
+
+    // Attempt 1 fires immediately (500), retry 1 after 5s, retry 2 after 10s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.current.graph.nodes.length).toBe(1);
+    unmount();
+  });
+
+  it('does not retry a 4xx response (permanent by nature)', async () => {
+    seedAnalysis('analysis-kg-retry-404');
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"error":"Analysis not found"}', { status: 404 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-retry-404'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.loading).toBe(false);
+    unmount();
+  });
+
+  it('re-arms the fetch on the online event after all retries exhausted during an outage', async () => {
+    seedAnalysis('analysis-kg-retry-online');
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"error":"Internal server error"}', { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-retry-online'));
+
+    // Exhaust the bounded retry budget: attempt + 3 retries at 5s/10s/15s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31_000);
+    });
+    const attemptsAfterExhaustion = fetchMock.mock.calls.length;
+    expect(attemptsAfterExhaustion).toBe(4);
+
+    // Network returns: exactly one more attempt, bounded by the real event.
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(fetchMock.mock.calls.length).toBe(attemptsAfterExhaustion + 1);
+
+    unmount();
+  });
+
+  it('enabled flipping false->true (entitlements resolve after mount) triggers the fetch that the [analysisId]-only deps previously skipped', async () => {
+    // Second, independent first-load root cause confirmed in the same RCA:
+    // useEffectiveViewMode is 'simple' while entitlements load (defaultFree
+    // has canAccessKnowledgeGraph=false), so `enabled` starts false and
+    // flips true a moment later — but the fetch effect's dependency array
+    // was [analysisId] only, so the flip never (re)fired and ADR 023-style
+    // rows (empty payload knowledgeGraph) rendered no WordCloud panel at
+    // all for the whole session.
+    seedAnalysis('analysis-kg-enabled-flip');
+    const okBody = { entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }], relations: [] };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Mount with enabled=false — the exact fresh-load sequence.
+    const { result, rerender, unmount } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useKnowledgeGraph('analysis-kg-enabled-flip', enabled),
+      { initialProps: { enabled: false } }
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // Entitlements resolve -> enabled flips true -> fetch must fire now.
+    rerender({ enabled: true });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.graph.nodes.length).toBe(1);
+
+    unmount();
+  });
+});

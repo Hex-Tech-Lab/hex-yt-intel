@@ -60,7 +60,25 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
   // Fetch persisted payload if completed and not yet present in memory
   useEffect(() => {
     if (!analysisId || status !== 'complete') return;
-    if (payloadForThisAnalysis) return; // Already present in memory
+    if (payloadForThisAnalysis) {
+      // RCA (2026-09-13, live video gKgWYFOhZx0): the LIVE streaming path
+      // seeds rawAnalysisPayload with a description-only stub
+      // (useSSEStream.ts deliberately excludes channelMeta/comments --
+      // "genuine LLM synthesis output, only written by
+      // stitch-analysis-chunks.ts once the analysis completes"). That stub
+      // can never gain those fields, and this guard previously blocked the
+      // persisted-payload fetch forever, so a live-watched analysis showed
+      // Channel Meta / Comments chips gray for the whole session even when
+      // the persisted row had both. Distinguish the stub from a restored
+      // payload: a stitched payload always carries a dimensions array (the
+      // UCIS schema requires it), the live stub never does. Only the stub
+      // shape triggers the one completion-time refetch; a restored payload
+      // (fetched-for analysisId, dimensions present) keeps skipping.
+      const looksLikeLiveStub = !Array.isArray(
+        (payloadForThisAnalysis as { dimensions?: unknown }).dimensions
+      );
+      if (!looksLikeLiveStub) return;
+    }
     if (fetchedForRef.current === analysisId) return;
     fetchedForRef.current = analysisId;
 

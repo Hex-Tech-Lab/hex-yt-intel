@@ -243,6 +243,49 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return { updated: true };
   }
 
+  /**
+   * CAS-guarded failure-counter bump for the dimension-remediation harness.
+   * P1c (PR #310 post-merge review, 2026-09-11): the previous implementation
+   * wrote the caller's FULL validation_report snapshot with a table
+   * `.update()`, so a concurrent writer that changed OTHER validation_report
+   * fields between this method's read and write (while billing_status and
+   * retry_count stayed the same) had its changes silently clobbered. It now
+   * goes through the `record_remediation_failure` RPC
+   * (20260911201000_record_remediation_failure_atomic.sql), which merges ONLY
+   * the fields this operation owns into the row's CURRENT jsonb atomically —
+   * there is no stale snapshot to clobber with — keeping the same
+   * expected-retry-count CAS as the PostgREST OR-filter it replaced (absent-
+   * or-0 for the first counted failure, exact N afterwards) and the
+   * billing_status guard. `updated: false` means a concurrent legitimate
+   * change (re-analyze, reap) owns the row now — a lost race, NOT an error.
+   * The known under-enforcement on a concurrent collision is the same
+   * documented, accepted trade-off — it can only UNDER-count, never
+   * over-count, so the ceiling still binds eventually.
+   */
+  // skipcq: JS-0105 -- this method's logic never needs `this` (same pattern
+  // as the sibling findAnalysisChunkCoverage below); it stays an instance
+  // method because AnalysisPersistencePort requires it, and adding a second
+  // such method should not read as a NEW class-methods-use-this violation
+  // just because it's new code.
+  async recordRemediationFailure(params: {
+    analysisId: string;
+    previousRetryCount: number;
+    failedStage: string;
+    failedAt: string;
+    guardBillingStatus: string;
+  }): Promise<{ updated: boolean }> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service.rpc('record_remediation_failure', {
+      p_analysis_id: params.analysisId,
+      p_guard_billing_status: params.guardBillingStatus,
+      p_expected_retry_count: params.previousRetryCount,
+      p_failure_stage: params.failedStage,
+      p_failed_at: params.failedAt,
+    });
+    if (error) throw error;
+    return { updated: data === true };
+  }
+
   // --- Chat Adapter Delegation ---
   getConversations(userId: string): Promise<ChatConversation[]> {
     return SupabaseChatAdapter.getConversations(userId);
@@ -374,6 +417,29 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   // --- Chunks ---
+
+  /**
+   * Persist a single analysis chunk with monotonic-status guard.
+   *
+   * ADR 021 Phase 4 (2026-09-11, PR #305 P1 fix): when a bundle's retry
+   * succeeds after the first attempt failed mid-stream, the worker's
+   * delayed `interrupted` persist (fired via `waitUntil` from the abort
+   * path) can land AFTER the retry's `completed` persist — both target the
+   * same `analysis_id` + `chunk_index`. A blind upsert would let the late
+   * `interrupted` write overwrite the good `completed` result, making a
+   * genuinely-recovered bundle invisible to (or falsely eligible for) the
+   * remediation cron.
+   *
+   * Guard: an `interrupted` write must never overwrite a row already at
+   * `completed`. Uses the same CAS-style guarded-update pattern as
+   * `analysis-requeue.ts`'s `tryRequeuePartial`:
+   *   1. UPDATE ... WHERE status != 'completed' (only updates non-completed rows)
+   *   2. If count=0 (row missing OR already completed): INSERT with
+   *      ignoreDuplicates so a race-inserted 'completed' row is silently
+   *      skipped instead of overwritten.
+   * `completed` and `failed` writes use the original blind upsert — a
+   * later completed result SHOULD replace an earlier interrupted one.
+   */
   async persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
@@ -386,19 +452,65 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
+      const rowData = {
+        analysis_id: params.analysisId,
+        chunk_index: params.chunkIndex,
+        dimensions_covered: params.dimensionsCovered,
+        payload: params.payload ?? {},
+        status: params.status,
+        tokens_used: params.tokensUsed ?? 0,
+        cost_usd: params.costUsd ?? 0,
+        openrouter_generation_id: params.generationId ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+        // Monotonic guard: interrupted AND failed writes must not overwrite
+        // completed. ('failed' is sent by the persist route for payload-less
+        // chunk persists, RCA 2026-09-13 — a lost-response retry can never
+        // follow a successful same-index persist via the single-success
+        // atomicPersist caller, but the guard makes that invariant
+        // database-enforced instead of caller-trust.)
+        if (params.status !== 'completed') {
+        const { error: updErr, count } = await service
+          .from('analysis_chunks')
+          .update(rowData, { count: 'exact' })
+          .eq('analysis_id', params.analysisId)
+          .eq('chunk_index', params.chunkIndex)
+          .neq('status', 'completed');
+
+        if (updErr) {
+          console.error('[SupabasePersistenceAdapter] persistAnalysisChunk guarded update failed:', updErr.message);
+          throw updErr;
+        }
+
+        // count truthy: row existed and was not 'completed' — updated successfully.
+        // !count (0 or null): row either doesn't exist (need INSERT) or is already
+        // 'completed' (must not overwrite). upsert with ignoreDuplicates
+        // handles both: inserts if missing, silently skips if a row exists.
+        if (!count) {
+          const { error: insErr } = await service
+            .from('analysis_chunks')
+            .upsert(rowData, {
+              onConflict: 'analysis_id,chunk_index',
+              ignoreDuplicates: true,
+            });
+
+          if (insErr) {
+            console.error('[SupabasePersistenceAdapter] persistAnalysisChunk insert-fallback failed:', insErr.message);
+            throw insErr;
+          }
+          // If the row already existed (completed), the upsert was silently
+          // skipped — the monotonic guarantee: interrupted/failed must not
+          // overwrite completed.
+        }
+        return;
+      }
+
+      // completed: blind upsert (later completed replaces earlier
+      // interrupted — the correct precedence direction).
       const { error } = await service
         .from('analysis_chunks')
-        .upsert({
-          analysis_id: params.analysisId,
-          chunk_index: params.chunkIndex,
-          dimensions_covered: params.dimensionsCovered,
-          payload: params.payload ?? {},
-          status: params.status,
-          tokens_used: params.tokensUsed ?? 0,
-          cost_usd: params.costUsd ?? 0,
-          openrouter_generation_id: params.generationId ?? null,
-          updated_at: new Date().toISOString(),
-        }, {
+        .upsert(rowData, {
           onConflict: 'analysis_id,chunk_index'
         });
 

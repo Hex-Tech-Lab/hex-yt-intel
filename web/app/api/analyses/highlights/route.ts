@@ -91,8 +91,19 @@ export async function GET(request: NextRequest) {
     summary: (row.summary ?? row.description ?? (row as Record<string, unknown>).text ?? '') as unknown,
     idx: row.idx,
     label: row.label,
-    verbatim_excerpt: row.verbatim_excerpt,
-    takeaway_idx: row.takeaway_idx,
+    // RCA (2026-09-13, live report, analysis cc71afb9/gKgWYFOhZx0): PR #281
+    // (de36e565) rewrote this mapping and renamed the response keys to
+    // snake_case (`verbatim_excerpt`/`takeaway_idx`) while every consumer
+    // -- HighlightsScrubber.tsx (interface Highlight) and HighlightsTrack
+    // -- reads the camelCase `verbatimExcerpt`/`takeawayIdx` this endpoint
+    // emitted pre-#281. With no mapping between res.json() and render, the
+    // camelCase field was ALWAYS undefined, so every keypoint with a
+    // verbatim excerpt stored in analysis_highlights rendered the
+    // "No verbatim transcript excerpt is stored" fallback + SUMMARIZED
+    // badge. Restore the pre-#281 camelCase keys; the share-page path
+    // (SupabaseAnalysisAdapter.findHighlightsForAnalysis) never broke.
+    verbatimExcerpt: row.verbatim_excerpt ?? null,
+    takeawayIdx: row.takeaway_idx ?? null,
   }));
 
   const parsedResponse = HighlightsResponseSchema.safeParse({

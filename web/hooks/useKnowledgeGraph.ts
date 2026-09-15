@@ -22,6 +22,17 @@ const EMPTY: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 // Default dimension used for knowledge-graph extraction fallback (Dimension 8)
 const DEFAULT_KG_EXTRACTION_DIMENSION = 8;
 
+// Bounded retry budget for the /graph fetch (2026-09-15, incident video
+// rDhaCLrdWHk): the fetch previously ran exactly once per analysisId — a
+// network drop or a transient 5xx left the graph permanently empty for the
+// session (WordCloud panel never rendered for ADR 023-style rows with no
+// worker-provided knowledgeGraph), with the failure swallowed silently.
+// 3 attempts at 5s/10s spacing, plus a re-arm on each offline->online
+// transition (bounded by real network events, not a poll loop). 4xx
+// (401/404) are permanent by nature and never retried.
+const MAX_GRAPH_FETCH_RETRIES = 3;
+const GRAPH_RETRY_BASE_DELAY_MS = 5000;
+
 // Single engine + synthesizer instance (stateless, safe to reuse).
 const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
 
@@ -68,14 +79,29 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
     }
 
     let cancelled = false;
-    setLoading(true);
-    setLoadedFromApi(false);
-    fetch(`/api/analyses/${encodeURIComponent(analysisId)}/graph`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
+    let lastAttemptFailed = false;
+
+    const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const fetchGraph = async (attempt = 0): Promise<void> => {
+      setLoading(true);
+      setLoadedFromApi(false);
+      try {
+        const res = await fetch(`/api/analyses/${encodeURIComponent(analysisId)}/graph`);
+        if (cancelled) return;
+        if (!res.ok) {
+          // 5xx (and only 5xx) is a potentially-transient server-side failure
+          // (e.g. verifyResourceOwnership's authenticate() throwing on a
+          // flapping connection returns 500) — retry bounded before giving
+          // up. 4xx is permanent (auth/ownership/not-found): fail now.
+          if (res.status >= 500 && attempt < MAX_GRAPH_FETCH_RETRIES) {
+            await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
+            if (cancelled) return;
+            return fetchGraph(attempt + 1);
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
         if (cancelled) return;
         // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
         // kg_entities table has NO `dimension` column (see
@@ -161,17 +187,39 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
           setLoadedFromApi(false);
         }
         setLoading(false);
-      })
-      .catch(() => {
+      } catch (error) {
         if (!cancelled) {
+          lastAttemptFailed = true;
+          // Log the real cause (qa-intel observability finding, 2026-09-15):
+          // this hook previously swallowed every fetch failure silently,
+          // which is exactly the "WordCloud broken with zero diagnostic
+          // trail" incident shape. One warn per exhausted attempt cycle,
+          // not per retry — at most 1 line per /graph fetch failure.
+          console.warn('[useKnowledgeGraph] graph fetch failed:', error instanceof Error ? error.message : String(error));
           // On a fetch error, do not wipe a synthesized fallback graph either.
           setLoadedFromApi(false);
           setLoading(false);
         }
-      });
+      }
+    };
 
-    return () => { cancelled = true; };
-  }, [analysisId]);
+    void fetchGraph();
+
+    // Recovery re-arm on offline->online (2026-09-15, incident video
+    // rDhaCLrdWHk): covers the outage case where ALL bounded retries ran
+    // while the connection was still down. Bounded by real network events,
+    // not a poll loop; skipped entirely when the last attempt succeeded.
+    const attemptRecovery = () => {
+      if (cancelled || !lastAttemptFailed) return;
+      void fetchGraph();
+    };
+    window.addEventListener('online', attemptRecovery);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', attemptRecovery);
+    };
+  }, [analysisId, enabled]);
 
   // 2. Client-side Synthesis (fallback/live)
   useEffect(() => {
