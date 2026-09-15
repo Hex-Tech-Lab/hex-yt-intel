@@ -264,4 +264,38 @@ describe('useChapters network-recovery refetch (2026-09-15 incident RCA, video r
     });
     expect(fetchMock.mock.calls.length).toBe(callsBefore); // no spurious refetch
   });
+
+  it('P0-1: a chapters fetch whose body (.json()) never settles is aborted by the timeout and enters the backoff loop (not stuck loading forever)', async () => {
+    // The body-level timeout gap: the old helper cleared the timer once
+    // headers arrived, leaving a stalled .json() uncovered. The callback
+    // shape keeps the timer armed through body consumption — a stalled
+    // .json() aborts on the same 10s schedule a stalled connection does,
+    // and the backoff loop advances instead of hanging in 'loading'.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const res = new Response('not-json', { status: 200 });
+      res.json = () =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+        });
+      return Promise.resolve(res);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-body-stall'));
+    expect(useChaptersStore.getState().entries['vid-body-stall']?.status).toBe('loading');
+
+    // Attempt 1: body timeout at 10s -> 1s backoff -> attempt 2 at ~11s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Full backoff schedule exhausts MAX_RETRIES and settles at 'error'
+    // instead of hanging in 'loading' forever.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    expect(useChaptersStore.getState().entries['vid-body-stall']?.status).toBe('error');
+    expect(fetchMock).toHaveBeenCalledTimes(5); // MAX_RETRIES
+  });
 });

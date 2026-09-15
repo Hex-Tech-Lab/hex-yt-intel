@@ -10,13 +10,14 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { PERSONA_DIMENSIONS } from '@/lib/types/persona';
 import { KnowledgeGraphSynthesizer } from '@/lib/intelligence/knowledge-graph';
 import { TfIdfSimilarityEngine } from '@/lib/intelligence/similarity';
 import { normalizeEntityType } from '@/lib/design/entity-taxonomy';
-import type { KnowledgeGraph, GraphNode, GraphEdge, RelationKind } from '@/lib/types/knowledge-graph';
+import type { KnowledgeGraph, GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 
 const EMPTY: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 
@@ -93,99 +94,37 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
 
     // PR #313 post-merge review (2026-09-15): ONE bounded retry driver for
     // every retryable failure class. A network-level rejection (dropped
-    // connection), a timeout abort (stalled connection), and a 5xx response
-    // all route through the same backoff schedule below. 4xx is permanent
-    // (auth/ownership/not-found): fails immediately, no budget spent.
-    const fetchGraph = async (attempt = 0): Promise<void> => {
-      setLoading(true);
-      setLoadedFromApi(false);
-      let res: Response;
-      try {
-        // fetchWithTimeout (P0b): a stalled-but-never-settling fetch must
-        // reject into the retryable bucket instead of blocking this await
-        // forever — the retry schedule can't run while the fetch promise
-        // hasn't settled.
-        res = await fetchWithTimeout(`/api/analyses/${encodeURIComponent(analysisId)}/graph`);
-      } catch (error) {
-        // Network-level rejection or timeout abort — same retryable bucket
-        // as a 5xx response (P0a): retry on the same schedule, and only on
-        // exhaustion fall through to the online-event last resort.
-        if (cancelled) return;
-        if (attempt < MAX_GRAPH_FETCH_RETRIES) {
-          await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
-          if (cancelled) return;
-          return fetchGraph(attempt + 1);
-        }
-        lastAttemptFailed = true;
-        // Log the real cause (qa-intel observability finding, 2026-09-15):
-        // this hook previously swallowed every fetch failure silently,
-        // which is exactly the "WordCloud broken with zero diagnostic
-        // trail" incident shape. One warn per exhausted attempt cycle,
-        // not per retry — at most 1 line per /graph fetch failure.
-        console.warn('[useKnowledgeGraph] graph fetch failed:', error instanceof Error ? error.message : String(error));
-        // On a fetch error, do not wipe a synthesized fallback graph either.
-        setLoadedFromApi(false);
-        setLoading(false);
-        return;
+    // connection), a timeout abort (stalled connection), a 5xx response, AND
+    // a malformed/empty 200 body (P0-2) all route through the same backoff
+    // schedule below. 4xx is permanent (auth/ownership/not-found): fails
+    // immediately, no budget spent, and does NOT arm the online-event
+    // recovery (P0-3 — previously 4xx set lastAttemptFailed=true, so every
+    // later connectivity transition re-fetched a 401/404 that never
+    // succeeds).
+    //
+    // P1-4 refactor (2026-09-15): the monolithic fetchGraph was split into
+    // pure helpers — mapGraphPayload (parse + normalize) and
+    // classifyFailure (retryable vs permanent) — to bring cyclomatic
+    // complexity under DeepSource's threshold. Behavior preserved exactly.
+    const mapGraphPayload = (data: unknown): { nodes: GraphNode[]; edges: GraphEdge[] } | null => {
+      if (!data || typeof data !== 'object') {
+        // No body or non-object body — malformed, throw to enter retryable path.
+        throw new Error('graph fetch failed: malformed payload (not an object)');
       }
-      if (cancelled) return;
-      if (!res.ok) {
-        // 5xx (and only 5xx) is a potentially-transient server-side failure
-        // (e.g. verifyResourceOwnership's authenticate() throwing on a
-        // flapping connection returns 500) — retry bounded before giving
-        // up. 4xx is permanent (auth/ownership/not-found): fail now.
-        if (res.status >= 500 && attempt < MAX_GRAPH_FETCH_RETRIES) {
-          await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
-          if (cancelled) return;
-          return fetchGraph(attempt + 1);
-        }
-        lastAttemptFailed = true;
-        console.warn('[useKnowledgeGraph] graph fetch failed:', `HTTP ${res.status}`);
-        setLoadedFromApi(false);
-        setLoading(false);
-        return;
+      const entities = (data as any).entities;
+      const relations = (data as any).relations;
+      if (!Array.isArray(entities) || !Array.isArray(relations)) {
+        // Valid JSON but wrong shape — retryable (P0-2), not a silent
+        // "empty result". A half-truncated 200 body that parses as JSON
+        // but drops the entities/relations arrays is a transient failure.
+        throw new Error('graph fetch failed: malformed payload (entities or relations not an array)');
       }
-      // P1a (PR #313 post-merge review): a success — including an
-      // empty-body success — clears the failure flag, so a later 'online'
-      // event cannot re-fire a redundant fetch for a graph that already
-      // loaded. Previously the flag was only ever set to true and never
-      // reset, so one failed attempt made every subsequent online event
-      // refetch forever.
-      lastAttemptFailed = false;
-      const data = await res.json();
-      if (cancelled) return;
-      // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
-      // kg_entities table has NO `dimension` column (see
-      // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql)
-      // -- nodes sourced from THIS API path previously had `dimension`
-      // silently omitted entirely (`undefined`). DashboardContainer's
-      // handleSelectNode then calls
-      // `useAnalysisDimensionsStore.getState().getDimension(node.dimension)`,
-      // which returns `undefined` for a non-numeric input by construction
-      // (isValidDimensionNumber gate) -- `dim` is always undefined for
-      // these nodes, so every click falls into the "dimension not yet
-      // streamed, subscribe and retry" branch, which can only ever resolve
-      // if that exact (undefined) dimension number later streams in --
-      // impossible. For a completed/restored analysis nothing streams
-      // again, so the retry silently times out after 15s with zero
-      // feedback: a real seek never happens, exactly the reported
-      // entity-click-seek no-op symptom. Falling back to the SAME sentinel
-      // (DEFAULT_KG_EXTRACTION_DIMENSION) the storeKnowledgeGraph branch
-      // below already uses for the identical "no reliable per-node
-      // dimension" situation keeps this path from being a guaranteed dead
-      // end -- worst case it seeks off dimension 8's content, but that is
-      // strictly better than never seeking at all.
-      const nodes = (data.entities || []).map((e: any) => {
-        // Cubic P1 (PR #217 review): kg_entities has no top-level `dimension`
-        // column, but persistGraph() stores the ORIGINAL GraphNode (which does
-        // carry a real `dimension`) losslessly in `raw_node` (see
-        // SupabasePersistenceAdapter.persistGraph -- `rawNode: n`). Checking
-        // only `e.dimension` (always undefined for this table) meant every
-        // API-sourced node silently fell back to DEFAULT_KG_EXTRACTION_DIMENSION
-        // even when its real dimension was recoverable from raw_node, producing
-        // a confidently WRONG seek instead of an honest no-op. Prefer the
-        // preserved raw_node.dimension; only use the sentinel when neither
-        // source has a valid number.
+      // API-sourced nodes carry only id/dimension/label/type/entityType/weight
+      // (kg_entities has no content/polarity/keyTerms/inPersona columns).
+      // The old code relied on implicit any-typing to pass these through to
+      // setGraph; we preserve that exact shape via a cast rather than
+      // inventing defaults the persisted row never carried.
+      const nodes = entities.map((e: any) => {
         const rawDimension = e.raw_node?.dimension;
         const resolvedDimension =
           typeof rawDimension === 'number' ? rawDimension :
@@ -196,48 +135,121 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
           dimension: resolvedDimension,
           label: e.label,
           type: e.type,
-          // e.type is API-sourced from kg_entities, which is normalized at
-          // write time -- but normalize again here defensively rather than
-          // trusting that invariant at render time (belt-and-suspenders,
-          // same reasoning as the storeKnowledgeGraph branch below).
           entityType: normalizeEntityType(e.type),
           weight: e.weight
         };
-      });
-      const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
-      const edges: Array<{ source: string; target: string; strength: number; kind: RelationKind }> = [];
-      for (const rItem of (data.relations || [])) {
+      }) as unknown as GraphNode[];
+      const nodeIds = new Set(nodes.map((n) => String(n.id)));
+      const edges: GraphEdge[] = [];
+      for (const rItem of relations) {
         if (rItem && nodeIds.has(String(rItem.source_entity_id)) && nodeIds.has(String(rItem.target_entity_id))) {
           edges.push({
             source: String(rItem.source_entity_id),
             target: String(rItem.target_entity_id),
             strength: typeof rItem.strength === 'number' ? rItem.strength : 1,
             kind: rItem.kind || 'related'
-          });
+          } as GraphEdge);
         }
       }
+      return nodes.length > 0 ? { nodes, edges } : null;
+    };
 
-      if (nodes.length > 0) {
-        setGraph({
-          nodes,
-          edges,
-          rootId: null
-        });
-        setLoadedFromApi(true);
-      } else {
-        // Empty API result: do NOT setGraph(EMPTY) here. The
-        // /api/analyses/[id]/graph route is backed by the kg_entities /
-        // kg_relations tables, which are empty database-wide for exactly the
-        // "no knowledge graph anywhere" analyses the client-side fallback
-        // exists to render (ADR 023). Overwriting with EMPTY here would
-        // clobber a just-synthesized fallback graph, so on an empty result
-        // we leave whatever the fallback produced in place and only clear
-        // the `loadedFromApi` flag. The graph is fully cleared on analysis
-        // switch / null analysisId in the `if (!analysisId)` branch and in
-        // the fallback's own empty-dimensions branch.
+    // Classifies a thrown error from the fetch+consume pipeline into
+    // 'retryable' (network/timeout/5xx/malformed-body — re-attempt on the
+    // bounded schedule) vs 'permanent' (any 4xx — settle, never re-arm).
+    // A 4xx carries its status on the thrown error (see consumeResponse
+    // below); everything else is retryable by default.
+    const classifyFailure = (error: unknown): 'retryable' | 'permanent' => {
+      const status = (error as any)?.status;
+      if (typeof status === 'number' && status >= 400 && status < 500) return 'permanent';
+      return 'retryable';
+    };
+
+    const fetchGraph = async (attempt = 0): Promise<void> => {
+      setLoading(true);
+      setLoadedFromApi(false);
+      try {
+        // fetchWithTimeout (P0-1/P0b): the consumeResponse callback runs
+        // INSIDE the timeout window, so a stalled `.json()` (headers arrive
+        // but body never completes) is aborted on the same schedule a
+        // stalled connection is — the timer is not cleared until
+        // consumeResponse settles. A non-ok response, an invalid JSON body,
+        // and a valid-JSON-but-malformed shape all throw here and propagate
+        // to the catch below (P0-2: previously parse/mapping ran OUTSIDE
+        // try/catch, so a thrown parse error was an unhandled rejection —
+        // `loading` never settled, no retry scheduled, no error surfaced).
+        const mapped = await fetchWithTimeout(
+          `/api/analyses/${encodeURIComponent(analysisId)}/graph`,
+          undefined,
+          async (res: Response) => {
+            if (!res.ok) {
+              // 5xx throws here too (retryable via classifyFailure); a 4xx
+              // throws with its status so classifyFailure marks it permanent.
+              const err = new Error(`graph fetch failed: HTTP ${res.status}`) as Error & { status: number };
+              (err as any).status = res.status;
+              throw err;
+            }
+            let data: unknown;
+            // Let res.json() throw naturally on invalid JSON — the outer
+            // catch logs it and classifies it as retryable (any non-4xx
+            // error is retryable by default). No inner catch needed: the
+            // raw parse error message is descriptive enough ("Unexpected
+            // token..." etc.) and the outer catch already captures it.
+            data = await res.json();
+            if (cancelled) throw new Error('__cancelled__');
+            const result = mapGraphPayload(data);
+            if (!result) {
+              // Empty API result (entities: []) is NOT a failure — leave
+              // whatever the fallback produced in place. Return a sentinel
+              // the caller can distinguish from a real graph.
+              return null;
+            }
+            return result;
+          }
+        );
+
+        if (cancelled) return;
+        // Success — including an empty-body success: clear the failure flag
+        // so a later 'online' event cannot re-fire a redundant fetch (P1a).
+        // Do NOT clear lastAttemptFailed until the body has been parsed AND
+        // accepted as valid (P0-2).
+        lastAttemptFailed = false;
+        if (mapped) {
+          setGraph({ nodes: mapped.nodes, edges: mapped.edges, rootId: null });
+          setLoadedFromApi(true);
+        } else {
+          // Empty API result: do NOT setGraph(EMPTY) here — would clobber a
+          // just-synthesized fallback graph (ADR 023). Only clear the flag.
+          setLoadedFromApi(false);
+        }
+        setLoading(false);
+      } catch (error) {
+        if (cancelled) return;
+        const classification = classifyFailure(error);
+        if (classification === 'permanent') {
+          // 4xx (P0-3): settle loading, mark non-retryable, and leave
+          // lastAttemptFailed = false so the online listener does NOT
+          // re-arm. Previously 4xx set the flag true, re-arming forever.
+          lastAttemptFailed = false;
+          console.warn('[useKnowledgeGraph] graph fetch permanent failure:', error instanceof Error ? error.message : String(error));
+          setLoadedFromApi(false);
+          setLoading(false);
+          return;
+        }
+        // Retryable (network/timeout/5xx/malformed body): re-attempt on the
+        // bounded schedule, or surface failure on exhaustion.
+        if (attempt < MAX_GRAPH_FETCH_RETRIES) {
+          await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
+          if (cancelled) return;
+          await fetchGraph(attempt + 1);
+          return;
+        }
+        lastAttemptFailed = true;
+        console.warn('[useKnowledgeGraph] graph fetch failed (retryable, exhausted):', error instanceof Error ? error.message : String(error));
+        Sentry.captureException(error, { contexts: { useKnowledgeGraph: { analysisId, attempt } } });
         setLoadedFromApi(false);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     void fetchGraph();

@@ -75,27 +75,26 @@ export function useAutoRestoreAnalysis(url: string) {
     // reload after the network returned, exactly the reported symptom.)
     const checkAndRestore = async (): Promise<'settled' | 'retryable'> => {
       try {
-        let res: Response;
-        let checkOk = false;
-        try {
-          // fetchWithTimeout (PR #313 post-merge review P0b): a stalled
-          // fetch previously blocked this await forever — pinning
-          // `restoring`, which also blocked the online-event recovery
-          // (gated on it) — so the retry driver could never even run. An
-          // abort rejection lands in the outer catch as 'retryable', the
-          // same bucket as any network failure.
-          res = await fetchWithTimeout(`/api/analyses/check?videoId=${videoId}`);
-          checkOk = res.ok;
-        } finally {
-          // Real diagnostic, not a no-op: surfaces whether this hook's very
-          // first network call of the restore attempt actually settled
-          // (as opposed to throwing/hanging), independent of whatever the
-          // rest of the function goes on to do -- useful when triaging a
-          // "restore never happened" report without needing a full repro.
-          addBreadcrumb('Auto-restore: check request settled', { videoId, ok: checkOk }, 'auto-restore');
-        }
-        if (!res.ok) return res.status >= 500 ? 'retryable' : 'settled';
-        const data = await res.json();
+        // fetchWithTimeout (PR #313 post-merge review P0-1/P0b): the
+        // consumeResponse callback runs INSIDE the timeout window, so a
+        // stalled `.json()` (headers arrive but body never completes) is
+        // aborted on the same schedule a stalled connection is — the timer
+        // is not cleared until consumeResponse settles. Previously the
+        // helper returned the bare Response and cleared the timer once
+        // headers arrived, leaving a stalled body-consumption hang
+        // uncovered one layer deeper.
+        const checkData = await fetchWithTimeout(
+          `/api/analyses/check?videoId=${videoId}`,
+          undefined,
+          async (res: Response) => {
+            addBreadcrumb('Auto-restore: check request settled', { videoId, ok: res.ok }, 'auto-restore');
+            if (!res.ok) return { ok: false, status: res.status } as const;
+            const data = await res.json();
+            return { ok: true, status: 200, data } as const;
+          }
+        );
+        if (!checkData.ok) return checkData.status >= 500 ? 'retryable' : 'settled';
+        const data = checkData.data;
         if (cancelled) return 'settled';
 
         if (data.exists && data.analysisId) {
@@ -168,24 +167,22 @@ export function useAutoRestoreAnalysis(url: string) {
             return 'settled';
           }
 
-          // Trigger the restoration flow just like history restoration
-          let restoreRes: Response;
-          let restoreOk = false;
-          try {
-            // Same timeout guard as the check fetch above (P0b) — the full
-            // record fetch is the larger payload and the likelier stall.
-            restoreRes = await fetchWithTimeout(`/api/analyses/${data.analysisId}`);
-            restoreOk = restoreRes.ok;
-          } finally {
-            // Same real diagnostic as the check-request breadcrumb above --
-            // the second, heavier fetch (full analysis record) is the one
-            // most likely to time out on a large payload; knowing whether
-            // it settled at all narrows "restore silently did nothing" vs.
-            // "restore threw before this point" without a full repro.
-            addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: restoreOk }, 'auto-restore');
-          }
-          if (!restoreRes.ok) return restoreRes.status >= 500 ? 'retryable' : 'settled';
-          const restoreData = await restoreRes.json();
+          // Trigger the restoration flow just like history restoration.
+          // Same timeout guard as the check fetch above (P0-1/P0b) — the
+          // full record fetch is the larger payload and the likelier stall,
+          // so body consumption also runs inside the timeout window.
+          const restoreResult = await fetchWithTimeout(
+            `/api/analyses/${data.analysisId}`,
+            undefined,
+            async (res: Response) => {
+              addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: res.ok }, 'auto-restore');
+              if (!res.ok) return { ok: false, status: res.status } as const;
+              const body = await res.json();
+              return { ok: true, status: 200, body } as const;
+            }
+          );
+          if (!restoreResult.ok) return restoreResult.status >= 500 ? 'retryable' : 'settled';
+          const restoreData = restoreResult.body;
           if (cancelled) return 'settled';
 
           let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');

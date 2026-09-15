@@ -17,7 +17,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, cleanup } from '@testing-library/react';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -33,9 +33,14 @@ const VIDEO_ID = 'dQw4w9WgXcQ';
 const ANALYSIS_ID = 'analysis-autorestore-1';
 const PASTED_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 
-// Same shape as useAutoRestoreAnalysis.test.tsx's RESTORE_RESPONSE --
-// deliberately identical so a behavior diff between the two files' fixtures
-// shows up as a test-outcome diff, not a data diff.
+// Same shape as useAutoRestoreAnalysis.test.tsx's RESTORE_RESPONSE, with
+// one intentional difference: `analysis_payload` is `{}` here (reduced)
+// vs. the fully-populated ANALYSIS_PAYLOAD in the sibling file. The
+// resilience tests don't exercise payload-derived fields (persona, KG,
+// classification, monetization) — they test the retry/timeout/recovery
+// pipeline — so a reduced payload is sufficient and keeps the fixture
+// focused. The main file's full payload is needed there because its
+// assertions DO verify payload-derived store hydration.
 const RESTORE_RESPONSE = {
   id: ANALYSIS_ID,
   videoId: VIDEO_ID,
@@ -63,6 +68,13 @@ describe('useAutoRestoreAnalysis transient-failure retry (2026-09-15 incident RC
 
   afterEach(() => {
     vi.useRealTimers();
+    // PR #315 review round 2 P2 (2026-09-15): moved from end-of-test-body
+    // to afterEach so a failed assertion doesn't leak the global fetch
+    // stub or a mounted hook into later tests (the original placement was
+    // inside each test's own body after the assertions — a failing expect
+    // skipped cleanup).
+    vi.unstubAllGlobals();
+    cleanup();
   });
 
   function countCheckCalls(fetchMock: ReturnType<typeof vi.fn>): number {
@@ -205,6 +217,80 @@ describe('useAutoRestoreAnalysis transient-failure retry (2026-09-15 incident RC
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(countCheckCalls(fetchMock)).toBe(checksAfterExhaustion + 1);
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it('P0-1: a check fetch whose HEADERS arrive but whose body (.json()) never settles is aborted by the timeout and enters the retry schedule', async () => {
+    // The body-level timeout gap: the old helper cleared the timer once
+    // headers arrived, leaving a stalled .json() uncovered. The callback
+    // shape keeps the timer armed through body consumption — a stalled
+    // .json() aborts on the same 10s schedule a stalled connection does.
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        const res = new Response('not-json', { status: 200 });
+        res.json = () =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+          });
+        return Promise.resolve(res);
+      }
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAutoRestoreAnalysis(PASTED_URL));
+
+    // Attempt 1: body timeout at 10s -> 5s retry -> attempt 2 at ~15s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16_000);
+    });
+    expect(countCheckCalls(fetchMock)).toBe(2);
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it('P0-1: a full-record fetch whose body (.json()) never settles is aborted by the timeout (not stuck restoring forever)', async () => {
+    // The full-record fetch is the larger payload and the likelier stall.
+    // A stalled .json() here must enter the retryable path, not pin
+    // `restoring` forever.
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/check')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ exists: true, analysisId: ANALYSIS_ID, status: 'complete' }), {
+            status: 200, headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+      if (url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        // Full-record fetch: headers arrive, body never completes.
+        const res = new Response('not-json', { status: 200 });
+        res.json = () =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+          });
+        return Promise.resolve(res);
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAutoRestoreAnalysis(PASTED_URL));
+
+    // Check succeeds (immediate), then full-record body stalls → timeout
+    // at 10s → retryable → 5s retry wait → check+full-record again at ~15s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16_000);
+    });
+    // At least 2 full-record attempts (the body stall was retried).
+    const fullRecordCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes(`/api/analyses/${ANALYSIS_ID}`)).length;
+    expect(fullRecordCalls).toBeGreaterThanOrEqual(2);
 
     unmount();
     vi.unstubAllGlobals();

@@ -91,15 +91,26 @@ export function useChapters(videoId: string | null) {
       while (retryCount < MAX_RETRIES && !cancelled) {
         let confirmedLoaded = false;
         try {
-          // fetchWithTimeout (PR #313 post-merge review P0b): a stalled
-          // fetch previously blocked this await forever, so retryCount
-          // never advanced and the backoff loop never ran — a hanging
-          // connection silenced every retry. An abort rejection lands in
-          // the catch below, the same bucket as any network failure.
-          const res = await fetchWithTimeout(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
+          // fetchWithTimeout (PR #313 post-merge review P0-1/P0b): the
+          // consumeResponse callback runs INSIDE the timeout window, so a
+          // stalled `.json()` (headers arrive but body never completes) is
+          // aborted on the same schedule a stalled connection is — the
+          // timer is not cleared until consumeResponse settles. Previously
+          // the helper returned the bare Response and cleared the timer
+          // once headers arrived, leaving a stalled body-consumption hang
+          // uncovered one layer deeper.
+          const parsed = await fetchWithTimeout(
+            `/api/videos/${encodeURIComponent(videoId)}/chapters`,
+            undefined,
+            async (res: Response) => {
+              if (!res.ok) return { ok: false } as const;
+              const body = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
+              return { ok: true, body } as const;
+            }
+          );
           if (cancelled) return;
-          if (res.ok) {
-            const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
+          if (parsed.ok) {
+            const data = parsed.body;
             if (!cancelled) {
               // confirmed: false means no sentinel/real rows exist yet -- the
               // worker's fire-and-forget write can still be in flight (fires
