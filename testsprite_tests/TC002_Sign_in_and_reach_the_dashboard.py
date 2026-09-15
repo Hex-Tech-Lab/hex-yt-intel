@@ -9,7 +9,7 @@ def _require_env(name):
     if not value:
         raise RuntimeError(
             "Missing required environment variable %r "
-            "(copy testsprite_tests/.env.example and set real values first)" % name
+            "(see testsprite_tests/.env.example and export it in your shell first)" % name
         )
     return value
 
