@@ -1,0 +1,22 @@
+web/lib/__tests__/useChatStore-resilience.test.ts
+  s_063531516ed0f0::t_2590d05a7454ba 75-78
+  s_063531516ed0f0::t_4aa984b4872f61 63
+worker/src/__tests__/extract-json-payload-recovery.test.ts
+  s_063531516ed0f0::t_ebea0e0c5a50ba 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5c9673fc3db412449a0c7272d7388c0e24b48f68",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
