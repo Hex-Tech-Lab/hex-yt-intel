@@ -5,8 +5,8 @@
 ## Login
 Use the test-auth bypass, not Google OAuth (Google's bot detection blocks automated browsers — this is the documented reason `/api/test-auth/login` and the sign-in form's test-auth fields exist):
 - URL: `https://www.getvintel.com/auth/signin`
-- Email: `testsprite@getvintel.com`
-- Password: see `TESTSPRITE_TEST_ACCOUNT_PASSWORD` in `.env.local` (reset 2026-09-07, not yet live-verified)
+- Email: see `TESTSPRITE_TEST_ACCOUNT_EMAIL` in `testsprite_tests/.env.example`
+- Password: see `TESTSPRITE_TEST_ACCOUNT_PASSWORD` in `testsprite_tests/.env.example` (reset 2026-09-07, not yet live-verified)
 - The test-auth form fields only render if `testAuthBypass.enabled` is true in the Settings Registry — confirmed true as of 2026-09-07.
 
 ## Reported symptom (user, 2026-09-07)
