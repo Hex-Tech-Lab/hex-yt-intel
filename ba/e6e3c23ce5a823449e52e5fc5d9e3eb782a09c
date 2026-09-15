@@ -1,0 +1,23 @@
+docs/history/THOS_2026-09-08_0100_HIGHLIGHTS_RACE_CUBIC_RESPONSE_AND_9PR_BATCH.md
+  s_be40705c213a3f::t_63d3f6a9f8973f 26,57,86,267
+docs/agent-prompts/2026-09-10-oc-testsprite-credential-leak-remediation.md
+  s_be40705c213a3f::t_62ff0c9c0b3462 87
+docs/history/THOS_2026-09-10_2245_BILLING_FIX_UX_QA_INTEL_RULE_CHECKLIST_REDO_CREDENTIAL_LEAK.md
+  s_be40705c213a3f::t_63d3f6a9f8973f 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bae6e3c23ce5a823449e52e5fc5d9e3eb782a09c",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
