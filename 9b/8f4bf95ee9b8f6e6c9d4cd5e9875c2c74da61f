@@ -1,0 +1,21 @@
+docs/testing/testsprite-first-regression-case.md
+  s_be40705c213a3f::t_64a9a60f8664b9 8
+.memory/AGENT_LEDGER.md
+  s_be40705c213a3f::t_351bfbf056d8f7 1395
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9b8f4bf95ee9b8f6e6c9d4cd5e9875c2c74da61f",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
