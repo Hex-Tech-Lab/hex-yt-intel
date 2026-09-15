@@ -1,0 +1,19 @@
+docs/history/THOS_2026-09-15_0835_MERGE_MARATHON_PR309_TO_313_AND_TOOLING.md
+  s_063531516ed0f0::t_2ad70e46e0a347 1,4,12-13,15-17,19,23-24,26-30,32,34,36-42,44,46,52-59,63-66,70-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a7393783592f776a904bcb62153bd9bb87cd9280",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
