@@ -1,0 +1,53 @@
+.memory/AGENT_LEDGER.md
+  s_38790a3d42d002::t_39fa0a8c2863d1 1409
+  s_f2473babcb8700::t_3d85efceffa22d 1408
+  s_38790a3d42d002::t_3027ef803fb583 1410
+web/lib/utils/fetch-with-timeout.ts
+  s_f2473babcb8700::t_e15281672dd690 2,4-29,32-33,37,39-40,42,45-57,59-62
+web/hooks/useKnowledgeGraph.ts
+  s_38790a3d42d002::t_606876a380ed13 20
+  s_38790a3d42d002::t_f14c03ac71d28b 13
+  s_38790a3d42d002::t_f4aae8acaf7ff9 109
+  s_38790a3d42d002::t_cfb1627fec3d64 97-108,110-112,114-120,122-127,141-144,151,154-155,157-237,241,243
+  s_38790a3d42d002::t_bf799516b02ada 238-240
+  s_38790a3d42d002::t_c0c367bd7722ad 242
+  s_38790a3d42d002::t_b18cc08c56ca8b 244-246
+web/hooks/useAutoRestoreAnalysis.ts
+  s_38790a3d42d002::t_c89fa0e59c9b4a 78-97
+  s_38790a3d42d002::t_c9c2bba3c27be6 174,184-185
+  s_38790a3d42d002::t_f54ef48f06f236 170-173,175-183
+web/hooks/useChapters.ts
+  s_be40705c213a3f::t_4c814a934e682b 94-110,112-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d26bcd59c68acaa23dafac3f159202348b502eb5",
+  "prompts": {},
+  "sessions": {
+    "s_38790a3d42d002": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f599e9ef5ffeL6tN3Ex7Oqch55",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f2473babcb8700": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5bac445fffeZxLeeFsRHWVLIC",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
