@@ -84,7 +84,7 @@ Steps, in order:
    assume none exists).
 3. If an env-var/config pattern already exists elsewhere in this project's
    Python test tooling, follow it. If not, create the minimal one: read from
-   `os.environ["TESTSPRITE_TEST_EMAIL"]` / `os.environ["TESTSPRITE_TEST_PASSWORD"]`,
+   `os.environ["TESTSPRITE_TEST_ACCOUNT_EMAIL"]` / `os.environ["TESTSPRITE_TEST_ACCOUNT_PASSWORD"]`,
    failing loudly (not silently) if unset.
 4. Apply the same replacement to all 11 files identically — same variable
    names, same read pattern. Do not introduce 11 slightly different

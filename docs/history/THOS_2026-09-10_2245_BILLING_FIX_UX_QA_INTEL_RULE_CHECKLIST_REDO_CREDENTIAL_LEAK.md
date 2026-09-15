@@ -32,7 +32,7 @@ Status: **4 PRs open, all mergeable, none merged yet.** 1 real security incident
 
 ## 3. Live security incident: plaintext test credentials — PARTIALLY REMEDIATED, resume here first
 
-**What happened**: OC's checklist audit (dispatched for unrelated fact-gathering) surfaced that 11 git-tracked `testsprite_tests/TC*.py` files, plus 3 `docs/history/THOS_*.md` handover docs, contain a plaintext Supabase Auth test-account credential (`testsprite@getvintel.com` + password) committed directly to the repo.
+**What happened**: OC's checklist audit (dispatched for unrelated fact-gathering) surfaced that 11 git-tracked `testsprite_tests/TC*.py` files, plus 3 `docs/history/THOS_*.md` handover docs, contain a plaintext Supabase Auth test-account credential (`<redacted test-account email — see testsprite_tests/.env.example>` + password) committed directly to the repo.
 
 **Done this session**:
 - **Password rotated** — confirmed via direct `auth.users` SQL update (`crypt()`/`pgcrypto`, real row `4c52c90e-8932-4b58-8768-89f7995d35aa` updated, verified via `returning`). New password saved to local `.env.local` (gitignored), not printed in this document or reprinted in chat after the rotation.
