@@ -123,7 +123,7 @@ sed -i 's/# HEX-YT-INTEL NOTICE/# VINTEL NOTICE/' docs/legal/NOTICE.md
 - LICENSE-ADDENDUM.md/NOTICE.md title edits are sitting uncommitted in `agent-a77ac2a2034f2dbdc`.
 - Infra-scope rebrand (package.json names, CF Worker service name `yt-intel`) explicitly deferred, not started.
 - Actual new legal entity name (vs. product brand "vIntel") never supplied by user — "Hex-Tech-Lab" left untouched everywhere.
-- Test-account password rotation (`testsprite@getvintel.com`) still not done, flagged multiple times.
+- Test-account password rotation (`<redacted test-account email - see testsprite_tests/.env.example>`) still not done, flagged multiple times.
 
 **🔍 In progress:** this handover document (now); resuming the LICENSE/NOTICE commit next.
 

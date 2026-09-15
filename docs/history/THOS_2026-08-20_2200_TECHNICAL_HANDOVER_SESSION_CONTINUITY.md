@@ -96,7 +96,7 @@ Per the user directly, 2026-08-20 ~21:56 EEST:
 **Deferred (explicitly, by user decision, not technical debt):**
 - Infra-scope rebrand (package.json names, CF Worker service name `yt-intel`) — separate future pass.
 - DMCA agent, legal-entity rename — post-launch per §8.
-- Test-account password rotation (`testsprite@getvintel.com`) — still not done, flagged repeatedly across sessions, low urgency but should eventually happen.
+- Test-account password rotation (`<redacted test-account email - see testsprite_tests/.env.example>`) — still not done, flagged repeatedly across sessions, low urgency but should eventually happen.
 
 ## 10. Context Preservation — User Working Style (unchanged from prior doc, reconfirmed this delta)
 
