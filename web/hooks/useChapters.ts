@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useChaptersStore, type ChapterEntry } from '@/store/useChaptersStore';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -90,7 +91,12 @@ export function useChapters(videoId: string | null) {
       while (retryCount < MAX_RETRIES && !cancelled) {
         let confirmedLoaded = false;
         try {
-          const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
+          // fetchWithTimeout (PR #313 post-merge review P0b): a stalled
+          // fetch previously blocked this await forever, so retryCount
+          // never advanced and the backoff loop never ran — a hanging
+          // connection silenced every retry. An abort rejection lands in
+          // the catch below, the same bucket as any network failure.
+          const res = await fetchWithTimeout(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
           if (cancelled) return;
           if (res.ok) {
             const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };

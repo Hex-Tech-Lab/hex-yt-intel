@@ -244,6 +244,114 @@ describe('useKnowledgeGraph fetch resilience (2026-09-15 incident RCA, video rDh
     unmount();
   });
 
+  it('retries a raw network-level fetch rejection the same way a 5xx retries (P0a, PR #313 post-merge review)', async () => {
+    // Pre-fix, a rejected fetch (TypeError: Failed to fetch — a dropped
+    // connection, the incident's exact failure mode) skipped the bounded
+    // retry schedule entirely and relied on the online-event handler.
+    // It must enter the SAME 5s/10s schedule a 500 does.
+    seedAnalysis('analysis-kg-netreject');
+    const okBody = { entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }], relations: [] };
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-netreject'));
+
+    // Same cadence as the 5xx test above: attempt 1 immediate, retries at 5s/10s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.current.graph.nodes.length).toBe(1);
+    unmount();
+  });
+
+  it('enters the retry schedule via the request timeout when a fetch never settles (P0b, PR #313 post-merge review)', async () => {
+    // Pre-fix, a stalled-but-never-rejecting fetch blocked the await
+    // forever — the retry logic is gated on the fetch promise settling, so
+    // it could never run. The AbortController timeout must convert the
+    // hang into a retryable failure on the same schedule.
+    seedAnalysis('analysis-kg-timeout');
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      // Simulates a stalled connection: never settles on its own, only
+      // rejects when the hook's AbortController fires.
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('This operation was aborted', 'AbortError')));
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-timeout'));
+
+    // Attempt 1: timeout abort at 10s -> 5s retry wait -> attempt 2 at ~15s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(16_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.current.loading).toBe(true);
+
+    // Attempt 3 (t≈35s) and attempt 4 (t≈60s) — the last budgeted attempt.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    // Attempt 4's own timeout fires (~t=70s): budget exhausted, failure surfaced.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(result.current.loading).toBe(false);
+
+    // A timeout failure is in the retryable bucket: the online last resort
+    // fires one more attempt, which is itself bounded by the same timeout
+    // (it rejects ~10s later instead of hanging forever).
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(11_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+
+    unmount();
+  });
+
+  it('clears the failure flag on success so later online events do not refetch (P1a, PR #313 post-merge review)', async () => {
+    // Pre-fix, lastAttemptFailed was only ever set to true (in the catch)
+    // and never reset on success — one failed attempt made EVERY subsequent
+    // 'online' event re-fire a redundant fetch forever.
+    seedAnalysis('analysis-kg-p1a');
+    const okBody = { entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }], relations: [] };
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-p1a'));
+
+    // Attempt 1 rejects; the 5s-scheduled retry succeeds.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // The successful recovery cleared the flag: a later online event (and
+    // a second one) must be a no-op.
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    unmount();
+  });
+
   it('enabled flipping false->true (entitlements resolve after mount) triggers the fetch that the [analysisId]-only deps previously skipped', async () => {
     // Second, independent first-load root cause confirmed in the same RCA:
     // useEffectiveViewMode is 'simple' while entitlements load (defaultFree

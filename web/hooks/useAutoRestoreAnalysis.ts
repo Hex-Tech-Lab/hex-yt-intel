@@ -7,6 +7,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
@@ -77,7 +78,13 @@ export function useAutoRestoreAnalysis(url: string) {
         let res: Response;
         let checkOk = false;
         try {
-          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
+          // fetchWithTimeout (PR #313 post-merge review P0b): a stalled
+          // fetch previously blocked this await forever — pinning
+          // `restoring`, which also blocked the online-event recovery
+          // (gated on it) — so the retry driver could never even run. An
+          // abort rejection lands in the outer catch as 'retryable', the
+          // same bucket as any network failure.
+          res = await fetchWithTimeout(`/api/analyses/check?videoId=${videoId}`);
           checkOk = res.ok;
         } finally {
           // Real diagnostic, not a no-op: surfaces whether this hook's very
@@ -165,7 +172,9 @@ export function useAutoRestoreAnalysis(url: string) {
           let restoreRes: Response;
           let restoreOk = false;
           try {
-            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
+            // Same timeout guard as the check fetch above (P0b) — the full
+            // record fetch is the larger payload and the likelier stall.
+            restoreRes = await fetchWithTimeout(`/api/analyses/${data.analysisId}`);
             restoreOk = restoreRes.ok;
           } finally {
             // Same real diagnostic as the check-request breadcrumb above --

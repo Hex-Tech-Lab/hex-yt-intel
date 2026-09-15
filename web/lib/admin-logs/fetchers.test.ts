@@ -230,7 +230,21 @@ describe('snapshot route wiring — regression guard (2026-09-15)', () => {
 
     expect(exportedFetcherNames.length).toBeGreaterThan(0);
 
-    const notWired = exportedFetcherNames.filter((name) => !routeSrc.includes(name));
+    // Tightened (PR #313 post-merge review P2, 2026-09-15): the original
+    // check was `routeSrc.includes(name)` — a name appearing in the import
+    // block, a comment, or a doc string passed WITHOUT being called inside
+    // the Promise.all fan-out. Scope the check to the Promise.all([ ... ])
+    // block and require call syntax at line start (`name(`), so a
+    // commented-out or merely-imported-but-never-invoked fetcher fails.
+    // Negative-control property preserved: removing a fetcher's call line
+    // from the array (the regression this guard exists for) still fails.
+    const wiredBlockMatch = routeSrc.match(/Promise\.all\(\[([\s\S]*?)\]\);/);
+    expect(wiredBlockMatch).not.toBeNull();
+    const wiredBlock = wiredBlockMatch?.[1] ?? '';
+
+    const notWired = exportedFetcherNames.filter(
+      (name) => !new RegExp(`^\\s*${name}\\(`, 'm').test(wiredBlock)
+    );
     expect(notWired).toEqual([]);
   });
 });

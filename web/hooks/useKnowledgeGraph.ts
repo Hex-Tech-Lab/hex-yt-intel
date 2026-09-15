@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { PERSONA_DIMENSIONS } from '@/lib/types/persona';
 import { KnowledgeGraphSynthesizer } from '@/lib/intelligence/knowledge-graph';
@@ -29,7 +30,14 @@ const DEFAULT_KG_EXTRACTION_DIMENSION = 8;
 // worker-provided knowledgeGraph), with the failure swallowed silently.
 // 3 attempts at 5s/10s spacing, plus a re-arm on each offline->online
 // transition (bounded by real network events, not a poll loop). 4xx
-// (401/404) are permanent by nature and never retried.
+// (401/404) are permanent by nature and never retried within the budget.
+// PR #313 post-merge review (2026-09-15): network-level rejections
+// (fetch throwing TypeError: Failed to fetch on a dropped connection — the
+// incident's exact failure mode) and timeout aborts (fetchWithTimeout below,
+// covering a stalled connection that never settles) now share this SAME
+// bounded budget with 5xx responses — previously only a 5xx response entered
+// the schedule; a rejected fetch skipped straight to the online-event last
+// resort, and a stalled-but-never-settling fetch hung forever outside it.
 const MAX_GRAPH_FETCH_RETRIES = 3;
 const GRAPH_RETRY_BASE_DELAY_MS = 5000;
 
@@ -83,124 +91,153 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
 
     const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+    // PR #313 post-merge review (2026-09-15): ONE bounded retry driver for
+    // every retryable failure class. A network-level rejection (dropped
+    // connection), a timeout abort (stalled connection), and a 5xx response
+    // all route through the same backoff schedule below. 4xx is permanent
+    // (auth/ownership/not-found): fails immediately, no budget spent.
     const fetchGraph = async (attempt = 0): Promise<void> => {
       setLoading(true);
       setLoadedFromApi(false);
+      let res: Response;
       try {
-        const res = await fetch(`/api/analyses/${encodeURIComponent(analysisId)}/graph`);
-        if (cancelled) return;
-        if (!res.ok) {
-          // 5xx (and only 5xx) is a potentially-transient server-side failure
-          // (e.g. verifyResourceOwnership's authenticate() throwing on a
-          // flapping connection returns 500) — retry bounded before giving
-          // up. 4xx is permanent (auth/ownership/not-found): fail now.
-          if (res.status >= 500 && attempt < MAX_GRAPH_FETCH_RETRIES) {
-            await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
-            if (cancelled) return;
-            return fetchGraph(attempt + 1);
-          }
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        if (cancelled) return;
-        // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
-        // kg_entities table has NO `dimension` column (see
-        // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql)
-        // -- nodes sourced from THIS API path previously had `dimension`
-        // silently omitted entirely (`undefined`). DashboardContainer's
-        // handleSelectNode then calls
-        // `useAnalysisDimensionsStore.getState().getDimension(node.dimension)`,
-        // which returns `undefined` for a non-numeric input by construction
-        // (isValidDimensionNumber gate) -- `dim` is always undefined for
-        // these nodes, so every click falls into the "dimension not yet
-        // streamed, subscribe and retry" branch, which can only ever resolve
-        // if that exact (undefined) dimension number later streams in --
-        // impossible. For a completed/restored analysis nothing streams
-        // again, so the retry silently times out after 15s with zero
-        // feedback: a real seek never happens, exactly the reported
-        // entity-click-seek no-op symptom. Falling back to the SAME sentinel
-        // (DEFAULT_KG_EXTRACTION_DIMENSION) the storeKnowledgeGraph branch
-        // below already uses for the identical "no reliable per-node
-        // dimension" situation keeps this path from being a guaranteed dead
-        // end -- worst case it seeks off dimension 8's content, but that is
-        // strictly better than never seeking at all.
-        const nodes = (data.entities || []).map((e: any) => {
-          // Cubic P1 (PR #217 review): kg_entities has no top-level `dimension`
-          // column, but persistGraph() stores the ORIGINAL GraphNode (which does
-          // carry a real `dimension`) losslessly in `raw_node` (see
-          // SupabasePersistenceAdapter.persistGraph -- `rawNode: n`). Checking
-          // only `e.dimension` (always undefined for this table) meant every
-          // API-sourced node silently fell back to DEFAULT_KG_EXTRACTION_DIMENSION
-          // even when its real dimension was recoverable from raw_node, producing
-          // a confidently WRONG seek instead of an honest no-op. Prefer the
-          // preserved raw_node.dimension; only use the sentinel when neither
-          // source has a valid number.
-          const rawDimension = e.raw_node?.dimension;
-          const resolvedDimension =
-            typeof rawDimension === 'number' ? rawDimension :
-            typeof e.dimension === 'number' ? e.dimension :
-            DEFAULT_KG_EXTRACTION_DIMENSION;
-          return {
-            id: e.id,
-            dimension: resolvedDimension,
-            label: e.label,
-            type: e.type,
-            // e.type is API-sourced from kg_entities, which is normalized at
-            // write time -- but normalize again here defensively rather than
-            // trusting that invariant at render time (belt-and-suspenders,
-            // same reasoning as the storeKnowledgeGraph branch below).
-            entityType: normalizeEntityType(e.type),
-            weight: e.weight
-          };
-        });
-        const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
-        const edges: Array<{ source: string; target: string; strength: number; kind: RelationKind }> = [];
-        for (const rItem of (data.relations || [])) {
-          if (rItem && nodeIds.has(String(rItem.source_entity_id)) && nodeIds.has(String(rItem.target_entity_id))) {
-            edges.push({
-              source: String(rItem.source_entity_id),
-              target: String(rItem.target_entity_id),
-              strength: typeof rItem.strength === 'number' ? rItem.strength : 1,
-              kind: rItem.kind || 'related'
-            });
-          }
-        }
-        
-        if (nodes.length > 0) {
-          setGraph({
-            nodes,
-            edges,
-            rootId: null
-          });
-          setLoadedFromApi(true);
-        } else {
-          // Empty API result: do NOT setGraph(EMPTY) here. The
-          // /api/analyses/[id]/graph route is backed by the kg_entities /
-          // kg_relations tables, which are empty database-wide for exactly the
-          // "no knowledge graph anywhere" analyses the client-side fallback
-          // exists to render (ADR 023). Overwriting with EMPTY here would
-          // clobber a just-synthesized fallback graph, so on an empty result
-          // we leave whatever the fallback produced in place and only clear
-          // the `loadedFromApi` flag. The graph is fully cleared on analysis
-          // switch / null analysisId in the `if (!analysisId)` branch and in
-          // the fallback's own empty-dimensions branch.
-          setLoadedFromApi(false);
-        }
-        setLoading(false);
+        // fetchWithTimeout (P0b): a stalled-but-never-settling fetch must
+        // reject into the retryable bucket instead of blocking this await
+        // forever — the retry schedule can't run while the fetch promise
+        // hasn't settled.
+        res = await fetchWithTimeout(`/api/analyses/${encodeURIComponent(analysisId)}/graph`);
       } catch (error) {
-        if (!cancelled) {
-          lastAttemptFailed = true;
-          // Log the real cause (qa-intel observability finding, 2026-09-15):
-          // this hook previously swallowed every fetch failure silently,
-          // which is exactly the "WordCloud broken with zero diagnostic
-          // trail" incident shape. One warn per exhausted attempt cycle,
-          // not per retry — at most 1 line per /graph fetch failure.
-          console.warn('[useKnowledgeGraph] graph fetch failed:', error instanceof Error ? error.message : String(error));
-          // On a fetch error, do not wipe a synthesized fallback graph either.
-          setLoadedFromApi(false);
-          setLoading(false);
+        // Network-level rejection or timeout abort — same retryable bucket
+        // as a 5xx response (P0a): retry on the same schedule, and only on
+        // exhaustion fall through to the online-event last resort.
+        if (cancelled) return;
+        if (attempt < MAX_GRAPH_FETCH_RETRIES) {
+          await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
+          if (cancelled) return;
+          return fetchGraph(attempt + 1);
+        }
+        lastAttemptFailed = true;
+        // Log the real cause (qa-intel observability finding, 2026-09-15):
+        // this hook previously swallowed every fetch failure silently,
+        // which is exactly the "WordCloud broken with zero diagnostic
+        // trail" incident shape. One warn per exhausted attempt cycle,
+        // not per retry — at most 1 line per /graph fetch failure.
+        console.warn('[useKnowledgeGraph] graph fetch failed:', error instanceof Error ? error.message : String(error));
+        // On a fetch error, do not wipe a synthesized fallback graph either.
+        setLoadedFromApi(false);
+        setLoading(false);
+        return;
+      }
+      if (cancelled) return;
+      if (!res.ok) {
+        // 5xx (and only 5xx) is a potentially-transient server-side failure
+        // (e.g. verifyResourceOwnership's authenticate() throwing on a
+        // flapping connection returns 500) — retry bounded before giving
+        // up. 4xx is permanent (auth/ownership/not-found): fail now.
+        if (res.status >= 500 && attempt < MAX_GRAPH_FETCH_RETRIES) {
+          await wait(GRAPH_RETRY_BASE_DELAY_MS * (attempt + 1));
+          if (cancelled) return;
+          return fetchGraph(attempt + 1);
+        }
+        lastAttemptFailed = true;
+        console.warn('[useKnowledgeGraph] graph fetch failed:', `HTTP ${res.status}`);
+        setLoadedFromApi(false);
+        setLoading(false);
+        return;
+      }
+      // P1a (PR #313 post-merge review): a success — including an
+      // empty-body success — clears the failure flag, so a later 'online'
+      // event cannot re-fire a redundant fetch for a graph that already
+      // loaded. Previously the flag was only ever set to true and never
+      // reset, so one failed attempt made every subsequent online event
+      // refetch forever.
+      lastAttemptFailed = false;
+      const data = await res.json();
+      if (cancelled) return;
+      // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
+      // kg_entities table has NO `dimension` column (see
+      // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql)
+      // -- nodes sourced from THIS API path previously had `dimension`
+      // silently omitted entirely (`undefined`). DashboardContainer's
+      // handleSelectNode then calls
+      // `useAnalysisDimensionsStore.getState().getDimension(node.dimension)`,
+      // which returns `undefined` for a non-numeric input by construction
+      // (isValidDimensionNumber gate) -- `dim` is always undefined for
+      // these nodes, so every click falls into the "dimension not yet
+      // streamed, subscribe and retry" branch, which can only ever resolve
+      // if that exact (undefined) dimension number later streams in --
+      // impossible. For a completed/restored analysis nothing streams
+      // again, so the retry silently times out after 15s with zero
+      // feedback: a real seek never happens, exactly the reported
+      // entity-click-seek no-op symptom. Falling back to the SAME sentinel
+      // (DEFAULT_KG_EXTRACTION_DIMENSION) the storeKnowledgeGraph branch
+      // below already uses for the identical "no reliable per-node
+      // dimension" situation keeps this path from being a guaranteed dead
+      // end -- worst case it seeks off dimension 8's content, but that is
+      // strictly better than never seeking at all.
+      const nodes = (data.entities || []).map((e: any) => {
+        // Cubic P1 (PR #217 review): kg_entities has no top-level `dimension`
+        // column, but persistGraph() stores the ORIGINAL GraphNode (which does
+        // carry a real `dimension`) losslessly in `raw_node` (see
+        // SupabasePersistenceAdapter.persistGraph -- `rawNode: n`). Checking
+        // only `e.dimension` (always undefined for this table) meant every
+        // API-sourced node silently fell back to DEFAULT_KG_EXTRACTION_DIMENSION
+        // even when its real dimension was recoverable from raw_node, producing
+        // a confidently WRONG seek instead of an honest no-op. Prefer the
+        // preserved raw_node.dimension; only use the sentinel when neither
+        // source has a valid number.
+        const rawDimension = e.raw_node?.dimension;
+        const resolvedDimension =
+          typeof rawDimension === 'number' ? rawDimension :
+          typeof e.dimension === 'number' ? e.dimension :
+          DEFAULT_KG_EXTRACTION_DIMENSION;
+        return {
+          id: e.id,
+          dimension: resolvedDimension,
+          label: e.label,
+          type: e.type,
+          // e.type is API-sourced from kg_entities, which is normalized at
+          // write time -- but normalize again here defensively rather than
+          // trusting that invariant at render time (belt-and-suspenders,
+          // same reasoning as the storeKnowledgeGraph branch below).
+          entityType: normalizeEntityType(e.type),
+          weight: e.weight
+        };
+      });
+      const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
+      const edges: Array<{ source: string; target: string; strength: number; kind: RelationKind }> = [];
+      for (const rItem of (data.relations || [])) {
+        if (rItem && nodeIds.has(String(rItem.source_entity_id)) && nodeIds.has(String(rItem.target_entity_id))) {
+          edges.push({
+            source: String(rItem.source_entity_id),
+            target: String(rItem.target_entity_id),
+            strength: typeof rItem.strength === 'number' ? rItem.strength : 1,
+            kind: rItem.kind || 'related'
+          });
         }
       }
+
+      if (nodes.length > 0) {
+        setGraph({
+          nodes,
+          edges,
+          rootId: null
+        });
+        setLoadedFromApi(true);
+      } else {
+        // Empty API result: do NOT setGraph(EMPTY) here. The
+        // /api/analyses/[id]/graph route is backed by the kg_entities /
+        // kg_relations tables, which are empty database-wide for exactly the
+        // "no knowledge graph anywhere" analyses the client-side fallback
+        // exists to render (ADR 023). Overwriting with EMPTY here would
+        // clobber a just-synthesized fallback graph, so on an empty result
+        // we leave whatever the fallback produced in place and only clear
+        // the `loadedFromApi` flag. The graph is fully cleared on analysis
+        // switch / null analysisId in the `if (!analysisId)` branch and in
+        // the fallback's own empty-dimensions branch.
+        setLoadedFromApi(false);
+      }
+      setLoading(false);
     };
 
     void fetchGraph();

@@ -210,6 +210,39 @@ describe('useChapters network-recovery refetch (2026-09-15 incident RCA, video r
     expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(attemptsAfterRecovery);
   });
 
+  it('a stalled chapters fetch enters the backoff loop via the request timeout (P0b, PR #313 post-merge review)', async () => {
+    // Pre-fix, a stalled-but-never-rejecting fetch blocked the loop's await
+    // forever: retryCount never advanced, so the backoff schedule (and the
+    // online-recovery re-arm that depends on the entry reaching 'error')
+    // could never run. The AbortController timeout must convert the hang
+    // into a rejection — the same bucket as any network failure.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('This operation was aborted', 'AbortError')));
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-stall'));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(useChaptersStore.getState().entries['vid-stall']?.status).toBe('loading');
+
+    // Attempt 1: timeout abort at 10s -> 1s backoff -> attempt 2 at ~11s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Full schedule (timeouts at 10s + backoffs 1/2/4/8s) exhausts
+    // MAX_RETRIES and settles the entry at 'error' instead of hanging in
+    // 'loading' forever.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    expect(useChaptersStore.getState().entries['vid-stall']?.status).toBe('error');
+    expect(fetchMock).toHaveBeenCalledTimes(5); // MAX_RETRIES
+  });
+
   it('online event does nothing when the entry already settled (loaded)', async () => {
     let resolvePromise: (response: Response) => void = () => {};
     const fetchMock = vi.fn(() => new Promise<Response>((resolve) => { resolvePromise = resolve; }));
