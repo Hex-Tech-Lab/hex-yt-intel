@@ -1,0 +1,138 @@
+supabase/migrations/20260911120000_abort_on_partial_failure_default_false.sql
+  s_be40705c213a3f::t_d6e96e90221c37 1-18
+scripts/quality-engine/__tests__/wave10-new-rules.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 16,33,47,71,123-124
+  s_063531516ed0f0::t_2a78e29e17e801 1-15,17-32,34-46,48-70,72-122,125-152
+web/components/dashboard/DimensionAccordion.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 5-6,21-37,45-53,63-70
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 31,223-226,282-291,340-343,346-519
+web/hooks/__tests__/useChapters.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 159-233
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 164-280
+docs/qa-intel/RETRO_WAVE_FINDINGS_2026-09-11.md
+  s_be40705c213a3f::t_d6e96e90221c37 1-352
+web/lib/__tests__/dimension-remediation.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 2-19,21,23-28,32-33,63-340
+web/components/dashboard/__tests__/DimensionAccordion.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 1-109
+web/lib/__tests__/remediate-dimensions-route.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-61
+web/lib/services/dimension-remediation.ts
+  s_be40705c213a3f::t_d6e96e90221c37 52,88-95,221,227-228,234,306-405,413-427,429-430,432,443-515,517,766,798-832,836,862,949-961
+web/app/api/analyses/persist/route.ts
+  s_be40705c213a3f::t_d6e96e90221c37 436-460,462,466-472,474-491,505-510,593-612,615,667,686-692,726-730,769-781,790,800
+worker/src/services/MarkdownReconstructor.ts
+  s_be40705c213a3f::t_d6e96e90221c37 135-141,143,159-164,167-173
+docs/agent-prompts/2026-09-10-oc-prelaunch-checklist-status-audit.md
+  s_be40705c213a3f::t_d6e96e90221c37 1-98
+web/lib/__tests__/analysis-requeue.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 314-327,332,338-339,454,465-469
+scripts/quality-engine/infra/LegacyRuleAdapter.ts
+  s_be40705c213a3f::t_d6e96e90221c37 7,15
+web/hooks/useSSEStream.ts
+  s_be40705c213a3f::t_d6e96e90221c37 297,330-339,474-554,557,562
+web/lib/services/analysis-reaper.ts
+  s_be40705c213a3f::t_d6e96e90221c37 148-150,210-213,242-246,248-251,284-297,338-341
+scripts/quality-engine/rules/persistence.ts
+  s_be40705c213a3f::t_d6e96e90221c37 10-14
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_be40705c213a3f::t_d6e96e90221c37 16-32,205-212
+web/lib/config/synthesis.ts
+  s_be40705c213a3f::t_d6e96e90221c37 33-43,45
+web/hooks/useKnowledgeGraph.ts
+  s_be40705c213a3f::t_d6e96e90221c37 25-35,82-104,190,192-198,203-216,218-222
+web/lib/admin-logs/fetchers.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 206-236
+web/app/api/analyses/highlights/route.ts
+  s_be40705c213a3f::t_d6e96e90221c37 94-106
+supabase/migrations/20260911180903_record_remediation_failure_atomic.sql
+  s_be40705c213a3f::t_d6e96e90221c37 1-83
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_be40705c213a3f::t_d6e96e90221c37 1-31,94,146-147,150-154,200-201,231-242,275-302,304
+  s_be40705c213a3f::t_22e2ee5936b16c 303,305
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_be40705c213a3f::t_d6e96e90221c37 246-288,420-442,455-510,513
+web/components/templates/console/ChatDock.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 153,768-790
+  s_be40705c213a3f::t_18139b7fa2f85f 791
+docs/PRE_LAUNCH_AUDIT_RAW_2026-09-10.md
+  s_be40705c213a3f::t_d6e96e90221c37 1-360
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-219
+web/lib/types.ts
+  s_be40705c213a3f::t_d6e96e90221c37 48-59
+web/store/useChatStore.ts
+  s_be40705c213a3f::t_d6e96e90221c37 213-222,227,601-612
+docs/agent-prompts/2026-09-11-oc-remediation-cron-not-wired.md
+  s_be40705c213a3f::t_d6e96e90221c37 1-33,43,45-50,55-77,79-81,83,85-100,106-111,113-119,122-124,128-150,164-165
+.memory/ADRS.md
+  s_be40705c213a3f::t_d6e96e90221c37 23-25
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 1-407
+web/lib/adapters/settings-adapter.ts
+  s_be40705c213a3f::t_d6e96e90221c37 196-205
+supabase/migrations/20260911180911_remediation_quarantine_ttl_setting.sql
+  s_be40705c213a3f::t_d6e96e90221c37 1-32
+scripts/quality-engine/domain/Rule.ts
+  s_be40705c213a3f::t_d6e96e90221c37 21-26
+web/hooks/__tests__/useAuxElementStatus.test.tsx
+  s_be40705c213a3f::t_d6e96e90221c37 1-105
+web/hooks/useAutoRestoreAnalysis.ts
+  s_be40705c213a3f::t_d6e96e90221c37 11,25,64-75,90,92,125-138,140-158,161,178,180,340,342,345-375,378-385,389,391
+worker/src/__tests__/extract-json-payload-recovery.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-78
+scripts/quality-engine/__tests__/wave9-new-rules.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 10,80-158
+web/lib/ports/AnalysisPersistencePort.ts
+  s_be40705c213a3f::t_d6e96e90221c37 177-212
+web/lib/__tests__/dimension-remediation-retry-burn.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-409
+scripts/quality-engine/application/QualityEngine.ts
+  s_be40705c213a3f::t_d6e96e90221c37 34,45,48-51
+scripts/quality-engine/engine.ts
+  s_be40705c213a3f::t_d6e96e90221c37 15,62-63,72,76
+scripts/quality-engine/rules/quality.ts
+  s_be40705c213a3f::t_d6e96e90221c37 101-136,331-478,482-483,494-496
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-271
+web/app/api/analyses/highlights/__tests__/route.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-137
+web/lib/validators/highlights.ts
+  s_be40705c213a3f::t_d6e96e90221c37 34-40
+web/lib/__tests__/analysis-reaper.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 72-78,80-82,205,207-209,220,224-225,230-237,243-249,295-297,302,319-320
+web/hooks/useChapters.ts
+  s_be40705c213a3f::t_d6e96e90221c37 149-177
+web/lib/__tests__/useChatStore-resilience.test.ts
+  s_be40705c213a3f::t_d6e96e90221c37 1-135
+web/hooks/useAuxElementStatus.ts
+  s_be40705c213a3f::t_d6e96e90221c37 63-81
+web/app/api/admin/logs/snapshot/route.ts
+  s_be40705c213a3f::t_d6e96e90221c37 14-16,57-66,83,91-93,105-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "75e5b5ce2897d2ea22c8588049ea5b169bf69fdc",
+  "prompts": {},
+  "sessions": {
+    "s_063531516ed0f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2eaaa43b-b7e3-4e61-9f2f-37cfe9461418",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
