@@ -144,3 +144,39 @@ This wave is explicitly SCOPING/PLANNING first (per user: "once we did that, we 
 - Prompts must be built from `docs/agent-prompts/TEMPLATE.md` as always, but **especially thorough on the skills section** — user explicitly said "go plus select and be extremely abundant with skills" (i.e. don't just apply the mandatory core 5, actively look for every skill that could plausibly help each specific task).
 - Every fix produced must include a negative-control test before being considered complete, mirroring the pattern already established this session (e.g. #309's `allowSelfAnalysis` negative control, #313's starvation-bug negative control).
 - CC must independently re-verify (real CI command, not just `--mode diff`) before merge, matching this session's established audit discipline.
+
+### Wave A-security — a real, overdue, mostly-Critical security backlog (user's Codacy dashboard export, 2026-09-15 08:55 EEST, 55 findings — LOGGED, NOT YET ACTIONED)
+
+This is a **separate, more urgent input** from the pattern-frequency table in the main Wave A section above — it's Codacy's actual tracked-findings dashboard (with SLA age/due-date columns), not a static-analysis rule-frequency count. Several items are **2 months overdue**. This needs to be treated as higher priority than the frequency-table Wave A work, not merged into it as just another data point.
+
+**Exact category breakdown as pasted by the user** (55 findings total, severities as labeled — nearly all "Critical"):
+
+| Category | Sub-type | Description | Rough count seen |
+|---|---|---|---|
+| Code security | File Access | "The application dynamically constructs file or path information" / "possible user input going into a `path.join` or `path.resolve` function" | ~14 (largest cluster, up to 2 months overdue) |
+| Code security | HTTP | "user-controlled URLs... passed directly to HTTP client libraries" (SSRF-shaped) | ~13 |
+| Code security | Cryptography | "cryptographically weak random number generators" | ~10 |
+| Code security | Command Injection | "non-static data to retrieve and run functions from the object" | 3 |
+| Code security | DoS | "`RegExp` constructor... called with a non-literal value" | 3 |
+| Code security | XSS | `dangerouslySetInnerHTML` (2 instances — one already 2 months overdue, one due in 11 days) | 2 |
+| Code security | Input Validation | user-controlled input (`CheckoutButtonProps`) that "can control the location of the current window context" (open-redirect-shaped) — due in 4 days | 1 |
+| Code security | Insecure Modules/Libraries | "possibility of prototype polluting function" | 1 |
+| **Dependencies** | Insecure Modules/Libraries | **Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used** — due in ~1 month | 1 |
+| **Dependencies** | Insecure Modules/Libraries | **Next.js: Unauthenticated Remote Code Execution on windows-hosted servers** — due in ~1 month | 1 |
+
+**CC's immediate read (verify with real investigation, don't just trust this framing)**:
+- **The two Next.js RCA CVEs are the single highest-priority items in this entire list** — "Unauthenticated Remote Code Execution" is about as severe as a finding gets, and this repo already has a documented pattern of patch-bumping Next.js for exactly this class of issue (see project CLAUDE.md §5: "Next.js: patch-bumped 2026-07-24 for Dependabot #73-90 SSRF/DoS/cache-confusion"). **First action on resume for this sub-wave: check the currently pinned Next.js version against these two CVEs' fixed-in versions and patch-bump if not already covered** — this may be a fast, high-value, low-risk fix (a version bump within the same minor line, per the established precedent) rather than something needing a custom qa-intel rule at all.
+- **File Access + HTTP (SSRF) clusters (~27 combined) are the dominant volume** and are genuine OWASP Top 10 categories (A01 path traversal / SSRF) — this repo has an `owasp-top-10` skill already; these should map to real qa-intel rules with the same rigor as the Wave A frequency-table security items (don't duplicate rule-design effort between the two Wave A inputs — reconcile them into one rule-design pass covering both).
+- **Weak-RNG cluster (~10)**: check whether these are genuinely security-sensitive uses (tokens, session IDs, crypto keys — real bugs) or incidental `Math.random()` in non-security contexts (UI jitter, sampling, test fixtures — Codacy may be flagging both indiscriminately). This distinction changes urgency a lot; don't blanket-fix without checking each site's actual purpose.
+- **`dangerouslySetInnerHTML` (2 instances)**: check what content is being rendered — if it's LLM-generated markdown/HTML rendered to the user (plausible in this app, given synthesis dimension content), this is a REAL XSS risk needing sanitization (e.g. DOMPurify), not just a lint suppression.
+- **The `CheckoutButtonProps` window-context finding** (due in 4 days — soonest deadline in the whole list) touches billing/checkout code — given this repo's Paddle integration and existing billing-correctness sensitivity (PR #306 this session was billing-related), this one likely deserves being looked at directly by CC rather than delegated, or at minimum a very tightly-scoped OC dispatch with CC reviewing the diff line-by-line before merge.
+- **Command Injection (3) / prototype pollution (1)**: "using non-static data to retrieve and run functions from the object" sounds like a dynamic property-access-as-function-call pattern — find the actual call sites before assuming this needs a generic fix; could be a false positive on a legitimate dispatch-table pattern, or a real injection risk, depending on whether the "non-static data" is ever user-controlled.
+
+**Explicitly NOT yet investigated or actioned** — this section is a faithful log of what the user provided plus CC's preliminary risk read, for the next session to pick up. **Do not assume any of these are already understood in depth; the "rough count" column above was eyeballed from a pasted UI dump, not queried from Codacy's API — get exact current counts/IDs from Codacy directly before planning work**, and treat CC's "likely false positive" / "likely real" guesses above as hypotheses to verify, not conclusions.
+
+**Suggested resume order for this sub-wave** (proposal only, confirm with user first per the "assess ROI/usefulness before executing" directive already established for both waves):
+1. Next.js CVE version check + patch bump (fast, contained, precedented).
+2. `CheckoutButtonProps` open-redirect-shaped finding (billing-adjacent, tight scope, CC-reviewed).
+3. `dangerouslySetInnerHTML` × 2 (check content source, sanitize if user/LLM-influenced content).
+4. Reconcile File Access / HTTP(SSRF) / weak-RNG clusters with the frequency-table Wave A's security items into ONE qa-intel rule-design pass (avoid duplicate design effort).
+5. Command injection / prototype pollution investigation (verify real vs. false-positive before fixing).
