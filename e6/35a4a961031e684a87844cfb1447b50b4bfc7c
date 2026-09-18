@@ -1,0 +1,72 @@
+.memory/AGENT_LEDGER.md
+  s_94b67ff7643016::t_cad3e3814686d6 1411
+web/store/__tests__/useChatStore-resilience.test.ts
+  s_94b67ff7643016::t_04882e48e6e741 3,16-27,64,66,75-77,96-104,179-187,189,194,197,202-205,208,215-216,221-222,224-225
+web/lib/__tests__/fetch-with-timeout.test.ts
+  s_94b67ff7643016::t_4bd4b21effdec1 3-4,12-19,29-40,52-55,71-76,79-82,84-91,93-94,98-99,104-106,123-124,141,144,160,163-164,169,191,194-195,198,211,218,221-238,240-247,249-258,262,266-275,281,285
+  s_94b67ff7643016::t_1b18a237f2a17e 239,248,265,284
+  s_94b67ff7643016::t_7af906b1623d5b 276-280,282-283
+  s_94b67ff7643016::t_ad60110b75267f 56,59-68
+  s_94b67ff7643016::t_8beae20c58cc41 259-261,263-264
+  s_400c28cf65de96::t_5d1262dd1bf88c 286
+web/hooks/useKnowledgeGraph.ts
+  s_94b67ff7643016::t_1d22d399e39309 135-138
+  s_94b67ff7643016::t_2e9bba921c0618 133,154
+  s_94b67ff7643016::t_65d3544b690a9b 48-61,63,65-78,85-90,92-109,113-114,117-118,120,125-132,134,139-153,155-167
+  s_94b67ff7643016::t_bfd0abf895fa6b 62,64
+  s_94b67ff7643016::t_ebb4d3a0425f34 218-238,257
+  s_94b67ff7643016::t_f67df96afaa96d 79-84,91
+  s_94b67ff7643016::t_e7a899cdff4291 110-112
+  s_be40705c213a3f::t_0813c980c8c10d 115-116,119,121-124
+web/hooks/useAutoRestoreAnalysis.ts
+  s_94b67ff7643016::t_45995da6a415eb 315-318
+  s_94b67ff7643016::t_9e7770000e02c7 86-91,95-98,102-105,108-110
+  s_94b67ff7643016::t_f0b04cd37ce8a4 112-115
+  s_94b67ff7643016::t_42ed954121ed26 189,193-196,200-203
+  s_94b67ff7643016::t_6b7b8571febc98 207-218
+  s_94b67ff7643016::t_9c157452613029 386-393
+web/hooks/useChapters.ts
+  s_94b67ff7643016::t_87da897245c3a0 106-113,115,119-134
+web/lib/utils/fetch-with-timeout.ts
+  s_94b67ff7643016::t_0c74ae2b8ad5f2 50-55,60,70
+web/hooks/__tests__/useChapters.test.tsx
+  s_94b67ff7643016::t_c67af5fc2b07df 268
+  s_94b67ff7643016::t_a1cc02b55a9b15 300-359
+web/hooks/__tests__/useKnowledgeGraph-payload.test.tsx
+  s_94b67ff7643016::t_6008358de1ca4b 1-127
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_94b67ff7643016::t_2c583114198303 389-453
+  s_94b67ff7643016::t_b29f4dfcf75ba5 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e635a4a961031e684a87844cfb1447b50b4bfc7c",
+  "prompts": {},
+  "sessions": {
+    "s_400c28cf65de96": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49c18737ffeh1zV0CP1E2vIxZ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_94b67ff7643016": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49cd0340ffe5l1zsLkGdF1J4q",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
