@@ -1,0 +1,27 @@
+docs/agent-prompts/2026-09-18-oc-pr317-round2.md
+  s_be40705c213a3f::t_378a5eb0b645ac 1-24
+docs/agent-prompts/2026-09-18-oc-pr314-round2.md
+  s_be40705c213a3f::t_7e26176cb6ed64 1-27
+docs/agent-prompts/2026-09-18-oc-pr315-round2.md
+  s_be40705c213a3f::t_4ea97cf7afdb13 1-31
+docs/agent-prompts/2026-09-18-oc-pr318-round2.md
+  s_be40705c213a3f::t_8c3e898a04f559 1-23
+.memory/AGENT_LEDGER.md
+  s_be40705c213a3f::t_1b801f6588d9d2 1398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "56bad4428fcad887719571be16c55b1f2036315a",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
