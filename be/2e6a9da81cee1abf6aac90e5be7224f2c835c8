@@ -1,0 +1,73 @@
+web/lib/ports/AnalysisPersistencePort.ts
+  s_a3dbb815be7f01::t_34eac0a1c75d8a 233-252,257
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_a3dbb815be7f01::t_a8415a0e157c24 52-53
+  s_a3dbb815be7f01::t_6f840be7c0a266 47
+  s_a3dbb815be7f01::t_087b985b8ef72c 36
+  s_a3dbb815be7f01::t_59af0258b89bcc 58
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_a3dbb815be7f01::t_adc45013f39d65 232,237-240,245,254,258-273,280
+  s_a3dbb815be7f01::t_65e333cb55a43b 241-244
+web/hooks/useAuxElementStatus.ts
+  s_a3dbb815be7f01::t_1c06dbf85faa06 29-30
+  s_a3dbb815be7f01::t_a2f8e752444c86 87-89
+web/lib/__tests__/persist-cas-race-and-primitive-payload.test.ts
+  s_a3dbb815be7f01::t_e2d11aeb9077fa 1-420
+web/lib/__tests__/highlights-validator.test.ts
+  s_a3dbb815be7f01::t_d6bc0a9eb0603d 180-182
+web/hooks/__tests__/useAuxElementStatus.test.tsx
+  s_a3dbb815be7f01::t_305e53f977466c 123-125
+web/lib/__tests__/persist-chunk-payload-classification.test.ts
+  s_a3dbb815be7f01::t_4bccc1f0aca598 40
+  s_a3dbb815be7f01::t_0d925e7169185c 51
+  s_a3dbb815be7f01::t_c08d16f6d536c1 45-46
+  s_a3dbb815be7f01::t_6cfb74979bf3bb 213-215
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_a3dbb815be7f01::t_cbace945307f90 540-550
+  s_a3dbb815be7f01::t_cd6d9d6c307a43 552-554,558,562,568-576,582
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_a3dbb815be7f01::t_ec0a958cd2ef04 41-42
+  s_a3dbb815be7f01::t_d79e3722e78e91 36
+  s_a3dbb815be7f01::t_e3a685c67815af 47
+web/lib/services/stitch-analysis-chunks.ts
+  s_a3dbb815be7f01::t_0b607dab165887 40-65
+  s_be40705c213a3f::t_e3c954260e519f 39
+web/app/api/analyses/persist/route.ts
+  s_a3dbb815be7f01::t_414db993b25f3f 818-822
+  s_a3dbb815be7f01::t_37986d377397b0 21
+  s_a3dbb815be7f01::t_7e7c4922f214df 489-494
+  s_a3dbb815be7f01::t_ba59c75512b3ca 1325
+  s_a3dbb815be7f01::t_3861a895857b1c 738-742,744,757-805,807-808
+  s_a3dbb815be7f01::t_f54dc0796621d0 160-162
+  s_a3dbb815be7f01::t_d6fc2f7ca997bd 504
+  s_a3dbb815be7f01::t_8df0d32b8a8355 510,512
+.memory/AGENT_LEDGER.md
+  s_be40705c213a3f::t_b63d54240af10e 1383-1397
+  s_a3dbb815be7f01::t_871ad94a70f494 1398-1399
+.opencode/opencode.json
+  s_be40705c213a3f::t_e1d9eca2f6192e 3-4,8,10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "be2e6a9da81cee1abf6aac90e5be7224f2c835c8",
+  "prompts": {},
+  "sessions": {
+    "s_a3dbb815be7f01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f59998c3effeqhYLIDascNVaWY",
+        "model": "z-ai/glm-5.2"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
