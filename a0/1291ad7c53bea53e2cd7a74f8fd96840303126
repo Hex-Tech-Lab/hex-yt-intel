@@ -1,0 +1,19 @@
+.deepsource.toml
+  s_cfb03e7ec4abdc::t_0001986bb69ab6 7-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a01291ad7c53bea53e2cd7a74f8fd96840303126",
+  "prompts": {},
+  "sessions": {
+    "s_cfb03e7ec4abdc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49cd0303ffeYaL1y00GWfT0UO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
