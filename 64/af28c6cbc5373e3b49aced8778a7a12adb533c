@@ -1,0 +1,44 @@
+web/lib/__tests__/next-output-mode.test.ts
+  s_400c28cf65de96::t_6d725ec5c0fe18 1-74
+web/lib/__tests__/next-dependency-guards.test.ts
+  s_400c28cf65de96::t_3e9e531c515939 47-48
+  s_400c28cf65de96::t_d1d4287a5b4a08 1-4,7-23,27,29-46,49-52,65-67,74-75
+  s_400c28cf65de96::t_a5a74a681ec1c1 24-26,28
+  s_400c28cf65de96::t_7fb39c11f173e4 5-6
+  s_400c28cf65de96::t_27bbf719c67192 53-64,68-73
+web/tests/image-optimization-security.spec.ts
+  s_400c28cf65de96::t_ef3e6ed203747d 33-35
+  s_400c28cf65de96::t_718f0c920f8c0a 1-24,36-39,41-54,65-66,68-100,102-106,108-112,114-122
+  s_400c28cf65de96::t_86889f688b24d6 40,67,101,107,113
+  s_400c28cf65de96::t_7856621073485b 25-32
+  s_400c28cf65de96::t_774fe89cf46469 55-64
+web/lib/config/next-output-mode.ts
+  s_400c28cf65de96::t_05f7d3460425e8 1-37,39-67
+  s_400c28cf65de96::t_2d64b2a6d3ef0e 38
+pnpm-workspace.yaml
+  s_400c28cf65de96::t_950aca9fad2602 38-48
+web/next.config.ts
+  s_400c28cf65de96::t_0c658e498bca83 6
+  s_400c28cf65de96::t_39c6b8cb1c7e7d 28-36
+  s_400c28cf65de96::t_b4747c6b6193e1 7-10
+  s_400c28cf65de96::t_e5dfbf91ae8b5a 43
+  s_400c28cf65de96::t_0ecaa49e57f1f7 84-85
+web/package.json
+  s_400c28cf65de96::t_a68f8b277d22b2 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "64af28c6cbc5373e3b49aced8778a7a12adb533c",
+  "prompts": {},
+  "sessions": {
+    "s_400c28cf65de96": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49c18737ffeh1zV0CP1E2vIxZ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
