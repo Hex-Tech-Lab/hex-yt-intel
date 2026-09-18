@@ -35,6 +35,17 @@ overrides:
   "ip-address": "^10.3.1"
   "eslint-plugin-react-hooks": "5.1.0"
   "eslint-plugin-react": "7.34.3"
+  # eslint-config-next + @next/eslint-plugin-next are deliberately PINNED at
+  # 14.2.16 and do NOT track web/package.json's next version (next itself is
+  # 16.3.3). Rationale (PR #317 round-2 audit, 2026-09-18): every
+  # eslint-config-next >=15 declares peer "eslint": ">=9.0.0", but this repo
+  # is frozen on ESLint 8.57.1 with legacy .eslintrc.json — bumping requires
+  # an ESLint 9 + flat-config migration (out of blast radius for CVE-bump
+  # PRs). web/package.json's eslint-config-next specifier is kept identical
+  # to this pin so the declared and resolved versions can't drift apart
+  # silently again (they had: package.json said 16.2.6 while the override
+  # resolved 14.2.16). A compatibility guard test asserts both stay in
+  # sync: web/lib/__tests__/next-dependency-guards.test.ts
   "eslint-config-next": "14.2.16"
   "@next/eslint-plugin-next": "14.2.16"
   "glob@>=10.2.0 <10.5.0": "10.5.0"
