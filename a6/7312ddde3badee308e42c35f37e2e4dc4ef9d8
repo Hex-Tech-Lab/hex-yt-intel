@@ -1,0 +1,21 @@
+web/lib/services/billing-status.ts
+  s_cfb03e7ec4abdc::t_c0ca7e6bbc8024 1-2,13-14,20-24,26,29-31
+web/lib/__tests__/persist-side-effect-outbox.test.ts
+  s_cfb03e7ec4abdc::t_69d34feb7721a6 70-72,101-113,125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a67312ddde3badee308e42c35f37e2e4dc4ef9d8",
+  "prompts": {},
+  "sessions": {
+    "s_cfb03e7ec4abdc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49cd0303ffeYaL1y00GWfT0UO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
