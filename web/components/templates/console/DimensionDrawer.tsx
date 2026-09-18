@@ -17,8 +17,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTokenRef = useRef(0);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -26,15 +27,28 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
 
   const handleCopy = useCallback(async () => {
     if (!dimension?.content) return;
+    const token = ++copyTokenRef.current;
     try {
       await navigator.clipboard.writeText(dimension.content);
+      if (copyTokenRef.current !== token) return; // dimension changed mid-copy
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-      setCopied(true);
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+      setCopyState('copied');
+      copyTimeoutRef.current = setTimeout(() => setCopyState('idle'), 2000);
     } catch (err) {
       console.error('[DimensionDrawer] Clipboard copy failed', { message: err instanceof Error ? err.message : String(err) });
+      if (copyTokenRef.current !== token) return;
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopyState('failed');
+      copyTimeoutRef.current = setTimeout(() => setCopyState('idle'), 2000);
     }
   }, [dimension]);
+
+  useEffect(() => {
+    // Dimension identity changed: invalidate any in-flight copy and reset UI.
+    copyTokenRef.current++;
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    setCopyState('idle');
+  }, [dimension?.label]);
 
   useEffect(() => {
     return () => {
@@ -153,13 +167,30 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           </div>
           <div className="flex items-center gap-1">
             <IconButton
-              label="Copy to clipboard"
-              tooltip={copied ? 'Copied!' : 'Copy to clipboard'}
+              label={copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
+              tooltip={copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
               variant="ghost"
               size="sm"
-              onClick={() => void handleCopy()}
-              className={copied ? '!border-green-500 !text-green-500 !bg-green-500/10' : ''}
-              icon={<Icon icon={copied ? 'solar:check-read-linear' : 'solar:copy-linear'} size={14} />}
+              onClick={() => { handleCopy().catch(() => {}); }}
+              className={
+                copyState === 'copied'
+                  ? '!border-green-500 !text-green-500 !bg-green-500/10'
+                  : copyState === 'failed'
+                    ? '!border-red-500 !text-red-500 !bg-red-500/10'
+                    : ''
+              }
+              icon={
+                <Icon
+                  icon={
+                    copyState === 'copied'
+                      ? 'solar:check-read-linear'
+                      : copyState === 'failed'
+                        ? 'solar:close-circle-linear'
+                        : 'solar:copy-linear'
+                  }
+                  size={14}
+                />
+              }
             />
             <Tooltip content="Close">
               <button
