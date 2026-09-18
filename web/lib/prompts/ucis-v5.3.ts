@@ -356,7 +356,12 @@ Where concepts connect to entirely different domains (at least 2 required).
 
 #### 8.4 Discovery Pathways
 
-Official resources, recommended deep dives, contrarian perspectives.
+Resources, tools, or further reading the speaker explicitly names in the
+transcript (never looked up externally -- this field is transcript-only,
+same as every other field under section 0.5). If the speaker names none, output
+this subsection header and write "N/A -- no resources/further reading
+named in transcript" per the Insufficient Data Protocol. Do NOT omit this
+subsection.
 
 ---
 
