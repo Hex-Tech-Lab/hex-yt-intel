@@ -1,0 +1,32 @@
+web/lib/services/billing-status.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 22,25
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 32,56-58,62,135
+web/lib/__tests__/persist-side-effect-outbox.test.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 133,135
+  s_cfb03e7ec4abdc::t_75a005a880dd89 70-74,103-113,125,242-243
+web/hooks/useAuxElementStatus.ts
+  s_cfb03e7ec4abdc::t_aa4b8043d87814 105-138,143,157-160,162,165-168,170-174
+web/lib/__tests__/persist-chunk-payload-classification.test.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 36,60-62,66
+web/lib/__tests__/persist-cas-race-and-primitive-payload.test.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 147,306,404,407
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_cfb03e7ec4abdc::t_f745edbcb5f05b 44,68-70,74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b07a18e30ad9b714ec26125655b4625072098ffc",
+  "prompts": {},
+  "sessions": {
+    "s_cfb03e7ec4abdc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49cd0303ffeYaL1y00GWfT0UO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
