@@ -1,0 +1,22 @@
+web/components/templates/console/DimensionDrawer.tsx
+  s_be40705c213a3f::t_9f01f7260dcb7e 3-4
+  s_be40705c213a3f::t_27e3cf897ad2b3 154-174
+  s_be40705c213a3f::t_90afef20821f6f 20-21,27-43
+  s_be40705c213a3f::t_678dd150c4feba 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b5c167e8fefcc4073c178adcd0101bc06c846102",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
