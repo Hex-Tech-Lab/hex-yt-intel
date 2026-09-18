@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { Tooltip } from '@astryxdesign/core';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { Tooltip, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
@@ -17,10 +17,30 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
+
+  const handleCopy = useCallback(async () => {
+    if (!dimension?.content) return;
+    try {
+      await navigator.clipboard.writeText(dimension.content);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopied(true);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('[DimensionDrawer] Clipboard copy failed', { message: err instanceof Error ? err.message : String(err) });
+    }
+  }, [dimension]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!dimension) {
@@ -131,16 +151,27 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               {dimension.label}
             </span>
           </div>
-          <Tooltip content="Close">
-            <button
-              ref={closeBtnRef}
-              onClick={handleClose}
-              aria-label="Close dimension details"
-              className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            >
-              <Icon icon="solar:close-circle-linear" size={16} />
-            </button>
-          </Tooltip>
+          <div className="flex items-center gap-1">
+            <IconButton
+              label="Copy to clipboard"
+              tooltip={copied ? 'Copied!' : 'Copy to clipboard'}
+              variant="ghost"
+              size="sm"
+              onClick={() => void handleCopy()}
+              className={copied ? '!border-green-500 !text-green-500 !bg-green-500/10' : ''}
+              icon={<Icon icon={copied ? 'solar:check-read-linear' : 'solar:copy-linear'} size={14} />}
+            />
+            <Tooltip content="Close">
+              <button
+                ref={closeBtnRef}
+                onClick={handleClose}
+                aria-label="Close dimension details"
+                className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              >
+                <Icon icon="solar:close-circle-linear" size={16} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Content */}
