@@ -1,0 +1,55 @@
+web/vitest.config.ts
+  s_665cc73207b24d::t_c4dcd770598ce9 13-18
+web/lib/prompts/ucis-v5.3.test.ts
+  s_665cc73207b24d::t_64efce59e8b4e6 43-56,59-89
+  s_665cc73207b24d::t_e8fe0183b6f32a 58
+  s_665cc73207b24d::t_4a6c90f016a5a2 3
+  s_665cc73207b24d::t_a4edab2d4a628d 57
+web/lib/prompts/factory.ts
+  s_665cc73207b24d::t_776f7f81baa47f 4
+  s_665cc73207b24d::t_042e8c1aa9178d 101
+  s_665cc73207b24d::t_5a5d5574d79507 64-69
+  s_665cc73207b24d::t_a59d306c6f127d 127
+.memory/AGENT_LEDGER.md
+  s_665cc73207b24d::t_5a946175df1ed6 1398
+web/lib/prompts/credibility-grounding.ts
+  s_665cc73207b24d::t_4b857cb7e91ea6 7-116
+  s_665cc73207b24d::t_ee09d7a15cceeb 1-6
+worker/src/__tests__/prompt-builder-grounding.test.ts
+  s_665cc73207b24d::t_9775e426a061d9 76-77
+  s_665cc73207b24d::t_9096c4cbe0188d 78-80,83-85
+  s_665cc73207b24d::t_51143dc96f3c60 1-4,6-72,75,81-82,86-100
+  s_be40705c213a3f::t_868deb1774a39a 5
+  s_665cc73207b24d::t_cbd9a6422d6267 73-74
+web/lib/prompts/credibility-grounding.test.ts
+  s_665cc73207b24d::t_124678e6cf3b12 1-102
+web/lib/prompts/ucis-v5.3.ts
+  s_665cc73207b24d::t_31e1538e398dba 197-201
+  s_665cc73207b24d::t_e8227b7a5d7ec4 442-444,453-454,465-466,474
+  s_665cc73207b24d::t_9f0730e8ae713e 154-158
+  s_665cc73207b24d::t_614f3c1899592b 688-704
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1ff2ca1f8c33aa7d67966139c3edaf93efb8196b",
+  "prompts": {},
+  "sessions": {
+    "s_665cc73207b24d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49c1837fffeueVhz2fa2PwL1J",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
