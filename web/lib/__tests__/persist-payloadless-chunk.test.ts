@@ -41,10 +41,12 @@ const adapterInstance = vi.hoisted(() => ({
   persistAnalysisChunk: vi.fn(),
   findAnalysisChunks: vi.fn(),
   updateAnalysisResult: vi.fn(),
+  updateValidationReport: vi.fn().mockResolvedValue(undefined),
+  markChunkFailed: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/lib/adapters', () => ({
-  SupabasePersistenceAdapter: vi.fn(() => adapterInstance),
+  SupabasePersistenceAdapter: vi.fn(function mockAdapterClass() { return adapterInstance; }),
 }));
 
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
@@ -55,7 +57,7 @@ vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
 }));
 
 vi.mock('@/lib/adapters/PostgresBillingAdapter', () => ({
-  PostgresBillingAdapter: vi.fn(() => ({ consumeQuota: vi.fn().mockResolvedValue(null) })),
+  PostgresBillingAdapter: vi.fn(function mockBillingAdapterClass() { return { consumeQuota: vi.fn().mockResolvedValue(null) }; }),
 }));
 
 vi.mock('@/lib/services/traffic', () => ({

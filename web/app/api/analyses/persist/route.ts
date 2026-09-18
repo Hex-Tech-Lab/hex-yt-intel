@@ -18,7 +18,9 @@ import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
-import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, hasUsableDimensionsPayload } from '@/lib/services/stitch-analysis-chunks';
+import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
+import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
+import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
 
@@ -763,16 +765,25 @@ export async function POST(request: NextRequest) {
               // loss). The scoped CAS misses (returns false) when the row
               // changed; we refetch and RESTORE a now-valid row into
               // chunkMap instead of blindly deleting. On a thrown DB error
-              // we leave the entry in chunkMap (the stitch skips malformed
-              // payloads via hasUsableDimensionsPayload, and the row stays
-              // 'completed' in DB so the reaper can still recover it) —
-              // we must NOT treat an unknown error as a confirmed demotion.
+              // (after bounded retries — see the catch below) we ABORT the
+              // finalize with an observable failure: the row's status is
+              // indeterminate, so the parent must not be treated as settled.
               try {
-                const demoted = await persistenceAdapter.markChunkFailed({
-                  analysisId,
-                  chunkIndex: malformedChunk.chunk_index,
-                  observedUpdatedAt: malformedChunk.updated_at,
-                });
+                // P1 (PR #314 second review round, item 2): the demotion is
+                // retried with bounded backoff (2 attempts) before giving
+                // up — a transient DB blip during the demotion previously
+                // left the row 'completed' + malformed in DB while the
+                // parent finalize committed WITHOUT the chunk (silent
+                // partial), and the reaper's completed-only filter would
+                // keep treating the row as recoverable forever.
+                const demoted = await retryWithBackoff(
+                  () => persistenceAdapter.markChunkFailed({
+                    analysisId,
+                    chunkIndex: malformedChunk.chunk_index,
+                    observedUpdatedAt: malformedChunk.updated_at,
+                  }),
+                  2
+                );
                 if (demoted) {
                   chunkMap.delete(malformedChunk.chunk_index);
                 } else {
@@ -798,13 +809,27 @@ export async function POST(request: NextRequest) {
                   }
                 }
               } catch (e) {
-                // Unknown DB error — do NOT delete the chunkMap entry. The
-                // stitch skips malformed payloads (hasUsableDimensionsPayload
-                // returns false), so leaving it is safe; the row stays
-                // 'completed' in DB (not demoted) so the reaper can still
-                // find it. We have NOT falsely confirmed a demotion.
+                // P1 (PR #314 second review round, item 2): the demotion
+                // could NOT be confirmed after bounded retries — the row's
+                // status is indeterminate (very likely still 'completed' +
+                // malformed). Finalizing the parent now would commit a
+                // stitch that silently omits this chunk while the row stays
+                // 'completed' (the reaper's completed-only filter would
+                // keep treating it as recoverable forever). Abort the
+                // finalize with an observable failure instead: the worker
+                // treats any non-OK persist as retryable and re-sends the
+                // whole persist (re-deriving the settled set and retrying
+                // the demotion), and the stuck-analysis reaper is the
+                // backstop if the demotion is persistently broken. We do
+                // NOT silently commit a parent that knowingly omits data.
+                const demotionErr = toError(e);
                 Sentry.captureException(e, { contexts: { persist: { phase: 'reclassify_malformed_chunk', analysisId } } });
-                console.warn('[analyses/persist] Failed to reclassify malformed completed chunk (demotion uncertain, chunk left completed in DB, stitch excludes it)', { analysisId, chunkIndex: malformedChunk.chunk_index, error: String(e) });
+                console.error('[analyses/persist] Chunk demotion failed after bounded retries — aborting finalize so it is not silently committed without the chunk', {
+                  analysisId,
+                  chunkIndex: malformedChunk.chunk_index,
+                  message: demotionErr.message
+                });
+                return { type: 'error' as const, error: 'Chunk demotion failed; finalization deferred', status: 503 };
               }
             }
           }
@@ -923,6 +948,11 @@ export async function POST(request: NextRequest) {
           // (PR #306 review).
           const isFullyValidated = isStitchedValid && finalStatus === 'done';
           const { channelMeta: _priorChannelMeta, comments: _priorComments, ...priorReportSansAux } = priorReport as any;
+          // P1 (PR #314 second review round, item 4): the side-effects claim
+          // is recorded in the SAME atomic write as the CAS transition — see
+          // side-effect-outbox.ts. Only claimed when this path will actually
+          // fire the downstream side effects (billingStatus === 'completed').
+          const sideEffectsClaimed = billingStatus === 'completed';
           const newReport: PersistedValidationReport = {
             ...priorReportSansAux,
             validation_status: finalStatus,
@@ -931,6 +961,7 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isFullyValidated,
+            ...(sideEffectsClaimed ? claimSideEffectsPending({}) : {}),
             ...withFreshAuxMetadata(channelMeta, comments),
           };
 
@@ -975,6 +1006,12 @@ export async function POST(request: NextRequest) {
           // failed on cosmetic KG/persona metadata but all dimensions are present. Gating on
           // isStitchedValid here would silently skip caching those rows, violating ADR Law #1.
           if (billingStatus === 'completed') {
+            // P1 (PR #314 second review round, item 4): every tracked side
+            // effect below reports its failure into this flag. On ANY failure
+            // the side_effects_pending claim stays set (the row is observably
+            // incomplete — reconciliation can replay the idempotent
+            // publishes); on full success the claim is cleared best-effort.
+            let sideEffectsFailed = false;
             const cachedPayload: CachedAnalysisResult = {
               id: analysisId,
               video_id: videoId,
@@ -998,6 +1035,7 @@ export async function POST(request: NextRequest) {
             const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
             await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
             });
 
@@ -1011,6 +1049,7 @@ export async function POST(request: NextRequest) {
                 metadata: { title: row.title, channelTitle: row.channelTitle || '' },
               }).catch(e => {
                 Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
                 console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
               });
             }
@@ -1021,6 +1060,7 @@ export async function POST(request: NextRequest) {
             // failure here must never affect the persist response.
             await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to publish digest task for chunks', { analysisId, error: String(e) });
             });
 
@@ -1033,6 +1073,7 @@ export async function POST(request: NextRequest) {
             // (skipIfPresent) so a re-persist re-spends nothing. Best-effort.
             await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to publish highlights task for chunks', { analysisId, error: String(e) });
             });
 
@@ -1056,6 +1097,30 @@ export async function POST(request: NextRequest) {
               .catch(e => {
                 console.warn('[analyses/persist] Failed to log analysis_completed usage event (chunked path)', { analysisId, error: String(e) });
               });
+
+            // P1 (PR #314 second review round, item 4): claim lifecycle.
+            // Full success -> clear the claim best-effort (the CAS winner
+            // already owns the row; preserveValidationPassed keeps the
+            // validation_passed column intact). Any tracked failure -> the
+            // claim STAYS SET (observable: reconciliation can replay the
+            // idempotent publishes / upsert the cache).
+            if (!sideEffectsFailed) {
+              await persistenceAdapter.updateValidationReport({
+                analysisId,
+                report: clearSideEffectsPending(newReport),
+                preserveValidationPassed: true,
+              }).catch(e => {
+                Sentry.captureException(e, { contexts: { persist: { phase: 'clear_side_effects_pending_chunks', analysisId } } });
+                console.warn('[analyses/persist] Failed to clear side_effects_pending claim (stays set; row is settled, side effects completed but claim write failed)', { analysisId, error: String(e) });
+              });
+            } else {
+              Sentry.captureMessage('analyses/persist: side effects partially failed — side_effects_pending claim left set for reconciliation', {
+                level: 'warning',
+                tags: { operation: 'analysis-persist', phase: 'side_effects_reconciliation' },
+                extra: { analysisId, videoId },
+              });
+              console.warn('[analyses/persist] Side effects partially failed — side_effects_pending claim left set (reconciliation required)', { analysisId, videoId });
+            }
           }
         }
 
@@ -1193,6 +1258,11 @@ export async function POST(request: NextRequest) {
       const reportValidationStatus = payloadToEvaluate !== undefined && computedValidationStatus ? computedValidationStatus : finalStatus;
 
       const { channelMeta: _priorChannelMeta2, comments: _priorComments2, ...priorReportSansAux2 } = priorReport as any;
+      // P1 (PR #314 second review round, item 4): same side-effects claim as
+      // the chunk path — recorded in the SAME atomic write as the CAS
+      // transition, only when this path will actually fire downstream side
+      // effects (isNonChunkValid gates the cache/digest/highlights block).
+      const sideEffectsClaimedNonChunk = validationPassed && finalStatus === 'done';
       const newReport: PersistedValidationReport = {
         ...priorReportSansAux2,
         validation_status: reportValidationStatus,
@@ -1205,6 +1275,7 @@ export async function POST(request: NextRequest) {
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
+        ...(sideEffectsClaimedNonChunk ? claimSideEffectsPending({}) : {}),
         ...withFreshAuxMetadata(channelMeta, comments),
       };
 
@@ -1328,8 +1399,11 @@ export async function POST(request: NextRequest) {
       });
 
       const isNonChunkValid = validationPassed && finalStatus === 'done';
+      // P1 (item 4): tracked side-effect failures for the non-chunk path.
+      let sideEffectsFailedNonChunk = false;
       if (isNonChunkValid) {
         await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
           console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
         });
@@ -1344,6 +1418,7 @@ export async function POST(request: NextRequest) {
           analysisId,
           metadata: { title: row.title, channelTitle: row.channelTitle || '' },
         }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
         });
@@ -1353,6 +1428,7 @@ export async function POST(request: NextRequest) {
         // 10X re-audit NEW-H(dim0-trigger): see the identical comment at the
         // chunk-path call site above.
         await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish digest task', { analysisId, error: String(e) });
         });
@@ -1361,6 +1437,7 @@ export async function POST(request: NextRequest) {
         // chunk-path call site above for the full RCA. Same idempotent /
         // best-effort shape as the digest task alongside it.
         await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish highlights task', { analysisId, error: String(e) });
         });
@@ -1374,6 +1451,26 @@ export async function POST(request: NextRequest) {
           .catch(e => {
             console.warn('[analyses/persist] Failed to log analysis_completed usage event', { analysisId, error: String(e) });
           });
+
+        // P1 (item 4): same claim lifecycle as the chunk path — clear the
+        // claim on full success, leave it set on any tracked failure.
+        if (!sideEffectsFailedNonChunk) {
+          await persistenceAdapter.updateValidationReport({
+            analysisId,
+            report: clearSideEffectsPending(newReport),
+            preserveValidationPassed: true,
+          }).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'clear_side_effects_pending', analysisId } } });
+            console.warn('[analyses/persist] Failed to clear side_effects_pending claim (stays set; row is settled, side effects completed but claim write failed)', { analysisId, error: String(e) });
+          });
+        } else {
+          Sentry.captureMessage('analyses/persist: side effects partially failed — side_effects_pending claim left set for reconciliation', {
+            level: 'warning',
+            tags: { operation: 'analysis-persist', phase: 'side_effects_reconciliation' },
+            extra: { analysisId, videoId },
+          });
+          console.warn('[analyses/persist] Side effects partially failed — side_effects_pending claim left set (reconciliation required)', { analysisId, videoId });
+        }
       }
 
       return { type: 'ok' as const, analysisId };

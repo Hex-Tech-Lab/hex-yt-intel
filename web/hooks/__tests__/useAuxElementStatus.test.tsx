@@ -120,9 +120,11 @@ describe('useAuxElementStatus — completion-time refetch for the live descripti
       if (calls === 1) {
         // The first (StrictMode-discarded) attempt never resolves — the
         // cleanup's `cancelled` flag means its eventual settle is ignored.
+        // The executor returns undefined (never resolves) — kept non-empty
+        // for DeepSource's empty-arrow-function rule.
         // skipcq: JS-0321 -- intentionally never-resolving promise (StrictMode
-        // discards this attempt; the empty executor IS the test's point).
-        return new Promise<Response>(() => { /* intentionally never resolves */ });
+        // discards this attempt; returning undefined IS the test's point).
+        return new Promise<Response>(() => undefined);
       }
       return Promise.resolve(
         new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {
@@ -197,5 +199,115 @@ describe('useAuxElementStatus — completion-time refetch for the live descripti
     // the guard (and the payload is no longer the live stub), no further
     // fetches fire despite the store-driven effect re-runs.
     expect(fetchMock.mock.calls.filter(([input]) => String(input).includes(ANALYSIS_ID))).toHaveLength(2);
+  });
+});
+
+describe('useAuxElementStatus — P2 (PR #314 round 2): normal-mode single bounded retry', () => {
+  beforeEach(() => {
+    useSynthesisNucleus.getState().reset();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    useSynthesisNucleus.getState().reset();
+  });
+
+  const targetCalls = (mock: { mock: { calls: unknown[][] } }) =>
+    mock.mock.calls.filter(([input]) => String(input).includes(ANALYSIS_ID));
+
+  it('NEGATIVE CONTROL: a rejected fetch in NORMAL (non-StrictMode) mode used to leave the chips gray forever — now exactly one retry succeeds', async () => {
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    let calls = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (!url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+      }
+      calls += 1;
+      if (calls === 1) {
+        return Promise.reject(new TypeError('network down'));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'));
+
+    // The retry fires after AUX_FETCH_RETRY_DELAY_MS (2000ms) — one bounded
+    // retry, then eventual success.
+    await waitFor(
+      () => {
+        expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
+      },
+      { timeout: 4000 }
+    );
+    expect(targetCalls(fetchMock)).toHaveLength(2);
+    expect(useSynthesisNucleus.getState().rawAnalysisPayload).toEqual(FULL_PAYLOAD);
+  });
+
+  it('a non-OK (500) fetch in NORMAL mode triggers exactly one retry, which succeeds', async () => {
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    let calls = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (!url.includes(`/api/analyses/${ANALYSIS_ID}`)) {
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+      }
+      calls += 1;
+      if (calls === 1) {
+        return Promise.resolve(new Response(JSON.stringify({ error: 'boom' }), { status: 500 }));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'));
+
+    await waitFor(
+      () => {
+        expect(result.current).toEqual({ description: true, channelMeta: true, comments: true });
+      },
+      { timeout: 4000 }
+    );
+    expect(targetCalls(fetchMock)).toHaveLength(2);
+  });
+
+  it('unmount BEFORE the retry fires: no second fetch happens (cleanup cancels the pending timer)', async () => {
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    const fetchMock = vi.fn(() => Promise.reject(new TypeError('network down')));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'));
+    expect(targetCalls(fetchMock)).toHaveLength(1);
+
+    // Unmount while the retry timer is still pending.
+    unmount();
+    await new Promise((settleTimer) => setTimeout(settleTimer, 2600));
+
+    // Only the first (failed) fetch happened — the retry was cancelled.
+    expect(targetCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it('a retry that ALSO fails stays bounded — no retry loop', async () => {
+    useSynthesisNucleus.getState().setRawAnalysisPayload(LIVE_STUB as never, ANALYSIS_ID);
+    const fetchMock = vi.fn(() => Promise.reject(new TypeError('network down')));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useAuxElementStatus(ANALYSIS_ID, 'complete'));
+    await new Promise((settleTimer) => setTimeout(settleTimer, 2600));
+
+    // Exactly the initial attempt + the single bounded retry. No third fetch.
+    expect(targetCalls(fetchMock)).toHaveLength(2);
   });
 });

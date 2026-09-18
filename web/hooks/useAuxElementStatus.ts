@@ -28,6 +28,22 @@ function mapAuxStatus(payload: AuxStatusPayloadInput | null | undefined): AuxEle
 
 // skipcq: JS-0067 -- React hooks must be named function declarations at
 // module scope (Rules of Hooks); an arrow/IIFE would violate the convention.
+
+/**
+ * P2 (PR #314 second review round): delay before the single bounded retry of
+ * the persisted-payload fetch in NORMAL (non-StrictMode) mode. In normal
+ * mode the effect's deps do not re-run on their own, so a rejected/non-OK
+ * fetch previously left the chips permanently gray until some other
+ * dependency happened to change. Exactly ONE retry is scheduled after this
+ * delay; the one-shot success guard (`fetchedForRef`) is still consumed only
+ * after a fetch actually completes and stores its payload, and the retry is
+ * cancelled by the effect cleanup (unmount / analysisId change). Kept as a
+ * named module constant rather than an inline literal; short by design —
+ * this only re-reads a likely-transient network hiccup, not a server-side
+ * retry policy (no Settings Registry surface exists client-side).
+ */
+const AUX_FETCH_RETRY_DELAY_MS = 2000;
+
 export function useAuxElementStatus(analysisId: string | null, status: string): AuxElementStatus | null {
   const [auxStatus, setAuxStatus] = useState<AuxElementStatus | null>(null);
   const fetchedForRef = useRef<string | null>(null);
@@ -84,15 +100,20 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
     if (fetchedForRef.current === analysisId) return;
 
     let cancelled = false;
-    // skipcq: JS-0098 -- `void` is the idiomatic fire-and-forget pattern for
-    // async IIFEs in useEffect (suppresses no-floating-promises); removing it
-    // would introduce an ESLint warning with no behavioral benefit.
-    void (async () => {
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Returns true when this attempt "settled" the fetch concern (success,
+    // or the effect was cancelled mid-flight so the retry must not fire).
+    const attemptFetch = async (): Promise<boolean> => {
       try {
         const res = await fetch(`/api/analyses/${analysisId}`);
-        if (!res.ok || cancelled) return;
+        if (cancelled) return true;
+        if (!res.ok) {
+          console.debug('[useAuxElementStatus] fetch not ok:', res.status);
+          return false;
+        }
         const data = await res.json();
-        if (cancelled) return;
+        if (cancelled) return true;
 
         // `cancelled` (set true by this effect's own cleanup, which fires
         // before a re-run triggered by analysisId changing) already
@@ -108,20 +129,39 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         // ever completing a real fetch under React StrictMode's intentional
         // double-invoke (mount → cleanup cancels the in-flight fetch →
         // remount sees the guard set and returns) and on a transient fetch
-        // failure — permanently suppressing the one legitimate retry this
-        // refetch exists to guarantee. Left unconsumed on cancellation,
-        // !ok, or rejection, the next relevant effect run (analysisId /
-        // status / payload change, or remount) retries; the effect's deps
-        // do not change on their own, so this stays a bounded single retry
-        // per relevant event, not an unbounded loop.
+        // failure. Left unconsumed on cancellation, !ok, or rejection, the
+        // next relevant effect run (or, P2 below, the single scheduled
+        // retry) re-attempts; no unbounded loop is possible.
         fetchedForRef.current = analysisId;
+        return true;
       } catch (err) {
         console.debug('[useAuxElementStatus] fetch failed:', err);
+        return false;
       }
+    };
+
+    // P2 (PR #314 second review round): in NORMAL (non-StrictMode) mode the
+    // effect's deps do not re-run after mount, so a rejected/non-OK fetch
+    // used to leave the chips gray forever. Schedule EXACTLY ONE bounded
+    // retry; the cleanup cancels both the in-flight attempt and the pending
+    // timer (unmount-before-retry fires no second fetch). The retry reuses
+    // the same one-shot-guard discipline (consumed only on success), so a
+    // failed retry just leaves the state as it was — no loops.
+    void (async () => {
+      const settled = await attemptFetch();
+      if (settled || cancelled) return;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        void attemptFetch();
+      }, AUX_FETCH_RETRY_DELAY_MS);
     })();
 
     return () => {
       cancelled = true;
+      if (retryTimer !== null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
     };
   }, [analysisId, status, payloadForThisAnalysis]);
 

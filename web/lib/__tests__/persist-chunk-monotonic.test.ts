@@ -112,9 +112,9 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     // Verify the guarded UPDATE was used (not a blind upsert)
     const interruptedUpdateCall = calls.find(call => call.method === 'update' && call.data.status === 'interrupted');
     expect(interruptedUpdateCall).toBeDefined();
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: BASE_PARAMS.chunkIndex });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: BASE_PARAMS.chunkIndex });
 
     // Verify the fallback upsert was called (count=0 triggered it)
     const fallbackUpsertCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
@@ -136,7 +136,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     // The fallback upsert should have been called to insert the new row
     const fallbackCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
     expect(fallbackCall).toBeDefined();
-    expect(fallbackCall!.data.status).toBe('interrupted');
+    expect(fallbackCall?.data.status).toBe('interrupted');
   });
 
   it('interrupted write DOES update an existing interrupted row (refresh with newer data)', async () => {
@@ -199,7 +199,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
 
     const guardedUpdate = calls.find(call => call.method === 'update' && call.data.status === 'failed');
     expect(guardedUpdate).toBeDefined();
-    expect(guardedUpdate!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
+    expect(guardedUpdate?.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
 
     const fallbackUpsert = calls.find(call => call.method === 'upsert' && call.data.status === 'failed');
     expect(fallbackUpsert).toBeDefined();
@@ -214,7 +214,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     const secondUpsert = calls2.find(call => call.method === 'upsert' && call.data.status === 'failed');
     expect(secondUpsert).toBeDefined();
     // ignoreDuplicates: the upsert cannot overwrite the existing row.
-    expect((secondUpsert!.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
+    expect((secondUpsert?.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
   });
 });
 

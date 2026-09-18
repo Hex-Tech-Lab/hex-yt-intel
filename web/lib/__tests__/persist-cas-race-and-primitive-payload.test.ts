@@ -25,7 +25,7 @@
  * exclusive.
  */
 import { NextRequest } from 'next/server';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const verifyContentSig = vi.hoisted(() => vi.fn());
 
@@ -33,6 +33,10 @@ vi.mock('@/lib/stream-token', () => ({ verifyContentSig }));
 vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
+  // WorkflowConductor.routeToRoom awaits Sentry.flush(2000) after the handler
+  // settles — the mock must define it or the route 500s with an "No flush
+  // export" error (this was the root cause of the CI Unit Tests failure).
+  flush: vi.fn().mockResolvedValue(true),
 }));
 
 const adapterInstance = vi.hoisted(() => ({
@@ -40,11 +44,12 @@ const adapterInstance = vi.hoisted(() => ({
   persistAnalysisChunk: vi.fn(),
   findAnalysisChunks: vi.fn(),
   updateAnalysisResult: vi.fn(),
+  updateValidationReport: vi.fn(),
   markChunkFailed: vi.fn(),
 }));
 
 vi.mock('@/lib/adapters', () => ({
-  SupabasePersistenceAdapter: vi.fn(() => adapterInstance),
+  SupabasePersistenceAdapter: vi.fn(function mockAdapterClass() { return adapterInstance; }),
 }));
 
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
@@ -55,7 +60,7 @@ vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
 }));
 
 vi.mock('@/lib/adapters/PostgresBillingAdapter', () => ({
-  PostgresBillingAdapter: vi.fn(() => ({ consumeQuota: vi.fn().mockResolvedValue(null) })),
+  PostgresBillingAdapter: vi.fn(function mockBillingAdapterClass() { return { consumeQuota: vi.fn().mockResolvedValue(null) }; }),
 }));
 
 vi.mock('@/lib/services/traffic', () => ({
@@ -79,14 +84,14 @@ import { hasUsableDimensionsPayload } from '@/lib/services/stitch-analysis-chunk
 const ANALYSIS_ID = '550e8400-e29b-41d4-a716-446655440000';
 const VIDEO_ID = 'gKgWYFOhZx0';
 
-function dim(n: number): { number: number; name: string; content: string } {
-  return { number: n, name: `Dimension ${n}`, content: `content for dim ${n}` };
+function dimension(dimNumber: number): { number: number; name: string; content: string } {
+  return { number: dimNumber, name: `Dimension ${dimNumber}`, content: `content for dim ${dimNumber}` };
 }
 
 const VALID_CHUNK_PAYLOADS: Record<number, unknown> = {
-  3: { schemaVersion: '2.0', dimensions: [dim(2), dim(4), dim(6)] },
-  4: { schemaVersion: '2.0', dimensions: [dim(5), dim(7), dim(10)] },
-  5: { schemaVersion: '2.0', dimensions: [dim(3), dim(9), dim(11)] },
+  3: { schemaVersion: '2.0', dimensions: [dimension(2), dimension(4), dimension(6)] },
+  4: { schemaVersion: '2.0', dimensions: [dimension(5), dimension(7), dimension(10)] },
+  5: { schemaVersion: '2.0', dimensions: [dimension(3), dimension(9), dimension(11)] },
 };
 
 const ROW = {
@@ -158,7 +163,7 @@ describe('P0 — markChunkFailed CAS race: concurrent writer replaces malformed 
     // missing chunk 2's dimensions, silently losing valid data.
     const malformedUpdatedAt = '2026-09-15T00:00:00Z';
     const validUpdatedAt = '2026-09-15T00:01:00Z';
-    const validPayloadForChunk2 = { schemaVersion: '2.0', dimensions: [dim(8)] };
+    const validPayloadForChunk2 = { schemaVersion: '2.0', dimensions: [dimension(8)] };
 
     // First findAnalysisChunks (route's initial read): chunk 2 is malformed.
     // Second findAnalysisChunks (refetch after CAS miss): chunk 2 is now valid.
@@ -200,17 +205,22 @@ describe('P0 — markChunkFailed CAS race: concurrent writer replaces malformed 
     // dimensions (dim 8), proving the valid payload was restored.
     expect(adapterInstance.updateAnalysisResult).toHaveBeenCalledTimes(1);
     const call = adapterInstance.updateAnalysisResult.mock.calls[0][0];
-    const stitchedDims = call.payload.dimensions.map((d: { number: number }) => d.number).sort((a: number, b: number) => a - b);
+    const stitchedDims = call.payload.dimensions.map((entry: { number: number }) => entry.number).sort((left: number, right: number) => left - right);
     expect(stitchedDims).toContain(8);
     expect(stitchedDims).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
-  it('a thrown DB error from markChunkFailed does NOT delete the chunkMap entry — stitch skips the malformed payload, finalize still commits', async () => {
-    // Chunk 2 is 'completed' with malformed payload. markChunkFailed THROWS
-    // (genuine DB error, not a CAS miss). The route must NOT treat this as a
-    // confirmed demotion — the chunkMap entry stays (the stitch skips it via
-    // hasUsableDimensionsPayload), and the finalize proceeds with the
-    // remaining valid chunks. The row stays 'completed' in DB.
+  it('a thrown DB error from markChunkFailed (after bounded retries) DEFERS the finalize with an observable 503 — parent is NOT silently committed without the chunk', async () => {
+    // Item-2 negative control (the OLD intermediate behavior): chunk 2 is
+    // 'completed' with malformed payload. markChunkFailed THROWS on every
+    // attempt (genuine DB error, not a CAS miss). The earlier fix caught the
+    // throw and let the finalize proceed with a stitch that silently OMITTED
+    // chunk 2 — while the DB row stayed 'completed' + malformed (the reaper's
+    // completed-only filter would keep treating it as recoverable forever).
+    // The fixed behavior: bounded retry (2 attempts), then the finalize is
+    // ABORTED with an observable 503 so the worker re-sends the whole persist
+    // (re-deriving the settled set and retrying the demotion) instead of the
+    // parent being silently committed without the chunk.
     adapterInstance.findAnalysisChunks.mockResolvedValue([
       chunkRow(1, 'failed', {}),
       chunkRow(2, 'completed', {}),
@@ -223,26 +233,39 @@ describe('P0 — markChunkFailed CAS race: concurrent writer replaces malformed 
     const res = await POST(
       post({ payload: VALID_CHUNK_PAYLOADS[5], chunkIndex: 5, totalChunks: 5, status: 'completed', model: 'm' })
     );
-    expect(res.status).toBe(200);
+    // Observable failure — NOT a silent 200.
+    expect(res.status).toBe(503);
 
-    // markChunkFailed was called (and threw).
-    expect(adapterInstance.markChunkFailed).toHaveBeenCalledTimes(1);
+    // Bounded retry: exactly 2 attempts (maxAttempts=2), then give up.
+    expect(adapterInstance.markChunkFailed).toHaveBeenCalledTimes(2);
     // No refetch happened (refetch only happens on CAS miss / false return,
-    // not on thrown error — the thrown error means "we don't know," and the
-    // chunkMap entry is left as-is for the stitch to skip).
+    // not on thrown error).
     expect(adapterInstance.findAnalysisChunks).toHaveBeenCalledTimes(1);
 
-    // The finalize still commits — with the valid chunks only (chunk 2's
-    // malformed payload is in chunkMap but skipped by the stitch).
+    // The finalize was NOT committed — no parent write, no side effects.
+    expect(adapterInstance.updateAnalysisResult).not.toHaveBeenCalled();
+  });
+
+  it('a transient markChunkFailed error succeeds on the bounded retry — the demotion is confirmed and the finalize commits', async () => {
+    // First attempt throws, second succeeds (transient DB blip): the bounded
+    // retry resolves the demotion instead of deferring the whole finalize.
+    adapterInstance.findAnalysisChunks.mockResolvedValue([
+      chunkRow(1, 'failed', {}),
+      chunkRow(2, 'completed', {}),
+      chunkRow(3, 'completed', VALID_CHUNK_PAYLOADS[3]),
+      chunkRow(4, 'completed', VALID_CHUNK_PAYLOADS[4]),
+      chunkRow(5, 'completed', VALID_CHUNK_PAYLOADS[5]),
+    ]);
+    adapterInstance.markChunkFailed
+      .mockRejectedValueOnce(new Error('transient blip'))
+      .mockResolvedValueOnce(true);
+
+    const res = await POST(
+      post({ payload: VALID_CHUNK_PAYLOADS[5], chunkIndex: 5, totalChunks: 5, status: 'completed', model: 'm' })
+    );
+    expect(res.status).toBe(200);
+    expect(adapterInstance.markChunkFailed).toHaveBeenCalledTimes(2);
     expect(adapterInstance.updateAnalysisResult).toHaveBeenCalledTimes(1);
-    const call = adapterInstance.updateAnalysisResult.mock.calls[0][0];
-    const stitchedDims = call.payload.dimensions.map((d: { number: number }) => d.number).sort((a: number, b: number) => a - b);
-    // Chunk 2's dim (8) is NOT in the stitch — the malformed payload was
-    // skipped, not falsely included.
-    expect(stitchedDims).not.toContain(8);
-    expect(stitchedDims).toEqual([2, 3, 4, 5, 6, 7, 9, 10, 11]);
-    // Partial (not done) because dim 8 is missing.
-    expect(call.validationReport.validation_status).toBe('partial');
   });
 
   it('CAS miss where refetched row is now failed (already demoted by concurrent writer) — chunk excluded from stitch', async () => {
@@ -269,7 +292,7 @@ describe('P0 — markChunkFailed CAS race: concurrent writer replaces malformed 
     expect(res.status).toBe(200);
     expect(adapterInstance.updateAnalysisResult).toHaveBeenCalledTimes(1);
     const call = adapterInstance.updateAnalysisResult.mock.calls[0][0];
-    const stitchedDims = call.payload.dimensions.map((d: { number: number }) => d.number).sort((a: number, b: number) => a - b);
+    const stitchedDims = call.payload.dimensions.map((entry: { number: number }) => entry.number).sort((left: number, right: number) => left - right);
     expect(stitchedDims).not.toContain(8);
     expect(stitchedDims).toEqual([2, 3, 4, 5, 6, 7, 9, 10, 11]);
   });
@@ -290,6 +313,7 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
     ['number payload', 42],
     ['boolean payload', true],
     ['null payload', null],
+    ['array payload', [1, 2, 3]],
     ['empty object', {}],
     ['object without dimensions', { foo: 'bar' }],
   ])('settled-stitch path handles %s without throwing (hasUsableDimensionsPayload predicate)', async (_name, primitivePayload) => {
@@ -316,7 +340,7 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
   });
 
   it('valid {dimensions:{...}} payload is classified as usable (not malformed)', async () => {
-    const validPayload = { schemaVersion: '2.0', dimensions: [dim(8)] };
+    const validPayload = { schemaVersion: '2.0', dimensions: [dimension(8)] };
     adapterInstance.findAnalysisChunks.mockResolvedValue([
       chunkRow(1, 'failed', {}),
       chunkRow(2, 'completed', validPayload),
@@ -338,9 +362,10 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
       ['string', 'hello'],
       ['number', 42],
       ['boolean', true],
-      ['null', null],
-      ['undefined', undefined],
-      ['empty object', {}],
+    ['null', null],
+    ['undefined', undefined],
+    ['array', [1, 2, 3]],
+    ['empty object', {}],
       ['object without dimensions key', { foo: 'bar' }],
       ['object with non-array dimensions', { dimensions: 'not-an-array' }],
     ])('returns false for %s', (_name, value) => {
@@ -376,6 +401,7 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
 describe('P2 — malformed vs payload-less log classification is mutually exclusive', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     verifyContentSig.mockResolvedValue(true);
     adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
     adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
@@ -383,6 +409,10 @@ describe('P2 — malformed vs payload-less log classification is mutually exclus
     adapterInstance.markChunkFailed.mockResolvedValue(true);
     // Only this bundle's own failed row — no finalize.
     adapterInstance.findAnalysisChunks.mockResolvedValue([chunkRow(1, 'failed', {})]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('a null payload logs reason "payload-less" (not "malformed-object")', async () => {

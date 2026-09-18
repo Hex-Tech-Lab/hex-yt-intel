@@ -37,31 +37,14 @@ export interface StitchResult {
 }
 
 /**
- * Type guard: does an unknown payload (from the DB's JSONB `payload` column,
- * which can contain ANY JSON value — string, number, boolean, null, object)
- * have a usable `dimensions` array shape?
- *
- * P1 (PR #314 second review round): the persist route's settled-stitch and
- * contract-check paths used `'dimensions' in chunk.payload` directly. The
- * `in` operator throws a TypeError when the LHS is a primitive
- * (string/number/boolean/null), and `AnalysisPersistencePort`'s `payload`
- * field is typed `Record<string, unknown>` — a compile-time lie about what
- * the DB can actually contain. This predicate centralizes the typeof guard
- * so every call site is safe without each one repeating the boilerplate.
- *
- * The port type is deliberately NOT widened to `unknown` (which would be the
- * fully honest type) because that cascades into type-error fixes across many
- * callers that currently rely on the `Record<string, unknown>` assumption;
- * this predicate is the surgical fix that stops the crash without that cost.
+ * Type guard for "does this unknown DB JSONB payload have a usable `dimensions`
+ * array shape?" — implementation + full RCA doc live in
+ * `@/lib/utils/has-usable-dimensions-payload` (moved out of this file, PR #314
+ * second review round, to keep this module under the 500-line qa-intel
+ * monolith-file gate). Re-exported here so the route's existing import keeps
+ * working unchanged.
  */
-export function hasUsableDimensionsPayload(payload: unknown): payload is { dimensions: unknown[] } {
-  return (
-    typeof payload === 'object' &&
-    payload !== null &&
-    'dimensions' in payload &&
-    Array.isArray((payload as Record<string, unknown>).dimensions)
-  );
-}
+export { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
 
 /**
  * Extract dimensions from stitched payload and build status array.
@@ -124,27 +107,14 @@ export function buildDimensionStatus(
   return { dimensionStatus, validationStatus, billingStatus, completeness };
 }
 
+
 /**
- * Resolve the final billing_status for a persisted analysis row.
- *
- * Single source of truth for the "cancelled overrides content; otherwise
- * dimension-completeness decides billing" rule. Extracted from the inline
- * ternary that previously lived at two independent call sites in
- * persist/route.ts (Path 1 ~line 617 and Path 2 ~line 851), allowing both
- * to share the exact same logic and the test suite to exercise the real
- * expression rather than re-implementing it inline.
- *
- * - `cancelled=true`  → always 'cancelled', regardless of dimensions
- * - `cancelled=false` → billingStatus from buildDimensionStatus ('completed'
- *   or 'failed' based on dimension count); never governed by schema validation
- *   pass/fail, which only speaks to KG/persona metadata quality, not content.
+ * Resolve the final billing_status for a persisted analysis row — moved to
+ * `@/lib/services/billing-status.ts` (PR #314 second review round, keeps this
+ * module under the 500-line qa-intel monolith-file gate). Re-exported so the
+ * route's existing import keeps working unchanged.
  */
-export function resolveBillingStatus(
-  cancelled: boolean,
-  billingStatus: BillingStatus,
-): BillingStatus {
-  return cancelled ? "cancelled" : billingStatus;
-}
+export { resolveBillingStatus } from '@/lib/services/billing-status';
 
 /**
  * Unified stitching logic: merge chunk payloads into a single analysis payload.
