@@ -1,0 +1,81 @@
+web/hooks/useAuxElementStatus.ts
+  s_cfb03e7ec4abdc::t_4af57d9fe9110b 31-46
+  s_cfb03e7ec4abdc::t_90ecf92f859da5 103-107,110-114,116,132-134,136,139,141-156,161-164
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_cfb03e7ec4abdc::t_ab7705a8a56ac3 37
+  s_cfb03e7ec4abdc::t_aa74a7f2225f9e 48
+  s_cfb03e7ec4abdc::t_afaebe25151bc5 32
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_cfb03e7ec4abdc::t_8f78533f692c1d 44-45,49,60
+web/lib/utils/has-usable-dimensions-payload.ts
+  s_cfb03e7ec4abdc::t_2098d06b5cc48c 1-27
+web/lib/services/billing-status.ts
+  s_cfb03e7ec4abdc::t_fe0910f2bc668b 1-27
+web/lib/__tests__/persist-cas-race-and-primitive-payload.test.ts
+  s_cfb03e7ec4abdc::t_fea7945e75ba60 365-368
+  s_cfb03e7ec4abdc::t_351f8df3639878 36-39
+  s_cfb03e7ec4abdc::t_ab7705a8a56ac3 52
+  s_cfb03e7ec4abdc::t_b36e750c47f21f 404
+  s_cfb03e7ec4abdc::t_a64f84caca7bad 47
+  s_cfb03e7ec4abdc::t_54219a384d98d0 213-223,236-237,239-240,242,245-267
+  s_cfb03e7ec4abdc::t_7bc25693525f9b 316
+  s_cfb03e7ec4abdc::t_e57df26324cf12 166,208,295,343
+  s_cfb03e7ec4abdc::t_989ae4c4d1eefd 414-417
+  s_cfb03e7ec4abdc::t_c08827338b06d1 87-88,92-94
+  s_cfb03e7ec4abdc::t_3ded3389eec6a0 28
+  s_cfb03e7ec4abdc::t_aa74a7f2225f9e 63
+web/lib/__tests__/persist-side-effect-outbox.test.ts
+  s_cfb03e7ec4abdc::t_508bcf742edba2 154,179,201,222
+  s_cfb03e7ec4abdc::t_47930d9eecd5bf 1-35,37-46,48-59,61,63-74,80-130,132-146,149,155-170,174,180-193,196,202-219,223-247
+  s_cfb03e7ec4abdc::t_5760339ecee4d2 62,131,171
+  s_cfb03e7ec4abdc::t_aa74a7f2225f9e 47
+  s_cfb03e7ec4abdc::t_fd8f98e70efef3 60
+  s_cfb03e7ec4abdc::t_173f693a4b446a 36
+  s_cfb03e7ec4abdc::t_62f8e8b1daa3cf 75-79,147-148,150-153,172-173,175-178,194-195,197-200,220-221
+.memory/AGENT_LEDGER.md
+  s_cfb03e7ec4abdc::t_b3ed22817fb03c 1400
+web/lib/types/validation-report.ts
+  s_cfb03e7ec4abdc::t_a553190f4b73f1 78-89
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_cfb03e7ec4abdc::t_07561615b72970 115-117,139,202,217
+web/hooks/__tests__/useAuxElementStatus.test.tsx
+  s_cfb03e7ec4abdc::t_4b9dd97a959b9c 123-124,126-127
+  s_cfb03e7ec4abdc::t_8e3365458e67bc 204-313
+web/lib/services/stitch-analysis-chunks.ts
+  s_cfb03e7ec4abdc::t_c7c4c84e542dfc 40-45,47
+  s_cfb03e7ec4abdc::t_fe0910f2bc668b 110,112-115,117
+web/app/api/analyses/persist/route.ts
+  s_cfb03e7ec4abdc::t_0da66481e362f5 21-22
+  s_cfb03e7ec4abdc::t_940491b0fe1cc9 772-786
+  s_cfb03e7ec4abdc::t_0c6afc0d40c4dd 1100-1123
+  s_cfb03e7ec4abdc::t_4345ed33fe96bf 1009-1014
+  s_cfb03e7ec4abdc::t_690a95f0e0b9a9 1261-1265,1278
+  s_cfb03e7ec4abdc::t_972d0e8d36d3e1 1038,1052,1063,1076
+  s_cfb03e7ec4abdc::t_2a351d175dc28e 768-770
+  s_cfb03e7ec4abdc::t_edbb01bb407ad4 1402-1403,1406,1421,1431,1440,1454-1473
+  s_cfb03e7ec4abdc::t_9127083b9c23cd 951-955,964
+  s_cfb03e7ec4abdc::t_1f761702e65c9f 812-825,827-832
+  s_cfb03e7ec4abdc::t_2ca92aa94427ce 23
+web/lib/services/side-effect-outbox.ts
+  s_cfb03e7ec4abdc::t_7f0a03be5ee8f2 1-69
+web/lib/__tests__/persist-chunk-payload-classification.test.ts
+  s_cfb03e7ec4abdc::t_afaebe25151bc5 36
+  s_cfb03e7ec4abdc::t_aa74a7f2225f9e 52
+  s_cfb03e7ec4abdc::t_ab7705a8a56ac3 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3211461a973e425f7cc1aa3fc29caacac29188fb",
+  "prompts": {},
+  "sessions": {
+    "s_cfb03e7ec4abdc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49cd0303ffeYaL1y00GWfT0UO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
