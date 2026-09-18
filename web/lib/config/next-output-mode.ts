@@ -32,13 +32,23 @@ export interface OutputModeResult {
   source: OutputModeSource;
 }
 
+/**
+ * Shape of the env vars this resolver reads. Index signature lets callers
+ * pass `process.env` directly (JS-T1001: optional props don't need an
+ * explicit `| undefined` — the `?` already implies it under strict TS).
+ */
 export interface DeployEnv {
-  DEPLOY_TARGET?: string | undefined;
-  VERCEL?: string | undefined;
+  DEPLOY_TARGET?: string;
+  VERCEL?: string;
   [key: string]: string | undefined;
 }
 
-export function resolveNextOutputMode(env: DeployEnv): OutputModeResult {
+/**
+ * Resolves the build's `output` mode (see file header for the full
+ * rationale): DEPLOY_TARGET explicit → VERCEL fallback → standalone +
+ * loud ambiguity warning.
+ */
+export const resolveNextOutputMode = (env: DeployEnv): OutputModeResult => {
   const target = env.DEPLOY_TARGET?.trim().toLowerCase();
   if (target) {
     if (target === 'vercel') {
@@ -55,13 +65,19 @@ export function resolveNextOutputMode(env: DeployEnv): OutputModeResult {
   // Ambiguous target (local build / masked env): standalone for
   // non-Vercel (Docker) deploys — but say so loudly, don't fail silently.
   return { output: 'standalone', source: 'default' };
-}
+};
 
-export function describeAmbiguousTargetWarning(result: OutputModeResult): string | null {
+/**
+ * Returns a human-readable warning string only when the deployment target
+ * was ambiguous (neither DEPLOY_TARGET nor VERCEL set); null otherwise.
+ */
+export const describeAmbiguousTargetWarning = (
+  result: OutputModeResult
+): string | null => {
   if (result.source !== 'default') return null;
   return [
     '[next.config] No DEPLOY_TARGET or VERCEL env var set — deployment target is ambiguous.',
     "Falling back to output: 'standalone' (non-Vercel/Docker behavior).",
     "If this build targets Vercel and the standalone artifacts leak into the deploy, set DEPLOY_TARGET=vercel explicitly.",
   ].join(' ');
-}
+};

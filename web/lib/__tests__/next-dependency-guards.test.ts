@@ -7,28 +7,31 @@ const WEB_DIR = path.resolve(__dirname, '../..');
 const INSTALLED_NEXT_DIR = path.resolve(WEB_DIR, 'node_modules/next');
 const INSTALLED_ECN_DIR = path.resolve(WEB_DIR, 'node_modules/eslint-config-next');
 
-function readPkgVersion(pkgDir: string): string {
+/** Reads the version field from an installed package's package.json. */
+const readPkgVersion = (pkgDir: string): string => {
   const pkg = JSON.parse(readFileSync(path.join(pkgDir, 'package.json'), 'utf8')) as {
     version?: string;
   };
   if (!pkg.version) throw new Error(`No version field found for ${pkgDir}`);
   return pkg.version;
-}
+};
 
-function parseMajorMinor(version: string): [number, number, number] {
+/** Parses "x.y.z" (ignoring prerelease suffixes) into numeric parts. */
+const parseMajorMinor = (version: string): [number, number, number] => {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) throw new Error(`Unparseable version: ${version}`);
   return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
+};
 
-function compareSemver(leftVersion: string, rightVersion: string): number {
+/** Three-part semver comparison: negative = left older, 0 = equal. */
+const compareSemver = (leftVersion: string, rightVersion: string): number => {
   const leftParts = parseMajorMinor(leftVersion);
   const rightParts = parseMajorMinor(rightVersion);
   for (let i = 0; i < 3; i++) {
     if (leftParts[i] !== rightParts[i]) return leftParts[i] - rightParts[i];
   }
   return 0;
-}
+};
 
 const MIN_NEXT_VERSION = '16.3.3';
 
@@ -45,9 +48,12 @@ describe('Next.js dependency-version guards (PR #317 security regression coverag
     const pkg = JSON.parse(
       readFileSync(path.join(WEB_DIR, 'package.json'), 'utf8')
     ) as { devDependencies?: Record<string, string> };
-    const declared = pkg.devDependencies?.next;
-    expect(declared).toBeDefined();
-    expect(declared!.startsWith('16.3.')).toBe(true);
+    const declaredNext = pkg.devDependencies?.next;
+    expect(declaredNext, 'next missing from web/package.json devDependencies').toBeDefined();
+    expect(
+      declaredNext?.startsWith('16.3.'),
+      `declared next ${String(declaredNext)} is not on the 16.3.x line`
+    ).toBe(true);
   });
 
   it('eslint-config-next declared version matches the pnpm-workspace.yaml override pin (drift guard)', () => {
@@ -68,8 +74,11 @@ describe('Next.js dependency-version guards (PR #317 security regression coverag
     ) as { devDependencies?: Record<string, string> };
     const declared = pkg.devDependencies?.['eslint-config-next'];
 
+    const ecnPin = pinMatch?.[1];
+    expect(ecnPin, 'override pin missing from pnpm-workspace.yaml').toBeDefined();
+
     // Declared == resolved (override wins in pnpm, so these must agree).
-    expect(declared).toBe(pinMatch![1]);
-    expect(readPkgVersion(INSTALLED_ECN_DIR)).toBe(pinMatch![1]);
+    expect(declared).toBe(ecnPin);
+    expect(readPkgVersion(INSTALLED_ECN_DIR)).toBe(ecnPin);
   });
 });
