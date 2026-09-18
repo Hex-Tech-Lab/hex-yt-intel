@@ -151,6 +151,10 @@ A complex, multi-dimensional narrative (approx. 1 page) highlighting key points 
 #### 2.3 Channel Authority Assessment
 
 - Subscriber count, channel age, upload cadence, credibility score (1–10).
+- The credibility justification MUST reference only names/credentials
+  already established in 2.1 or directly observed in the transcript.
+  NEVER invent a named person, title, or credential not present elsewhere
+  in this analysis or the source material.
 
 #### 2.4 Audience Sentiment Prediction
 
@@ -188,6 +192,9 @@ Dominant tone, emotional trajectory, confidence level, energy shifts.
 
 #### 4.2 Persuasion Strategy
 Primary mode (Logic / Data / Story / Authority / Demonstration / Emotional). Rhetorical techniques. Hook architecture.
+When citing an "authority transfer" or named-expert technique, reference
+only people/credentials already established elsewhere in this analysis or
+directly observed in the transcript — never invent a name.
 
 #### 4.3 Bias Detection & Critical Assessment
 Promotional vs. educational ratio, conflicts of interest, recency bias, selection bias, confirmation bias.
