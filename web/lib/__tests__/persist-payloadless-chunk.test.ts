@@ -41,7 +41,7 @@ const adapterInstance = vi.hoisted(() => ({
   persistAnalysisChunk: vi.fn(),
   findAnalysisChunks: vi.fn(),
   updateAnalysisResult: vi.fn(),
-  updateValidationReport: vi.fn().mockResolvedValue(undefined),
+  updateValidationReport: vi.fn().mockResolvedValue(null),
   markChunkFailed: vi.fn().mockResolvedValue(true),
 }));
 
@@ -65,13 +65,13 @@ vi.mock('@/lib/services/traffic', () => ({
 }));
 
 vi.mock('@/lib/qstash-client', () => ({
-  publishValidationTask: vi.fn().mockResolvedValue(undefined),
-  publishDigestTask: vi.fn().mockResolvedValue(undefined),
-  publishHighlightsTask: vi.fn().mockResolvedValue(undefined),
+  publishValidationTask: vi.fn().mockResolvedValue(null),
+  publishDigestTask: vi.fn().mockResolvedValue(null),
+  publishHighlightsTask: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/services/cache', () => ({
-  setAnalysisCache: vi.fn().mockResolvedValue(undefined),
+  setAnalysisCache: vi.fn().mockResolvedValue(null),
   generateCacheKey: vi.fn().mockReturnValue('cache-key'),
 }));
 

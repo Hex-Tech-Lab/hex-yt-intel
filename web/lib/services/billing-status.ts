@@ -19,9 +19,7 @@
  */
 import type { BillingStatus } from "@/lib/types/validation-report";
 
-export function resolveBillingStatus(
+export const resolveBillingStatus = (
   cancelled: boolean,
   billingStatus: BillingStatus,
-): BillingStatus {
-  return cancelled ? "cancelled" : billingStatus;
-}
+): BillingStatus => (cancelled ? "cancelled" : billingStatus);

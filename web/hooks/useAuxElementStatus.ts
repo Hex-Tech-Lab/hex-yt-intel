@@ -102,38 +102,45 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+    // Fetch + parse + store. Throws on network/parse failure (caller wraps).
+    // Kept separate from attemptFetch so each function stays well under the
+    // DeepSource cyclomatic-complexity threshold (JS-0112, PR #314 round 2).
+    const fetchAndApply = async (): Promise<boolean> => {
+      if (cancelled) return true;
+      const res = await fetch(`/api/analyses/${analysisId}`);
+      if (!res.ok) {
+        console.debug('[useAuxElementStatus] fetch not ok:', res.status);
+        return false;
+      }
+      const data = await res.json();
+      if (cancelled) return true;
+
+      // `cancelled` (set true by this effect's own cleanup, which fires
+      // before a re-run triggered by analysisId changing) already
+      // protects against a stale response landing after the user has
+      // switched to a different analysis -- explicit tag-with-analysisId
+      // below is the second, store-level layer of that same protection.
+      const payload = data.analysis_payload as RestoreAnalysisPayload | null | undefined;
+      useSynthesisNucleus.getState().setRawAnalysisPayload(payload ?? null, analysisId);
+      setAuxStatus(mapAuxStatus(payload));
+      // P2a (PR #312 post-merge review): the one-shot guard is consumed
+      // only AFTER a fetch has actually completed and stored its payload.
+      // Setting it before the fetch resolved consumed the guard without
+      // ever completing a real fetch under React StrictMode's intentional
+      // double-invoke (mount → cleanup cancels the in-flight fetch →
+      // remount sees the guard set and returns) and on a transient fetch
+      // failure. Left unconsumed on cancellation, !ok, or rejection, the
+      // next relevant effect run (or, P2 below, the single scheduled
+      // retry) re-attempts; no unbounded loop is possible.
+      fetchedForRef.current = analysisId;
+      return true;
+    };
+
     // Returns true when this attempt "settled" the fetch concern (success,
     // or the effect was cancelled mid-flight so the retry must not fire).
     const attemptFetch = async (): Promise<boolean> => {
       try {
-        const res = await fetch(`/api/analyses/${analysisId}`);
-        if (cancelled) return true;
-        if (!res.ok) {
-          console.debug('[useAuxElementStatus] fetch not ok:', res.status);
-          return false;
-        }
-        const data = await res.json();
-        if (cancelled) return true;
-
-        // `cancelled` (set true by this effect's own cleanup, which fires
-        // before a re-run triggered by analysisId changing) already
-        // protects against a stale response landing after the user has
-        // switched to a different analysis -- explicit tag-with-analysisId
-        // below is the second, store-level layer of that same protection.
-        const payload = data.analysis_payload as RestoreAnalysisPayload | null | undefined;
-        useSynthesisNucleus.getState().setRawAnalysisPayload(payload ?? null, analysisId);
-        setAuxStatus(mapAuxStatus(payload));
-        // P2a (PR #312 post-merge review): the one-shot guard is consumed
-        // only AFTER a fetch has actually completed and stored its payload.
-        // Setting it before the fetch resolved consumed the guard without
-        // ever completing a real fetch under React StrictMode's intentional
-        // double-invoke (mount → cleanup cancels the in-flight fetch →
-        // remount sees the guard set and returns) and on a transient fetch
-        // failure. Left unconsumed on cancellation, !ok, or rejection, the
-        // next relevant effect run (or, P2 below, the single scheduled
-        // retry) re-attempts; no unbounded loop is possible.
-        fetchedForRef.current = analysisId;
-        return true;
+        return await fetchAndApply();
       } catch (err) {
         console.debug('[useAuxElementStatus] fetch failed:', err);
         return false;
@@ -147,14 +154,24 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
     // timer (unmount-before-retry fires no second fetch). The retry reuses
     // the same one-shot-guard discipline (consumed only on success), so a
     // failed retry just leaves the state as it was — no loops.
-    void (async () => {
+    // Explicit promise handling (initialFetch has no rejection path —
+    // attemptFetch catches internally — but the .catch keeps the
+    // no-floating-promises contract and DeepSource's no-void rule happy).
+    const initialFetch = async (): Promise<boolean> => {
       const settled = await attemptFetch();
-      if (settled || cancelled) return;
+      if (settled || cancelled) return true;
       retryTimer = setTimeout(() => {
         retryTimer = null;
-        void attemptFetch();
+        attemptFetch().catch((err: unknown) => {
+          console.debug('[useAuxElementStatus] retry failed:', err);
+        });
+        return null;
       }, AUX_FETCH_RETRY_DELAY_MS);
-    })();
+      return true;
+    };
+    initialFetch().catch((err: unknown) => {
+      console.debug('[useAuxElementStatus] initial fetch failed:', err);
+    });
 
     return () => {
       cancelled = true;

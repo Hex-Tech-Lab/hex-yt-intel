@@ -67,9 +67,11 @@ import { hasPendingSideEffects, SIDE_EFFECTS_PENDING_REPORT_KEY } from '@/lib/se
 const ANALYSIS_ID = '550e8400-e29b-41d4-a716-446655440000';
 const VIDEO_ID = 'gKgWYFOhZx0';
 
-function dimension(dimNumber: number): { number: number; name: string; content: string } {
-  return { number: dimNumber, name: `Dimension ${dimNumber}`, content: `content for dim ${dimNumber}` };
-}
+const dimension = (dimNumber: number): { number: number; name: string; content: string } => ({
+  number: dimNumber,
+  name: `Dimension ${dimNumber}`,
+  content: `content for dim ${dimNumber}`,
+});
 
 const VALID_CHUNK_PAYLOADS: Record<number, unknown> = {
   1: { schemaVersion: '2.0', dimensions: [dimension(1), dimension(2), dimension(3)] },
@@ -98,19 +100,17 @@ const ROW = {
   transcript: 'transcript text',
 };
 
-function chunkRow(index: number, status: string, payload: unknown) {
-  return {
-    chunk_index: index,
-    dimensions_covered: [],
-    payload,
-    status,
-    updated_at: new Date().toISOString(),
-    tokens_used: 1000,
-    cost_usd: 0.01,
-  };
-}
+const chunkRow = (index: number, status: string, payload: unknown) => ({
+  chunk_index: index,
+  dimensions_covered: [],
+  payload,
+  status,
+  updated_at: new Date().toISOString(),
+  tokens_used: 1000,
+  cost_usd: 0.01,
+});
 
-function post(body: Record<string, unknown>): NextRequest {
+const post = (body: Record<string, unknown>): NextRequest => {
   return new NextRequest('http://localhost/api/analyses/persist', {
     method: 'POST',
     body: JSON.stringify({
@@ -122,7 +122,7 @@ function post(body: Record<string, unknown>): NextRequest {
     }),
     headers: { 'Content-Type': 'application/json' },
   });
-}
+};
 
 describe('P1 item 4 — durable side-effect claim lifecycle (chunk path)', () => {
   beforeEach(() => {
@@ -130,9 +130,9 @@ describe('P1 item 4 — durable side-effect claim lifecycle (chunk path)', () =>
     verifyContentSig.mockResolvedValue(true);
     cacheMocks.setAnalysisCache.mockResolvedValue(null);
     adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
-    adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
+    adapterInstance.persistAnalysisChunk.mockResolvedValue(null);
     adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: true });
-    adapterInstance.updateValidationReport.mockResolvedValue(undefined);
+    adapterInstance.updateValidationReport.mockResolvedValue(null);
     adapterInstance.markChunkFailed.mockResolvedValue(true);
   });
 
@@ -239,7 +239,8 @@ describe('hasPendingSideEffects reconciliation predicate (unit)', () => {
     expect(hasPendingSideEffects({ side_effects_pending: false })).toBe(false);
     expect(hasPendingSideEffects({})).toBe(false);
     expect(hasPendingSideEffects(null)).toBe(false);
-    expect(hasPendingSideEffects(undefined)).toBe(false);
+    const missingPayload: unknown = undefined; // explicit: predicate must accept undefined
+    expect(hasPendingSideEffects(missingPayload)).toBe(false);
     expect(hasPendingSideEffects('legacy-string-report')).toBe(false);
     expect(hasPendingSideEffects([{ side_effects_pending: true }])).toBe(false);
     expect(hasPendingSideEffects({ side_effects_pending: 'true' })).toBe(false);

@@ -144,7 +144,7 @@ describe('P0 — markChunkFailed CAS race: concurrent writer replaces malformed 
     vi.clearAllMocks();
     verifyContentSig.mockResolvedValue(true);
     adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
-    adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
+    adapterInstance.persistAnalysisChunk.mockResolvedValue(null);
     adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: true });
     adapterInstance.markChunkFailed.mockResolvedValue(true);
   });
@@ -303,7 +303,7 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
     vi.clearAllMocks();
     verifyContentSig.mockResolvedValue(true);
     adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
-    adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
+    adapterInstance.persistAnalysisChunk.mockResolvedValue(null);
     adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: true });
     adapterInstance.markChunkFailed.mockResolvedValue(true);
   });
@@ -401,10 +401,10 @@ describe('P1 — primitive JSON payload does not crash the settled-stitch path',
 describe('P2 — malformed vs payload-less log classification is mutually exclusive', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     verifyContentSig.mockResolvedValue(true);
     adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
-    adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
+    adapterInstance.persistAnalysisChunk.mockResolvedValue(null);
     adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: true });
     adapterInstance.markChunkFailed.mockResolvedValue(true);
     // Only this bundle's own failed row — no finalize.
