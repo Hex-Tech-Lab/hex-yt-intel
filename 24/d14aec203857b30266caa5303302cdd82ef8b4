@@ -1,0 +1,24 @@
+web/lib/__tests__/next-dependency-guards.test.ts
+  s_400c28cf65de96::t_72033424662a98 10-11,17,19-20,24,26-27,34
+  s_400c28cf65de96::t_a87973fe015eac 51-56
+  s_400c28cf65de96::t_e03bd79ba1ddd0 77-79,81-82
+web/lib/config/next-output-mode.ts
+  s_400c28cf65de96::t_0605f62b6baeb3 68,70-76,83
+  s_400c28cf65de96::t_e913ad1515c967 35-39,41-42,46-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "24d14aec203857b30266caa5303302cdd82ef8b4",
+  "prompts": {},
+  "sessions": {
+    "s_400c28cf65de96": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f49c18737ffeh1zV0CP1E2vIxZ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
