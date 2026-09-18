@@ -1,0 +1,19 @@
+.opencode/opencode.json
+  s_0c572983f90840::t_71741f251dce2e 3-4,8,11-16,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "58a8b0deeb02221bb9a72caf053d499a4847e8ba",
+  "prompts": {},
+  "sessions": {
+    "s_0c572983f90840": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5c043d1cffe9JlSHWgIX7NqBD",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
