@@ -33,6 +33,7 @@ vi.mock('@/lib/stream-token', () => ({ verifyContentSig }));
 vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
+  flush: vi.fn().mockResolvedValue(true),
 }));
 
 const adapterInstance = vi.hoisted(() => ({
@@ -43,24 +44,18 @@ const adapterInstance = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/adapters', () => ({
-  SupabasePersistenceAdapter: class {
-    constructor() {
-      return adapterInstance;
-    }
-  },
+  SupabasePersistenceAdapter: vi.fn(() => adapterInstance),
 }));
 
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
   SupabaseTranscriptAdapter: {
-    upsertTranscript: vi.fn().mockResolvedValue(undefined),
-    upsertChapters: vi.fn().mockResolvedValue(undefined),
+    upsertTranscript: vi.fn().mockResolvedValue(null),
+    upsertChapters: vi.fn().mockResolvedValue(null),
   },
 }));
 
 vi.mock('@/lib/adapters/PostgresBillingAdapter', () => ({
-  PostgresBillingAdapter: class {
-    consumeQuota = vi.fn().mockResolvedValue(undefined);
-  },
+  PostgresBillingAdapter: vi.fn(() => ({ consumeQuota: vi.fn().mockResolvedValue(null) })),
 }));
 
 vi.mock('@/lib/services/traffic', () => ({

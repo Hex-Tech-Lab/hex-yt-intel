@@ -18,7 +18,7 @@ import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
-import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
+import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, hasUsableDimensionsPayload } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
 
@@ -157,6 +157,9 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
  * - analysis_markdown: Reconstructed markdown for backward compat + PDF export
  * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
  */
+// skipcq: JS-0067, JS-R1005 -- Next.js App Router requires a named `POST`
+// export at module scope (not an arrow / IIFE), and the route's cyclomatic
+// complexity is inherent to its multi-stage chunked-persist contract.
 export async function POST(request: NextRequest) {
   let body: any;
 
@@ -483,7 +486,12 @@ export async function POST(request: NextRequest) {
       // keeps its existing non-chunk interrupted terminal write (rerouting
       // it would leave a disconnected client's row in 'processing' until the
       // reaper's grace window elapsed).
-      const isPayloadlessChunk = chunkIndex !== undefined && !validPayload;
+      // P2 (PR #314 second review round): `isPayloadlessChunk` is now
+      // mutually exclusive with `chunkPayloadMalformed` — a truthy-but-
+      // invalid object (e.g. {}, {foo:'bar'}) is 'malformed-object', NOT
+      // 'payload-less'. Previously `!validPayload` covered both classes so
+      // the log reason at the warn below never reached 'malformed-object'.
+      const isPayloadlessChunk = chunkIndex !== undefined && (payload === undefined || payload === null);
       // P1b: a malformed-object chunk persist routes through the chunk
       // workflow (as a terminal 'failed' chunk row) exactly like a
       // payload-less one. Both stay exempt only for status='interrupted' —
@@ -493,15 +501,15 @@ export async function POST(request: NextRequest) {
       // interrupted terminal write keeps its existing non-chunk path.
       const isUnusableChunkPayload = (isPayloadlessChunk || chunkPayloadMalformed) && !isInterrupted;
 
-      if (chunkIndex !== undefined && ((validPayload && 'dimensions' in validPayload) || isUnusableChunkPayload)) {
+      if (chunkIndex !== undefined && ((validPayload && hasUsableDimensionsPayload(validPayload)) || isUnusableChunkPayload)) {
         // Process this specific chunk; return early if chunk is complete or timeout detected.
         const dimensionsCovered = validPayload && Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
-        if (!isPayloadlessChunk) {
+        if (validPayload) {
           // Diagnostic logging for empty or sparse dimensions
-          const dimensionDetails = (validPayload!.dimensions as any[]).map(d => ({
+          const dimensionDetails = (validPayload.dimensions as any[]).map(d => ({
             number: d.number,
             hasContent: typeof d.content === 'string' && d.content.trim().length > 0,
             contentLength: typeof d.content === 'string' ? d.content.length : 0
@@ -727,8 +735,13 @@ export async function POST(request: NextRequest) {
           // reclassify is best-effort: a failure here must not lose the
           // finalize this request is about to commit.
           if (!isFullyReceived) {
+            // P1 (PR #314 second review round): use the shared predicate
+            // instead of `'dimensions' in chunk.payload` — the `in` operator
+            // throws TypeError on a primitive payload (string/number/boolean/
+            // null), which the DB's JSONB column can contain even though the
+            // port types payload as Record<string, unknown>.
             const malformedCompletedChunks = finalChunks.filter(chunk =>
-              !chunk.payload || !('dimensions' in chunk.payload) || !Array.isArray((chunk.payload as any).dimensions)
+              !hasUsableDimensionsPayload(chunk.payload)
             );
             for (const malformedChunk of malformedCompletedChunks) {
               console.error('[analyses/persist] Completed chunk has malformed payload (no usable dimensions shape) — reclassifying to failed before stitch', {
@@ -741,11 +754,58 @@ export async function POST(request: NextRequest) {
                 tags: { operation: 'analysis-persist', phase: 'settled_stitch' },
                 extra: { analysisId, videoId, chunkIndex: malformedChunk.chunk_index },
               });
-              await persistenceAdapter.markChunkFailed({ analysisId, chunkIndex: malformedChunk.chunk_index }).catch(e => {
+              // P0 (PR #314 second review round): the demotion is now a
+              // scoped CAS on (analysis_id, chunk_index, status='completed',
+              // updated_at=<observed>). A concurrent writer can replace the
+              // malformed row with a VALID completed payload (bumping
+              // updated_at) between our read and this write — the old
+              // status-only CAS would have demoted the now-valid row (data
+              // loss). The scoped CAS misses (returns false) when the row
+              // changed; we refetch and RESTORE a now-valid row into
+              // chunkMap instead of blindly deleting. On a thrown DB error
+              // we leave the entry in chunkMap (the stitch skips malformed
+              // payloads via hasUsableDimensionsPayload, and the row stays
+              // 'completed' in DB so the reaper can still recover it) —
+              // we must NOT treat an unknown error as a confirmed demotion.
+              try {
+                const demoted = await persistenceAdapter.markChunkFailed({
+                  analysisId,
+                  chunkIndex: malformedChunk.chunk_index,
+                  observedUpdatedAt: malformedChunk.updated_at,
+                });
+                if (demoted) {
+                  chunkMap.delete(malformedChunk.chunk_index);
+                } else {
+                  // CAS miss — a concurrent writer changed the row. Refetch
+                  // to determine whether it's now valid (restore) or already
+                  // demoted (delete) or still malformed (delete, the stitch
+                  // already excludes it and the row is still 'completed' so
+                  // the reaper can retry).
+                  const refetched = await retryWithBackoff(
+                    () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+                    2
+                  );
+                  const current = refetched?.find(c => c.chunk_index === malformedChunk.chunk_index);
+                  if (current && current.status === 'completed' && hasUsableDimensionsPayload(current.payload)) {
+                    // Concurrent writer replaced the malformed row with a
+                    // VALID completed payload — restore it into the stitch.
+                    chunkMap.set(malformedChunk.chunk_index, current.payload);
+                  } else {
+                    // Row is now failed/interrupted/still-malformed — exclude
+                    // from stitch (the entry that was in chunkMap had the
+                    // malformed payload; deleting is correct either way).
+                    chunkMap.delete(malformedChunk.chunk_index);
+                  }
+                }
+              } catch (e) {
+                // Unknown DB error — do NOT delete the chunkMap entry. The
+                // stitch skips malformed payloads (hasUsableDimensionsPayload
+                // returns false), so leaving it is safe; the row stays
+                // 'completed' in DB (not demoted) so the reaper can still
+                // find it. We have NOT falsely confirmed a demotion.
                 Sentry.captureException(e, { contexts: { persist: { phase: 'reclassify_malformed_chunk', analysisId } } });
-                console.warn('[analyses/persist] Failed to reclassify malformed completed chunk (finalize proceeds)', { analysisId, chunkIndex: malformedChunk.chunk_index, error: String(e) });
-              });
-              chunkMap.delete(malformedChunk.chunk_index);
+                console.warn('[analyses/persist] Failed to reclassify malformed completed chunk (demotion uncertain, chunk left completed in DB, stitch excludes it)', { analysisId, chunkIndex: malformedChunk.chunk_index, error: String(e) });
+              }
             }
           }
 
@@ -755,9 +815,11 @@ export async function POST(request: NextRequest) {
           const invalidChunks = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const chunkPayload = chunkMap.get(i);
-            // Fail if: chunk missing entirely OR dimensions field missing/not-array
-            // (empty dimensions arrays ARE acceptable — stream may generate no content for its slice)
-            if (!chunkPayload || !('dimensions' in chunkPayload) || !Array.isArray(chunkPayload.dimensions)) {
+            // P1: use the shared predicate — `'dimensions' in chunkPayload`
+            // throws TypeError on a primitive payload from the DB's JSONB
+            // column. (empty dimensions arrays ARE acceptable — stream may
+            // generate no content for its slice)
+            if (!hasUsableDimensionsPayload(chunkPayload)) {
               invalidChunks.push(i);
             }
           }
@@ -1260,7 +1322,7 @@ export async function POST(request: NextRequest) {
         finalStatus,
         hasMarkdown: !!stitchedMarkdown,
         hasPayload: !!stitchedPayload,
-        hasDimensions: stitchedPayload && 'dimensions' in stitchedPayload ? (stitchedPayload.dimensions?.length ?? 0) : 0,
+        hasDimensions: hasUsableDimensionsPayload(stitchedPayload) ? (stitchedPayload.dimensions.length ?? 0) : 0,
         hasKG: stitchedPayload?.knowledgeGraph ? (stitchedPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
         cacheKey,
       });

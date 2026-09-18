@@ -229,18 +229,20 @@ describe('markChunkFailed CAS demotion (P1a, PR #312 post-merge review)', () => 
     setNextResult({ error: null, count: 1 });
 
     const adapter = new SupabasePersistenceAdapter();
-    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 });
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' });
     expect(demoted).toBe(true);
 
     const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'failed');
     expect(updateCall).toBeDefined();
-    // The CAS precondition: only a row currently at 'completed' can be
-    // demoted — the payload-observing caller is the only legitimate source
-    // of this write, and a concurrent writer that already changed the row
-    // wins.
-    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'status', value: 'completed' });
-    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
-    expect(updateCall!.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: 2 });
+    // The CAS precondition: only a row currently at 'completed' with the
+    // EXACT observed updated_at can be demoted — a concurrent writer that
+    // replaced the malformed payload with a valid one (bumping updated_at)
+    // must not be demoted (P0, PR #314 second review round).
+    const filters = updateCall?.filters ?? [];
+    expect(filters).toContainEqual({ type: 'eq', column: 'status', value: 'completed' });
+    expect(filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
+    expect(filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: 2 });
+    expect(filters).toContainEqual({ type: 'eq', column: 'updated_at', value: '2026-09-15T00:00:00Z' });
   });
 
   it('reports false (no demotion) when the row is no longer completed (concurrent writer won)', async () => {
@@ -249,8 +251,24 @@ describe('markChunkFailed CAS demotion (P1a, PR #312 post-merge review)', () => 
     setNextResult({ error: null, count: 0 });
 
     const adapter = new SupabasePersistenceAdapter();
-    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 });
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' });
     expect(demoted).toBe(false);
+  });
+
+  it('falls back to status-only CAS when observedUpdatedAt is null (does not block)', async () => {
+    const { client, calls, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 1 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: null });
+    expect(demoted).toBe(true);
+
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'failed');
+    expect(updateCall).toBeDefined();
+    const filters = updateCall?.filters ?? [];
+    // No updated_at filter when observedUpdatedAt is null — status-only guard.
+    expect(filters).not.toContainEqual(expect.objectContaining({ column: 'updated_at' }));
   });
 
   it('throws (and captures) on a genuine query error — a silent false must not mask infra failure', async () => {
@@ -259,6 +277,6 @@ describe('markChunkFailed CAS demotion (P1a, PR #312 post-merge review)', () => 
     setNextResult({ error: { message: 'db down' }, count: null });
 
     const adapter = new SupabasePersistenceAdapter();
-    await expect(adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2 })).rejects.toMatchObject({ message: 'db down' });
+    await expect(adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' })).rejects.toMatchObject({ message: 'db down' });
   });
 });

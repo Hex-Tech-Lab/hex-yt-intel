@@ -177,7 +177,9 @@ describe('HighlightsResponseSchema', () => {
       ],
     });
     expect(result.highlights).toHaveLength(2);
-    expect(result.highlights[1]!.title).toBe('Second');
+    const second = result.highlights[1];
+    expect(second).toBeDefined();
+    expect(second?.title).toBe('Second');
   });
 
   it('validates empty highlights array', () => {

@@ -26,6 +26,8 @@ function mapAuxStatus(payload: AuxStatusPayloadInput | null | undefined): AuxEle
   };
 }
 
+// skipcq: JS-0067 -- React hooks must be named function declarations at
+// module scope (Rules of Hooks); an arrow/IIFE would violate the convention.
 export function useAuxElementStatus(analysisId: string | null, status: string): AuxElementStatus | null {
   const [auxStatus, setAuxStatus] = useState<AuxElementStatus | null>(null);
   const fetchedForRef = useRef<string | null>(null);
@@ -82,6 +84,9 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
     if (fetchedForRef.current === analysisId) return;
 
     let cancelled = false;
+    // skipcq: JS-0098 -- `void` is the idiomatic fire-and-forget pattern for
+    // async IIFEs in useEffect (suppresses no-floating-promises); removing it
+    // would introduce an ESLint warning with no behavioral benefit.
     void (async () => {
       try {
         const res = await fetch(`/api/analyses/${analysisId}`);

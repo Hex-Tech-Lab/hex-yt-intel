@@ -120,7 +120,9 @@ describe('useAuxElementStatus — completion-time refetch for the live descripti
       if (calls === 1) {
         // The first (StrictMode-discarded) attempt never resolves — the
         // cleanup's `cancelled` flag means its eventual settle is ignored.
-        return new Promise<Response>(() => {});
+        // skipcq: JS-0321 -- intentionally never-resolving promise (StrictMode
+        // discards this attempt; the empty executor IS the test's point).
+        return new Promise<Response>(() => { /* intentionally never resolves */ });
       }
       return Promise.resolve(
         new Response(JSON.stringify({ id: ANALYSIS_ID, analysis_payload: FULL_PAYLOAD }), {

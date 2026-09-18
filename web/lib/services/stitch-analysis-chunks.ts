@@ -37,6 +37,33 @@ export interface StitchResult {
 }
 
 /**
+ * Type guard: does an unknown payload (from the DB's JSONB `payload` column,
+ * which can contain ANY JSON value — string, number, boolean, null, object)
+ * have a usable `dimensions` array shape?
+ *
+ * P1 (PR #314 second review round): the persist route's settled-stitch and
+ * contract-check paths used `'dimensions' in chunk.payload` directly. The
+ * `in` operator throws a TypeError when the LHS is a primitive
+ * (string/number/boolean/null), and `AnalysisPersistencePort`'s `payload`
+ * field is typed `Record<string, unknown>` — a compile-time lie about what
+ * the DB can actually contain. This predicate centralizes the typeof guard
+ * so every call site is safe without each one repeating the boilerplate.
+ *
+ * The port type is deliberately NOT widened to `unknown` (which would be the
+ * fully honest type) because that cascades into type-error fixes across many
+ * callers that currently rely on the `Record<string, unknown>` assumption;
+ * this predicate is the surgical fix that stops the crash without that cost.
+ */
+export function hasUsableDimensionsPayload(payload: unknown): payload is { dimensions: unknown[] } {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'dimensions' in payload &&
+    Array.isArray((payload as Record<string, unknown>).dimensions)
+  );
+}
+
+/**
  * Extract dimensions from stitched payload and build status array.
  * Only uses dimensions that actually made it into the stitched content.
  */

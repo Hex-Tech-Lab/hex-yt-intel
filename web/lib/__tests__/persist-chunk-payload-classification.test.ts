@@ -37,24 +37,18 @@ const adapterInstance = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/adapters', () => ({
-  SupabasePersistenceAdapter: class {
-    constructor() {
-      return adapterInstance;
-    }
-  },
+  SupabasePersistenceAdapter: vi.fn(() => adapterInstance),
 }));
 
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
   SupabaseTranscriptAdapter: {
-    upsertTranscript: vi.fn().mockResolvedValue(undefined),
-    upsertChapters: vi.fn().mockResolvedValue(undefined),
+    upsertTranscript: vi.fn().mockResolvedValue(null),
+    upsertChapters: vi.fn().mockResolvedValue(null),
   },
 }));
 
 vi.mock('@/lib/adapters/PostgresBillingAdapter', () => ({
-  PostgresBillingAdapter: class {
-    consumeQuota = vi.fn().mockResolvedValue(undefined);
-  },
+  PostgresBillingAdapter: vi.fn(() => ({ consumeQuota: vi.fn().mockResolvedValue(null) })),
 }));
 
 vi.mock('@/lib/services/traffic', () => ({
@@ -216,7 +210,9 @@ describe('P1a — completed-but-malformed chunks are reclassified before the set
     // The malformed completed row is reclassified (same accounting as the
     // payload-less failed rows) and observable.
     expect(adapterInstance.markChunkFailed).toHaveBeenCalledTimes(1);
-    expect(adapterInstance.markChunkFailed).toHaveBeenCalledWith({ analysisId: ANALYSIS_ID, chunkIndex: 2 });
+    expect(adapterInstance.markChunkFailed).toHaveBeenCalledWith(
+      expect.objectContaining({ analysisId: ANALYSIS_ID, chunkIndex: 2, observedUpdatedAt: expect.any(String) })
+    );
     const { captureMessage } = await import('@sentry/nextjs');
     expect(captureMessage).toHaveBeenCalledWith(
       'analyses/persist: completed chunk had malformed payload, reclassified to failed',
