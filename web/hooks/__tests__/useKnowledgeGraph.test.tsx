@@ -15,7 +15,7 @@
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { renderHook, cleanup, act } from '@testing-library/react';
-import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
+import { useKnowledgeGraph, mapGraphPayload, classifyFailure } from '@/hooks/useKnowledgeGraph';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 describe('useKnowledgeGraph client-side fallback', () => {
@@ -383,6 +383,71 @@ describe('useKnowledgeGraph fetch resilience (2026-09-15 incident RCA, video rDh
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.current.graph.nodes.length).toBe(1);
 
+    unmount();
+  });
+});
+
+describe('useKnowledgeGraph deep payload validation end-to-end (PR #315 review round 2 item 6)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    cleanup();
+    useSynthesisNucleus.getState().reset();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  function seedAnalysis(id: string) {
+    useSynthesisNucleus.getState().initializeAnalysis({
+      id,
+      videoId: `${id}-video`,
+      title: 'Deep validation test',
+      dimensions: {},
+    });
+  }
+
+  it('a shallowly-valid but item-invalid payload ({entities:[{}]}) is rejected as retryable and retried — not silently mapped with undefined ids', async () => {
+    seedAnalysis('analysis-kg-deep-validation');
+    const okBody = { entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }], relations: [] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ entities: [{}], relations: [] }), { status: 200 }))
+      .mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-deep-validation'));
+
+    // Attempt 1: shallow-valid body, invalid item → retryable → retry after 5s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.current.graph.nodes.length).toBe(1);
+    expect(result.current.graph.nodes[0].id).toBe('e1');
+    unmount();
+  });
+
+  it('a mixed valid/invalid payload rejects the WHOLE payload (no partial graph with undefined ids)', async () => {
+    seedAnalysis('analysis-kg-mixed-invalid');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      entities: [{ id: 'e1', label: 'Ok', type: 'concept', weight: 1 }, { label: 'missing id' }],
+      relations: [],
+    }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-mixed-invalid'));
+
+    // All attempts reject; budget exhausts → loading settles false, no
+    // partial graph was ever set.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.graph.nodes.length).toBe(0);
     unmount();
   });
 });

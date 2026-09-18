@@ -47,11 +47,17 @@ export async function fetchWithTimeout<T>(
   // already aborted, abort immediately; otherwise listen for its abort
   // and forward it to our controller. Either source aborting kills the
   // fetch + any in-progress body stream read inside consumeResponse.
+  // The listener is removed in `finally` below (P2, PR #315 round 2) —
+  // `{ once: true }` only covers the fires-once case; if the caller's
+  // signal never aborts, the listener previously stayed attached to the
+  // caller's signal forever (a leak for long-lived signals like a
+  // component-scoped AbortController reused across requests).
+  const forwardCallerAbort = () => controller.abort();
   if (init?.signal) {
     if (init.signal.aborted) {
       controller.abort();
     } else {
-      init.signal.addEventListener('abort', () => controller.abort(), { once: true });
+      init.signal.addEventListener('abort', forwardCallerAbort, { once: true });
     }
   }
 
@@ -61,6 +67,7 @@ export async function fetchWithTimeout<T>(
     // still inside the timeout window and will be aborted on schedule.
     return await consumeResponse(res);
   } finally {
+    init?.signal?.removeEventListener('abort', forwardCallerAbort);
     clearTimeout(timer);
   }
 }

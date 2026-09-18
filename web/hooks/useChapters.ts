@@ -103,13 +103,35 @@ export function useChapters(videoId: string | null) {
             `/api/videos/${encodeURIComponent(videoId)}/chapters`,
             undefined,
             async (res: Response) => {
-              if (!res.ok) return { ok: false } as const;
+              // PR #315 review round 2 (P1): 4xx responses are permanent
+              // (auth/ownership/not-found — retrying can never succeed), so
+              // they must NOT share the retry/backoff budget with transient
+              // failures. The result carries the status so the loop below
+              // can terminate immediately on a 4xx while 5xx stays
+              // retryable — the same discriminated contract useKnowledgeGraph's
+              // classifyFailure enforces (parity, 2026-09-18).
+              if (!res.ok) return { kind: 'http-error', status: res.status } as const;
               const body = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
-              return { ok: true, body } as const;
+              return { kind: 'ok', body } as const;
             }
           );
           if (cancelled) return;
-          if (parsed.ok) {
+          if (parsed.kind === 'http-error') {
+            if (parsed.status >= 400 && parsed.status < 500) {
+              // Permanent failure: settle immediately — no retry budget
+              // spent, no backoff delay, no online re-arm churn.
+              if (!cancelled) {
+                Sentry.captureException(
+                  new Error(`chapters fetch failed: HTTP ${parsed.status}`),
+                  { contexts: { chapters: { videoId, status: parsed.status } } }
+                );
+                setError(videoId, loadGeneration);
+                reachedTerminal = true;
+              }
+              return;
+            }
+            // 5xx: transient — fall through to the retry schedule below.
+          } else if (parsed.kind === 'ok') {
             const data = parsed.body;
             if (!cancelled) {
               // confirmed: false means no sentinel/real rows exist yet -- the

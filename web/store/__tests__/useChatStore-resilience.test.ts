@@ -1,6 +1,6 @@
 /**
  * Focused contract test for useChatStore's outbox resilience exemption
- * (PR #315 review round 2 P2, 2026-09-15).
+ * (PR #315 review round 2 P2, 2026-09-15; isolation rework 2026-09-18).
  *
  * useChatStore does NOT use the shared `fetchWithTimeout` helper — its
  * `deliver()` path (bouncer + stream) uses `AbortSignal.timeout()` directly,
@@ -13,7 +13,18 @@
  * `AbortSignal.timeout()` is backed by native timers and cannot be driven
  * by vitest fake timers (see fetch-with-timeout.ts's doc comment) — so
  * this test overrides `AbortSignal.timeout` with a controllable
- * AbortController and uses real timers.
+ * AbortController, while class-level FAKE timers keep the failed send's
+ * 3s replay timer (useChatStore.ts line ~612) from firing across tests.
+ *
+ * Isolation rework (PR #315 review round 2 item 4, 2026-09-18): a failed
+ * send schedules a REAL 3s replay timer and bindNetwork registers an
+ * UNREMOVABLE anonymous 'online' listener — both previously leaked across
+ * tests (a real timer from one test could flush a later test's outbox,
+ * and the online listener fired for events it was never meant to see).
+ * Now: fake timers per class, the online listener is bound BEFORE any
+ * failed outbox item exists, every test resets store + outbox state, and
+ * the replay assertion counts fetches before/after the online event
+ * specifically.
  *
  * Audit findings (2026-09-15):
  * - deliver() bouncer fetch: AbortSignal.timeout(15000) ✅
@@ -50,7 +61,9 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
   let controllers: AbortController[] = [];
 
   beforeEach(() => {
+    vi.useFakeTimers();
     localStorage.clear();
+    outbox.remove('nonexistent'); // no-op, ensures read path works on an empty box
     useChatStore.setState({
       conversations: [{ id: CONV_ID, title: 'Test', analysisId: null, videoId: 'vid1', createdAt: new Date().toISOString(), archived: false }],
       activeId: CONV_ID,
@@ -59,6 +72,9 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
       error: null,
       persistState: 'idle',
       activePersistRequestId: null,
+      // networkBound must be false so a bindNetwork() in a test registers a
+      // FRESH listener for THAT test; the reset also keeps a previous
+      // test's listener from being silently reused.
       networkBound: false,
     });
     controllers = [];
@@ -77,6 +93,15 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
     AbortSignal.timeout = originalAbortSignalTimeout;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    // useRealTimers DISCARDS the fake queue: the failed send's scheduled
+    // 3s replay timer (and any other pending timer) can never fire into a
+    // later test.
+    vi.useRealTimers();
+    // Full state reset — the outbox lives in localStorage and survives
+    // between tests otherwise.
+    localStorage.clear();
+    useChatStore.getState().reset();
+    useChatStore.setState({ networkBound: false, sending: false, error: null });
   });
 
   it('a stalled bouncer fetch is aborted by the timeout, error is surfaced, and the message stays in the outbox for retry', async () => {
@@ -151,38 +176,52 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
   });
 
   it('flushOutbox on the online event replays a failed message (outbox retry mechanism is wired)', async () => {
+    // Isolation contract (item 4): the online listener is bound BEFORE any
+    // failed outbox item exists (bindNetwork's immediate flush is a no-op
+    // on an empty box), and the failed send's 3s replay timer is FAKE —
+    // never advanced — so the explicit 'online' event below is the ONLY
+    // possible replay trigger. The fetch-count assertions around the event
+    // prove exactly that.
+    useChatStore.getState().bindNetwork();
+    expect(outbox.all().length).toBe(0); // bind-time flush had nothing to replay
+
     // First send fails (stalled bouncer), message stays in outbox.
-    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+    const stalledFetch = vi.fn((_url: string, init?: RequestInit) => {
       return new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
       });
     });
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('fetch', stalledFetch);
 
     const sendPromise = useChatStore.getState().sendMessage('retry me', { analysisId: null, videoId: 'vid1' });
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await vi.waitFor(() => expect(stalledFetch).toHaveBeenCalled());
     controllers[0].abort();
     await sendPromise;
     expect(outbox.all().length).toBe(1);
 
+    // No replay has happened while still offline-failed: exactly the one
+    // failed bouncer call so far, and nothing since the send settled.
+    expect(stalledFetch.mock.calls.length).toBe(1);
+
     // Now the network recovers: replace fetch with a working bouncer + stream.
     vi.unstubAllGlobals();
-    vi.stubGlobal('fetch', vi.fn((url: string) => {
+    const replayFetch = vi.fn((url: string) => {
       if (url.includes('/api/chat/conversations/') && !url.includes('stream')) {
         return Promise.resolve(new Response(JSON.stringify({
           assistant: { id: 'a1', conversationId: CONV_ID, role: 'assistant', content: 'reply', createdAt: new Date().toISOString() },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       }
       return Promise.resolve(new Response('{}', { status: 200 }));
-    }));
-
-    // Bind network (adds the 'online' listener).
-    useChatStore.getState().bindNetwork();
+    });
+    vi.stubGlobal('fetch', replayFetch);
 
     // Dispatch the online event — flushOutbox must replay.
     window.dispatchEvent(new Event('online'));
 
-    // The outbox should be cleared (deliver succeeded, assistant returned).
+    // The outbox should be cleared (deliver succeeded, assistant returned),
+    // and the replay fetch must be the ONLY fetch after the online event.
     await vi.waitFor(() => expect(outbox.all().length).toBe(0));
+    expect(replayFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(stalledFetch.mock.calls.length).toBe(1); // no further attempts on the failed fetch
   });
 });

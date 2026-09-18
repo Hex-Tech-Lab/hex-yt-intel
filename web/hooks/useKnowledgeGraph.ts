@@ -45,6 +45,126 @@ const GRAPH_RETRY_BASE_DELAY_MS = 5000;
 // Single engine + synthesizer instance (stateless, safe to reuse).
 const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
 
+// --- Pure /graph payload mapping helpers (PR #315 review round 2, items
+// 2+6, 2026-09-18) — module-level so they are individually testable and
+// fetchGraph's cyclomatic complexity stays under DeepSource's threshold.
+// Behavior contract: any INVALID ITEM (not just a wrong top-level shape)
+// rejects the WHOLE payload with a thrown error, which the fetch driver
+// classifies as retryable — items are never silently dropped or mapped
+// with undefined ids, which used to poison the nodeIds set every
+// downstream consumer derives from. ---
+
+const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+const isValidEntityId = (value: unknown): value is string | number =>
+  (typeof value === 'string' && value.trim().length > 0) || isFiniteNumber(value);
+
+function throwMalformed(detail: string): never {
+  throw new Error(`graph fetch failed: malformed payload (${detail})`);
+}
+
+interface RawEntityFields {
+  id?: unknown;
+  dimension?: unknown;
+  raw_node?: { dimension?: unknown } | null;
+  weight?: unknown;
+}
+
+// Resolves an entity's dimension, preserving the established precedence
+// (raw_node.dimension > dimension > DEFAULT sentinel). Any PRESENT value
+// must be a finite number — `typeof NaN === 'number'` used to slip a NaN
+// through the old typeof check into node.dimension.
+const resolveEntityDimension = (entity: RawEntityFields): number => {
+  const rawDimension = entity.raw_node?.dimension;
+  if (isFiniteNumber(rawDimension)) return rawDimension;
+  if (isFiniteNumber(entity.dimension)) return entity.dimension;
+  // A PRESENT-but-non-finite value (e.g. NaN, which passes a bare
+  // typeof-number check) rejects the payload; absence keeps the sentinel.
+  if (rawDimension !== undefined || entity.dimension !== undefined) {
+    throwMalformed('entity dimension is not a finite number');
+  }
+  return DEFAULT_KG_EXTRACTION_DIMENSION;
+};
+
+const mapEntityToNode = (entity: unknown): GraphNode => {
+  if (!entity || typeof entity !== 'object') throwMalformed('entity is not an object');
+  const e = entity as RawEntityFields & { label?: unknown; type?: string };
+  if (!isValidEntityId(e.id)) throwMalformed('entity has a missing/invalid id');
+  if (e.weight !== undefined && !isFiniteNumber(e.weight)) throwMalformed('entity weight is not a finite number');
+  // API-sourced nodes carry only id/dimension/label/type/entityType/weight
+  // (kg_entities has no content/polarity/keyTerms/inPersona columns). An
+  // absent weight defaults to 1 — the same default the client-side fallback
+  // path (section 2 below) and edges' strength default use.
+  return {
+    id: e.id,
+    dimension: resolveEntityDimension(e),
+    label: e.label,
+    type: e.type,
+    entityType: normalizeEntityType(e.type),
+    weight: isFiniteNumber(e.weight) ? e.weight : 1,
+  } as unknown as GraphNode;
+};
+
+const mapRelationsToEdges = (relations: unknown[], nodes: GraphNode[]): GraphEdge[] => {
+  const nodeIds = new Set(nodes.map((node) => String(node.id)));
+  return relations.map((rawRelation): GraphEdge => {
+    if (!rawRelation || typeof rawRelation !== 'object') throwMalformed('relation is not an object');
+    const relation = rawRelation as { source_entity_id?: unknown; target_entity_id?: unknown; strength?: unknown; kind?: unknown };
+    // An endpoint that does not reference a real mapped node id rejects the
+    // whole payload (previously the relation was silently dropped).
+    if (relation.source_entity_id == null || relation.target_entity_id == null ||
+        !nodeIds.has(String(relation.source_entity_id)) || !nodeIds.has(String(relation.target_entity_id))) {
+      throwMalformed('relation references an unknown entity id');
+    }
+    if (relation.strength !== undefined && !isFiniteNumber(relation.strength)) throwMalformed('relation strength is not a finite number');
+    return {
+      source: String(relation.source_entity_id),
+      target: String(relation.target_entity_id),
+      strength: isFiniteNumber(relation.strength) ? relation.strength : 1,
+      kind: (typeof relation.kind === 'string' && relation.kind ? relation.kind : 'related') as GraphEdge['kind'],
+    };
+  });
+};
+
+// Validates the top-level payload shape AND maps every item, throwing on
+// the first invalid item (whole-payload rejection, never a partial graph).
+// Returns null only for a genuinely EMPTY graph (entities: []) — a distinct
+// success outcome the caller uses to keep its synthesized fallback in place.
+export const mapGraphPayload = (data: unknown): { nodes: GraphNode[]; edges: GraphEdge[] } | null => {
+  if (!data || typeof data !== 'object') throwMalformed('not an object');
+  const record = data as { entities?: unknown; relations?: unknown };
+  const entities = Array.isArray(record.entities) ? record.entities : null;
+  const relations = Array.isArray(record.relations) ? record.relations : null;
+  if (!entities || !relations) {
+    // Valid JSON but wrong shape — retryable (P0-2), not a silent
+    // "empty result". A half-truncated 200 body that parses as JSON
+    // but drops the entities/relations arrays is a transient failure.
+    throwMalformed('entities or relations not an array');
+  }
+  const nodes = entities.map(mapEntityToNode);
+  if (nodes.length === 0) return null;
+  return { nodes, edges: mapRelationsToEdges(relations, nodes) };
+};
+
+// Classifies a thrown error from the fetch+consume pipeline into
+// 'retryable' (network/timeout/5xx/malformed-body — re-attempt on the
+// bounded schedule) vs 'permanent' (any 4xx — settle, never re-arm).
+// A 4xx carries its status on the thrown error (see buildHttpError);
+// everything else is retryable by default.
+export const classifyFailure = (error: unknown): 'retryable' | 'permanent' => {
+  const status = (error as { status?: unknown })?.status;
+  if (isFiniteNumber(status) && status >= 400 && status < 500) return 'permanent';
+  return 'retryable';
+};
+
+const buildHttpError = (response: Response): Error & { status: number } => {
+  // 5xx throws here too (retryable via classifyFailure); a 4xx throws
+  // with its status so classifyFailure marks it permanent.
+  const error = new Error(`graph fetch failed: HTTP ${response.status}`) as Error & { status: number };
+  error.status = response.status;
+  return error;
+};
+
 export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean = true): { graph: KnowledgeGraph; ready: boolean; loading: boolean } {
   const analysis = useSynthesisNucleus((s) => s.analysis);
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
@@ -95,74 +215,27 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
     // PR #313 post-merge review (2026-09-15): ONE bounded retry driver for
     // every retryable failure class. A network-level rejection (dropped
     // connection), a timeout abort (stalled connection), a 5xx response, AND
-    // a malformed/empty 200 body (P0-2) all route through the same backoff
-    // schedule below. 4xx is permanent (auth/ownership/not-found): fails
-    // immediately, no budget spent, and does NOT arm the online-event
-    // recovery (P0-3 — previously 4xx set lastAttemptFailed=true, so every
-    // later connectivity transition re-fetched a 401/404 that never
-    // succeeds).
-    //
-    // P1-4 refactor (2026-09-15): the monolithic fetchGraph was split into
-    // pure helpers — mapGraphPayload (parse + normalize) and
-    // classifyFailure (retryable vs permanent) — to bring cyclomatic
-    // complexity under DeepSource's threshold. Behavior preserved exactly.
-    const mapGraphPayload = (data: unknown): { nodes: GraphNode[]; edges: GraphEdge[] } | null => {
-      if (!data || typeof data !== 'object') {
-        // No body or non-object body — malformed, throw to enter retryable path.
-        throw new Error('graph fetch failed: malformed payload (not an object)');
-      }
-      const entities = (data as any).entities;
-      const relations = (data as any).relations;
-      if (!Array.isArray(entities) || !Array.isArray(relations)) {
-        // Valid JSON but wrong shape — retryable (P0-2), not a silent
-        // "empty result". A half-truncated 200 body that parses as JSON
-        // but drops the entities/relations arrays is a transient failure.
-        throw new Error('graph fetch failed: malformed payload (entities or relations not an array)');
-      }
-      // API-sourced nodes carry only id/dimension/label/type/entityType/weight
-      // (kg_entities has no content/polarity/keyTerms/inPersona columns).
-      // The old code relied on implicit any-typing to pass these through to
-      // setGraph; we preserve that exact shape via a cast rather than
-      // inventing defaults the persisted row never carried.
-      const nodes = entities.map((e: any) => {
-        const rawDimension = e.raw_node?.dimension;
-        const resolvedDimension =
-          typeof rawDimension === 'number' ? rawDimension :
-          typeof e.dimension === 'number' ? e.dimension :
-          DEFAULT_KG_EXTRACTION_DIMENSION;
-        return {
-          id: e.id,
-          dimension: resolvedDimension,
-          label: e.label,
-          type: e.type,
-          entityType: normalizeEntityType(e.type),
-          weight: e.weight
-        };
-      }) as unknown as GraphNode[];
-      const nodeIds = new Set(nodes.map((n) => String(n.id)));
-      const edges: GraphEdge[] = [];
-      for (const rItem of relations) {
-        if (rItem && nodeIds.has(String(rItem.source_entity_id)) && nodeIds.has(String(rItem.target_entity_id))) {
-          edges.push({
-            source: String(rItem.source_entity_id),
-            target: String(rItem.target_entity_id),
-            strength: typeof rItem.strength === 'number' ? rItem.strength : 1,
-            kind: rItem.kind || 'related'
-          } as GraphEdge);
-        }
-      }
-      return nodes.length > 0 ? { nodes, edges } : null;
-    };
-
-    // Classifies a thrown error from the fetch+consume pipeline into
-    // 'retryable' (network/timeout/5xx/malformed-body — re-attempt on the
-    // bounded schedule) vs 'permanent' (any 4xx — settle, never re-arm).
-    // A 4xx carries its status on the thrown error (see consumeResponse
-    // below); everything else is retryable by default.
-    const classifyFailure = (error: unknown): 'retryable' | 'permanent' => {
-      const status = (error as any)?.status;
-      if (typeof status === 'number' && status >= 400 && status < 500) return 'permanent';
-      return 'retryable';
+    // a malformed/invalid 200 body (P0-2 + round-2 deep validation) all
+    // route through the same backoff schedule below. 4xx is permanent
+    // (auth/ownership/not-found): fails immediately, no budget spent, and
+    // does NOT arm the online-event recovery (P0-3 — previously 4xx set
+    // lastAttemptFailed=true, so every later connectivity transition
+    // re-fetched a 401/404 that never succeeds). Payload validation and
+    // failure classification are the module-level pure helpers above (P1-4
+    // refactor, complexity under DeepSource's threshold; behavior preserved
+    // except the round-2 whole-payload item validation).
+    const consumeGraphResponse = async (response: Response): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] } | null> => {
+      if (!response.ok) throw buildHttpError(response);
+      // Let res.json() throw naturally on invalid JSON — the outer catch
+      // logs it and classifies it as retryable (any non-4xx error is
+      // retryable by default). No inner catch needed: the raw parse error
+      // message is descriptive enough ("Unexpected token..." etc.) and the
+      // outer catch already captures it.
+      const data = await response.json();
+      if (cancelled) throw new Error('__cancelled__');
+      // mapGraphPayload validates the shape AND every entity/relation item,
+      // throwing on the first invalid item (whole-payload rejection).
+      return mapGraphPayload(data);
     };
 
     const fetchGraph = async (attempt = 0): Promise<void> => {
@@ -181,31 +254,7 @@ export function useKnowledgeGraph(analysisId?: string | null, enabled: boolean =
         const mapped = await fetchWithTimeout(
           `/api/analyses/${encodeURIComponent(analysisId)}/graph`,
           undefined,
-          async (res: Response) => {
-            if (!res.ok) {
-              // 5xx throws here too (retryable via classifyFailure); a 4xx
-              // throws with its status so classifyFailure marks it permanent.
-              const err = new Error(`graph fetch failed: HTTP ${res.status}`) as Error & { status: number };
-              (err as any).status = res.status;
-              throw err;
-            }
-            let data: unknown;
-            // Let res.json() throw naturally on invalid JSON — the outer
-            // catch logs it and classifies it as retryable (any non-4xx
-            // error is retryable by default). No inner catch needed: the
-            // raw parse error message is descriptive enough ("Unexpected
-            // token..." etc.) and the outer catch already captures it.
-            data = await res.json();
-            if (cancelled) throw new Error('__cancelled__');
-            const result = mapGraphPayload(data);
-            if (!result) {
-              // Empty API result (entities: []) is NOT a failure — leave
-              // whatever the fallback produced in place. Return a sentinel
-              // the caller can distinguish from a real graph.
-              return null;
-            }
-            return result;
-          }
+          consumeGraphResponse
         );
 
         if (cancelled) return;

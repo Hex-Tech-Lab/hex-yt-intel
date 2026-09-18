@@ -265,8 +265,7 @@ describe('useChapters network-recovery refetch (2026-09-15 incident RCA, video r
     expect(fetchMock.mock.calls.length).toBe(callsBefore); // no spurious refetch
   });
 
-  it('P0-1: a chapters fetch whose body (.json()) never settles is aborted by the timeout and enters the backoff loop (not stuck loading forever)', async () => {
-    // The body-level timeout gap: the old helper cleared the timer once
+  it('P0-1: a chapters fetch whose body (.json()) never settles is aborted by the timeout and enters the backoff loop (not stuck loading forever)', async () => {    // The body-level timeout gap: the old helper cleared the timer once
     // headers arrived, leaving a stalled .json() uncovered. The callback
     // shape keeps the timer armed through body consumption — a stalled
     // .json() aborts on the same 10s schedule a stalled connection does,
@@ -297,5 +296,64 @@ describe('useChapters network-recovery refetch (2026-09-15 incident RCA, video r
     });
     expect(useChaptersStore.getState().entries['vid-body-stall']?.status).toBe('error');
     expect(fetchMock).toHaveBeenCalledTimes(5); // MAX_RETRIES
+  });
+});
+describe('useChapters 4xx permanent vs 5xx retryable (PR #315 review round 2 item 1)', () => {
+  beforeEach(() => {
+    useChaptersStore.setState({ entries: {}, generations: {} });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('a 4xx response is permanent: settles immediately, spends no retry budget, no backoff', async () => {
+    // Negative control (pre-fix): the consumeResponse callback returned
+    // `{ ok: false }` with no status, so a 401/404 entered the SAME
+    // retry/backoff schedule as a transient failure — 5 attempts and ~31s
+    // of backoff spent on a failure that can never succeed.
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"error":"unauthorized"}', { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-401'));
+
+    // Advance well past the full backoff schedule — a retrying bug would
+    // fire more attempts here.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no retry budget spent
+    expect(useChaptersStore.getState().entries['vid-401']?.status).toBe('error');
+  });
+
+  it('a 404 response is permanent the same way (ownership/not-found never succeeds on retry)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"error":"not found"}', { status: 404 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-404'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(useChaptersStore.getState().entries['vid-404']?.status).toBe('error');
+  });
+
+  it('a 5xx response stays retryable on the backoff schedule (transient, not permanent)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"error":"internal"}', { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useChapters('vid-500'));
+    // Full schedule: 5 attempts with 1/2/4/8s backoffs.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(5); // MAX_RETRIES
+    expect(useChaptersStore.getState().entries['vid-500']?.status).toBe('error');
   });
 });
