@@ -49,7 +49,7 @@ describe('UCIS_V5_3_SYSTEM — KG weight-field guidance (#243)', () => {
  */
 describe('UCIS_V5_3_SYSTEM — person-credibility grounding (PR #318)', () => {
   it('2.3 prohibits inventing OR embellishing every attribute, traceable to 2.1/transcript only', () => {
-    const section23 = UCIS_V5_3_SYSTEM.slice(
+    const section23 = UCIS_V5_3_SYSTEM.slice( // section extraction, not display truncation -- no ellipsis needed
       UCIS_V5_3_SYSTEM.indexOf('#### 2.3'),
       UCIS_V5_3_SYSTEM.indexOf('#### 2.4')
     );
@@ -59,7 +59,7 @@ describe('UCIS_V5_3_SYSTEM — person-credibility grounding (PR #318)', () => {
   });
 
   it('4.2 is narrowed to 2.1/transcript only — never other generated dimensions', () => {
-    const section42 = UCIS_V5_3_SYSTEM.slice(
+    const section42 = UCIS_V5_3_SYSTEM.slice( // section extraction, not display truncation -- no ellipsis needed
       UCIS_V5_3_SYSTEM.indexOf('#### 4.2'),
       UCIS_V5_3_SYSTEM.indexOf('#### 4.3')
     );

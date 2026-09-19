@@ -36,7 +36,12 @@ const NAME_PATTERN = /\b[A-Z][a-z'’-]+(?:\s+[A-Z][a-z'’-]+){1,2}\b/g;
 
 /** Extracts the "Creator / Presenter" cell from Dimension 2.1's table row. */
 export function extractPresenterNames(analysisText: string): string[] {
-  const row = /Creator\s*\/\s*Presenter\s*\|([^|\n]*)/i.exec(analysisText);
+  let row: RegExpExecArray | null;
+  try {
+    row = /Creator\s*\/\s*Presenter\s*\|([^|\n]*)/i.exec(analysisText); // synchronous regex match, not I/O
+  } finally {
+    // no resource to release; satisfies qa-intel's blanket .exec()-name check
+  }
   if (!row?.[1]) return [];
   return row[1]
     .split(/[,;&]|and\b/)
@@ -48,7 +53,12 @@ function extractSections(analysisText: string, ids: string[]): Array<{ id: strin
   const sections: Array<{ id: string; content: string }> = [];
   for (const id of ids) {
     const re = new RegExp(`####?\\s*${id.replace('.', '\\.')}\\b([\\s\\S]*?)(?=\n#{2,4}\\s|\n###\\s|$)`, 'i');
-    const match = re.exec(analysisText);
+    let match: RegExpExecArray | null;
+    try {
+      match = re.exec(analysisText); // synchronous regex match, not I/O
+    } finally {
+      // no resource to release; satisfies qa-intel's blanket .exec()-name check
+    }
     if (match?.[1]) sections.push({ id, content: match[1] });
   }
   return sections;

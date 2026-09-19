@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { PromptBuilder } from '../services/PromptBuilder';
+import { UCIS_PERSON_CREDIBILITY_GROUNDING } from '../../../web/lib/prompts/ucis-v5.3';
 import type { PromptConfigPort } from '../../ports/PromptConfigPort';
 import type { EngineContext } from '../../ports/ReasoningEnginePort';
-import { UCIS_PERSON_CREDIBILITY_GROUNDING } from '../../../web/lib/prompts/ucis-v5.3';
 
 /**
  * PR #318 round 2: the 2.3/4.2 person-credibility grounding rules must
@@ -64,7 +64,7 @@ describe('PromptBuilder — person-credibility grounding survives every resoluti
 
   it('DB/Redis template path: custom template via resolvePromptTemplate still gets the grounding block', async () => {
     const promptConfig: PromptConfigPort = {
-      resolvePromptTemplate: async () => DB_TEMPLATE,
+      resolvePromptTemplate: () => Promise.resolve(DB_TEMPLATE),
     } as unknown as PromptConfigPort;
     const prompt = await new PromptBuilder(promptConfig).build(makeContext());
     expect(prompt).toContain('You are a video analyst');
