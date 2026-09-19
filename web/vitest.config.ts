@@ -10,6 +10,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      // worker tests import web/lib modules that use the '@lib/*' tsconfig
+      // alias (e.g. prompts/factory.ts) -- vitest doesn't read tsconfig paths.
+      '@lib': path.resolve(__dirname, './lib'),
+      '@components': path.resolve(__dirname, './components'),
+      '@hooks': path.resolve(__dirname, './hooks'),
+      '@store': path.resolve(__dirname, './store'),
       '../../worker/src/chat-stream': path.resolve(__dirname, '../worker/src/chat-stream.ts'),
       '../../worker/src/services/ValidationService': path.resolve(__dirname, '../worker/src/services/ValidationService.ts'),
     },

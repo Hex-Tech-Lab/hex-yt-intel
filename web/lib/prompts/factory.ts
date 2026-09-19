@@ -1,7 +1,7 @@
 import type { PersonaId } from '@/lib/prompts';
 import { rankPersonas } from '@/lib/prompts';
 import { resolveUCISPromptTemplate } from '@lib/services/settings';
-import { UCIS_V5_3_SYSTEM } from '@lib/prompts/ucis-v5.3';
+import { UCIS_V5_3_SYSTEM, UCIS_PERSON_CREDIBILITY_GROUNDING } from '@lib/prompts/ucis-v5.3';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export interface GetUCISPromptParams {
@@ -61,6 +61,12 @@ export async function getUCISPrompt({
   skipAllDimensionsInstruction,
 }: GetUCISPromptParams): Promise<string> {
   const systemPrompt = promptOverride ?? (await resolveUCISPromptTemplate(version));
+  // PR #318 round 2: DB/Redis-resolved templates and promptOverride replace
+  // the embedded UCIS text wholesale, silently dropping the 2.3/4.2 inline
+  // person-credibility rules (the "Jason Nadak" hallucination). Append the
+  // canonical grounding block to the assembled prompt on EVERY path so the
+  // rules always reach the model regardless of which template won.
+  const groundingBlock = `\n\n---\n\n${UCIS_PERSON_CREDIBILITY_GROUNDING}\n`;
   const personas = rankPersonas(persona);
   const formattedDuration = duration !== undefined ? formatDuration(duration) : undefined;
   const metadataWithDuration = { ...metadata, duration: formattedDuration };
@@ -92,7 +98,7 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Timezone**: ${timezone}${durationNotice}${shortFormNotice}
 
 **Transcript**:
-${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}`;
+${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${groundingBlock}`;
   }
 
   const promptVersion = version || '5.1';
@@ -118,6 +124,6 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Transcript**:
 ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${dimensionsInstruction}
 
-**CRITICAL**: Do NOT include any closing tags, summary lines, or metadata markers (e.g., "End of UCIS v${promptVersion} Report") at the end of your response. The output must end immediately after the final dimension content.`;
+**CRITICAL**: Do NOT include any closing tags, summary lines, or metadata markers (e.g., "End of UCIS v${promptVersion} Report") at the end of your response. The output must end immediately after the final dimension content.${groundingBlock}`;
 
 }

@@ -151,6 +151,11 @@ A complex, multi-dimensional narrative (approx. 1 page) highlighting key points 
 #### 2.3 Channel Authority Assessment
 
 - Subscriber count, channel age, upload cadence, credibility score (1–10).
+- The credibility justification MUST reference only people, names, titles,
+  roles, affiliations, and credentials already established in 2.1 or
+  directly observed in the transcript. NEVER invent OR embellish any such
+  attribute from other generated dimensions or general knowledge. If an
+  attribute cannot be traced to 2.1 or the transcript, omit it entirely.
 
 #### 2.4 Audience Sentiment Prediction
 
@@ -188,6 +193,12 @@ Dominant tone, emotional trajectory, confidence level, energy shifts.
 
 #### 4.2 Persuasion Strategy
 Primary mode (Logic / Data / Story / Authority / Demonstration / Emotional). Rhetorical techniques. Hook architecture.
+When citing an "authority transfer" or named-expert technique, reference
+ONLY names/roles/credentials explicitly present in Dimension 2.1 or directly
+observed in the transcript. Never treat facts introduced by other GENERATED
+dimensions (2.3, 3, 5, etc.) as established sources. If no supported
+authority exists, describe the technique generically and omit the name
+entirely rather than inferring one.
 
 #### 4.3 Bias Detection & Critical Assessment
 Promotional vs. educational ratio, conflicts of interest, recency bias, selection bias, confirmation bias.
@@ -349,7 +360,12 @@ Where concepts connect to entirely different domains (at least 2 required).
 
 #### 8.4 Discovery Pathways
 
-Official resources, recommended deep dives, contrarian perspectives.
+Resources, tools, or further reading the speaker explicitly names in the
+transcript (never looked up externally -- this field is transcript-only,
+same as every other field under section 0.5). If the speaker names none, output
+this subsection header and write "N/A -- no resources/further reading
+named in transcript" per the Insufficient Data Protocol. Do NOT omit this
+subsection.
 
 ---
 
@@ -423,9 +439,9 @@ Counterarguments, conditional non-applicability, alternative frameworks.
 
 | Field | Estimate | Confidence | Notes |
 |---|---|---|---|
-| **Estimated CPM** | [\$X–\$Y] | [High / Medium / Low] | Based on: content domain, audience tier, engagement metrics |
-| **Expected RPM** | [\$X–\$Y per 1K views] | [High / Medium / Low] | Typical range for this niche + creator authority |
-| **Annual Display Revenue** (at current view velocity) | [\$X] | [Confidence] | Assumes stable upload cadence and algorithm positioning |
+| **Estimated CPM** | [$X–$Y] | [High / Medium / Low] | Based on: content domain, audience tier, engagement metrics |
+| **Expected RPM** | [$X–$Y per 1K views] | [High / Medium / Low] | Typical range for this niche + creator authority |
+| **Annual Display Revenue** (at current view velocity) | [$X] | [Confidence] | Assumes stable upload cadence and algorithm positioning |
 | **Optimization Opportunities** | [List 2–3 domain-specific levers: audience geography mix, content type shift, etc.] | — | Explicit from transcript only; otherwise mark "[Insufficient...]" |
 
 #### 11.2 Sponsorship & Brand Partnership CPM
@@ -434,8 +450,8 @@ Counterarguments, conditional non-applicability, alternative frameworks.
 
 | Partner Type | Estimated CPM | Fit Assessment | Negotiation Window |
 |---|---|---|---|
-| **Direct B2B Sponsors** | [\$X–\$Y] | [Excellent / Good / Moderate / Poor] | [Rationale from content] |
-| **SaaS / Product Sponsors** | [\$X–\$Y] | [...] | [...] |
+| **Direct B2B Sponsors** | [$X–$Y] | [Excellent / Good / Moderate / Poor] | [Rationale from content] |
+| **SaaS / Product Sponsors** | [$X–$Y] | [...] | [...] |
 | **Affiliate / CPA Networks** | [X–Y% commission] | [...] | [...] |
 
 **Sponsor Suitability**: [List 2–3 specific partner categories that align with audience + content. If unavailable, mark "[Insufficient...]"]
@@ -446,8 +462,8 @@ Counterarguments, conditional non-applicability, alternative frameworks.
 
 - **Lead Magnet Potential**: [High / Medium / Low] – Can this audience be funneled into an email list, waitlist, or webinar funnel?
 - **Service Positioning Fit**: [High / Medium / Low] – Does the creator signal authority suitable for coaching, consulting, or 1:1 services?
-- **Estimated Lead Value (LTV)**: [\$X per qualified lead] or "[Insufficient data...]"
-- **Implied Monthly Revenue Potential**: [If creator captures X% conversion → \$Y/month] or "[Insufficient data...]"
+- **Estimated Lead Value (LTV)**: [$X per qualified lead] or "[Insufficient data...]"
+- **Implied Monthly Revenue Potential**: [If creator captures X% conversion → $Y/month] or "[Insufficient data...]"
 
 #### 11.4 Affiliate & E-Commerce Monetization
 
@@ -455,7 +471,7 @@ Counterarguments, conditional non-applicability, alternative frameworks.
 
 | Product Type | Tools Mentioned | Revenue Model | Estimated Potential |
 |---|---|---|---|
-| **Educational Products** | [e.g., courses, templates, frameworks if mentioned] | [Affiliate % or margin] | [\$X/month or "Insufficient..."] |
+| **Educational Products** | [e.g., courses, templates, frameworks if mentioned] | [Affiliate % or margin] | [$X/month or "Insufficient..."] |
 | **Software / Tooling** | [e.g., SaaS tools mentioned explicitly] | [Affiliate % or referral fee] | [...] |
 | **Physical / Digital Goods** | [e.g., books, merch, templates] | [Margin or revenue share] | [...] |
 
@@ -669,3 +685,20 @@ Analyse the provided content using the complete v5.3 framework above. You are op
 
 **For short-form content (< 180 seconds)**: You are a blind, ruthless parser. Extract exactly what the transcript provides. Use "[Insufficient data in source transcript to fulfill this dimension]" for complex dimensions without exception or complaint. This is not a failure—it is the correct protocol.
 `;
+
+/**
+ * Person-credibility grounding rules (PR #318 round 2). The Dimension 2.3/4.2
+ * inline rules above are part of the embedded default template only -- a
+ * DB/Redis-resolved template or an explicit promptOverride replaces the whole
+ * system prompt and would lose them. getUCISPrompt() appends this block to the
+ * ASSEMBLED prompt regardless of which template won, so the rules survive
+ * every resolution path. Keep the language in sync with the 2.3/4.2 sections.
+ */
+export const UCIS_PERSON_CREDIBILITY_GROUNDING = `## PERSON-CREDIBILITY GROUNDING (non-negotiable, overrides every dimension)
+
+Never invent OR embellish a person's name, title, role, affiliation, or credential -- in ANY dimension. Every such attribute MUST be explicitly present in Dimension 2.1 (Creator / Presenter) or directly observed in the transcript. Facts introduced by other GENERATED dimensions (2.3, 3, 5, etc.) are NOT established sources.
+
+- Dimension 2.3 (credibility justification): cite only people, names, titles, roles, and credentials traceable to 2.1 or the transcript.
+- Dimension 4.2 (authority-transfer / named-expert techniques): reference ONLY names/roles/credentials explicitly present in 2.1 or the transcript. If no supported authority exists, describe the technique generically and omit the name entirely rather than inferring one.
+
+If an attribute cannot be traced to 2.1 or the transcript, omit it. Omitting is always correct; fabricating or embellishing never is.`;
