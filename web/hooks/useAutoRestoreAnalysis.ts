@@ -7,6 +7,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
@@ -74,24 +75,44 @@ export function useAutoRestoreAnalysis(url: string) {
     // reload after the network returned, exactly the reported symptom.)
     const checkAndRestore = async (): Promise<'settled' | 'retryable'> => {
       try {
-        let res: Response;
-        let checkOk = false;
-        try {
-          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
-          checkOk = res.ok;
-        } finally {
-          // Real diagnostic, not a no-op: surfaces whether this hook's very
-          // first network call of the restore attempt actually settled
-          // (as opposed to throwing/hanging), independent of whatever the
-          // rest of the function goes on to do -- useful when triaging a
-          // "restore never happened" report without needing a full repro.
-          addBreadcrumb('Auto-restore: check request settled', { videoId, ok: checkOk }, 'auto-restore');
+        // fetchWithTimeout (PR #313 post-merge review P0-1/P0b): the
+        // consumeResponse callback runs INSIDE the timeout window, so a
+        // stalled `.json()` (headers arrive but body never completes) is
+        // aborted on the same schedule a stalled connection is — the timer
+        // is not cleared until consumeResponse settles. Previously the
+        // helper returned the bare Response and cleared the timer once
+        // headers arrived, leaving a stalled body-consumption hang
+        // uncovered one layer deeper.
+        // Breadcrumbs (PR #315 review round 2 P3): request-start / settled
+        // (header arrival) / failure / success span the WHOLE
+        // fetchWithTimeout call — previously only the in-callback "settled"
+        // breadcrumb existed, so a pre-header network failure or timeout
+        // abort left zero breadcrumb trail at all.
+        addBreadcrumb('Auto-restore: check request started', { videoId }, 'auto-restore');
+        const checkData = await fetchWithTimeout(
+          `/api/analyses/check?videoId=${videoId}`,
+          undefined,
+          async (response: Response) => {
+            addBreadcrumb('Auto-restore: check request settled', { videoId, ok: response.ok }, 'auto-restore');
+            if (!response.ok) return { ok: false, status: response.status } as const;
+            const data = await response.json();
+            return { ok: true, status: 200, data } as const;
+          }
+        );
+        if (!checkData.ok) {
+          addBreadcrumb('Auto-restore: check request failed', { videoId, status: checkData.status }, 'auto-restore');
+          return checkData.status >= 500 ? 'retryable' : 'settled';
         }
-        if (!res.ok) return res.status >= 500 ? 'retryable' : 'settled';
-        const data = await res.json();
+        const data = checkData.data;
         if (cancelled) return 'settled';
+        // Success breadcrumb only after the body parsed AND the check data
+        // is in hand — not on header arrival.
+        addBreadcrumb('Auto-restore: check request completed', { videoId, exists: data.exists === true }, 'auto-restore');
 
-        if (data.exists && data.analysisId) {
+        // Shape guard (cheap, PR #315 round 2 tangent): the check body is
+        // arbitrary JSON — only enter the restore flow when the identity
+        // fields are actually well-formed.
+        if (data.exists === true && typeof data.analysisId === 'string' && data.analysisId.length > 0) {
           console.log('[AutoRestore] Existing analysis detected for video, fetching details:', data.analysisId);
 
           // Early bail: the check route already determined this row is terminal
@@ -161,23 +182,39 @@ export function useAutoRestoreAnalysis(url: string) {
             return 'settled';
           }
 
-          // Trigger the restoration flow just like history restoration
-          let restoreRes: Response;
-          let restoreOk = false;
-          try {
-            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
-            restoreOk = restoreRes.ok;
-          } finally {
-            // Same real diagnostic as the check-request breadcrumb above --
-            // the second, heavier fetch (full analysis record) is the one
-            // most likely to time out on a large payload; knowing whether
-            // it settled at all narrows "restore silently did nothing" vs.
-            // "restore threw before this point" without a full repro.
-            addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: restoreOk }, 'auto-restore');
+          // Trigger the restoration flow just like history restoration.
+          // Same timeout guard as the check fetch above (P0-1/P0b) — the
+          // full record fetch is the larger payload and the likelier stall,
+          // so body consumption also runs inside the timeout window.
+          addBreadcrumb('Auto-restore: full-record request started', { analysisId: data.analysisId }, 'auto-restore');
+          const restoreResult = await fetchWithTimeout(
+            `/api/analyses/${data.analysisId}`,
+            undefined,
+            async (response: Response) => {
+              addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: response.ok }, 'auto-restore');
+              if (!response.ok) return { ok: false, status: response.status } as const;
+              const body = await response.json();
+              return { ok: true, status: 200, body } as const;
+            }
+          );
+          if (!restoreResult.ok) {
+            addBreadcrumb('Auto-restore: full-record request failed', { analysisId: data.analysisId, status: restoreResult.status }, 'auto-restore');
+            return restoreResult.status >= 500 ? 'retryable' : 'settled';
           }
-          if (!restoreRes.ok) return restoreRes.status >= 500 ? 'retryable' : 'settled';
-          const restoreData = await restoreRes.json();
+          const restoreData = restoreResult.body;
           if (cancelled) return 'settled';
+
+          // Record-identity shape guard (cheap, PR #315 round 2 tangent):
+          // the full record is arbitrary JSON — without an id/videoId pair
+          // the restore cannot hydrate coherently. Treat as a malformed
+          // (transient) response rather than storing undefined identity.
+          const hasRecordIdentity =
+            typeof restoreData?.id === 'string' && restoreData.id.length > 0 &&
+            typeof restoreData?.videoId === 'string' && restoreData.videoId.length > 0;
+          if (!hasRecordIdentity) {
+            addBreadcrumb('Auto-restore: full record malformed (missing record identity)', { analysisId: data.analysisId }, 'auto-restore');
+            return 'retryable';
+          }
 
           let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
 
@@ -275,6 +312,10 @@ export function useAutoRestoreAnalysis(url: string) {
             }
           });
 
+          // Success breadcrumb only after JSON parse + store processing
+          // completed — not on header arrival (P3).
+          addBreadcrumb('Auto-restore: full record restored', { analysisId: restoreData.id }, 'auto-restore');
+
           // Ground/Select the chat session in the background. Guarded by the
           // same `cancelled` flag the outer effect already uses (real bug,
           // live-reported 2026-08-01): this inner IIFE previously had no
@@ -342,6 +383,14 @@ export function useAutoRestoreAnalysis(url: string) {
         return 'settled';
       } catch (err) {
         console.debug('[AutoRestore] Pre-flight cache check failed:', err);
+        // Pre-header failure (network reject / timeout abort): never reached
+        // consumeResponse, so no "settled" breadcrumb fired — this is the
+        // only trace the attempt ever happened (P3).
+        addBreadcrumb(
+          'Auto-restore: request failed before settling',
+          { error: err instanceof Error ? err.message : String(err) },
+          'auto-restore'
+        );
         return 'retryable';
       }
     };

@@ -230,7 +230,26 @@ describe('snapshot route wiring — regression guard (2026-09-15)', () => {
 
     expect(exportedFetcherNames.length).toBeGreaterThan(0);
 
-    const notWired = exportedFetcherNames.filter((name) => !routeSrc.includes(name));
+    // Tightened (PR #313 post-merge review P2, 2026-09-15; made formatting-
+    // robust PR #315 review round 2 P2, 2026-09-15): the original check
+    // was `routeSrc.includes(name)` — a name appearing in the import
+    // block, a comment, or a doc string passed WITHOUT being called.
+    // The first tightening scoped to the `Promise.all([ ... ]);` block via
+    // regex, but that regex depended on exact source-text formatting
+    // (semicolon after `])`, no `await` on a separate line, etc.) — a valid
+    // route refactor would produce a false test failure. This version
+    // strips comments from the route source and checks that each exported
+    // fetcher name appears as a CALL expression (`name(`) in the remaining
+    // code. Robust to any formatting change; the negative-control property
+    // (an omitted fetcher fails the guard) is preserved because a missing
+    // call is a missing call regardless of formatting.
+    const stripComments = (src: string): string =>
+      src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    const routeCode = stripComments(routeSrc);
+
+    const notWired = exportedFetcherNames.filter(
+      (name) => !new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\(`).test(routeCode)
+    );
     expect(notWired).toEqual([]);
   });
 });

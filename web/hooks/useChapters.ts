@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useChaptersStore, type ChapterEntry } from '@/store/useChaptersStore';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -90,10 +91,48 @@ export function useChapters(videoId: string | null) {
       while (retryCount < MAX_RETRIES && !cancelled) {
         let confirmedLoaded = false;
         try {
-          const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
+          // fetchWithTimeout (PR #313 post-merge review P0-1/P0b): the
+          // consumeResponse callback runs INSIDE the timeout window, so a
+          // stalled `.json()` (headers arrive but body never completes) is
+          // aborted on the same schedule a stalled connection is — the
+          // timer is not cleared until consumeResponse settles. Previously
+          // the helper returned the bare Response and cleared the timer
+          // once headers arrived, leaving a stalled body-consumption hang
+          // uncovered one layer deeper.
+          const parsed = await fetchWithTimeout(
+            `/api/videos/${encodeURIComponent(videoId)}/chapters`,
+            undefined,
+            async (res: Response) => {
+              // PR #315 review round 2 (P1): 4xx responses are permanent
+              // (auth/ownership/not-found — retrying can never succeed), so
+              // they must NOT share the retry/backoff budget with transient
+              // failures. The result carries the status so the loop below
+              // can terminate immediately on a 4xx while 5xx stays
+              // retryable — the same discriminated contract useKnowledgeGraph's
+              // classifyFailure enforces (parity, 2026-09-18).
+              if (!res.ok) return { kind: 'http-error', status: res.status } as const;
+              const body = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
+              return { kind: 'ok', body } as const;
+            }
+          );
           if (cancelled) return;
-          if (res.ok) {
-            const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
+          if (parsed.kind === 'http-error') {
+            if (parsed.status >= 400 && parsed.status < 500) {
+              // Permanent failure: settle immediately — no retry budget
+              // spent, no backoff delay, no online re-arm churn.
+              if (!cancelled) {
+                Sentry.captureException(
+                  new Error(`chapters fetch failed: HTTP ${parsed.status}`),
+                  { contexts: { chapters: { videoId, status: parsed.status } } }
+                );
+                setError(videoId, loadGeneration);
+                reachedTerminal = true;
+              }
+              return;
+            }
+            // 5xx: transient — fall through to the retry schedule below.
+          } else if (parsed.kind === 'ok') {
+            const data = parsed.body;
             if (!cancelled) {
               // confirmed: false means no sentinel/real rows exist yet -- the
               // worker's fire-and-forget write can still be in flight (fires
