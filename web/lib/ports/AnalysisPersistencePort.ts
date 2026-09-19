@@ -224,6 +224,39 @@ export interface AnalysisPersistencePort {
     generationId?: string;
   }): Promise<void>;
 
+  /**
+   * Demote a nominally-'completed' chunk row to 'failed' (P1a, PR #312
+   * post-merge review): the caller read the row's payload during finalize
+   * and observed it has no usable dimensions shape — the stitch would
+   * silently drop it, so the row's status must be brought in line with what
+   * the stitch actually used (same accounting as the payload-less failed
+   * chunk rows from PR #312).
+   *
+   * P0 (PR #314 second review round): CAS is now scoped to the EXACT row
+   * the caller observed, not just `status = 'completed'`. A concurrent
+   * writer can replace the malformed `completed` row with a VALID
+   * `completed` payload between the caller's read and this demotion — the
+   * old `status='completed'`-only guard would have demoted that now-valid
+   * row (data loss). The `observedUpdatedAt` parameter (from
+   * `findAnalysisChunks`'s `updated_at` column) narrows the CAS so the
+   * UPDATE only fires when the row is still the exact same revision. When
+   * `observedUpdatedAt` is null (the column was null — should not happen in
+   * practice but the port types it as nullable), the guard falls back to
+   * `status='completed'` only (the pre-P0 behavior, better than blocking).
+   *
+   * Returns `true` only when the demotion actually happened (CAS matched,
+   * row is now `failed`). Returns `false` on a CAS miss (0 rows updated —
+   * a concurrent writer changed the row). Throws on a genuine DB error so
+   * the caller can distinguish "lost the race" (false) from "infra
+   * failure" (thrown) — the caller must NOT treat a thrown error as a
+   * confirmed demotion.
+   */
+  markChunkFailed(params: {
+    analysisId: string;
+    chunkIndex: number;
+    observedUpdatedAt: string | null;
+  }): Promise<boolean>;
+
   findAnalysisChunks(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;

@@ -527,6 +527,68 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
   }
 
+  /**
+   * Demote a nominally-'completed' chunk row to 'failed' (P1a, PR #312
+   * post-merge review, 2026-09-15): the caller (persist route's
+   * settled-partial finalize) read the row's payload and observed it has no
+   * usable dimensions shape — the stitch would silently drop it, so the
+   * row's status must match what the stitch actually used (the same
+   * accounting PR #312 gave payload-less chunks: spend stays recorded on
+   * the row, and the stuck-analysis reaper's completed-only usability
+   * filter stops treating it as recoverable).
+   *
+   * P0 (PR #314 second review round): the CAS is now scoped to the EXACT
+   * row revision via `observedUpdatedAt`, not just `status = 'completed'`.
+   * A concurrent writer can replace the malformed `completed` row with a
+   * VALID `completed` payload (bumping `updated_at`) before this demotion
+   * runs — the old status-only guard would have demoted the now-valid row
+   * (real data loss). The `updated_at` guard ensures the UPDATE only fires
+   * when the row is still the exact same revision the caller read. Returns
+   * false on a CAS miss so the caller can refetch and check whether the row
+   * is now valid (restore it) or still malformed. Throws on a genuine DB
+   * error so the caller does NOT treat an infra failure as a confirmed
+   * demotion.
+   */
+  // skipcq: JS-0105 -- this method's logic never needs `this` (same pattern
+  // as the sibling recordRemediationFailure and findAnalysisChunkCoverage);
+  // it stays an instance method because AnalysisPersistencePort requires it.
+  async markChunkFailed(params: {
+    analysisId: string;
+    chunkIndex: number;
+    observedUpdatedAt: string | null;
+  }): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      let query = service
+        .from('analysis_chunks')
+        .update({ status: 'failed', updated_at: new Date().toISOString() }, { count: 'exact' })
+        .eq('analysis_id', params.analysisId)
+        .eq('chunk_index', params.chunkIndex)
+        .eq('status', 'completed');
+      // P0 (PR #314 second review round): narrow the CAS to the EXACT row
+      // revision the caller observed, so a concurrent writer that replaced
+      // the malformed payload with a valid one (bumping updated_at) cannot
+      // be demoted. When observedUpdatedAt is null, fall back to the
+      // status-only guard (pre-P0 behavior).
+      if (params.observedUpdatedAt !== null) {
+        query = query.eq('updated_at', params.observedUpdatedAt);
+      }
+      const { error, count } = await query;
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] markChunkFailed update failed:', error.message);
+        throw error;
+      }
+      return Boolean(count);
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'markChunkFailed' },
+        extra: { analysisId: params.analysisId, chunkIndex: params.chunkIndex },
+      });
+      throw error;
+    }
+  }
+
   async findAnalysisChunks(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {

@@ -75,6 +75,18 @@ export interface PersistedValidationReport {
   model_used?: string | null;
   valid?: boolean;
 
+  /**
+   * Durable side-effect claim (PR #314 second review round, item 4 — see
+   * `web/lib/services/side-effect-outbox.ts`): true while the row is
+   * terminally settled but its downstream side effects (cache write, QStash
+   * validation/digest/highlights publishes) have NOT all been confirmed.
+   * Recorded in the SAME atomic write as the parent CAS transition; cleared
+   * best-effort once every tracked side effect succeeded. A future
+   * reconciliation cron re-fires the (idempotent) publishes for rows where
+   * this is still true.
+   */
+  side_effects_pending?: boolean;
+
   // Legacy field for backward compatibility
   status?: ValidationReportStatus;
 }
