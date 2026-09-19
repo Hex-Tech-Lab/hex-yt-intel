@@ -1,0 +1,29 @@
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_be40705c213a3f::t_9ddaf11edf4eae 1-205
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_be40705c213a3f::t_fa7188389e3281 1-240
+.claude/MEMORY.md
+  s_be40705c213a3f::t_627e497726705f 4,52-53
+.mcp.json
+  s_be40705c213a3f::t_235abd6d93a678 3-10
+.memory/AGENT_LEDGER.md
+  s_be40705c213a3f::t_f3b4fcf26ae066 1400-1402
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  s_be40705c213a3f::t_08f4044de42fbe 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8ebda55023c2beab2d022e45a863d144a421d80b",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
