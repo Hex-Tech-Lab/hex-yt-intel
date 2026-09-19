@@ -33,6 +33,7 @@ vi.mock('@/lib/stream-token', () => ({ verifyContentSig }));
 vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
+  flush: vi.fn().mockResolvedValue(true),
 }));
 
 const adapterInstance = vi.hoisted(() => ({
@@ -40,27 +41,23 @@ const adapterInstance = vi.hoisted(() => ({
   persistAnalysisChunk: vi.fn(),
   findAnalysisChunks: vi.fn(),
   updateAnalysisResult: vi.fn(),
+  updateValidationReport: vi.fn().mockResolvedValue(null),
+  markChunkFailed: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/lib/adapters', () => ({
-  SupabasePersistenceAdapter: class {
-    constructor() {
-      return adapterInstance;
-    }
-  },
+  SupabasePersistenceAdapter: vi.fn(function mockAdapterClass() { return adapterInstance; }),
 }));
 
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
   SupabaseTranscriptAdapter: {
-    upsertTranscript: vi.fn().mockResolvedValue(undefined),
-    upsertChapters: vi.fn().mockResolvedValue(undefined),
+    upsertTranscript: vi.fn().mockResolvedValue(null),
+    upsertChapters: vi.fn().mockResolvedValue(null),
   },
 }));
 
 vi.mock('@/lib/adapters/PostgresBillingAdapter', () => ({
-  PostgresBillingAdapter: class {
-    consumeQuota = vi.fn().mockResolvedValue(undefined);
-  },
+  PostgresBillingAdapter: vi.fn(function mockBillingAdapterClass() { return { consumeQuota: vi.fn().mockResolvedValue(null) }; }),
 }));
 
 vi.mock('@/lib/services/traffic', () => ({
@@ -68,13 +65,13 @@ vi.mock('@/lib/services/traffic', () => ({
 }));
 
 vi.mock('@/lib/qstash-client', () => ({
-  publishValidationTask: vi.fn().mockResolvedValue(undefined),
-  publishDigestTask: vi.fn().mockResolvedValue(undefined),
-  publishHighlightsTask: vi.fn().mockResolvedValue(undefined),
+  publishValidationTask: vi.fn().mockResolvedValue(null),
+  publishDigestTask: vi.fn().mockResolvedValue(null),
+  publishHighlightsTask: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/services/cache', () => ({
-  setAnalysisCache: vi.fn().mockResolvedValue(undefined),
+  setAnalysisCache: vi.fn().mockResolvedValue(null),
   generateCacheKey: vi.fn().mockReturnValue('cache-key'),
 }));
 
