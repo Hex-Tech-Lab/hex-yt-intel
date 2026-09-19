@@ -1,0 +1,25 @@
+worker/src/__tests__/prompt-builder-grounding.test.ts
+  s_be40705c213a3f::t_b12ba03e131427 3
+  s_be40705c213a3f::t_726f297a67fe06 67
+web/lib/prompts/ucis-v5.3.test.ts
+  s_be40705c213a3f::t_138cdd96df2a0d 52,62
+web/lib/prompts/credibility-grounding.ts
+  s_be40705c213a3f::t_5d156bae4f0d55 56-61
+  s_be40705c213a3f::t_ef04b4d8dec85d 39-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d8cba1535c2ba57cbd7ba49b9daed4df31ea80fd",
+  "prompts": {},
+  "sessions": {
+    "s_be40705c213a3f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88696822-6e83-472c-9cd3-2ca27e20642e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
