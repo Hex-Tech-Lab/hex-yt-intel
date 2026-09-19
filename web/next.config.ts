@@ -1,9 +1,13 @@
 /**
  * See /docs/next-config.md for configuration notes and historical context.
  */
-import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import path from "path";
+import type { NextConfig } from "next";
+import {
+  resolveNextOutputMode,
+  describeAmbiguousTargetWarning,
+} from "./lib/config/next-output-mode";
 
 // Bundle analysis: `pnpm exec next experimental-analyze -o` (Turbopack-native,
 // no config needed) -- @next/bundle-analyzer doesn't work under this app's
@@ -13,14 +17,30 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   distDir: '.next',
-  output: 'standalone',
+  // 'standalone' is for non-Vercel (Docker) deploys only. Vercel's builder
+  // strips this config via its own modifyConfig pass and does its own
+  // function tracing -- but under Turbopack production builds, Next only
+  // emits .next/next-server.js.nft.json when 'standalone' is actually set,
+  // so leaving it unconditional makes Vercel's onBuildComplete ENOENT on
+  // that file post-build (real regression hit on the Next 16.3.3 bump,
+  // 2026-09-15 -- known Next 16.3.x + Vercel + Turbopack interaction, see
+  // https://community.vercel.com/t/next-js-16-3-1-preview-packaging-fails-in-onbuildcomplete-with-missing-next-server-js-nft-json/48121).
+  // Resolution logic (DEPLOY_TARGET primary, VERCEL fallback, loud warning
+  // when ambiguous) lives in lib/config/next-output-mode.ts and is unit
+  // tested -- see that file for the full rationale.
+  ...(() => {
+    const resolved = resolveNextOutputMode(process.env);
+    const ambiguousWarning = describeAmbiguousTargetWarning(resolved);
+    if (ambiguousWarning) console.warn(ambiguousWarning);
+    return resolved.output ? { output: resolved.output } : {};
+  })(),
   productionBrowserSourceMaps: false,
   turbopack: {
     root: path.resolve(__dirname, '..'),
   },
   typescript: {
     tsconfigPath: "./tsconfig.json",
-    ignoreBuildErrors: !!process.env.CI,
+    ignoreBuildErrors: Boolean(process.env.CI),
   },
 
   serverExternalPackages: ['pdfkit'],
@@ -61,7 +81,8 @@ const nextConfig: NextConfig = {
   // ============================================================================
   // CACHING STRATEGY
   // ============================================================================
-  headers: async () => {
+  // Sync (not async): DeepSource JS-0116 — no await expressions here.
+  headers: () => {
     return [
       {
         source: "/public/:path*",
