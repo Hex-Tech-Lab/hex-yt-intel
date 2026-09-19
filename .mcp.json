@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ],
+      "type": "stdio"
+    },
     "testsprite": {
       "command": "pnpm",
       "args": ["dlx", "@testsprite/testsprite-mcp@0.0.43"],
