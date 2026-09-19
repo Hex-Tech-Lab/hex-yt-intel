@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { paddle } from '@/lib/paddle';
 import { resolveUserTierForPriceId, mapPlanStringToUserTier } from '@/lib/config/pricing';
-import * as Sentry from '@sentry/nextjs';
 
 import type { UserTier } from '@/lib/types/billing';
 

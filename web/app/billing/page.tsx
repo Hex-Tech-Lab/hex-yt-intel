@@ -6,9 +6,10 @@ import { Banner } from '@astryxdesign/core';
 import { ResponsiveHeader } from '@/components/organisms/ResponsiveHeader';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
-import type { UserTier } from '@/lib/types/billing';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 import { Footer } from '@/components/Footer';
+
+import type { UserTier } from '@/lib/types/billing';
 
 async function getBillingData(userId: string) {
   const supabase = getSupabaseServiceClient();
