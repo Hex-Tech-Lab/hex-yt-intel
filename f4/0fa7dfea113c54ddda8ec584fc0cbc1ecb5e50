@@ -1,0 +1,22 @@
+web/app/api/billing/webhook/route.ts
+  s_70ef42d4bad845::t_18253cdffb7e89 2
+web/app/billing/page.tsx
+  s_70ef42d4bad845::t_1bc2d5c15d1628 12
+  s_70ef42d4bad845::t_038f4a584b3719 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f40fa7dfea113c54ddda8ec584fc0cbc1ecb5e50",
+  "prompts": {},
+  "sessions": {
+    "s_70ef42d4bad845": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f44f8eb80ffeNflWEkZXu06m2E",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
