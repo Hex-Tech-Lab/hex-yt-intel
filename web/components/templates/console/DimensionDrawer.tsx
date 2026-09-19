@@ -171,7 +171,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               tooltip={copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
               variant="ghost"
               size="sm"
-              onClick={() => { handleCopy().catch(() => {}); }}
+              onClick={() => { handleCopy().catch((e) => console.error('[DimensionDrawer] copy handler rejected', e)); }}
               className={
                 copyState === 'copied'
                   ? '!border-green-500 !text-green-500 !bg-green-500/10'
