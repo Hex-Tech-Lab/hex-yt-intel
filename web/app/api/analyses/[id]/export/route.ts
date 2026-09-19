@@ -9,8 +9,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { filterHallucinationContent } from '@/lib/utils/hallucination-filter';
 
-/** Tiers permitted to export the FULL report (TOC + all 11 dimensions). */
-const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
+/**
+ * Tiers permitted to export the FULL report (TOC + all 11 dimensions).
+ * 'admin' is a DB-only retention tier (not in UserTier); light/max included
+ * as paid tiers (feature-exposure decision provisional -- NEEDS USER
+ * DECISION on whether Light gets full-report export).
+ */
+const FULL_REPORT_TIERS: ReadonlySet<string> = new Set(['light', 'pro', 'max', 'enterprise', 'admin']);
+export { FULL_REPORT_TIERS };
 
 /** Sanitize filename to prevent header injection and ensure system compatibility. */
 function sanitizeFilename(name: string): string {

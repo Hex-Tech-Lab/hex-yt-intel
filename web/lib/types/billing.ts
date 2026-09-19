@@ -5,7 +5,13 @@
  * Allows switching providers with a single environment variable change.
  */
 
-export type UserTier = 'free' | 'pro' | 'enterprise';
+/**
+ * Canonical customer-facing tier vocabulary (2026-09-19 unification, STEP 1).
+ * Product truth: Free / Light / Pro / Max. `enterprise` is kept — the DB
+ * allows it and admin-granted accounts may carry it. `admin`/`casual`/`core`
+ * /`power` exist ONLY in retention_policies.tier (DB-only, step 2 scope).
+ */
+export type UserTier = 'free' | 'light' | 'pro' | 'max' | 'enterprise';
 
 export type BillingProviderType = 'paddle' | 'stripe' | 'lemonsqueezy';
 

@@ -8,11 +8,12 @@ import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
 import { showToast } from '@/lib/dashboard/export';
 import { fmtCentsToUsd } from '@/lib/utils/format';
+import type { UserTier } from '@/lib/types/billing';
 
 interface BillingDashboardProps {
   initialData: {
     user: any;
-    tier: 'free' | 'pro' | 'enterprise';
+    tier: UserTier;
     analysesUsed: number;
     analysesLimit: number | null;
     usageStats: Record<string, number>;
@@ -24,8 +25,8 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
   const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
-  
-  const isPro = initialData.tier === 'pro' || initialData.tier === 'enterprise';
+
+  const isPro = initialData.tier !== 'free';
   const statusColor = isPro ? "var(--ok)" : "var(--accent)";
   const status = isPro ? "active" : "free";
   
@@ -91,7 +92,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
               Current Plan
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
-              {initialData.tier === 'free' ? 'Free Plan' : 'Pro Plan'}
+              {initialData.tier === 'free' ? 'Free Plan' : `${initialData.tier.charAt(0).toUpperCase()}${initialData.tier.slice(1)} Plan`}
             </p>
           </div>
           <div>

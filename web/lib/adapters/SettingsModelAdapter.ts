@@ -84,7 +84,11 @@ export class SettingsModelAdapter implements ModelResolutionPort {
    */
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat' | 'reasoning'): Promise<string[]> {
     if (kind === 'reasoning') {
-      const cascade = await resolveReasoningCascade(tier === 'pro' || tier === 'enterprise' ? tier : 'free');
+      // Reasoning cascade distinguishes only free vs paid (the pro/enterprise
+      // branches resolve the same registry key); per the 2026-08-18 product
+      // correction tiers differ by feature exposure and volume, never by
+      // which model computes them, so any paid tier maps to the paid branch.
+      const cascade = await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro');
       return cascade.map((item) => item.model);
     }
 

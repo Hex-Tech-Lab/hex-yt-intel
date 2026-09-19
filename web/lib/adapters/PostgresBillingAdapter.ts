@@ -5,11 +5,17 @@ import { SupabaseSettingsAdapter } from './SupabaseSettingsAdapter';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
-const MONTHLY_QUOTAS = {
+// Paid tiers (light/pro/max/enterprise) are not quota-gated here today;
+// real per-tier volume limits are a NEEDS USER DECISION (no empirical data
+// yet). Typed Record<UserTier, ...> so widening UserTier forces a
+// deliberate entry instead of a silent `|| 3` free fallback.
+const MONTHLY_QUOTAS: Record<UserTier, number | null> = {
   free: 3,
+  light: null,
   pro: null,
+  max: null,
   enterprise: null,
-} as const;
+};
 
 // ADR 020 Phase 2: fallbacks only -- the registry (setting_definitions) is
 // the live source of truth, same pattern as dimension-remediation.ts's
@@ -39,7 +45,10 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
       return { allowed: true };
     }
 
-    if (tier === 'pro' || tier === 'enterprise') {
+    // Paid tiers are not quota-gated (matches the SQL quota functions'
+    // anything-but-free-is-unlimited behaviour; volume differentiation is
+    // a NEEDS USER DECISION).
+    if (tier !== 'free') {
       return { allowed: true };
     }
 
@@ -71,7 +80,7 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
         return false;
       }).length;
 
-      const limit = MONTHLY_QUOTAS[tier as 'free'] || 3;
+      const limit = MONTHLY_QUOTAS[tier] ?? 3;
       const allowed = activeCount < limit;
 
       if (!allowed) {

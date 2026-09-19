@@ -1,6 +1,7 @@
 import { getBillingProvider } from '@lib/billing-factory';
 import { stripe, STRIPE_PRICING } from '@lib/stripe';
 import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
+import type { UserTier } from '@lib/types/billing';
 
 /**
  * BILLING DATA CONSOLIDATION LAW (2026-06-08)
@@ -10,7 +11,7 @@ import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAda
  */
 
 export interface UnifiedBillingData {
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: UserTier;
   analysesUsed: number;
   analysesLimit: number | null;
   usageStats: Record<string, number>;
@@ -51,7 +52,7 @@ const usageLogCount = await persistence.getUsageLogsCountSince({ userId, since }
     invoices = []; 
   }
 
-  const tier = (userData.tier || 'free') as 'free' | 'pro';
+  const tier = (userData.tier || 'free') as UserTier;
   const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
 
   return {

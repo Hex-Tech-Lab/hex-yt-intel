@@ -17,6 +17,7 @@ import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 import type { KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
+import type { UserTier } from '@/lib/types/billing';
 
 import { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
 import { SupabaseChatAdapter } from './SupabaseChatAdapter';
@@ -384,7 +385,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   // --- Billing Adapter Delegation ---
-  updateUserTier(params: { userId: string; tier: 'pro' | 'free' }): Promise<void> {
+  updateUserTier(params: { userId: string; tier: UserTier }): Promise<void> {
     return SupabaseBillingAdapter.updateUserTier(params);
   }
 

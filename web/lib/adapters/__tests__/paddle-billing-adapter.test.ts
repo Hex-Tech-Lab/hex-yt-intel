@@ -5,6 +5,9 @@ import { ProcessPaddleWebhookUseCase } from '../../usecases/ProcessPaddleWebhook
 
 // Mock Supabase
 const mockUpsert = vi.fn();
+const mockUpdate = vi.fn(() => ({
+  eq: vi.fn().mockResolvedValue({ error: null, count: 1 })
+}));
 const mockSelect = vi.fn(() => ({
   eq: vi.fn(() => ({
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
@@ -15,13 +18,15 @@ vi.mock('@/lib/supabase', () => ({
     from: vi.fn(() => ({
       upsert: mockUpsert,
       select: mockSelect,
+      update: mockUpdate,
     }))
   }))
 }));
 
 // Mock Sentry
 vi.mock('@sentry/nextjs', () => ({
-  captureException: vi.fn()
+  captureException: vi.fn(),
+  captureMessage: vi.fn()
 }));
 
 function generateValidSignature(rawBody: string, secret: string) {
@@ -91,7 +96,7 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
     expect(mockUpsert).toHaveBeenCalledTimes(2); // Upsert handles idempotency
   });
 
-  it('Test 3: Valid subscription.created event correctly updates user tier to founder', async () => {
+  it('Test 3: Valid subscription.created event maps a founder plan string to pro in users.tier and clamps the subscriptions column', async () => {
     mockUpsert.mockResolvedValueOnce({ error: null });
 
     const rawBody = JSON.stringify({
@@ -108,16 +113,22 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
     });
 
     const validSignature = generateValidSignature(rawBody, secret);
-    
+
+    const { SupabaseBillingAdapter } = await import('../../adapters/SupabaseBillingAdapter');
+    const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
     const result = await useCase.execute(rawBody, validSignature, secret);
-    
+
     expect(result.success).toBe(true);
+    // Founder pricing is a price, not a tier: pro feature set.
+    expect(updateUserTier).toHaveBeenCalledWith({ userId: 'user_456', tier: 'pro' });
+    // user_subscriptions.plan_tier is DB-CHECK-constrained to ('free','founder','pro')
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         user_id: 'user_456',
         paddle_customer_id: 'ctm_456',
         paddle_subscription_id: 'sub_456',
-        plan_tier: 'founder',
+        plan_tier: 'pro',
         status: 'active'
       }),
       { onConflict: 'paddle_subscription_id' }

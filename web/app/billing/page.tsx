@@ -6,6 +6,7 @@ import { Banner } from '@astryxdesign/core';
 import { ResponsiveHeader } from '@/components/organisms/ResponsiveHeader';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
+import type { UserTier } from '@/lib/types/billing';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 import { Footer } from '@/components/Footer';
 
@@ -57,7 +58,7 @@ async function getBillingData(userId: string) {
     }
   }
 
-  const tier = userData.tier as 'free' | 'pro' | 'enterprise';
+  const tier = userData.tier as UserTier;
   const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
 
   return {

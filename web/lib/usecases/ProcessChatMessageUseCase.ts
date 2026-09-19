@@ -23,7 +23,11 @@ import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
 // (2026-07-24 Usage tab work, migration 20260723231500).
 const CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number> = {
   free: 5,
+  // Light/Max temporarily share Pro/Enterprise values (no empirical data
+  // yet; NEEDS USER DECISION -- same interim decision as RATE_LIMITS).
+  light: 30,
   pro: 30,
+  max: 100,
   enterprise: 100,
 };
 
@@ -139,10 +143,12 @@ export class ProcessChatMessageUseCase {
     const userMessageCount = allMessages.filter((m) => m.role === 'user').length;
 
     const limits = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['chat.turnLimit.free', 'chat.turnLimit.pro', 'chat.turnLimit.enterprise'],
+      ['chat.turnLimit.free', 'chat.turnLimit.light', 'chat.turnLimit.pro', 'chat.turnLimit.max', 'chat.turnLimit.enterprise'],
       {
         'chat.turnLimit.free': CHAT_TURN_LIMIT_FALLBACK.free,
+        'chat.turnLimit.light': CHAT_TURN_LIMIT_FALLBACK.light,
         'chat.turnLimit.pro': CHAT_TURN_LIMIT_FALLBACK.pro,
+        'chat.turnLimit.max': CHAT_TURN_LIMIT_FALLBACK.max,
         'chat.turnLimit.enterprise': CHAT_TURN_LIMIT_FALLBACK.enterprise,
       }
     );
@@ -516,8 +522,10 @@ export class ProcessChatMessageUseCase {
       : await this.modelResolution.resolveModels(tier, 'chat');
     // Full registry-resolved tiers (with providerOrder), forwarded to the worker
     // alongside chatModels -- see ChatStreamRequest.cascade in worker/src/chat-stream.ts.
+    // Free-vs-paid reasoning cascade (same rationale as SettingsModelAdapter;
+    // tiers differ by volume, never by model).
     const chatCascade: CascadeItem[] = isReasoning
-      ? await resolveReasoningCascade(tier === 'pro' || tier === 'enterprise' ? tier : 'free')
+      ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
       : await resolveChatCascade();
 
     // 10. Generate cryptographic stream token

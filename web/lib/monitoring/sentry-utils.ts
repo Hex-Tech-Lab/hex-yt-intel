@@ -166,7 +166,7 @@ export async function trackExternalCall<T>(
 export function setUserContext(
   userId: string,
   email?: string,
-  tier?: 'free' | 'pro' | 'enterprise'
+  tier?: 'free' | 'light' | 'pro' | 'max' | 'enterprise'
 ): void {
   Sentry.setUser({
     id: userId,

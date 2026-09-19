@@ -12,7 +12,13 @@ import type { UserTier } from '@/lib/types/billing';
 // rule), this should read the same registry key instead of restating it.
 const ANALYSIS_MONTHLY_QUOTA: Record<UserTier, number | null> = {
   free: 3,
+  // Light/Max: paid tiers, no enforced monthly analysis quota yet. Real
+  // per-tier volume limits are a NEEDS USER DECISION (step 2 / pricing
+  // data); null = unlimited is the current de facto behaviour for any
+  // non-free tier (matches the SQL quota functions).
+  light: null,
   pro: null,
+  max: null,
   enterprise: null,
 };
 
