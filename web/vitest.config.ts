@@ -54,6 +54,13 @@ export default defineConfig({
       // as the two app/api globs above -- a broad app/api glob would
       // silently pick up unrelated future fixtures.
       'app/api/analyses/check/**/*.test.ts',
+      // PR #312's highlights wire-contract route test (app/api/analyses/
+      // highlights/__tests__/route.test.ts) was added on the RCA branch but
+      // never named here -- same silent-non-execution class as the .tsx and
+      // middleware gaps documented above: passing contract-auditor's
+      // sibling check while vitest never ran it (found 2026-09-15 while
+      // pinning the P2B validator contract this route test guards).
+      'app/api/analyses/highlights/**/*.test.ts',
       // Real coverage gap found 2026-08-20 (automated PR review P1): a
       // top-level web/middleware.test.ts matched none of the globs above --
       // same class of silent-non-execution as the .tsx gap documented

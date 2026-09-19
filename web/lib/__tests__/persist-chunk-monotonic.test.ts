@@ -112,9 +112,9 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     // Verify the guarded UPDATE was used (not a blind upsert)
     const interruptedUpdateCall = calls.find(call => call.method === 'update' && call.data.status === 'interrupted');
     expect(interruptedUpdateCall).toBeDefined();
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
-    expect(interruptedUpdateCall!.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: BASE_PARAMS.chunkIndex });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
+    expect(interruptedUpdateCall?.filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: BASE_PARAMS.chunkIndex });
 
     // Verify the fallback upsert was called (count=0 triggered it)
     const fallbackUpsertCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
@@ -136,7 +136,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     // The fallback upsert should have been called to insert the new row
     const fallbackCall = calls.find(call => call.method === 'upsert' && call.data.status === 'interrupted');
     expect(fallbackCall).toBeDefined();
-    expect(fallbackCall!.data.status).toBe('interrupted');
+    expect(fallbackCall?.data.status).toBe('interrupted');
   });
 
   it('interrupted write DOES update an existing interrupted row (refresh with newer data)', async () => {
@@ -199,7 +199,7 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
 
     const guardedUpdate = calls.find(call => call.method === 'update' && call.data.status === 'failed');
     expect(guardedUpdate).toBeDefined();
-    expect(guardedUpdate!.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
+    expect(guardedUpdate?.filters).toContainEqual({ type: 'neq', column: 'status', value: 'completed' });
 
     const fallbackUpsert = calls.find(call => call.method === 'upsert' && call.data.status === 'failed');
     expect(fallbackUpsert).toBeDefined();
@@ -214,6 +214,69 @@ describe('persistAnalysisChunk monotonic-status guard (PR #305 P1 fix)', () => {
     const secondUpsert = calls2.find(call => call.method === 'upsert' && call.data.status === 'failed');
     expect(secondUpsert).toBeDefined();
     // ignoreDuplicates: the upsert cannot overwrite the existing row.
-    expect((secondUpsert!.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
+    expect((secondUpsert?.options as { ignoreDuplicates?: boolean } | undefined)?.ignoreDuplicates).toBe(true);
+  });
+});
+
+describe('markChunkFailed CAS demotion (P1a, PR #312 post-merge review)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('flips a row only while it is still "completed" and reports whether the demotion happened', async () => {
+    const { client, calls, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 1 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' });
+    expect(demoted).toBe(true);
+
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'failed');
+    expect(updateCall).toBeDefined();
+    // The CAS precondition: only a row currently at 'completed' with the
+    // EXACT observed updated_at can be demoted — a concurrent writer that
+    // replaced the malformed payload with a valid one (bumping updated_at)
+    // must not be demoted (P0, PR #314 second review round).
+    const filters = updateCall?.filters ?? [];
+    expect(filters).toContainEqual({ type: 'eq', column: 'status', value: 'completed' });
+    expect(filters).toContainEqual({ type: 'eq', column: 'analysis_id', value: BASE_PARAMS.analysisId });
+    expect(filters).toContainEqual({ type: 'eq', column: 'chunk_index', value: 2 });
+    expect(filters).toContainEqual({ type: 'eq', column: 'updated_at', value: '2026-09-15T00:00:00Z' });
+  });
+
+  it('reports false (no demotion) when the row is no longer completed (concurrent writer won)', async () => {
+    const { client, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 0 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' });
+    expect(demoted).toBe(false);
+  });
+
+  it('falls back to status-only CAS when observedUpdatedAt is null (does not block)', async () => {
+    const { client, calls, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: null, count: 1 });
+
+    const adapter = new SupabasePersistenceAdapter();
+    const demoted = await adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: null });
+    expect(demoted).toBe(true);
+
+    const updateCall = calls.find(call => call.method === 'update' && call.data.status === 'failed');
+    expect(updateCall).toBeDefined();
+    const filters = updateCall?.filters ?? [];
+    // No updated_at filter when observedUpdatedAt is null — status-only guard.
+    expect(filters).not.toContainEqual(expect.objectContaining({ column: 'updated_at' }));
+  });
+
+  it('throws (and captures) on a genuine query error — a silent false must not mask infra failure', async () => {
+    const { client, setNextResult } = createMockClient();
+    vi.mocked(getSupabaseServiceClient).mockReturnValue(client as any);
+    setNextResult({ error: { message: 'db down' }, count: null });
+
+    const adapter = new SupabasePersistenceAdapter();
+    await expect(adapter.markChunkFailed({ analysisId: BASE_PARAMS.analysisId, chunkIndex: 2, observedUpdatedAt: '2026-09-15T00:00:00Z' })).rejects.toMatchObject({ message: 'db down' });
   });
 });
