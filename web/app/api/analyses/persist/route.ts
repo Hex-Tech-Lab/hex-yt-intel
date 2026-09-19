@@ -18,6 +18,8 @@ import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
+import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
+import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
 import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
@@ -157,6 +159,9 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
  * - analysis_markdown: Reconstructed markdown for backward compat + PDF export
  * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
  */
+// skipcq: JS-0067, JS-R1005 -- Next.js App Router requires a named `POST`
+// export at module scope (not an arrow / IIFE), and the route's cyclomatic
+// complexity is inherent to its multi-stage chunked-persist contract.
 export async function POST(request: NextRequest) {
   let body: any;
 
@@ -384,6 +389,23 @@ export async function POST(request: NextRequest) {
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 
       let validPayload: UCISPayloadV2 | undefined;
+      // P1b (PR #312 post-merge review): payload validity for chunk requests
+      // is a three-way classification — 'valid' (parsed against the chunk
+      // schema), 'payload-less' (null/undefined), or 'malformed-object'
+      // (truthy but schema-invalid, e.g. {} or {foo:'bar'}). A malformed
+      // object used to 400 out of the route entirely, but the worker's
+      // PersistService treats every non-OK persist as retryable (3 attempts,
+      // then gives up) and that bundle's chunk row was NEVER written — so
+      // the completeness set could never close (isFullyReceived and
+      // isFullySettled both require every index 1..N to have a terminal
+      // row) and the parent row sat 'processing' until the stuck-analysis
+      // reaper's grace window: the same user-visible freeze PR #312 fixed
+      // for payload:null, just via a different malformed shape. A malformed
+      // object is now terminal-for-that-bundle exactly like payload-less:
+      // it persists as a terminal 'failed' chunk row (spend accounting +
+      // the reaper usability filter's expected shape) and can close the
+      // settled set. Non-chunk requests keep the existing fail-loud 400.
+      let chunkPayloadMalformed = false;
 
       if (payload !== undefined && payload !== null) {
         const isChunk = chunkIndex !== undefined;
@@ -399,15 +421,26 @@ export async function POST(request: NextRequest) {
           : UCISPayloadV2Schema.safeParse(payload);
 
         if (!parseResult.success) {
-          console.warn('[analyses/persist] Invalid payload schema', { 
-            analysisId, 
-            videoId, 
+          if (!isChunk) {
+            console.warn('[analyses/persist] Invalid payload schema', {
+              analysisId,
+              videoId,
+              chunkIndex,
+              errors: parseResult.error.flatten()
+            });
+            return { type: 'error' as const, error: 'Invalid payload schema', status: 400 };
+          }
+          console.warn('[analyses/persist] Malformed chunk payload (truthy but schema-invalid) — persisting as terminal failed chunk row', {
+            analysisId,
+            videoId,
             chunkIndex,
-            errors: parseResult.error.flatten() 
+            status,
+            errors: parseResult.error.flatten()
           });
-          return { type: 'error' as const, error: 'Invalid payload schema', status: 400 };
+          chunkPayloadMalformed = true;
+        } else {
+          validPayload = parseResult.data as any;
         }
-        validPayload = parseResult.data as any;
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
@@ -455,17 +488,30 @@ export async function POST(request: NextRequest) {
       // keeps its existing non-chunk interrupted terminal write (rerouting
       // it would leave a disconnected client's row in 'processing' until the
       // reaper's grace window elapsed).
-      const isPayloadlessChunk = chunkIndex !== undefined && !validPayload;
+      // P2 (PR #314 second review round): `isPayloadlessChunk` is now
+      // mutually exclusive with `chunkPayloadMalformed` — a truthy-but-
+      // invalid object (e.g. {}, {foo:'bar'}) is 'malformed-object', NOT
+      // 'payload-less'. Previously `!validPayload` covered both classes so
+      // the log reason at the warn below never reached 'malformed-object'.
+      const isPayloadlessChunk = chunkIndex !== undefined && (payload === undefined || payload === null);
+      // P1b: a malformed-object chunk persist routes through the chunk
+      // workflow (as a terminal 'failed' chunk row) exactly like a
+      // payload-less one. Both stay exempt only for status='interrupted' —
+      // RCA 2026-09-13: rerouting an interrupted persist away from the
+      // parent-row write would leave a disconnected client's row
+      // 'processing' until the reaper's grace window elapsed, so the
+      // interrupted terminal write keeps its existing non-chunk path.
+      const isUnusableChunkPayload = (isPayloadlessChunk || chunkPayloadMalformed) && !isInterrupted;
 
-      if (chunkIndex !== undefined && ((validPayload && 'dimensions' in validPayload) || (isPayloadlessChunk && !isInterrupted))) {
+      if (chunkIndex !== undefined && ((validPayload && hasUsableDimensionsPayload(validPayload)) || isUnusableChunkPayload)) {
         // Process this specific chunk; return early if chunk is complete or timeout detected.
         const dimensionsCovered = validPayload && Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
-        if (!isPayloadlessChunk) {
+        if (validPayload) {
           // Diagnostic logging for empty or sparse dimensions
-          const dimensionDetails = (validPayload!.dimensions as any[]).map(d => ({
+          const dimensionDetails = (validPayload.dimensions as any[]).map(d => ({
             number: d.number,
             hasContent: typeof d.content === 'string' && d.content.trim().length > 0,
             contentLength: typeof d.content === 'string' ? d.content.length : 0
@@ -488,11 +534,12 @@ export async function POST(request: NextRequest) {
             });
           }
         } else {
-          console.warn('[analyses/persist] Payload-less chunk persist (markdown-only fallback) recorded as failed chunk, parent row not finalized from it', {
+          console.warn('[analyses/persist] Unusable chunk payload (payload-less or malformed) recorded as failed chunk, parent row not finalized from it', {
             analysisId,
             videoId,
             chunkIndex,
-            status
+            status,
+            reason: isPayloadlessChunk ? 'payload-less' : 'malformed-object'
           });
         }
 
@@ -502,12 +549,12 @@ export async function POST(request: NextRequest) {
             chunkIndex,
             dimensionsCovered,
             payload,
-            // A payload-less chunk never produced trustworthy dimension
-            // content — 'failed' keeps it out of the stitcher's completed
-            // set, out of the contract check, and inside the reaper's
-            // usability filter (completed-only), while still recording the
-            // bundle's real token spend on the chunk row.
-            status: isPayloadlessChunk ? 'failed' : status,
+            // A payload-less or malformed chunk never produced trustworthy
+            // dimension content — 'failed' keeps it out of the stitcher's
+            // completed set, out of the contract check, and inside the
+            // reaper's usability filter (completed-only), while still
+            // recording the bundle's real token spend on the chunk row.
+            status: isUnusableChunkPayload ? 'failed' : status,
             tokensUsed,
             costUsd,
             generationId,
@@ -657,6 +704,10 @@ export async function POST(request: NextRequest) {
               model: model || null,
               validationPassed: false,
               validationReport: incompletionReport,
+              // P0: every parent write in this route is a CAS transition —
+              // a stale timeout write must never clobber a terminal row a
+              // concurrent finalize already settled.
+              guardBillingStatus: 'processing',
             }),
             2
           );
@@ -670,15 +721,130 @@ export async function POST(request: NextRequest) {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
+          // P1a (PR #312 post-merge review): a chunk row can be nominally
+          // 'completed' yet carry a payload with no usable dimensions shape
+          // (legacy rows written before chunk-schema validation existed, or
+          // an out-of-band writer). The stitch below silently skips such
+          // payloads — real data loss with zero observability, and the
+          // reaper's completed-only usability filter keeps treating the row
+          // as recoverable forever. On the settled-partial path (the
+          // fully-received path's contract check below already fails
+          // loudly), detect them, reclassify the row 'failed' — the same
+          // accounting PR #312 gave payload-less chunks: the recorded spend
+          // stays on the row and the reaper filter stops treating it as
+          // recoverable — and exclude it from the stitch map so the
+          // finalize is honest about what it actually stitched. The
+          // reclassify is best-effort: a failure here must not lose the
+          // finalize this request is about to commit.
+          if (!isFullyReceived) {
+            // P1 (PR #314 second review round): use the shared predicate
+            // instead of `'dimensions' in chunk.payload` — the `in` operator
+            // throws TypeError on a primitive payload (string/number/boolean/
+            // null), which the DB's JSONB column can contain even though the
+            // port types payload as Record<string, unknown>.
+            const malformedCompletedChunks = finalChunks.filter(chunk =>
+              !hasUsableDimensionsPayload(chunk.payload)
+            );
+            for (const malformedChunk of malformedCompletedChunks) {
+              console.error('[analyses/persist] Completed chunk has malformed payload (no usable dimensions shape) — reclassifying to failed before stitch', {
+                analysisId,
+                videoId,
+                chunkIndex: malformedChunk.chunk_index
+              });
+              Sentry.captureMessage('analyses/persist: completed chunk had malformed payload, reclassified to failed', {
+                level: 'warning',
+                tags: { operation: 'analysis-persist', phase: 'settled_stitch' },
+                extra: { analysisId, videoId, chunkIndex: malformedChunk.chunk_index },
+              });
+              // P0 (PR #314 second review round): the demotion is now a
+              // scoped CAS on (analysis_id, chunk_index, status='completed',
+              // updated_at=<observed>). A concurrent writer can replace the
+              // malformed row with a VALID completed payload (bumping
+              // updated_at) between our read and this write — the old
+              // status-only CAS would have demoted the now-valid row (data
+              // loss). The scoped CAS misses (returns false) when the row
+              // changed; we refetch and RESTORE a now-valid row into
+              // chunkMap instead of blindly deleting. On a thrown DB error
+              // (after bounded retries — see the catch below) we ABORT the
+              // finalize with an observable failure: the row's status is
+              // indeterminate, so the parent must not be treated as settled.
+              try {
+                // P1 (PR #314 second review round, item 2): the demotion is
+                // retried with bounded backoff (2 attempts) before giving
+                // up — a transient DB blip during the demotion previously
+                // left the row 'completed' + malformed in DB while the
+                // parent finalize committed WITHOUT the chunk (silent
+                // partial), and the reaper's completed-only filter would
+                // keep treating the row as recoverable forever.
+                const demoted = await retryWithBackoff(
+                  () => persistenceAdapter.markChunkFailed({
+                    analysisId,
+                    chunkIndex: malformedChunk.chunk_index,
+                    observedUpdatedAt: malformedChunk.updated_at,
+                  }),
+                  2
+                );
+                if (demoted) {
+                  chunkMap.delete(malformedChunk.chunk_index);
+                } else {
+                  // CAS miss — a concurrent writer changed the row. Refetch
+                  // to determine whether it's now valid (restore) or already
+                  // demoted (delete) or still malformed (delete, the stitch
+                  // already excludes it and the row is still 'completed' so
+                  // the reaper can retry).
+                  const refetched = await retryWithBackoff(
+                    () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+                    2
+                  );
+                  const current = refetched?.find(c => c.chunk_index === malformedChunk.chunk_index);
+                  if (current && current.status === 'completed' && hasUsableDimensionsPayload(current.payload)) {
+                    // Concurrent writer replaced the malformed row with a
+                    // VALID completed payload — restore it into the stitch.
+                    chunkMap.set(malformedChunk.chunk_index, current.payload);
+                  } else {
+                    // Row is now failed/interrupted/still-malformed — exclude
+                    // from stitch (the entry that was in chunkMap had the
+                    // malformed payload; deleting is correct either way).
+                    chunkMap.delete(malformedChunk.chunk_index);
+                  }
+                }
+              } catch (e) {
+                // P1 (PR #314 second review round, item 2): the demotion
+                // could NOT be confirmed after bounded retries — the row's
+                // status is indeterminate (very likely still 'completed' +
+                // malformed). Finalizing the parent now would commit a
+                // stitch that silently omits this chunk while the row stays
+                // 'completed' (the reaper's completed-only filter would
+                // keep treating it as recoverable forever). Abort the
+                // finalize with an observable failure instead: the worker
+                // treats any non-OK persist as retryable and re-sends the
+                // whole persist (re-deriving the settled set and retrying
+                // the demotion), and the stuck-analysis reaper is the
+                // backstop if the demotion is persistently broken. We do
+                // NOT silently commit a parent that knowingly omits data.
+                const demotionErr = toError(e);
+                Sentry.captureException(e, { contexts: { persist: { phase: 'reclassify_malformed_chunk', analysisId } } });
+                console.error('[analyses/persist] Chunk demotion failed after bounded retries — aborting finalize so it is not silently committed without the chunk', {
+                  analysisId,
+                  chunkIndex: malformedChunk.chunk_index,
+                  message: demotionErr.message
+                });
+                return { type: 'error' as const, error: 'Chunk demotion failed; finalization deferred', status: 503 };
+              }
+            }
+          }
+
           // CONTRACT VALIDATION: Verify all chunks have required payload structure
           // Each chunk MUST have a dimensions field (can be empty array, but field must exist)
           // This ensures consistent payload structure across all 5 streams
           const invalidChunks = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const chunkPayload = chunkMap.get(i);
-            // Fail if: chunk missing entirely OR dimensions field missing/not-array
-            // (empty dimensions arrays ARE acceptable — stream may generate no content for its slice)
-            if (!chunkPayload || !('dimensions' in chunkPayload) || !Array.isArray(chunkPayload.dimensions)) {
+            // P1: use the shared predicate — `'dimensions' in chunkPayload`
+            // throws TypeError on a primitive payload from the DB's JSONB
+            // column. (empty dimensions arrays ARE acceptable — stream may
+            // generate no content for its slice)
+            if (!hasUsableDimensionsPayload(chunkPayload)) {
               invalidChunks.push(i);
             }
           }
@@ -715,6 +881,7 @@ export async function POST(request: NextRequest) {
                   model: model || null,
                   validationPassed: false,
                   validationReport: failureReport,
+                  guardBillingStatus: 'processing',
                 }),
                 2
               );
@@ -748,6 +915,7 @@ export async function POST(request: NextRequest) {
                 model: model || null,
                 validationPassed: false,
                 validationReport: safetyReport,
+                guardBillingStatus: 'processing',
               }),
               2
             );
@@ -780,6 +948,11 @@ export async function POST(request: NextRequest) {
           // (PR #306 review).
           const isFullyValidated = isStitchedValid && finalStatus === 'done';
           const { channelMeta: _priorChannelMeta, comments: _priorComments, ...priorReportSansAux } = priorReport as any;
+          // P1 (PR #314 second review round, item 4): the side-effects claim
+          // is recorded in the SAME atomic write as the CAS transition — see
+          // side-effect-outbox.ts. Only claimed when this path will actually
+          // fire the downstream side effects (billingStatus === 'completed').
+          const sideEffectsClaimed = billingStatus === 'completed';
           const newReport: PersistedValidationReport = {
             ...priorReportSansAux,
             validation_status: finalStatus,
@@ -788,10 +961,24 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isFullyValidated,
+            ...(sideEffectsClaimed ? claimSideEffectsPending({}) : {}),
             ...withFreshAuxMetadata(channelMeta, comments),
           };
 
-          await retryWithBackoff(
+          // P0 (PR #312 post-merge review): the parent finalize is a CAS
+          // transition ('processing' → terminal), not a blind write. Two
+          // concurrent requests can both reach this finalize for the same
+          // analysis (a real scenario under retry); without the guard both
+          // would stitch, both would write the parent (a stale result
+          // overwriting a fresher one), and both would fire the
+          // billing-adjacent side effects below — cache write, QStash
+          // publishes, quota consume. Same guarded-write shape as
+          // analysis-reaper.ts's tryRequeuePartial and
+          // dimension-remediation.ts's remediated finalize (the
+          // update_analysis_result_atomic RPC owns the conditional UPDATE).
+          // Losing the race is benign: the row IS settled, just by the
+          // other writer — return without any side effects.
+          const { updated: parentFinalized } = await retryWithBackoff(
             () => persistenceAdapter.updateAnalysisResult({
               analysisId,
               markdown: stitchedMarkdown,
@@ -799,9 +986,18 @@ export async function POST(request: NextRequest) {
               model: model || null,
               validationPassed: isFullyValidated,
               validationReport: newReport,
+              guardBillingStatus: 'processing',
             }),
             2
           );
+          if (!parentFinalized) {
+            console.warn('[analyses/persist] Parent finalize lost the processing-status CAS — row already settled by a concurrent writer; skipping cache writes, billing transition, and QStash publishes', {
+              analysisId,
+              videoId,
+              chunkIndex
+            });
+            return { type: 'chunk_saved' as const, analysisId, chunkIndex };
+          }
 
           // Cache any billing-complete result (ADR Law #1: prevent paid re-analysis on re-request).
           // Gate on billingStatus === 'completed' (dimension completeness), NOT isStitchedValid
@@ -810,6 +1006,12 @@ export async function POST(request: NextRequest) {
           // failed on cosmetic KG/persona metadata but all dimensions are present. Gating on
           // isStitchedValid here would silently skip caching those rows, violating ADR Law #1.
           if (billingStatus === 'completed') {
+            // P1 (PR #314 second review round, item 4): every tracked side
+            // effect below reports its failure into this flag. On ANY failure
+            // the side_effects_pending claim stays set (the row is observably
+            // incomplete — reconciliation can replay the idempotent
+            // publishes); on full success the claim is cleared best-effort.
+            let sideEffectsFailed = false;
             const cachedPayload: CachedAnalysisResult = {
               id: analysisId,
               video_id: videoId,
@@ -833,6 +1035,7 @@ export async function POST(request: NextRequest) {
             const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
             await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
             });
 
@@ -846,6 +1049,7 @@ export async function POST(request: NextRequest) {
                 metadata: { title: row.title, channelTitle: row.channelTitle || '' },
               }).catch(e => {
                 Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
                 console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
               });
             }
@@ -856,6 +1060,7 @@ export async function POST(request: NextRequest) {
             // failure here must never affect the persist response.
             await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to publish digest task for chunks', { analysisId, error: String(e) });
             });
 
@@ -868,6 +1073,7 @@ export async function POST(request: NextRequest) {
             // (skipIfPresent) so a re-persist re-spends nothing. Best-effort.
             await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
               Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
               console.warn('[analyses/persist] Failed to publish highlights task for chunks', { analysisId, error: String(e) });
             });
 
@@ -891,6 +1097,30 @@ export async function POST(request: NextRequest) {
               .catch(e => {
                 console.warn('[analyses/persist] Failed to log analysis_completed usage event (chunked path)', { analysisId, error: String(e) });
               });
+
+            // P1 (PR #314 second review round, item 4): claim lifecycle.
+            // Full success -> clear the claim best-effort (the CAS winner
+            // already owns the row; preserveValidationPassed keeps the
+            // validation_passed column intact). Any tracked failure -> the
+            // claim STAYS SET (observable: reconciliation can replay the
+            // idempotent publishes / upsert the cache).
+            if (!sideEffectsFailed) {
+              await persistenceAdapter.updateValidationReport({
+                analysisId,
+                report: clearSideEffectsPending(newReport),
+                preserveValidationPassed: true,
+              }).catch(e => {
+                Sentry.captureException(e, { contexts: { persist: { phase: 'clear_side_effects_pending_chunks', analysisId } } });
+                console.warn('[analyses/persist] Failed to clear side_effects_pending claim (stays set; row is settled, side effects completed but claim write failed)', { analysisId, error: String(e) });
+              });
+            } else {
+              Sentry.captureMessage('analyses/persist: side effects partially failed — side_effects_pending claim left set for reconciliation', {
+                level: 'warning',
+                tags: { operation: 'analysis-persist', phase: 'side_effects_reconciliation' },
+                extra: { analysisId, videoId },
+              });
+              console.warn('[analyses/persist] Side effects partially failed — side_effects_pending claim left set (reconciliation required)', { analysisId, videoId });
+            }
           }
         }
 
@@ -1028,6 +1258,11 @@ export async function POST(request: NextRequest) {
       const reportValidationStatus = payloadToEvaluate !== undefined && computedValidationStatus ? computedValidationStatus : finalStatus;
 
       const { channelMeta: _priorChannelMeta2, comments: _priorComments2, ...priorReportSansAux2 } = priorReport as any;
+      // P1 (PR #314 second review round, item 4): same side-effects claim as
+      // the chunk path — recorded in the SAME atomic write as the CAS
+      // transition, only when this path will actually fire downstream side
+      // effects (isNonChunkValid gates the cache/digest/highlights block).
+      const sideEffectsClaimedNonChunk = validationPassed && finalStatus === 'done';
       const newReport: PersistedValidationReport = {
         ...priorReportSansAux2,
         validation_status: reportValidationStatus,
@@ -1040,10 +1275,18 @@ export async function POST(request: NextRequest) {
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
+        ...(sideEffectsClaimedNonChunk ? claimSideEffectsPending({}) : {}),
         ...withFreshAuxMetadata(channelMeta, comments),
       };
 
-      await retryWithBackoff(
+      // P0: same CAS discipline as the chunk-path finalize above — this is
+      // the non-chunk path's only parent write, and everything after it
+      // (transcript/chapters upserts, cache write, QStash publishes, quota
+      // consume) must only run for the request that actually won the
+      // 'processing' → terminal transition. A stale interrupted or partial
+      // persist arriving after a concurrent finalize must not downgrade or
+      // re-mutate the terminal row, and must not duplicate the side effects.
+      const { updated: parentFinalizedNonChunk } = await retryWithBackoff(
         () => persistenceAdapter.updateAnalysisResult({
           analysisId,
           markdown: stitchedMarkdown,
@@ -1051,9 +1294,23 @@ export async function POST(request: NextRequest) {
           model: model || null,
           validationPassed,
           validationReport: newReport,
+          guardBillingStatus: 'processing',
         }),
         2
       );
+      if (!parentFinalizedNonChunk) {
+        console.warn('[analyses/persist] Non-chunk finalize lost the processing-status CAS — row already settled by a concurrent writer; skipping downstream writes', {
+          analysisId,
+          videoId,
+          finalStatus
+        });
+        // Same response the request would have returned, minus the side
+        // effects — the parent row's settlement is already owned by the
+        // winning writer, so the worker has nothing left to retry.
+        if (isInterrupted) return { type: 'interrupted' as const, analysisId };
+        if (finalStatus === 'partial') return { type: 'partial_timeout' as const, analysisId, missingChunks: finalMissingChunks };
+        return { type: 'ok' as const, analysisId };
+      }
 
       // AUTHORITATIVE WRITE — re-audit finding P1.2. When this runs, it's the
       // full stitched content across every chunk, and it runs after any
@@ -1136,14 +1393,17 @@ export async function POST(request: NextRequest) {
         finalStatus,
         hasMarkdown: !!stitchedMarkdown,
         hasPayload: !!stitchedPayload,
-        hasDimensions: stitchedPayload && 'dimensions' in stitchedPayload ? (stitchedPayload.dimensions?.length ?? 0) : 0,
+        hasDimensions: hasUsableDimensionsPayload(stitchedPayload) ? (stitchedPayload.dimensions.length ?? 0) : 0,
         hasKG: stitchedPayload?.knowledgeGraph ? (stitchedPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
         cacheKey,
       });
 
       const isNonChunkValid = validationPassed && finalStatus === 'done';
+      // P1 (item 4): tracked side-effect failures for the non-chunk path.
+      let sideEffectsFailedNonChunk = false;
       if (isNonChunkValid) {
         await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
           console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
         });
@@ -1158,6 +1418,7 @@ export async function POST(request: NextRequest) {
           analysisId,
           metadata: { title: row.title, channelTitle: row.channelTitle || '' },
         }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
         });
@@ -1167,6 +1428,7 @@ export async function POST(request: NextRequest) {
         // 10X re-audit NEW-H(dim0-trigger): see the identical comment at the
         // chunk-path call site above.
         await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish digest task', { analysisId, error: String(e) });
         });
@@ -1175,6 +1437,7 @@ export async function POST(request: NextRequest) {
         // chunk-path call site above for the full RCA. Same idempotent /
         // best-effort shape as the digest task alongside it.
         await publishHighlightsTask({ analysisId, userId: row.userId, videoId }).catch(e => {
+          sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish highlights task', { analysisId, error: String(e) });
         });
@@ -1188,6 +1451,26 @@ export async function POST(request: NextRequest) {
           .catch(e => {
             console.warn('[analyses/persist] Failed to log analysis_completed usage event', { analysisId, error: String(e) });
           });
+
+        // P1 (item 4): same claim lifecycle as the chunk path — clear the
+        // claim on full success, leave it set on any tracked failure.
+        if (!sideEffectsFailedNonChunk) {
+          await persistenceAdapter.updateValidationReport({
+            analysisId,
+            report: clearSideEffectsPending(newReport),
+            preserveValidationPassed: true,
+          }).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'clear_side_effects_pending', analysisId } } });
+            console.warn('[analyses/persist] Failed to clear side_effects_pending claim (stays set; row is settled, side effects completed but claim write failed)', { analysisId, error: String(e) });
+          });
+        } else {
+          Sentry.captureMessage('analyses/persist: side effects partially failed — side_effects_pending claim left set for reconciliation', {
+            level: 'warning',
+            tags: { operation: 'analysis-persist', phase: 'side_effects_reconciliation' },
+            extra: { analysisId, videoId },
+          });
+          console.warn('[analyses/persist] Side effects partially failed — side_effects_pending claim left set (reconciliation required)', { analysisId, videoId });
+        }
       }
 
       return { type: 'ok' as const, analysisId };

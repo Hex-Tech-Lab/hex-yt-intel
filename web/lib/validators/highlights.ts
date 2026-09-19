@@ -31,13 +31,19 @@ export const HighlightSegmentSchema = z.preprocess(
     end: z.number().min(0),
     title: z.string().min(1),
     summary: z.string().optional(),
-    // Explicit (not passthrough-only) so the response's camelCase wire
-    // contract with HighlightsScrubber is pinned where the boundary is
-    // validated. RCA 2026-09-13: these two keys silently dropped to
-    // snake_case in PR #281's route rewrite -- exactly the drift an
-    // implicit passthrough-only field cannot catch.
-    verbatimExcerpt: z.string().nullable().optional(),
-    takeawayIdx: z.number().int().nullable().optional(),
+    // Required-but-nullable (not passthrough-only, not optional) so the
+    // response's camelCase wire contract with HighlightsScrubber is pinned
+    // AND enforced where the boundary is validated. RCA 2026-09-13: these
+    // two keys silently dropped to snake_case in PR #281's route rewrite --
+    // exactly the drift an implicit passthrough-only field cannot catch.
+    // P2b (PR #312 post-merge review): `.optional()` was still not enough —
+    // a future regression back to snake_case-only objects (snake_case keys
+    // survive `.passthrough()`) would pass validation silently again. The
+    // keys are now REQUIRED: presence is enforced, `null` (legitimately no
+    // excerpt stored for this keypoint) stays valid. The route is the only
+    // runtime producer and always emits both keys.
+    verbatimExcerpt: z.string().nullable(),
+    takeawayIdx: z.number().int().nullable(),
   }).passthrough().refine((data) => data.end > data.start, {
     message: 'end timestamp must be greater than start timestamp',
   })
