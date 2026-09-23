@@ -78,7 +78,7 @@ export async function GET(
 
         const { data: analysis, error } = await supabase
           .from('analyses')
-          .select('id, analysis_markdown')
+          .select('id, analysis_markdown, analysis_payload')
           .eq('id', id)
           .eq('user_id', user.id)
           .maybeSingle();
@@ -94,6 +94,7 @@ export async function GET(
         const contentHash = await hashContent(markdown);
         const cacheKey = `relations:${id}:${contentHash}`;
 
+        // 1. Check Redis fast cache first
         const cached = await getRedisValue(cacheKey);
         if (cached) {
           try {
@@ -108,6 +109,28 @@ export async function GET(
               console.warn('[relations/route] Failed to delete malformed cache key', { cacheKey, error: String(deleteErr) });
             });
           }
+        }
+
+        // 2. Read-Through: If Redis missed, check persistent storage in Supabase analyses.analysis_payload
+        const payload = (analysis.analysis_payload && typeof analysis.analysis_payload === 'object')
+          ? (analysis.analysis_payload as Record<string, unknown>)
+          : null;
+        const storedRelations = payload?.stance_relations as (RelationsResult & { contentHash?: string }) | undefined;
+
+        if (storedRelations && Array.isArray(storedRelations.insights) && storedRelations.contentHash === contentHash) {
+          const { contentHash: _ch, ...relationsData } = storedRelations;
+          const result: RelationsResult = {
+            ...relationsData,
+            analysisId: id,
+          };
+          // Pre-warm Redis so subsequent reads within TTL hit memory directly
+          await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(cacheErr => {
+            console.warn('[relations/route] Failed to pre-warm Redis from Supabase persistent payload', { cacheKey, error: String(cacheErr) });
+          });
+
+          send({ ...result, cached: true, type: 'complete' });
+          controller.close();
+          return;
         }
 
         // Check for in-flight server computation first
@@ -153,9 +176,26 @@ export async function GET(
           };
 
           if (insights.length > 0) {
-            await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(cacheErr => {
-              console.warn('[relations/route] Failed to cache relation insights', { cacheKey, error: String(cacheErr) });
-            });
+            // Write-through: persist to Redis (7d TTL) and Supabase analysis_payload (permanent)
+            await Promise.allSettled([
+              setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(cacheErr => {
+                console.warn('[relations/route] Failed to cache relation insights in Redis', { cacheKey, error: String(cacheErr) });
+              }),
+              supabase
+                .from('analyses')
+                .update({
+                  analysis_payload: {
+                    ...(payload || {}),
+                    stance_relations: { ...result, contentHash },
+                  },
+                })
+                .eq('id', id)
+                .then(({ error: updateErr }) => {
+                  if (updateErr) {
+                    console.warn('[relations/route] Failed to persist stance relations in Supabase analyses.analysis_payload', { id, error: updateErr.message });
+                  }
+                }),
+            ]);
           }
 
           resolvePromise(result);

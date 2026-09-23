@@ -87,14 +87,14 @@ async function* callStanceModelStream(
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://getvintel.com',
-        'X-Title': 'hex-yt-intel / stance-relations',
+        'X-Title': 'vIntel - Stance Relations Engine',
       },
       body: JSON.stringify({
         model: translateModelId(model),
         temperature: 0.3,
-        max_tokens: 700,
+        max_tokens: 1500,
         stream: true,
-        reasoning: { effort: 'low' },
+        reasoning: { effort: 'minimal' },
         messages: [{ role: 'user', content: prompt }],
         provider: {
           sort: 'latency',
@@ -228,13 +228,36 @@ export async function* computeStanceRelationsStream(
     }
 
     const json = extractJson(fullText);
-    if (!json) {
+    let parsed: unknown = null;
+    if (json) {
+      try {
+        parsed = JSON.parse(json);
+      } catch (parseErr) {
+        // Resilient recovery: if payload clipped near tail, attempt to close trailing unclosed array/object
+        const lastObjEnd = json.lastIndexOf('}');
+        if (lastObjEnd > 0) {
+          try {
+            const repaired = json.slice(0, lastObjEnd + 1) + ']}';
+            parsed = JSON.parse(repaired);
+            console.warn(`[relations/engine] Model ${item.model} recovered via resilient trailing-bracket repair`);
+          } catch {
+            // repair failed, continue to fallback
+          }
+        }
+        if (!parsed) {
+          console.warn(`[relations/engine] Model ${item.model} returned malformed JSON:`, parseErr instanceof Error ? parseErr.message : String(parseErr));
+        }
+      }
+    } else {
       console.warn(`[relations/engine] Model ${item.model} returned no valid JSON; trying next cascade model`);
       continue;
     }
 
+    if (!parsed) {
+      continue;
+    }
+
     try {
-      const parsed = JSON.parse(json);
       const result = LLMResponseSchema.safeParse(parsed);
       if (!result.success) {
         console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);

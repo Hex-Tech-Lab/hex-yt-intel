@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Switch, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
@@ -22,6 +22,20 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   const [openStates, setOpenStates] = useState<Record<string, boolean>>(
     Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
+
+  useEffect(() => {
+    setOpenStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const item of items) {
+        if (next[item.id] === undefined) {
+          next[item.id] = item.defaultOpen || false;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
 
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
   const entityTimeSeekEnabled = useVideoStore((s) => s.entityTimeSeekEnabled);

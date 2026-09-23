@@ -134,7 +134,7 @@ export async function streamChatCascade(
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": HTTP_REFERER,
-          "X-Title": "hex-yt-intel / chat-stream",
+          "X-Title": "vIntel - Interactive Chat",
         },
         body: JSON.stringify({
           model: translatedModel,

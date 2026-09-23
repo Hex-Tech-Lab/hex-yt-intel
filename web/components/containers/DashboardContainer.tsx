@@ -541,7 +541,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) => void;
     }[] = [];
 
-    if (displayGraph.nodes.length > 0) {
+    const isAnalyzing =
+      isLiveStreaming ||
+      status === "analyzing" ||
+      status === "downloading" ||
+      status === "parsing";
+
+    if (displayGraph.nodes.length > 0 || isAnalyzing) {
       items.push({
         id: "word-cloud",
         title: "Word Cloud",
@@ -551,6 +557,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             graph={displayGraph}
             selectedId={selectedNodeId}
             onSelect={handleSelectNode}
+            isAnalyzing={isAnalyzing}
           />
         ),
         onAction: (action) => {
@@ -632,6 +639,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     handlePanelExport,
     handleExpandPanel,
     handleSelectNode,
+    isLiveStreaming,
+    status,
   ]);
   // rightPanelItems can transition between populated and empty at runtime in
   // BOTH modes now (WordCloud appears/disappears with displayGraph; Pro's
