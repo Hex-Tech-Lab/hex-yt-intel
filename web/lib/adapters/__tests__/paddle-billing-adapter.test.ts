@@ -29,6 +29,14 @@ vi.mock('@sentry/nextjs', () => ({
   captureMessage: vi.fn()
 }));
 
+// Mock the settings registry so resolveUserTierForPriceId() reads the
+// static fallback (no live Supabase call in unit tests).
+vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
+  SupabaseSettingsAdapter: {
+    getRegistrySettings: vi.fn().mockResolvedValue({}),
+  },
+}));
+
 function generateValidSignature(rawBody: string, secret: string) {
   const ts = Math.floor(Date.now() / 1000).toString();
   const signedPayload = `${ts}:${rawBody}`;
@@ -76,7 +84,10 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
         customer_id: 'ctm_123',
         status: 'active',
         custom_data: { user_id: 'user_123' },
-        items: [{ price: { custom_data: { plan_tier: 'pro' } } }]
+        // Tier comes from the shared price-ID mapping (fail-closed on
+        // unrecognised prices since 2026-09-24 round 2 — custom_data plan
+        // strings no longer re-derive tiers); Pro yearly fallback price.
+        items: [{ price: { id: 'pri_01m0azm06tqsbxxbm8nyqs2whq', custom_data: { plan_tier: 'pro' } } }]
       }
     });
 
@@ -108,7 +119,9 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
         customer_id: 'ctm_456',
         status: 'active',
         custom_data: { user_id: 'user_456' },
-        items: [{ price: { custom_data: { plan_tier: 'founder' } } }]
+        // Founder fallback price — maps to pro via the shared price-ID
+        // mapping (founder pricing is a price, not a tier).
+        items: [{ price: { id: 'pri_01m0bjt2sv9qkr4jyq1kpfjgmt', custom_data: { plan_tier: 'founder' } } }]
       }
     });
 

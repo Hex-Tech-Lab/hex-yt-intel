@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { paddle } from '@/lib/paddle';
-import { resolveUserTierForPriceId, mapPlanStringToUserTier } from '@/lib/config/pricing';
+import { resolveUserTierForPriceId } from '@/lib/config/pricing';
 
 import type { UserTier } from '@/lib/types/billing';
 
@@ -29,13 +29,13 @@ interface PaddleEventShape {
 }
 
 /** Resolve the tier an event grants, via the shared mapping. Fails closed. */
-async function resolveEventTier(event: PaddleEventShape): Promise<UserTier | null> {
-  if (event.data.status === 'canceled') return 'free';
+function resolveEventTier(event: PaddleEventShape): Promise<UserTier | null> {
+  if (event.data.status === 'canceled') return Promise.resolve('free');
   const priceId = event.data.items?.[0]?.price?.id;
-  const fromPrice = await resolveUserTierForPriceId(priceId);
-  if (fromPrice) return fromPrice;
-  return mapPlanStringToUserTier(event.data.custom_data?.planTier)
-    ?? mapPlanStringToUserTier(event.data.items?.[0]?.price?.custom_data?.plan_tier);
+  // Fail-closed contract (pricing.ts): an unrecognised price must never
+  // re-derive a tier from custom_data plan strings — a forged/unmapped
+  // price carrying planTier "max" would otherwise grant Max. No fallback.
+  return resolveUserTierForPriceId(priceId);
 }
 
 export async function POST(request: NextRequest) {

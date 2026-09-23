@@ -181,5 +181,22 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
       expect(supabase.upsert).not.toHaveBeenCalled();
       expect(captureMessage).toHaveBeenCalled();
     });
+
+    // Negative control (2026-09-24 round 2, P1): unrecognised price + forged
+    // custom_data planTier "max" must NOT grant max (fallback removed).
+    it('ignores custom_data planTier "max" on an unrecognised price (no fallback)', async () => {
+      const supabase = makeSupabaseMock();
+      vi.mocked(getSupabaseServiceClient).mockReturnValue(supabase as never);
+      const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
+      const adapter = new PaddleBillingAdapter();
+      const result = await adapter.processSubscriptionEvent(
+        subscriptionPayload({ priceId: 'pri_unknown', planTier: 'max' }) as never
+      );
+
+      expect(result.success).toBe(false);
+      expect(updateUserTier).not.toHaveBeenCalled();
+      expect(supabase.upsert).not.toHaveBeenCalled();
+    });
   });
 });

@@ -72,4 +72,19 @@ describe('LEGACY /api/billing/webhook — shared price→tier mapping', () => {
     const body = await res.json();
     expect(body.error).toContain('Unrecognised price ID');
   });
+
+  // Negative control (2026-09-24 round 2, P1): an unrecognised price with a
+  // forged custom_data planTier of "max" must NOT grant max — custom_data
+  // plan strings may never re-derive a tier from an unmapped price.
+  it('ignores custom_data planTier "max" on an unrecognised price (no fallback)', async () => {
+    vi.mocked(paddle.webhooks.unmarshal).mockReturnValue(
+      event({
+        custom_data: { userId: 'user_1', planTier: 'max' },
+        items: [{ price: { id: 'pri_totally_unknown', custom_data: { plan_tier: 'max' } } }],
+      }) as never
+    );
+    const res = await post({});
+    expect(res.status).toBe(400);
+    expect(updateUserTierMock).not.toHaveBeenCalled();
+  });
 });

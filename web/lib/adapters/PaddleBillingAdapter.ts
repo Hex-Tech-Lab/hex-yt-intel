@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BillingPort } from '@/lib/ports/BillingPort';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { paddle } from '@/lib/paddle';
-import { resolvePriceId, resolveUserTierForPriceId, mapPlanStringToUserTier } from '@/lib/config/pricing';
+import { resolvePriceId, resolveUserTierForPriceId } from '@/lib/config/pricing';
 import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
 import type { PlanTier, UserTier, WebhookPayload } from '@/lib/types/billing';
@@ -120,18 +120,17 @@ export class PaddleBillingAdapter implements BillingPort {
       }
 
       // Tier from the shared price-ID -> UserTier mapping (single source,
-      // 2026-09-19). custom_data plan strings are only a fallback; an
-      // unrecognised price FAILS CLOSED -- the old grant-'pro'-for-anything
-      // behaviour must not come back.
+      // 2026-09-19; custom_data fallback removed 2026-09-24 round 2 — an
+      // unrecognised price must never re-derive a tier from custom_data
+      // plan strings: forged/unmapped price carrying planTier "max" would
+      // otherwise grant Max). Fails CLOSED — null ⇒ tier unchanged.
       const isCanceled = data.status === 'canceled';
       const priceId: string | null | undefined = data.items?.[0]?.price?.id;
       let effectiveUserTier: UserTier;
       if (isCanceled) {
         effectiveUserTier = 'free';
       } else {
-        const resolvedTier: UserTier | null = (await resolveUserTierForPriceId(priceId))
-          ?? mapPlanStringToUserTier(data.custom_data?.planTier)
-          ?? mapPlanStringToUserTier(data.items?.[0]?.price?.custom_data?.plan_tier);
+        const resolvedTier: UserTier | null = await resolveUserTierForPriceId(priceId);
         if (!resolvedTier) {
           console.error('[PaddleBillingAdapter] Unrecognised price ID, failing closed (tier unchanged)', { priceId: priceId ?? null });
           Sentry.captureMessage('PaddleBillingAdapter: unrecognised price ID, tier unchanged', { level: 'error', extra: { priceId: priceId ?? null, event_type: payload?.event_type } });
