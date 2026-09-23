@@ -1,0 +1,51 @@
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_f44856a4977ca3::t_cb0a800a70ccff 1-235
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_f44856a4977ca3::t_8b3940ef01c396 1-238
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_cad02d4720754a::t_4edbdda4f2c45e 1-239
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_cad02d4720754a::t_47ed36aa113ee8 1-232
+.mcp.json
+  s_494fa24a1a11a4::t_4f8c8d45472974 6,13-16
+.memory/AGENT_LEDGER.md
+  s_494fa24a1a11a4::t_eca31495400632 1412-1413
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_494fa24a1a11a4::t_31d0eeffc0b323 1-2
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_494fa24a1a11a4::t_ed66eb7cd797e4 1-2
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_494fa24a1a11a4::t_f2601888b56279 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "143f87ca9fcefe70051c379db0f88edb6d6f237a",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cad02d4720754a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f715dd2fferdM5EHTLbied67",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f44856a4977ca3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f7ca1e9ffeGf9A7d2qrGmyNs",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
