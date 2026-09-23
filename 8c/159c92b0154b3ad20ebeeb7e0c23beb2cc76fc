@@ -1,0 +1,55 @@
+.memory/ADRS.md
+  s_5a72be526ea24c::t_5a4a14fe2b494a 26-27
+scripts/backfill-stance-relations.ts
+  s_5a72be526ea24c::t_8818b9543d163b 1-249
+web/lib/__tests__/contracts/kg-relations.contract.test.ts
+  s_5a72be526ea24c::t_e5e364ad608c6a 259-307
+web/app/api/analyses/[id]/relations/route.ts
+  s_494fa24a1a11a4::t_61208b143f7389 81,97,114-135,179-198
+web/components/containers/DashboardContainer.tsx
+  s_494fa24a1a11a4::t_1bd08d6c0049fd 544-550,560,642-643
+web/components/dashboard/RightPanelAccordion.tsx
+  s_494fa24a1a11a4::t_7961ec0e40d377 3,26-39
+web/components/templates/console/WordCloud.tsx
+  s_494fa24a1a11a4::t_23cc7bbed8f70b 11,34,546-548,561,624
+web/lib/__tests__/contracts/openrouter-request.contract.test.ts
+  s_494fa24a1a11a4::t_73c7fc77851006 85,132,134
+web/lib/adapters/OpenRouterCompletionAdapter.ts
+  s_494fa24a1a11a4::t_aa60ed7cf8678e 31
+web/lib/embeddings.ts
+  s_494fa24a1a11a4::t_4b5be1c7e54c21 68
+web/lib/intelligence/relations-engine.ts
+  s_494fa24a1a11a4::t_b1077bde455492 90,95,97,231-251,256-259
+web/lib/services/openrouter.ts
+  s_494fa24a1a11a4::t_ae042e73f38cbf 101
+worker/src/chat-stream.ts
+  s_494fa24a1a11a4::t_a9aa51b3904d9f 137
+worker/src/services/CommentClassifier.ts
+  s_494fa24a1a11a4::t_8d193906f62098 73
+worker/src/services/LLMCascade.ts
+  s_494fa24a1a11a4::t_78703e4c7e20d6 316,500
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8c159c92b0154b3ad20ebeeb7e0c23beb2cc76fc",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_5a72be526ea24c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fce22f8ffePCchyZvIGsQ7mA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
