@@ -1,3 +1,5 @@
+> **⚠️ NOT DISPATCHED — re-scope before use (PR #324 review, 2026-09-24).** This bundles investigation, rule design, multi-file implementation and full-codebase validation into one Flash-tier prompt while its header says `medium` effort, which contradicts the Model-tuning rule. Split it into (1) investigate and classify patterns, (2) implement only the approved rule clusters, (3) validate and report, and route (2) to a non-Flash model.
+
 # Agent Dispatch Prompt — Wave A: mine Codacy pattern-frequency list into new/improved qa-intel rules
 
 **Target Agent**: OC (opencode, GLM 5.3 Flash, low effort)

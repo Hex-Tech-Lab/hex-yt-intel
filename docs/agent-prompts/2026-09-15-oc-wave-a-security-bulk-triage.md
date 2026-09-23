@@ -1,3 +1,5 @@
+> **⚠️ NOT DISPATCHED — reconcile before use (PR #324 review, 2026-09-24).** The cluster counts don't add up (Cluster 1 lists 14 sites but says ~13; Cluster 2 lists 15 but says ~13; the title's "~40 remaining" is ~49 by the lists), and §2 names two different branches (`fix/wave-a-security-backlog`, already used and merged by #317, and `fix/wave-a-security-triage`). Before dispatch: recount against a fresh Codacy export, use one fresh branch, and require the report to list every finding exactly once as fixed / suppressed-with-evidence / unresolved.
+
 # Agent Dispatch Prompt — Wave A-security: triage + fix/suppress remaining ~40 Codacy Critical findings
 
 **Target Agent**: OC (opencode, GLM 5.3 Flash, low effort)
