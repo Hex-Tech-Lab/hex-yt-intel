@@ -1,0 +1,53 @@
+worker/src/routes/analysis.ts
+  s_cad02d4720754a::t_da55c0777f43d3 261-266
+  s_cad02d4720754a::t_9bf3a1fb3b3bf0 339
+  s_cad02d4720754a::t_e47ccae3edfe7e 402-407
+  s_cad02d4720754a::t_a08f0a6f49f424 1207-1213,1218-1221
+  s_cad02d4720754a::t_29f1e6997a0e35 14
+  s_cad02d4720754a::t_5b922705ba5378 149-150
+  s_cad02d4720754a::t_1c79211d712fac 16
+  s_cad02d4720754a::t_1d86dbbba45339 253
+  s_cad02d4720754a::t_40212ee9a382dc 384-388
+  s_cad02d4720754a::t_d56aa5c2e368f8 237-240
+worker/src/services/chapter-persist.ts
+  s_cad02d4720754a::t_293d10d49e8c20 49
+  s_cad02d4720754a::t_79b5f292e01709 1-48,50-115
+worker/src/__tests__/chapter-persist.test.ts
+  s_cad02d4720754a::t_293d10d49e8c20 38,43,104
+  s_cad02d4720754a::t_46613b43577f95 1-37,39-42,44-103,105-167
+web/middleware.ts
+  s_cad02d4720754a::t_251748f12dfd04 116-127,166-177,179,184-185,198-216
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  s_cad02d4720754a::t_61d1828a981b02 76,78
+  s_cad02d4720754a::t_813a989689bec3 1-75,77,79-118
+web/vitest.config.ts
+  s_cad02d4720754a::t_a78e3ca75a41ae 70-74
+.memory/AGENT_LEDGER.md
+  s_cad02d4720754a::t_586c9616fa49f2 1400
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_f44856a4977ca3::t_535450ab63a2e5 1-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "807233d695191433f7e3a37cfe2c8f70a5380c82",
+  "prompts": {},
+  "sessions": {
+    "s_cad02d4720754a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f715dd2fferdM5EHTLbied67",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f44856a4977ca3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f7ca1e9ffeGf9A7d2qrGmyNs",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
