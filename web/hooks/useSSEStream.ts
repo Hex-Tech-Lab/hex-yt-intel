@@ -218,13 +218,18 @@ export function useSSEStream() {
 
               let hasSettled = false;
 
-              const settleAnalysis = (finalStatus: 'complete' | 'error', errorMsg?: string) => {
+              const settleAnalysis = (finalStatus: 'complete' | 'error', errorMsg?: string, successMsg?: string) => {
                 if (hasSettled) return;
                 hasSettled = true;
                 activeAnalysisIdRef.current = null;
 
                 if (finalStatus === 'complete') {
-                  store.logOk(`Analysis stream completed successfully.`);
+                  // RCA (2026-09-24): a 1/5 partial settle used to print
+                  // "Analysis stream completed successfully." — success-washing
+                  // a partial result. The final line now carries the real
+                  // outcome (checkSettleState passes a partial message);
+                  // settle semantics themselves are unchanged.
+                  store.logOk(successMsg || 'Analysis stream completed successfully.');
                   useSynthesisNucleus.getState().completeAnalysis();
                   setStatus('complete');
                   setIsLoading(false);
@@ -426,8 +431,12 @@ export function useSSEStream() {
                   }
                   if (totalSettled === TOTAL_STREAMS) {
                     if (completedIndexes.size > 0) {
+                      const isPartial = completedIndexes.size < TOTAL_STREAMS;
+                      const completeMsg = isPartial
+                        ? `Partial result: ${completedIndexes.size}/${TOTAL_STREAMS} streams completed; some dimensions are missing.`
+                        : 'Analysis stream completed successfully.';
                       store.logOk(`${completedIndexes.size}/${TOTAL_STREAMS} streams completed.`);
-                      settleAnalysis('complete');
+                      settleAnalysis('complete', undefined, completeMsg);
                     } else {
                       settleAnalysis('error', 'All analysis streams failed.');
                     }

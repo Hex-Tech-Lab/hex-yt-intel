@@ -72,7 +72,7 @@ export async function fetchSynthesisLogs(searchParams: URLSearchParams): Promise
       const level = run.status === 'failed' ? 'ERROR' : 'INFO';
       logLines.push(`[${run.created_at}] [${level}] [comment-sample-run:${statusTag}] runId=${run.id} analysisId=${run.analysis_id} tier=${run.tier} totalCount=${run.total_comment_count} sampledCount=${run.sampled_count || 0}`);
     });
-    logLines.sort((a, b) => a.localeCompare(b));
+    logLines.sort((a: string, b: string) => a.localeCompare(b));
 
     const content = logLines.length > 0
       ? logLines.join('\n')
@@ -422,13 +422,23 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
   if (!token || !accountId) {
     return { status: 503, body: { error: 'CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not configured in Vercel environment variables.', missingEnvVars: ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'].filter((k) => !process.env[k]) } };
   }
+  const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
+  const startTimeIso = new Date(startTimeMs).toISOString();
+  const endTimeIso = new Date(endTimeMs).toISOString();
+  // RCA (2026-09-24): the original query had NO datetime filter — it fetched
+  // the 50 most-recent invocation aggregates (aggregated buckets, not per
+  // request), so a quiet window returned totalEntries: 0 even while the
+  // worker had 78+ invocations incl. exceededResources. Push the requested
+  // window INTO the GraphQL filter (server-side) instead of trusting a
+  // client-side slice of the latest-50.
   const query = `
-    query GetWorkerLogs($accountTag: string!) {
+    query GetWorkerLogs($accountTag: string!, $datetime_geq: Time!, $datetime_leq: Time!) {
       viewer {
         accounts(filter: {accountTag: $accountTag}) {
-          workersInvocationsAdaptive(limit: 50, orderBy: [datetime_DESC]) {
+          workersInvocationsAdaptive(limit: 50, filter: { datetime_geq: $datetime_geq, datetime_leq: $datetime_leq }, orderBy: [datetime_DESC]) {
             dimensions { scriptName status datetime }
             quantiles { cpuTimeP50 }
+            sum { errors }
           }
         }
       }
@@ -438,7 +448,7 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
     const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { accountTag: accountId } }),
+      body: JSON.stringify({ query, variables: { accountTag: accountId, datetime_geq: startTimeIso, datetime_leq: endTimeIso } }),
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
@@ -446,7 +456,6 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
     }
     const json = await res.json();
     const rawInvocations = json?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-    const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
     const invocations = rawInvocations.filter((inv: any) => {
       const ts = new Date(inv.dimensions?.datetime || 0).getTime();
       return ts >= startTimeMs && ts <= endTimeMs;
@@ -456,9 +465,59 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
       const time = dims.datetime || new Date().toISOString();
       const status = dims.status || 'unknown';
       const level = status === 'success' || status === 'ok' ? 'INFO' : 'ERROR';
-      return `[${time}] [${level}] [cf-worker:${dims.scriptName || 'yt-intel'}] status=${status} p50CpuTime=${inv.quantiles?.cpuTimeP50 ?? 0}ms`;
+      return `[${time}] [${level}] [cf-worker:${dims.scriptName || 'yt-intel'}] status=${status} p50CpuTime=${((inv.quantiles?.cpuTimeP50 ?? 0) / 1000).toFixed(1)}ms errors=${inv.sum?.errors ?? 0}`;
     });
-    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Cloudflare worker invocations returned.`, invocations } };
+
+    // Workers Observability (persist=true in worker/wrangler.toml) gives
+    // per-request outcomes (e.g. exceededCpu) that the aggregate
+    // workersInvocationsAdaptive dataset cannot. Contract verified against
+    // POST /accounts/{account_id}/workers/observability/telemetry/query
+    // (developers.cloudflare.com API docs, 2026-09-24): body takes
+    // { queryId, timeframe: {from,to} epoch-ms, view, limit, parameters } and
+    // returns result.events[] with $metadata (message/error/level/rayId) and
+    // $workers (scriptName/outcome). Fail-soft on this second call so a
+    // token-scope gap or 4xx degrades to a warning line, never a full 500 —
+    // same resilience convention as fetchSentryLogs' 401/403 fail-soft.
+    let observabilityEvents: any[] = [];
+    let observabilityWarning: string | undefined;
+    try {
+      const obsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/observability/telemetry/query`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          queryId: 'admin-logs-snapshot',
+          timeframe: { from: startTimeMs, to: endTimeMs },
+          view: 'events',
+          limit: 100,
+          parameters: {
+            datasets: ['cloudflare-workers'],
+            filters: [{ key: '$metadata.error', operation: 'exists', type: 'string' }],
+          },
+        }),
+      });
+      if (!obsRes.ok) {
+        const errText = await obsRes.text().catch(() => '');
+        throw new Error(`Workers Observability API returned ${obsRes.status}: ${errText}`);
+      }
+      const obsJson = await obsRes.json();
+      // Live-verified shape (2026-09-24): events are nested at result.events.events.
+      observabilityEvents = obsJson?.result?.events?.events || [];
+      const obsLines = observabilityEvents.map((evt: any) => {
+        const meta = evt.$metadata || {};
+        const workers = evt.$workers || {};
+        const time = evt.timestamp ? new Date(evt.timestamp).toISOString() : new Date().toISOString();
+        const level = meta.error ? 'ERROR' : (meta.level || 'info').toUpperCase() === 'ERROR' ? 'ERROR' : 'INFO';
+        return `[${time}] [${level}] [cf-obs:${workers.scriptName || meta.service || 'yt-intel'}] outcome=${workers.outcome || 'unknown'} error=${meta.error || 'none'} rayId=${meta.rayId || 'unknown'} message=${meta.message || ''}`;
+      });
+      logLines.push(...obsLines);
+      logLines.sort((a: string, b: string) => a.localeCompare(b));
+    } catch (obsError) {
+      observabilityWarning = `Workers Observability query failed: ${obsError instanceof Error ? obsError.message : String(obsError)}`;
+      Sentry.captureMessage(observabilityWarning, { level: 'warning', tags: { operation: 'admin_cloudflare_observability' } });
+      console.warn('[admin-logs]', observabilityWarning);
+    }
+
+    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Cloudflare worker invocations returned.`, invocations, observabilityEvents, ...(observabilityWarning ? { warning: observabilityWarning } : {}) } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { tags: { operation: 'admin_cloudflare_logs' } });
