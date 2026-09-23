@@ -1,0 +1,66 @@
+web/app/api/analyses/[id]/relations/route.ts
+  s_73c2a831fb04c7::t_9b710055a88d5f 200-204,206-211,213-217
+  s_73c2a831fb04c7::t_8ec76a72d2f8e4 205
+  s_73c2a831fb04c7::t_b9276606422395 7,80-83,86,120-132,212
+  s_73c2a831fb04c7::t_1b746b0a1fab32 169-174
+web/lib/adapters/SupabaseAnalysisPayloadAdapter.ts
+  s_73c2a831fb04c7::t_527a3c6269b2ce 1-72
+web/package.json
+  s_73c2a831fb04c7::t_e72337bd762512 40
+scripts/backfill-stance-relations.ts
+  s_73c2a831fb04c7::t_ef3aa6234e0e67 206-207
+  s_73c2a831fb04c7::t_aea60d25df8ead 8-12,26,30-37,48,52-54,61-78,82-94,108-115,117-118,120,122-126,128-168,170-202,217,228,232-236,241-256,259-274,276-281,283,285-288,291-293,295-301,303-319,321-323,325-329,331,333-336,338-339,343,347-353
+  s_73c2a831fb04c7::t_91dfa17f014d36 102-105
+  s_73c2a831fb04c7::t_ecf26c09830cbb 237-240
+web/app/api/analyses/[id]/relations/__tests__/route.test.ts
+  s_73c2a831fb04c7::t_0af45e4df1722f 1-90,100-280
+  s_73c2a831fb04c7::t_0662671ccab0ef 91-99
+web/lib/__tests__/relations-engine-repair.test.ts
+  s_73c2a831fb04c7::t_c56d5c3a21e566 1-108
+.memory/AGENT_LEDGER.md
+  s_73c2a831fb04c7::t_de51c06fe709ad 1400
+web/lib/__tests__/contracts/stance-relations-persistence.contract.test.ts
+  s_73c2a831fb04c7::t_4a24936f1ce779 34-35
+  s_73c2a831fb04c7::t_3579c8c62d8f07 92
+  s_73c2a831fb04c7::t_38974d72f4a07b 1-33,36-91,93-115
+web/vitest.config.ts
+  s_73c2a831fb04c7::t_0c47437f5899fe 70-73
+web/lib/intelligence/relations-engine.ts
+  s_73c2a831fb04c7::t_b0981b062f54f9 236
+  s_73c2a831fb04c7::t_6e967ebb1c7796 237-247
+  s_73c2a831fb04c7::t_927a105f2c158e 3
+supabase/migrations/20260924120000_merge_analysis_payload_key_rpc.sql
+  s_73c2a831fb04c7::t_8ac99515f0fb76 1-62
+web/lib/ports/AnalysisPayloadKeyPort.ts
+  s_73c2a831fb04c7::t_9102cb30e870c0 1-19
+web/lib/utils/relations-settings.ts
+  s_73c2a831fb04c7::t_3bcc497003d8d2 1-20
+pnpm-lock.yaml
+  s_73c2a831fb04c7::t_ac654694dfc8a5 125-127
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_494fa24a1a11a4::t_cd80ffbca62b22 1-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "afe276a195eed3544582c27aa3efd1acb95661e2",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_73c2a831fb04c7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f68c676ffeTfCFhUSas2CNNn",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
