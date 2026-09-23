@@ -1,0 +1,43 @@
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_70ef42d4bad845::t_b455e588a1dd10 1-44,342-344
+.memory/AGENT_LEDGER.md
+  s_494fa24a1a11a4::t_59b3e58279777c 1403-1411
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_494fa24a1a11a4::t_6872e1da20baba 1-255
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_494fa24a1a11a4::t_1381ae925f4003 1-239
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_494fa24a1a11a4::t_e658f97260510a 1-236
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_494fa24a1a11a4::t_0f75ad996f290b 1-233
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_494fa24a1a11a4::t_6050b1f0b0eca9 1-232
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_494fa24a1a11a4::t_7bfae7dfc2c7ba 1-234
+docs/history/ROSTER_2026-07-20.md
+  s_494fa24a1a11a4::t_f1bf53e4786b2f 600-632
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b4b627a65363bf0c76f0aa981ca13d222356d7ad",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_70ef42d4bad845": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f44f8eb80ffeNflWEkZXu06m2E",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
