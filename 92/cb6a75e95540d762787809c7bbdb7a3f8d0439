@@ -1,0 +1,36 @@
+.memory/AGENT_LEDGER.md
+  s_1e3e085f27ee57::t_70ba97065667e2 1400
+web/middleware.test.ts
+  s_1e3e085f27ee57::t_ea15e7b1b07cfe 40-67
+worker/src/routes/analysis.ts
+  s_1e3e085f27ee57::t_3ca50573a7f336 1186-1194,1196-1197
+  s_1e3e085f27ee57::t_b0428734f37216 1227-1236
+web/middleware.ts
+  s_1e3e085f27ee57::t_10c9df467d9405 193-206
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_494fa24a1a11a4::t_cdbdd619740fcb 1-233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "92cb6a75e95540d762787809c7bbdb7a3f8d0439",
+  "prompts": {},
+  "sessions": {
+    "s_1e3e085f27ee57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fcc5d3cffeGxPZkqloVBllRP",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
