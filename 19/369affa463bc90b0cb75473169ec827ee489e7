@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  s_76725cfad57c94::t_6d74591ddf8534 1402
+  s_70ef42d4bad845::t_f8f830a196bebc 1401
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_494fa24a1a11a4::t_d533c40d8cde63 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "19369affa463bc90b0cb75473169ec827ee489e7",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_70ef42d4bad845": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f44f8eb80ffeNflWEkZXu06m2E",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_76725cfad57c94": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f68f3d7ffeSkZErIJzgeoZzD",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
