@@ -1,0 +1,45 @@
+web/lib/admin-logs/fetchers.ts
+  s_56c4644aa83c36::t_c49d4608ce869b 425-433,435,438,441,451,468,470-519
+  s_56c4644aa83c36::t_ff0cfe5b28255c 520
+  s_494fa24a1a11a4::t_ebf8a5253dc23c 75
+.memory/AGENT_LEDGER.md
+  s_56c4644aa83c36::t_b27e11df2895ee 1400
+web/hooks/useSSEStream.ts
+  s_56c4644aa83c36::t_540336ffd5c0c0 221,227-232
+  s_56c4644aa83c36::t_7c9f25dd3e1a89 434-437
+  s_494fa24a1a11a4::t_916dfe79472d94 439
+web/lib/admin-logs/__tests__/fetchCloudflareLogs.test.ts
+  s_56c4644aa83c36::t_cdb3c61e41b766 1-43,45,47-111,113,115-135
+  s_56c4644aa83c36::t_06812362cb0a4f 44
+  s_56c4644aa83c36::t_66033a571dc073 46,114
+  s_56c4644aa83c36::t_6808aec240b17b 112
+  s_56c4644aa83c36::t_e0b5e673e13f90 136-138
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_56c4644aa83c36::t_487fb82c1e2c2d 204-240
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_494fa24a1a11a4::t_e2888b9c61ceed 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cb5d1aa251bd1faf359f0f3a48d89fe9ab010c36",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_56c4644aa83c36": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fcc5bbeffe2frt7h99QqTvKY",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
