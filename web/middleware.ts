@@ -113,28 +113,18 @@ async function hasSupabaseAuth(
   }
 }
 
-export async function middleware(request: NextRequest) {
-  // CORS Preflight Handling (Fixes 401 on OPTIONS)
-  if (request.method === 'OPTIONS') {
-    return new NextResponse(null, { 
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hex-Test-Secret',
-      },
-    });
-  }
-
-  const { pathname } = request.nextUrl;
-
-  // Public allowlist. THIS IS THE ONLY WAY A ROUTE UNDER THE MATCHER SKIPS AUTH.
-  // The gate below is fail-CLOSED: anything not listed here (and not a dev bypass)
-  // requires a valid Supabase session. When adding a new endpoint whose legitimate
-  // caller has NO user session cookie — an external webhook, a server-to-server
-  // (S2S) call, or a pre-auth redirect — add it here explicitly; otherwise leave
-  // it out and it is protected by default.
-  const publicRoutes = [
+// Public allowlist. THIS IS THE ONLY WAY A ROUTE UNDER THE MATCHER SKIPS AUTH.
+// The gate below is fail-CLOSED: anything not listed here (and not a dev bypass)
+// requires a valid Supabase session. When adding a new endpoint whose legitimate
+// caller has NO user session cookie — an external webhook, a server-to-server
+// (S2S) call, or a pre-auth redirect — add it here explicitly; otherwise leave
+// it out and it is protected by default.
+//
+// Extracted from middleware() to a module-level helper (2026-09-24): the
+// chapter-persist exemption added one more branch to an already-threshold
+// function, tripping CodeFactor's "Complex Method" + DeepSource JS-R1005.
+// Behavior-preserving move; middleware.test.ts pins every branch shape.
+const publicRoutes = [
     '/auth/callback',      // Supabase OAuth callback (page, outside matcher — defensive)
     '/api/auth/signin',    // Legacy redirect to /auth/signin (no session by definition)
     '/api/stripe',         // Stripe webhooks (signature-verified)
@@ -173,21 +163,26 @@ export async function middleware(request: NextRequest) {
     // not this middleware.
   ];
 
-  // A small number of security-sensitive single-purpose routes get EXACT
-  // path matching only, not the prefix match below -- real finding
-  // 2026-08-20 (automated PR review): the general `startsWith(route + '/')`
-  // rule would let any future child path under these silently inherit the
-  // exemption (e.g. a hypothetical /api/test-auth/login/whatever) without
-  // anyone noticing. These routes have no legitimate child paths.
-  const exactPublicRoutes = ['/api/test-auth/login'];
+// A small number of security-sensitive single-purpose routes get EXACT
+// path matching only, not the prefix match below -- real finding
+// 2026-08-20 (automated PR review): the general `startsWith(route + '/')`
+// rule would let any future child path under these silently inherit the
+// exemption (e.g. a hypothetical /api/test-auth/login/whatever) without
+// anyone noticing. These routes have no legitimate child paths.
+const exactPublicRoutes = ['/api/test-auth/login'];
+
+// skipcq: JS-0067 -- module-scope helpers are idiomatic in a Next.js edge
+// middleware module; DeepSource's "wrap in an IIFE" advice is a false
+// positive here (same class as the other module-level fns in this file).
+function isPublicApiRequest(method: string, pathname: string): boolean {
   if (exactPublicRoutes.includes(pathname)) {
-    return NextResponse.next();
+    return true;
   }
 
   // Segment-boundary match so a public prefix can't unintentionally exempt a
   // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').
-  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-    return NextResponse.next();
+  if (publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
+    return true;
   }
 
   // S2S chapters persist (the Cloudflare Worker posts this from ctx.waitUntil
@@ -200,7 +195,25 @@ export async function middleware(request: NextRequest) {
   // gate with {"error":"Unauthorized"} before the route's own HMAC check
   // ever ran (same bug class as /api/waitlist 2026-08-14 and
   // /api/test-auth 2026-08-20, both documented above).
-  if (request.method === 'POST' && /^\/api\/videos\/[^/]+\/chapters$/.test(pathname)) {
+  return method === 'POST' && /^\/api\/videos\/[^/]+\/chapters$/.test(pathname);
+}
+
+export async function middleware(request: NextRequest) {
+  // CORS Preflight Handling (Fixes 401 on OPTIONS)
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { 
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hex-Test-Secret',
+      },
+    });
+  }
+
+  const { pathname } = request.nextUrl;
+
+  if (isPublicApiRequest(request.method, pathname)) {
     return NextResponse.next();
   }
 
