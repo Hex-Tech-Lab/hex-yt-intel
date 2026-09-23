@@ -4,6 +4,7 @@ export const runtime = 'edge';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getRedisValue, setRedisValue, deleteRedisKey } from '@/lib/redis';
 import { computeStanceRelationsStream, type StanceDimension } from '@/lib/intelligence/relations-engine';
+import { SupabaseAnalysisPayloadAdapter } from '@/lib/adapters/SupabaseAnalysisPayloadAdapter';
 import { DIMENSION_NAMES } from '@/lib/types/dimension';
 import type { RelationsResult, RelationInsight } from '@/lib/types/knowledge-graph';
 import { NextRequest, NextResponse } from 'next/server';
@@ -76,9 +77,13 @@ export async function GET(
           return;
         }
 
+        // PR #322 round-2 P2: only the columns the Redis fast-path needs are
+        // fetched here — the (potentially large) analysis_payload JSONB is
+        // read in a second query ONLY on a cache miss, so cache hits never
+        // transfer it.
         const { data: analysis, error } = await supabase
           .from('analyses')
-          .select('id, analysis_markdown, analysis_payload')
+          .select('id, analysis_markdown')
           .eq('id', id)
           .eq('user_id', user.id)
           .maybeSingle();
@@ -112,8 +117,19 @@ export async function GET(
         }
 
         // 2. Read-Through: If Redis missed, check persistent storage in Supabase analyses.analysis_payload
-        const payload = (analysis.analysis_payload && typeof analysis.analysis_payload === 'object')
-          ? (analysis.analysis_payload as Record<string, unknown>)
+        const { data: payloadRow, error: payloadError } = await supabase
+          .from('analyses')
+          .select('analysis_payload')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (payloadError) {
+          console.warn('[relations/route] Failed to read analysis_payload for read-through', { id, error: payloadError.message });
+        }
+
+        const payload = (payloadRow?.analysis_payload && typeof payloadRow.analysis_payload === 'object')
+          ? (payloadRow.analysis_payload as Record<string, unknown>)
           : null;
         const storedRelations = payload?.stance_relations as (RelationsResult & { contentHash?: string }) | undefined;
 
@@ -150,6 +166,12 @@ export async function GET(
         const apiKey = process.env.OPENROUTER_API_KEY || '';
         const insights: RelationInsight[] = [];
         let modelUsed = 'unknown';
+        // PR #322 round-2 P1: persistence below lives INSIDE the success
+        // path — a COMPLETED cascade that legitimately produced zero
+        // insights is a valid result and is persisted (otherwise every
+        // recompute re-pays LLM tokens until the Redis TTL expires). The
+        // catch block below (model/network exhaustion) never persists and
+        // never caches an empty result as if it were a valid answer.
 
         let resolvePromise: (val: RelationsResult) => void = () => {};
         const computePromise = new Promise<RelationsResult>((res) => {
@@ -175,27 +197,24 @@ export async function GET(
             insights,
           };
 
-          if (insights.length > 0) {
-            // Write-through: persist to Redis (7d TTL) and Supabase analysis_payload (permanent)
-            await Promise.allSettled([
-              setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(cacheErr => {
-                console.warn('[relations/route] Failed to cache relation insights in Redis', { cacheKey, error: String(cacheErr) });
-              }),
-              supabase
-                .from('analyses')
-                .update({
-                  analysis_payload: {
-                    ...(payload || {}),
-                    stance_relations: { ...result, contentHash },
-                  },
-                })
-                .eq('id', id)
-                .then(({ error: updateErr }) => {
-                  if (updateErr) {
-                    console.warn('[relations/route] Failed to persist stance relations in Supabase analyses.analysis_payload', { id, error: updateErr.message });
-                  }
-                }),
-            ]);
+          // Write-through: persist to Redis (7d TTL) and Supabase
+          // analysis_payload (permanent). The Supabase write goes through
+          // the atomic key-merge port (jsonb_set RPC) so concurrent payload
+          // writers can never be clobbered by a stale full-payload rewrite.
+          const payloadAdapter = new SupabaseAnalysisPayloadAdapter(supabase);
+          const [, persistOutcome] = await Promise.allSettled([
+            setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).then(() => 'ok', (cacheErr) => {
+              console.warn('[relations/route] Failed to cache relation insights in Redis', { cacheKey, error: String(cacheErr) });
+              return 'failed';
+            }),
+            payloadAdapter.mergePayloadKey(id, 'stance_relations', { ...result, contentHash }),
+          ]);
+
+          if (persistOutcome.status === 'fulfilled' && !persistOutcome.value.persisted) {
+            console.warn('[relations/route] stance_relations persistence did not land (0 rows affected or failed after retries)', { id });
+          } else if (persistOutcome.status === 'rejected') {
+            Sentry.captureException(persistOutcome.reason, { tags: { operation: 'relations', phase: 'persist' }, contexts: { relations: { id } } });
+            console.warn('[relations/route] stance_relations persistence rejected', { id, error: String(persistOutcome.reason) });
           }
 
           resolvePromise(result);

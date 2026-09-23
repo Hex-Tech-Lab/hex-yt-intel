@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { jsonrepair } from 'jsonrepair';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { resolveStanceCascade } from '@/lib/config/cascade';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
@@ -232,20 +233,18 @@ export async function* computeStanceRelationsStream(
     if (json) {
       try {
         parsed = JSON.parse(json);
-      } catch (parseErr) {
-        // Resilient recovery: if payload clipped near tail, attempt to close trailing unclosed array/object
-        const lastObjEnd = json.lastIndexOf('}');
-        if (lastObjEnd > 0) {
-          try {
-            const repaired = json.slice(0, lastObjEnd + 1) + ']}';
-            parsed = JSON.parse(repaired);
-            console.warn(`[relations/engine] Model ${item.model} recovered via resilient trailing-bracket repair`);
-          } catch {
-            // repair failed, continue to fallback
-          }
-        }
-        if (!parsed) {
-          console.warn(`[relations/engine] Model ${item.model} returned malformed JSON:`, parseErr instanceof Error ? parseErr.message : String(parseErr));
+      } catch (_parseErr) {
+        // Bracket-aware repair (PR #322 round-2 P2): the old recovery blindly
+        // appended ']}' after the last '}', which could accept a truncated
+        // prefix as valid and persist it permanently. jsonrepair only closes
+        // genuinely unbalanced structure; the result is still fully
+        // schema-validated below, so a repair that produced garbage falls
+        // through to the next cascade model instead of persisting garbage.
+        try {
+          parsed = JSON.parse(jsonrepair(json));
+          console.warn(`[relations/engine] Model ${item.model} recovered via jsonrepair trailing-structure repair`);
+        } catch (repairErr) {
+          console.warn(`[relations/engine] Model ${item.model} jsonrepair failed, trying next cascade model:`, repairErr instanceof Error ? repairErr.message : String(repairErr));
         }
       }
     } else {
@@ -269,7 +268,6 @@ export async function* computeStanceRelationsStream(
             issuePaths: result.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
           },
         });
-        // Only import Sentry if it's not imported already, but let's just use console for now, wait, we need Sentry.
       }
       if (result.success) {
         const insights = result.data.insights

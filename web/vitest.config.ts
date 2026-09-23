@@ -67,6 +67,10 @@ export default defineConfig({
       // sibling check while vitest never ran it (found 2026-09-15 while
       // pinning the P2B validator contract this route test guards).
       'app/api/analyses/highlights/**/*.test.ts',
+      // PR #322 round-2: route-level relations contract tests. The literal
+      // [id] segment must be backslash-escaped or picomatch treats it as a
+      // single-char character class and matches nothing.
+      'app/api/analyses/\\[id\\]/relations/**/*.test.ts',
       // Real coverage gap found 2026-08-20 (automated PR review P1): a
       // top-level web/middleware.test.ts matched none of the globs above --
       // same class of silent-non-execution as the .tsx gap documented
