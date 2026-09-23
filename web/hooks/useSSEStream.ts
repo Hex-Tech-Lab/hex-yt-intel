@@ -12,11 +12,88 @@ import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
 /**
- * Hook managing Server-Sent Event streaming for analysis generation.
- * Orchestrates stream initiation, chunk collection, polling, and result assembly.
- * Handles interruption recovery, stream backpressure, and error propagation.
- * @returns Object with startAnalysis and stopAnalysis functions for stream control
+ * Handles a single SSE/JSON line from the worker stream: `data:`-prefixed
+ * lines have the prefix stripped before processing; anything else is passed
+ * through verbatim with debug-only error tolerance (non-data lines like SSE
+ * comments must not kill the stream). Extracted from runSingleStream
+ * (PR #321 round-2: CodeFactor complex-method finding, behavior unchanged).
  */
+function handleSseLine(line: string, adapter: SynthesisStreamAdapter): void {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  if (trimmed.startsWith('data:')) {
+    adapter.processLine(trimmed.slice(5).trim());
+    return;
+  }
+  try {
+    adapter.processLine(trimmed);
+  } catch (e) {
+    console.debug('[useSSEStream] Ignored non-data line processing failure:', e);
+  }
+}
+
+/**
+ * Reads the worker stream body to completion, feeding every SSE event frame
+ * to handleSseLine. A user-intentional abort (AbortError) is quiet; any
+ * other read failure propagates to the caller's retry/settle logic. Always
+ * releases the reader lock.
+ */
+async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal): Promise<void> {
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (currentSignal.aborted) { await reader.cancel(); break; }
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() || '';
+      for (const e of events) handleSseLine(e, adapter);
+    }
+    if (buffer.trim()) handleSseLine(buffer, adapter);
+  } catch (readErr: any) {
+    if (readErr.name === 'AbortError') return;
+    throw readErr;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/**
+ * Performs the worker stream fetch with handshake-timeout/error
+ * classification. A 25s handshake window (streamController fires abort);
+ * AbortError is classified as timeout vs user-intentional abort; raw
+ * non-abort fetch failures get Sentry context (bundle index + worker host)
+ * so transient connectivity blips are distinguishable from a systemic
+ * worker outage. Returns the raw Response for the caller to validate.
+ */
+async function fetchWorkerStream(i: number, url: string, streamPayload: WorkerStreamRequest, combinedSignal: AbortSignal, streamController: AbortController): Promise<Response> {
+  const timeoutId = setTimeout(() => streamController.abort(), 25000);
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(streamPayload),
+      signal: combinedSignal,
+    });
+  } catch (fetchErr: any) {
+    const timedOut = streamController.signal.aborted;
+    if (fetchErr.name === 'AbortError') {
+      throw new Error(timedOut ? 'Handshake timed out after 25s.' : 'Request aborted.');
+    }
+    Sentry.captureException(fetchErr, {
+      tags: { component: 'useSSEStream', phase: 'worker-fetch' },
+      extra: { bundleIndex: i, workerHost: (() => { try { return new URL(url).host; } catch { return 'unknown'; } })() },
+    });
+    throw new Error(`Network error contacting worker (bundle ${i + 1}): ${fetchErr.message || fetchErr.name || 'unknown'}`);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// skipcq: JS-0067 -- React hook: a module-level ESM export, not a global-scope script declaration (DeepSource false positive)
 export function useSSEStream() {
   const config = useSynthesisConfig();
   const TOTAL_STREAMS = config.totalStreams;
@@ -60,6 +137,7 @@ export function useSSEStream() {
     };
   }, []);
 
+  // skipcq: JS-0116 -- false positive: awaits live in the nested closures below (setTimeout/Sentry spans), not in this wrapper's own body
   const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -218,6 +296,7 @@ export function useSSEStream() {
 
               let hasSettled = false;
 
+              // skipcq: JS-R1005 -- settle logic is intentionally flat/readable at this complexity; splitting it would obscure the hasSettled invariants (DeepSource, PR #321 round-2)
               const settleAnalysis = (finalStatus: 'complete' | 'error', errorMsg?: string, successMsg?: string) => {
                 if (hasSettled) return;
                 hasSettled = true;
@@ -327,7 +406,6 @@ export function useSSEStream() {
                 };
 
                 const streamController = new AbortController();
-                const timeoutId = setTimeout(() => streamController.abort(), 25000);
 
                 const controller = new AbortController();
                 currentSignal.addEventListener('abort', () => controller.abort(), { once: true });
@@ -342,82 +420,22 @@ export function useSSEStream() {
                   if (attemptSignal.aborted) controller.abort();
                   else attemptSignal.addEventListener('abort', () => controller.abort(), { once: true });
                 }
-                const combinedSignal = controller.signal;
 
-                let res;
-                let timedOut = false;
-                try {
-                  res = await fetch(job.stream.url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(streamPayload),
-                    signal: combinedSignal,
-                  });
-                } catch (fetchErr: any) {
-                  clearTimeout(timeoutId);
-                  if (streamController.signal.aborted) timedOut = true;
-                  if (fetchErr.name === 'AbortError') {
-                    throw new Error(timedOut ? 'Handshake timed out after 25s.' : 'Request aborted.');
-                  }
-                  // Raw browser fetch failures (TypeError: Failed to fetch, etc.)
-                  // give no RCA signal on their own -- capture with bundle/host
-                  // context so transient connectivity blips are distinguishable
-                  // from a systemic worker outage in Sentry.
-                  Sentry.captureException(fetchErr, {
-                    tags: { component: 'useSSEStream', phase: 'worker-fetch' },
-                    extra: { bundleIndex: i, workerHost: (() => { try { return new URL(job.stream.url).host; } catch { return 'unknown'; } })() },
-                  });
-                  throw new Error(`Network error contacting worker (bundle ${i + 1}): ${fetchErr.message || fetchErr.name || 'unknown'}`);
-                } finally {
-                  clearTimeout(timeoutId);
-                }
+                const res = await fetchWorkerStream(i, job.stream.url, streamPayload, controller.signal, streamController);
 
                 if (!res.ok || !res.body) {
                   const errBody = await res.text().catch(() => '').then(t => t.slice(0, 120));
                   throw new Error(`Worker stream ${i + 1} failed (${res.status}): ${errBody}`);
                 }
 
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                const handleEvent = (line: string) => {
-                  const trimmed = line.trim();
-                  if (!trimmed) return;
-                  if (trimmed.startsWith('data:')) {
-                    adapter.processLine(trimmed.slice(5).trim());
-                    return;
-                  }
-                  try {
-                    adapter.processLine(trimmed);
-                  } catch (e) {
-                    console.debug('[useSSEStream] Ignored non-data line processing failure:', e);
-                  }
-                };
-
-                try {
-                  for (;;) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    if (currentSignal.aborted) { await reader.cancel(); break; }
-                    buffer += decoder.decode(value, { stream: true });
-                    const events = buffer.split(/\r?\n\r?\n/);
-                    buffer = events.pop() || '';
-                    for (const e of events) handleEvent(e);
-                  }
-                  if (buffer.trim()) handleEvent(buffer);
-                } catch (readErr: any) {
-                  if (readErr.name === 'AbortError') return;
-                  throw readErr;
-                } finally {
-                  reader.releaseLock();
-                }
+                await readSseBody(res, adapter, currentSignal);
               };
 
               const runStreams = async () => {
                 const completedIndexes = new Set<number>();
                 const failedIndexes = new Set<number>();
 
+                // skipcq: JS-R1005 -- intentional: single settle-check across both completed/failed indexes; splitting would race hasSettled (DeepSource, PR #321 round-2)
                 const checkSettleState = () => {
                   if (hasSettled) return;
                   const totalSettled = completedIndexes.size + failedIndexes.size;
