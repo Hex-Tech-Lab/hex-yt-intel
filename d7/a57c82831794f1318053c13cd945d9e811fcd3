@@ -1,0 +1,31 @@
+web/app/api/billing/webhook/route.ts
+  s_76725cfad57c94::t_e1e033ec2efd8d 32
+  s_76725cfad57c94::t_28c3337919a4f9 5,35-38
+  s_76725cfad57c94::t_2a45571ff5768f 33
+web/lib/__tests__/tier-vocabulary.test.ts
+  s_76725cfad57c94::t_1a2e59a3dd9b60 184-200
+web/lib/adapters/__tests__/paddle-billing-adapter.test.ts
+  s_76725cfad57c94::t_300c05ac502b56 32-39
+  s_76725cfad57c94::t_9c39cef2eeab1f 122-124
+  s_76725cfad57c94::t_997cb1534ce680 87-90
+web/lib/adapters/PaddleBillingAdapter.ts
+  s_76725cfad57c94::t_28c3337919a4f9 9,123-126,133
+web/app/api/billing/webhook/__tests__/route.test.ts
+  s_76725cfad57c94::t_544be4e37ff753 75-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d7a57c82831794f1318053c13cd945d9e811fcd3",
+  "prompts": {},
+  "sessions": {
+    "s_76725cfad57c94": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f68f3d7ffeSkZErIJzgeoZzD",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
