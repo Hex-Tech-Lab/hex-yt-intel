@@ -1183,8 +1183,18 @@ analysis.post("/analyze-llm-stream", async (c) => {
     // and fire-and-forget to the new /api/videos/[videoId]/chapters endpoint.
     // This runs in parallel with the LLM stream — chapters are independent of
     // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
+    //
+    // Single-persist gating (2026-09-24): each analysis dispatches 5 parallel
+    // bundle streams (chunkIndex 1..5, same metadata), and this block used to
+    // run on ALL of them -- 5 identical parse+sign+POST round trips per
+    // analysis for an idempotent upsert. Gate to the first arriving bundle;
+    // `undefined` preserves the old behavior for stale clients that don't
+    // send chunkIndex. Bundle 1 failing to reach the worker at all means the
+    // whole analysis is already degraded -- chapters are a cosmetic chip, so
+    // the loss window is acceptable vs 5x the S2S spend.
     const description = (req.metadata as { description?: string }).description;
-    if (description !== undefined) {
+    const isChapterPersistBundle = req.chunkIndex === undefined || req.chunkIndex === 1;
+    if (description !== undefined && isChapterPersistBundle) {
       const chapters = parseChapters(description);
       // Same fallback as the persist callback above (line ~769) -- previously
       // fell back to '' here, which silently skipped chapter persistence with
@@ -1213,6 +1223,16 @@ analysis.post("/analyze-llm-stream", async (c) => {
                 videoId: req.videoId,
                 status: response.status,
                 body: bodySnippet,
+              });
+              // console.error alone made this failure invisible to alerting --
+              // the 2026-09-23 production incident ("non-2xx on every stream")
+              // ran for weeks with zero Sentry signal. Captured so the next
+              // auth/route regression on this endpoint pages instead of
+              // silently degrading every analysis' chapters chip.
+              Sentry.captureMessage('Chapter persist returned non-2xx', {
+                level: 'error',
+                tags: { component: 'analyze-llm-stream', phase: 'chapter-persist' },
+                extra: { videoId: req.videoId, status: response.status, bodySnippet },
               });
             }
           } catch (err) {

@@ -190,6 +190,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // S2S chapters persist (the Cloudflare Worker posts this from ctx.waitUntil
+  // with NO cookies; gated by an HMAC content signature with purpose
+  // 'chapters' inside the handler itself, same pattern as /api/analyses/persist).
+  // Method-scoped to POST only: the sibling GET is a browser-session read
+  // (useChapters) and must stay fail-closed. Live-caught 2026-09-24 -- this
+  // exemption was missing since the decoupled chapter persist shipped
+  // (PR #206, 2026-08-06), so EVERY worker chapter persist 401'd at this
+  // gate with {"error":"Unauthorized"} before the route's own HMAC check
+  // ever ran (same bug class as /api/waitlist 2026-08-14 and
+  // /api/test-auth 2026-08-20, both documented above).
+  if (request.method === 'POST' && /^\/api\/videos\/[^/]+\/chapters$/.test(pathname)) {
+    return NextResponse.next();
+  }
+
   // Development-only test validation bypass — allows E2E test suites to bypass auth
   // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
   const isProduction = process.env.NODE_ENV === 'production';
