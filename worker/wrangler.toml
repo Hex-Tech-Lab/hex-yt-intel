@@ -61,8 +61,9 @@ command = "pnpm run build"
 #   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
 #   wrangler secret put DECODO_API_KEY --env production
 #   wrangler secret put APIFY_TOKEN --env production
+#   wrangler secret put TRANSCRIPTAPI_API_KEY --env production
 # TRANSCRIPT_PROVIDER_ORDER is a plain (non-secret) var: comma list, default
-# "apify,decodo,native" — the placeholder tier is always the final fallback.
+# "transcriptapi,apify,decodo,native" — the placeholder tier is always the final fallback.
 # TRANSCRIPT_CHAIN_BUDGET_MS is a plain (non-secret) var: total ms budget for
 # the whole transcript provider chain (default 160000 = Apify's 130s worst
 # case + a 30s floor for the fallback tiers). Not a secret.
