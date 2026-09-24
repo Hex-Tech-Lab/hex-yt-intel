@@ -75,8 +75,16 @@ export class BracketBuffer {
     this.scanIndex = this.buffer.length;
 
     if (this.objectStart > 0) {
+      // Drop the consumed leading text (e.g. a "```json" fence) but keep the
+      // scan position consistent with the SLICED buffer: everything up to the
+      // end is already scanned and reflected in depth/inString/escaped, so the
+      // next feed() resumes at scanIndex (= new length) instead of rescanning
+      // the whole buffer from 0 with stale accumulated state. The old reset to
+      // 0 double-counted every brace once per feed -- depth inflated by ~1 per
+      // feed (envelope never closed in feed(), O(n^2) scans) and was the
+      // primary CPU killer in the 2026-09-23 Free-plan exceededCpu incident.
       this.buffer = this.buffer.slice(this.objectStart);
-      this.scanIndex = 0;
+      this.scanIndex = this.buffer.length;
       this.objectStart = 0;
     } else if (this.objectStart === -1) {
       this.buffer = '';
