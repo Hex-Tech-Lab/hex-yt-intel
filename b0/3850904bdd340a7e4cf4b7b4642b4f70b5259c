@@ -1,0 +1,43 @@
+worker/src/services/TranscriptExtractor.ts
+  s_30b3df4d6cf469::t_404507775cd0d2 21
+  s_30b3df4d6cf469::t_2a924820add7a3 7
+  s_30b3df4d6cf469::t_7910a589855a54 121
+  s_30b3df4d6cf469::t_b0fd36cfc5dbfe 25
+  s_30b3df4d6cf469::t_6fddbebb0734d1 38,42-52,54
+  s_30b3df4d6cf469::t_8a540e117fc001 64-65,74-75,82-83
+worker/wrangler.toml
+  s_30b3df4d6cf469::t_24b6a54ad500eb 65-67,69-70,72-74
+worker/src/services/providers/SupadataTranscriptProvider.ts
+  s_30b3df4d6cf469::t_8273c6aa165ca9 107,113
+  s_30b3df4d6cf469::t_c2e8af3601b809 1-106,108-112,114-180
+worker/src/routes/analysis.ts
+  s_30b3df4d6cf469::t_c334580fe594e7 52-53
+  s_30b3df4d6cf469::t_b78e82ed6ed147 656-657
+  s_30b3df4d6cf469::t_187b4342f9997e 597,703,899
+worker/src/worker.ts
+  s_30b3df4d6cf469::t_1baa7a2dd9cd36 34-35
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_30b3df4d6cf469::t_da571bc164dc5f 111-113
+worker/src/__tests__/SupadataTranscriptProvider.test.ts
+  s_30b3df4d6cf469::t_9244919f546560 1-171
+worker/src/__tests__/TranscriptExtractor.test.ts
+  s_30b3df4d6cf469::t_c4412df788f6ce 160
+worker/src/__tests__/TranscriptApiProvider.test.ts
+  s_30b3df4d6cf469::t_ce848029437f93 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b03850904bdd340a7e4cf4b7b4642b4f70b5259c",
+  "prompts": {},
+  "sessions": {
+    "s_30b3df4d6cf469": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a818512ffefnzPnCOPcmOJCD",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
