@@ -51,9 +51,9 @@ export default async function PricingPage() {
 
           <FaqAccordion items={[
             { q: "How does the synthesis engine work?", a: "We process video transcripts through our UCIS (Unified Content Intelligence System) model, which extracts claims, frameworks, and tactics across the most important dimensions." },
-            { q: "Can I change my plan anytime?", a: "Yes. Upgrade or downgrade immediately. Pro-rated adjustments are handled automatically by our global payment processors." },
-            { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Max tiers can synthesize longer videos with full accuracy and timestamp mapping, up to each tier's quota." },
-            { q: "Which languages are supported?", a: "We currently support 65+ languages, tested and confirmed for real transcription/analysis accuracy. The synthesis engine automatically detects and translates content into your primary workspace language." },
+            { q: "Can I change my plan anytime?", a: "Yes. You can upgrade, downgrade or cancel from your billing page. Plan changes are handled by our payment provider Paddle." },
+            { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Max tiers can synthesize longer videos with timestamp mapping, up to each tier's quota." },
+            { q: "Which languages are supported?", a: "We currently support 65+ languages, tested and confirmed for real transcription/analysis accuracy. Analysis output is in English." },
             { q: "Do you offer refunds?", a: "Yes — within 7 days of purchase, if you haven't used any analysis credits on that purchase, it's fully refundable. Once an analysis has run, that credit is considered used." },
             { q: "Is my data secure?", a: "Absolutely. All synthesis data is encrypted and stored in your private knowledge graph. Transcripts are held in transient cache for up to 72hrs and automatically removed. We never use user data to train third-party models." }
           ]} />
