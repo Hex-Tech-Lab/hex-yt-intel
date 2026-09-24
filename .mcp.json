@@ -1,8 +1,19 @@
 {
   "mcpServers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": [
+        "code-review-graph@2.3.9",
+        "serve"
+      ],
+      "type": "stdio"
+    },
     "testsprite": {
       "command": "pnpm",
-      "args": ["dlx", "@testsprite/testsprite-mcp@0.0.43"],
+      "args": [
+        "dlx",
+        "@testsprite/testsprite-mcp@0.0.43"
+      ],
       "env": {
         "API_KEY": "${TESTSPRITE_API_KEY}"
       }
