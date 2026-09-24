@@ -67,6 +67,11 @@ export default defineConfig({
       // sibling check while vitest never ran it (found 2026-09-15 while
       // pinning the P2B validator contract this route test guards).
       'app/api/analyses/highlights/**/*.test.ts',
+      // PR #326's pricing page gained a copy-contract sibling test
+      // (qa-intel high finding: authorization-relevant file with no
+      // sibling regression test). Named explicitly, same rationale as the
+      // globs above.
+      'app/pricing/__tests__/page.test.ts',
       // PR #320 round-2 (2026-09-24): the videos/[videoId]/chapters route
       // boundary test — the middleware EXEMPTS this route's POST from the
       // session gate, so its own HMAC gate is the only auth boundary and it

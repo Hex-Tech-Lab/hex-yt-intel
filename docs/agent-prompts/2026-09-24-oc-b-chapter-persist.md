@@ -70,11 +70,7 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-<<<<<<< HEAD
-**Verified:** Cloudflare Workers Logs 2026-09-23 20:39 UTC show `[analyze-llm-stream] Chapter persist returned non-2xx` on every analyze stream (video 4mTLpuQpB80, channel UCPjNBjflYl0-HQtUvOx0Ibw). Start at the worker code that emits that message (worker/src/routes/analysis.ts) and the Vercel route it calls. Status code and body are not logged — that is part of the finding. (Historical note, corrected per Cubic round-3 review: the current implementation DOES log status + a truncated response-body snippet to console.error and Sentry — this prompt predates round 2's fix.)
-=======
 **Verified:** Cloudflare Workers Logs 2026-09-23 20:39 UTC show `[analyze-llm-stream] Chapter persist returned non-2xx` on every analyze stream (video 4mTLpuQpB80, channel UCPjNBjflYl0-HQtUvOx0Ibw). Start at the worker code that emits that message (worker/src/routes/analysis.ts) and the Vercel route it calls. Status code and body are not logged — that is part of the finding.
->>>>>>> origin/main
 
 **Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
 
