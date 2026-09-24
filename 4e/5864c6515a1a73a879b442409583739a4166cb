@@ -1,0 +1,164 @@
+worker/src/services/BracketBuffer.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 31-32,40,81-88,90,228
+.memory/AGENT_LEDGER.md
+  s_039acac7102b95::t_f0c539a5b45798 1404
+  s_0b70e74065eb41::t_91d44c9bc5ba5b 1406
+  s_a4f6d0d8e52b45::t_5201f1574276a7 1405
+.mcp.json
+  s_0b70e74065eb41::t_9c8379d995ad72 3-10,13-16
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-238
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-44,342-344
+web/components/marketing/PricingComparisonTable.tsx
+  s_0b70e74065eb41::t_9c8379d995ad72 27-28,46
+docs/history/THOS_2026-09-25_0100_TRANSCRIPT_INCIDENT_APIFY_ADR032_SPIKES_QA_RULES_MERGE_WAVE.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-59
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-238
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-207
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-231
+docs/research/2026-09-24-hex-expan-payments-lessons.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-304
+web/hooks/useSSEStream.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 15-19,21-96,140,299-300,306-311,423-424,431,438,452-455,457
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_0b70e74065eb41::t_9c8379d995ad72 43,144
+  s_0b70e74065eb41::t_0cef3c023a0a10 172
+web/middleware.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 116-127,166-172,174-190,192-195,202-204,206-209,211-280,297,303-320
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-150
+AGENTS.md
+  s_0b70e74065eb41::t_9c8379d995ad72 137,141
+web/lib/constants/pricing-plans.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 47,50
+.gitignore
+  s_0b70e74065eb41::t_9c8379d995ad72 57-59
+CLAUDE.md
+  s_0b70e74065eb41::t_9c8379d995ad72 38,41-42,54,101
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_0b70e74065eb41::t_9c8379d995ad72 204-240
+worker/src/routes/analysis.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 14,16,149-150,237-240,253,261-266,339,384-388,402-407,1207-1213,1218-1221
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-68
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-9
+docs/reviews/2026-09-24-pr322-external-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-8
+docs/reviews/2026-09-24-pr325-external-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-23
+docs/history/ROSTER_2026-07-20.md
+  s_0b70e74065eb41::t_9c8379d995ad72 600-632
+.memory/SESSION_TODO.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-34
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-256
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-238
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-244
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  s_0b70e74065eb41::t_9c8379d995ad72 1-11
+web/app/pricing/page.tsx
+  s_0b70e74065eb41::t_9c8379d995ad72 54-57
+worker/src/__tests__/chapter-persist.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-180
+worker/src/services/chapter-persist.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-127
+web/vitest.config.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 70-79
+docs/reviews/2026-09-24-pr320-external-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-8
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-237
+scripts/quality-engine/domain/Rule.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 6-13,35
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-235
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-231
+web/app/pricing/__tests__/page.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-27
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-144
+web/middleware.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 40-67
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-234
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-10
+scripts/quality-engine/application/QualityEngine.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 52-59
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0b70e74065eb41::t_9c8379d995ad72 35-52
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-235
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-232
+scripts/quality-engine/rules/sql-migrations.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-215
+scripts/quality-engine/rules/index.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 56-57
+docs/research/2026-09-24-payments-lessons-triage.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-60
+web/lib/admin-logs/__tests__/fetchCloudflareLogs.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-272
+web/app/waitlist/page.tsx
+  s_0b70e74065eb41::t_9c8379d995ad72 188-189,192,223-224,232,236,238,244,257
+docs/legal/refund-policy.md
+  s_0b70e74065eb41::t_9c8379d995ad72 3,7-8,10,14,17
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-255
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  s_0b70e74065eb41::t_9c8379d995ad72 1-78
+.memory/ADRS.md
+  s_0b70e74065eb41::t_9c8379d995ad72 26
+scripts/verify-quality-engine.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 103-109,146-151,173,216
+web/lib/admin-logs/fetchers.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 3-4,77,421-510,517-525,527,530,533,540-638,640-660,662-664,763
+docs/agent-prompts/TEMPLATE.md
+  s_0b70e74065eb41::t_9c8379d995ad72 43,135
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  s_0b70e74065eb41::t_9c8379d995ad72 1-134
+.claude/MEMORY.md
+  s_0b70e74065eb41::t_deae3b90d614ec 4,52-53
+.opencode/opencode.json
+  s_0b70e74065eb41::t_b0e83688b65a39 11-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4e5864c6515a1a73a879b442409583739a4166cb",
+  "prompts": {},
+  "sessions": {
+    "s_039acac7102b95": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2ad7b040ffewdrh1rl2wpZQwO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0b70e74065eb41": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a9a3177ffeK16HzRFDf5fR2K",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a4f6d0d8e52b45": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2ad713ffffe8m4lazAJjhLvU2",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
