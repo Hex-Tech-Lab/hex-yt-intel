@@ -1,0 +1,29 @@
+web/package.json
+  s_cbe94151e1e560::t_6c458732673a49 62,81
+scripts/spikes/adr032/run-youtube-fetch.sh
+  s_cbe94151e1e560::t_2ad4b532263792 1-42
+web/app/api/spikes/youtube-fetch/route.ts
+  s_cbe94151e1e560::t_5f50e89af07d55 1-107
+web/next.config.ts
+  s_cbe94151e1e560::t_ef4a22bd648dc7 40-42
+web/tsconfig.json
+  s_cbe94151e1e560::t_7e2f1f40540364 24
+pnpm-lock.yaml
+  s_cbe94151e1e560::t_c0d4100ef4f89e 177-179,234-236,1783-1798,1803-1806,1869-1874,1881-1884,7247-7260,7263-7266,7338-7343,7350-7355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "158aec1baf4db4ab857b103f9e7f1327d50c1837",
+  "prompts": {},
+  "sessions": {
+    "s_cbe94151e1e560": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc513e0ffeuThVqxjsNqeZeI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
