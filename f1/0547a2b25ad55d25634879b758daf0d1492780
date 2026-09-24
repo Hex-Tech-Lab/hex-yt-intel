@@ -1,0 +1,19 @@
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_6eaa11b0e75cef::t_c25de951f5d7a5 242-246,248-250,252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f10547a2b25ad55d25634879b758daf0d1492780",
+  "prompts": {},
+  "sessions": {
+    "s_6eaa11b0e75cef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2acf1d8dffeFSB27OiRZh3twm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
