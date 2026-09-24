@@ -1,0 +1,19 @@
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  s_6ea8e2c943639f::t_d545e7defb9a68 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b2f1648d7ced4323b4f534a5b8f308b294563f94",
+  "prompts": {},
+  "sessions": {
+    "s_6ea8e2c943639f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c381eacffeXcVmx0GfEkHBh5",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
