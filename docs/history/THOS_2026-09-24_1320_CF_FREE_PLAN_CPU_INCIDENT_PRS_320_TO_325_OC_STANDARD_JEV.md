@@ -57,7 +57,8 @@ Enabled by the user in OpenRouter (`~typesafe/jev-latest` → `jev-1.13-20260917
 4. **User reviews and merges** #324 first (it carries the OC config), then #320/#321/#322/#323/#325 one at a time — each later merge needs `main` merged in (ledger conflicts), one push per PR at a time (Netlify free-plan builds collide).
 5. **ADR 032** (pass-through worker + monolith split + risk register) → user approval → build waves 2a–2f → wave 3 real-video proof. Check Vercel Fluid Compute first.
 6. Tier steps 2 (DB constraint, `chat.turnLimit.light/max` seeds, `user_subscriptions.plan_tier`) and 3 (ADR 027 `pricing.tiers` registry), informed by the hex-expan payments report.
-7. Wave A-security items 2–5 (CheckoutButtonProps past SLA), T&C footnote (§5.2), roster live-verification backlog (§10.5).
+7. **qa-intel housekeeping**: implement rule candidates R1–R11 + SQL-migration scanning gap from `docs/qa-intel/RULESET_LESSONS_LEDGER.md` (2026-09-24 entry; reviews archived in `docs/reviews/`). One rule cluster per OC prompt, positive-fire + negative control each. Standing practice: archive every external review in `docs/reviews/` and mine it into the ledger.
+8. Wave A-security items 2–5 (CheckoutButtonProps past SLA), T&C footnote (§5.2), roster live-verification backlog (§10.5).
 
 ## 8. Needs the user
 - Review/merge the six PRs (none merged).
