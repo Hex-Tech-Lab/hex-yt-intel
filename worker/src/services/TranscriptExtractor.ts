@@ -4,7 +4,7 @@
  *
  * Configurable fallback chain (2026-09-24, Decodo 429 incident): the provider
  * order comes from TRANSCRIPT_PROVIDER_ORDER (comma list, default
- * "apify,decodo,native"). Each provider is tried in order; the placeholder
+ * "transcriptapi,apify,decodo,native"). Each provider is tried in order; the placeholder
  * tier is always the final fallback and is not part of the order.
  *
  * NOTE: this worker cannot read the Supabase Settings Registry directly (per
@@ -15,12 +15,13 @@
 import { addBreadcrumb, captureException, captureMessage } from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
 import { ApifyTranscriptProvider } from './providers/ApifyTranscriptProvider';
+import { TranscriptApiProvider } from './providers/TranscriptApiProvider';
 import { DecodoTranscriptProvider } from './providers/DecodoTranscriptProvider';
 import { YouTubeNativeTranscriptProvider } from './providers/YouTubeNativeTranscriptProvider';
 import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
-const DEFAULT_PROVIDER_ORDER = 'apify,decodo,native';
+const DEFAULT_PROVIDER_ORDER = 'transcriptapi,apify,decodo,native';
 
 /**
  * Parses TRANSCRIPT_CHAIN_BUDGET_MS from env into a finite budget in ms.
@@ -37,11 +38,12 @@ export function parseChainBudgetMs(raw?: string): number | undefined {
 // block for up to 130000ms (its own abort, > the actor's 120s timeout). The
 // budget must therefore leave at least 30s for the remaining fallback tiers
 // (decodo 30s + native ~25s of internal deadlines) before the placeholder:
-// 130000 (Apify worst case) + 30000 (fallback floor) = 160000ms. Overridable
+// TranscriptAPI (first tier since 2026-09-25) adds up to 30000ms before Apify:
+// 30000 (TranscriptAPI) + 130000 (Apify worst case) + 30000 (fallback floor) = 190000ms. Overridable
 // via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, so env only).
-const DEFAULT_CHAIN_BUDGET_MS = 160000;
+const DEFAULT_CHAIN_BUDGET_MS = 190000;
 
-const VALID_PROVIDER_NAMES = ['apify', 'decodo', 'native'] as const;
+const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native'] as const;
 type ProviderName = typeof VALID_PROVIDER_NAMES[number];
 
 export class TranscriptExtractor implements TranscriptProviderPort {
@@ -50,6 +52,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
   private apifyToken?: string;
   private providerOrder: ProviderName[];
   private chainBudgetMs: number;
+  private transcriptApiKey?: string;
 
   constructor(
     residentialProxyUrl?: string,
@@ -57,11 +60,13 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     providerOrder?: string,
     apifyToken?: string,
     chainBudgetMs?: number,
+    transcriptApiKey?: string,
   ) {
     this.residentialProxyUrl = residentialProxyUrl;
     this.decodoApiKey = decodoApiKey;
     this.apifyToken = apifyToken;
     this.chainBudgetMs = chainBudgetMs ?? DEFAULT_CHAIN_BUDGET_MS;
+    this.transcriptApiKey = transcriptApiKey;
     this.providerOrder = TranscriptExtractor.parseProviderOrder(providerOrder);
   }
 
@@ -97,6 +102,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     const providers: Array<{ name: ProviderName; provider: TranscriptProviderPort }> = [];
     for (const name of this.providerOrder) {
       if (name === 'apify') providers.push({ name, provider: new ApifyTranscriptProvider(this.apifyToken) });
+      else if (name === 'transcriptapi') providers.push({ name, provider: new TranscriptApiProvider(this.transcriptApiKey) });
       else if (name === 'decodo') providers.push({ name, provider: new DecodoTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
       else providers.push({ name, provider: new YouTubeNativeTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
     }

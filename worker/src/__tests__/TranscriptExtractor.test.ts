@@ -157,7 +157,7 @@ describe('parseProviderOrder invalid-entry handling', () => {
   it('falls back to the default order when every entry is invalid (and warns)', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      expect(TranscriptExtractor.parseProviderOrder('foo,bar')).toEqual(['apify', 'decodo', 'native']);
+      expect(TranscriptExtractor.parseProviderOrder('foo,bar')).toEqual(['transcriptapi', 'apify', 'decodo', 'native']);
       expect(warn).toHaveBeenCalledTimes(1);
       expect(addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ invalid: 'foo,bar' }),
