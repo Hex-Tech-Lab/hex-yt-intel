@@ -82,7 +82,7 @@ Before writing sections 1–2 below, decide:
 1. Find the endpoint, reproduce the failure path in a test, determine the root cause with file:line evidence.
 2. Fix it. Also make the log include status code + truncated body so the next failure is diagnosable.
 3. Check whether 5 streams each persisting chapters is redundant; if so, make it once per analysis (idempotent) and justify.
-4. Gates: tsc, vitest (web + worker), qa-intel diff.
+4. Gates: tsc, vitest (web + worker), qa-intel `--mode diff` AND `--mode full` (never one mode alone — standing project rule; bare `--full` is silently inert, the flag is `--mode full`).
 
 Branch: `fix/chapter-persist-non-2xx` (already checked out in your worktree).
 
@@ -168,7 +168,7 @@ Branch: `fix/chapter-persist-non-2xx` (already checked out in your worktree).
   - `planetscale-postgres-safety-review` is **NOT applicable to this repo** (wrong DB platform — Supabase Postgres, not PlanetScale). Do not invoke.
 
 - **IF `scripts/**` | `.memory/**` | `*.config.*` | `.*ignore` (Monorepo / CI)**:
-  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run in `--full` mode per the ALWAYS rule above).
+  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run `--mode full` explicitly per the ALWAYS rule above).
   - pr-review-toolkit plugin: `comment-analyzer` + `pr-test-analyzer` — PR description/test-coverage sanity.
 
 - **High-stakes / genuinely contested decisions ONLY (not a per-PR gate)**:
