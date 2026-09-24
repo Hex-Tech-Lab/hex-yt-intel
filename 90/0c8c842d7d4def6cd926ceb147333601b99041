@@ -1,0 +1,19 @@
+CLAUDE.md
+  s_19ea79c5e44b8c::t_9b0fb53558ef08 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "900c8c842d7d4def6cd926ceb147333601b99041",
+  "prompts": {},
+  "sessions": {
+    "s_19ea79c5e44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46bc1605-f1d2-4288-9b3b-5d43e467032d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
