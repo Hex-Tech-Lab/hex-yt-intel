@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   turbopack: {
     root: path.resolve(__dirname, '..'),
+    resolveAlias: {
+      '@worker/*': '../worker/src/*',
+    },
   },
   typescript: {
     tsconfigPath: "./tsconfig.json",

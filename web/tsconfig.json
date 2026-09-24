@@ -21,6 +21,7 @@
       "@/*": ["./*"],
       "@types/*": ["../packages/types/src/*"],
       "@lib/*": ["./lib/*"],
+      "@worker/*": ["../worker/src/*"],
       "@components/*": ["./components/*"],
       "@hooks/*": ["./hooks/*"],
       "@store/*": ["./store/*"],
