@@ -1,7 +1,8 @@
-import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
-import type { UserTier } from '@/lib/types/billing';
+import { isPaidTier, normalizeUserTier } from '@/lib/types/billing';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 import { SupabaseSettingsAdapter } from './SupabaseSettingsAdapter';
+import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
+import type { UserTier } from '@/lib/types/billing';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -47,8 +48,10 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
 
     // Paid tiers are not quota-gated (matches the SQL quota functions'
     // anything-but-free-is-unlimited behaviour; volume differentiation is
-    // a NEEDS USER DECISION).
-    if (tier !== 'free') {
+    // a NEEDS USER DECISION). normalizeUserTier first: the typed param can
+    // still carry a legacy/misspelled DB string at runtime (upstream casts),
+    // which must fail closed to the free quota instead of bypassing it.
+    if (isPaidTier(normalizeUserTier(tier))) {
       return { allowed: true };
     }
 

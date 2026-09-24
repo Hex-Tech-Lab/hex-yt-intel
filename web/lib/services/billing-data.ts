@@ -1,6 +1,7 @@
 import { getBillingProvider } from '@lib/billing-factory';
 import { stripe, STRIPE_PRICING } from '@lib/stripe';
 import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
+import { normalizeUserTier } from '@lib/types/billing';
 import type { UserTier } from '@lib/types/billing';
 
 /**
@@ -52,7 +53,7 @@ const usageLogCount = await persistence.getUsageLogsCountSince({ userId, since }
     invoices = []; 
   }
 
-  const tier = (userData.tier || 'free') as UserTier;
+  const tier = normalizeUserTier(userData.tier);
   const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
 
   return {

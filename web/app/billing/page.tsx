@@ -9,6 +9,7 @@ import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supab
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 import { Footer } from '@/components/Footer';
 
+import { normalizeUserTier } from '@/lib/types/billing';
 import type { UserTier } from '@/lib/types/billing';
 
 async function getBillingData(userId: string) {
@@ -59,7 +60,7 @@ async function getBillingData(userId: string) {
     }
   }
 
-  const tier = userData.tier as UserTier;
+  const tier: UserTier = normalizeUserTier(userData.tier);
   const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
 
   return {

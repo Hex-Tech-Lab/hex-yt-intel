@@ -8,6 +8,7 @@ import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
 import { showToast } from '@/lib/dashboard/export';
 import { fmtCentsToUsd } from '@/lib/utils/format';
+import { isPaidTier, normalizeUserTier } from '@/lib/types/billing';
 import type { UserTier } from '@/lib/types/billing';
 
 interface BillingDashboardProps {
@@ -26,7 +27,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const [referralCopied, setReferralCopied] = useState(false);
   const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
 
-  const isPro = initialData.tier !== 'free';
+  const isPro = isPaidTier(normalizeUserTier(initialData.tier));
   const statusColor = isPro ? "var(--ok)" : "var(--accent)";
   const status = isPro ? "active" : "free";
   
