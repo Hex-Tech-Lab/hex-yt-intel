@@ -1,0 +1,30 @@
+worker/src/services/TranscriptExtractor.ts
+  s_c0862af7ca0281::t_68ad4ee5d1a42e 69
+  s_c0862af7ca0281::t_f11dee0e5e7b8c 18
+  s_c0862af7ca0281::t_44108c82f11a93 105
+worker/src/worker.ts
+  s_c0862af7ca0281::t_03c9254f1cc0d9 33
+worker/src/services/providers/TranscriptApiProvider.ts
+  s_c0862af7ca0281::t_23429ed1d4922f 1-80
+worker/src/routes/transcript.ts
+  s_c0862af7ca0281::t_03c9254f1cc0d9 8
+worker/src/__tests__/TranscriptApiProvider.test.ts
+  s_c0862af7ca0281::t_8079582c57fae0 1-82,84-114,116,118-127
+  s_c0862af7ca0281::t_a0e44a1835bfc9 83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "31553e1ee3bdd40ff54b2e0b1b81daed33306a2a",
+  "prompts": {},
+  "sessions": {
+    "s_c0862af7ca0281": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aad9b5affeU2vp9oYfwSJAoy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
