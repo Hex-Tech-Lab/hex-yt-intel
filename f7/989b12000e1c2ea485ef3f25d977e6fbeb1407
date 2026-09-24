@@ -1,0 +1,29 @@
+worker/src/services/providers/ApifyTranscriptProvider.ts
+  s_ca4246c6c59506::t_5396aef801989a 27-31,53-57
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_19ea79c5e44b8c::t_14df10a099608c 4,48-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f7989b12000e1c2ea485ef3f25d977e6fbeb1407",
+  "prompts": {},
+  "sessions": {
+    "s_19ea79c5e44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46bc1605-f1d2-4288-9b3b-5d43e467032d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ca4246c6c59506": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2ad713fdffe8rMUVea6gfXs0M",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
