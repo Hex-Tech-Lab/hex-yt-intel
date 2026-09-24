@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ApifyTranscriptProvider } from '../services/providers/ApifyTranscriptProvider';
+import { ApifyTranscriptProvider, APIFY_LANGUAGE_PREFERENCE } from '../services/providers/ApifyTranscriptProvider';
 import { TranscriptExtractor } from '../services/TranscriptExtractor';
 
 // Mock Sentry
@@ -45,7 +45,9 @@ describe('ApifyTranscriptProvider', () => {
     expect(url).toContain('run-sync-get-dataset-items?timeout=120&maxTotalChargeUsd=0.05');
     const body = JSON.parse(init.body);
     expect(body.youtube_url).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    expect(body.languages).toEqual(['en', 'ar', 'de', 'ja', 'nl', 'he']);
+    expect(body.languages).toEqual([...APIFY_LANGUAGE_PREFERENCE]);
+    expect(body.languages.slice(0, 2)).toEqual(['en', 'ar']);
+    expect(body.languages.length).toBeGreaterThanOrEqual(65);
     expect(init.headers.Authorization).toBe('Bearer token');
   });
 

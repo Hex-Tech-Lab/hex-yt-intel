@@ -24,6 +24,11 @@ interface ApifyDatasetItem {
   non_timestamped?: string[];
 }
 
+/** Ordered language preference sent to the Apify actor (en/ar first, then YouTube caption languages). */
+export const APIFY_LANGUAGE_PREFERENCE: readonly string[] = [
+  'en', 'ar', 'es', 'fr', 'de', 'pt', 'it', 'ru', 'ja', 'ko', 'zh-Hans', 'zh-Hant', 'hi', 'bn', 'ur', 'id', 'ms', 'tr', 'fa', 'he', 'nl', 'sv', 'no', 'da', 'fi', 'pl', 'cs', 'sk', 'hu', 'ro', 'bg', 'uk', 'el', 'sr', 'hr', 'sl', 'lt', 'lv', 'et', 'vi', 'th', 'tl', 'ta', 'te', 'ml', 'kn', 'mr', 'gu', 'pa', 'sw', 'am', 'yo', 'zu', 'af', 'sq', 'hy', 'az', 'eu', 'be', 'bs', 'ca', 'gl', 'ka', 'kk', 'km', 'lo', 'mk', 'mn', 'ne', 'si', 'uz', 'cy', 'is', 'ga', 'mt',
+];
+
 export class ApifyTranscriptProvider implements TranscriptProviderPort {
   private apifyToken?: string;
 
@@ -45,13 +50,11 @@ export class ApifyTranscriptProvider implements TranscriptProviderPort {
       },
       body: JSON.stringify({
         youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
-        // Ordered list of languages the product analyses. Derived empirically
-        // from languages observed in completed analyses (2026-09-24 DB query):
-        // en/ar dominate (product targets) plus de/ja/nl/he seen repeatedly in
-        // real traffic (e.g. LTNVA2iP9YU de, 9T8L73AidFY ja, vmZzZ9Tv-ks nl,
-        // sw22FMB_SWI he). A language Apify returns outside this list is
-        // still accepted below.
-        languages: ['en', 'ar', 'de', 'ja', 'nl', 'he'],
+        // Ordered preference list. The actor returns the FIRST available
+        // transcript matching a listed code and fails if none match, so the
+        // list covers YouTube's caption languages (the site promises 65+),
+        // product targets en/ar first. One call regardless of list length.
+        languages: APIFY_LANGUAGE_PREFERENCE,
         include_metadata: false,
       }),
       signal: AbortSignal.timeout(130000),
