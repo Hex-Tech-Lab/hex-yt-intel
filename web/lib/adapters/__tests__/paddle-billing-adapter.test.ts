@@ -99,12 +99,15 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
     expect(result.status).toBe(200);
     expect(mockUpsert).toHaveBeenCalledTimes(1);
 
-    // Call it again (replay)
-    mockUpsert.mockResolvedValueOnce({ error: null });
+    // Call it again (replay). Since PR #325 round 4, the per-event-id
+    // idempotency lock dedupes BEFORE any adapter call: the replay returns
+    // 200 without re-processing, and the upsert is NOT called a second time.
     const replayResult = await useCase.execute(rawBody, validSignature, secret);
     
     expect(replayResult.success).toBe(true);
-    expect(mockUpsert).toHaveBeenCalledTimes(2); // Upsert handles idempotency
+    expect(replayResult.status).toBe(200);
+    expect(replayResult.message).toBe('Duplicate event ignored');
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
   });
 
   it('Test 3: Valid subscription.created event maps a founder plan string to pro in users.tier and clamps the subscriptions column', async () => {

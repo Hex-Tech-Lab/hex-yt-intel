@@ -5,11 +5,12 @@ import type { UserTier } from '@/lib/types/billing';
 /**
  * Settings-Registry-based multi-provider price-ID structure (2026-08-18).
  *
- * Real MoR shortlist for hex-yt-intel: Paddle (primary; sandbox-only today --
- * the account is not yet KYC-verified, not a caution/hold-back decision, just
- * what's actually available to transact against right now), Dodo Payments
- * (confirmed fallback, no API integration built yet), Creem (third option,
- * weaker trust signal but real, no API integration built yet).
+ * Real MoR shortlist for hex-yt-intel (updated 2026-09-24): Paddle
+ * (primary — KYC still pending, the account is not yet verified to
+ * transact), then the fallback cascade Lemon Squeezy → Payhip →
+ * FastSpring (no API integrations built yet for any of them). Dodo
+ * Payments is OUT: it refused Egypt-resident founders (confirmed by their
+ * support, 2026-09-14). Creem was not pursued.
  *
  * Shape: tier -> interval -> provider -> real price ID, or null if that
  * combo has no real price ID yet. Mirrors the cascade registry pattern
