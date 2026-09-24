@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — <TASK_NAME>
+# Agent Dispatch Prompt — Log snapshot never returns Cloudflare data; UI reports success on 1/5
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
-**Effort Level**: <high | medium | low>
+**Target Agent**: OC (opencode, openrouter/z-ai/glm-5.3-flash via committed .opencode/opencode.json)
+**Effort Level**: low (pinned); be thorough in the report
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,13 +70,20 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-<Context>
+**Verified:** (1) `web/lib/admin-logs/fetchers.ts` `fetchCloudflareLogs` queries `workersInvocationsAdaptive(limit: 50, orderBy: [datetime_DESC])` with NO datetime filter and fields that omit outcome detail; `scripts/poll-logs-snapshot.sh` returned `totalEntries: 0` while the worker had 78+ invocations incl. `exceededResources` in the window. A correct query with `filter:{datetime_geq,datetime_leq}` returns data with the same credentials. Workers Logs (observability, persist=true in worker/wrangler.toml) are also queryable via `POST /accounts/{id}/workers/observability/telemetry/query` and give per-request outcomes like `exceededCpu` — use them. (2) The client log printed "Analysis stream completed successfully." after "1/5 streams completed." (web/hooks/useSSEStream.ts).
+
+**Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
+
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-<Directives>
+1. Fix the Cloudflare fetcher: time-window filter from the requested range, include status/outcome, and add Workers Observability events (errors + outcomes) to the snapshot. Test with a mocked API response.
+2. Make the final UI/log message reflect reality for partial results (e.g. "Partial: 1/5 streams completed — missing dimensions will be regenerated") without changing settle semantics.
+3. Gates: tsc, vitest, qa-intel diff.
+
+Branch: `fix/observability-blind-spots` (already checked out in your worktree).
 
 ---
 
