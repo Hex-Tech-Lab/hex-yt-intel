@@ -1,0 +1,22 @@
+spikes/adr032-worker/src/index.js
+  s_487ecb5c916eff::t_b8c0c4ea956342 57-61
+  s_487ecb5c916eff::t_422c7c76d65bbe 29
+  s_487ecb5c916eff::t_2c54b47bb88745 39
+  s_487ecb5c916eff::t_313be51b59b0cb 22-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fe5b221e9f79a2e88c66f15231ec89ef75125f14",
+  "prompts": {},
+  "sessions": {
+    "s_487ecb5c916eff": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc4f802ffeKDaObTabmU1my8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
