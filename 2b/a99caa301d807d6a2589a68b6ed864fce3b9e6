@@ -1,0 +1,26 @@
+spikes/adr032-worker/fixtures/sse-500kb.txt
+  s_487ecb5c916eff::t_dfe9a3992abae2 1-4410
+spikes/adr032-worker/wrangler.toml
+  s_487ecb5c916eff::t_dcb7af350fef8d 1-6
+spikes/adr032-worker/src/index.js
+  s_487ecb5c916eff::t_d56209597828f0 1-54,56-64
+  s_487ecb5c916eff::t_339db61651659a 55
+spikes/adr032-worker/fixtures/sse-2mb.txt
+  s_487ecb5c916eff::t_dfe9a3992abae2 1-18016
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2ba99caa301d807d6a2589a68b6ed864fce3b9e6",
+  "prompts": {},
+  "sessions": {
+    "s_487ecb5c916eff": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc4f802ffeKDaObTabmU1my8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
