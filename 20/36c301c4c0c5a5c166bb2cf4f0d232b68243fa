@@ -1,0 +1,31 @@
+web/lib/__tests__/contracts/stance-relations-persistence.contract.test.ts
+  s_73c2a831fb04c7::t_089f8394a480df 21,73,85,99,109
+web/lib/__tests__/relations-engine-repair.test.ts
+  s_73c2a831fb04c7::t_089f8394a480df 14,21
+web/app/api/analyses/[id]/relations/__tests__/route.test.ts
+  s_73c2a831fb04c7::t_a61e3332b4b3fe 159,177,201,220,237,272
+  s_73c2a831fb04c7::t_2d45c72013c7ca 17-18,32,38
+  s_73c2a831fb04c7::t_4c8e0f9d62ef14 12
+  s_73c2a831fb04c7::t_bad3155323749e 72-73
+web/lib/adapters/SupabaseAnalysisPayloadAdapter.ts
+  s_73c2a831fb04c7::t_ff550f59843368 5
+  s_73c2a831fb04c7::t_7f85cf4de497d1 2,6
+web/app/api/analyses/[id]/relations/route.ts
+  s_73c2a831fb04c7::t_586e0b75ffd697 24-26,28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2036c301c4c0c5a5c166bb2cf4f0d232b68243fa",
+  "prompts": {},
+  "sessions": {
+    "s_73c2a831fb04c7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f68c676ffeTfCFhUSas2CNNn",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
