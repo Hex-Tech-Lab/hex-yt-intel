@@ -1,0 +1,19 @@
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_0ad06df9e3ce0b::t_d3e682290e6697 203-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "acde39364c6a38b1e5c7482eda31160c19cb9007",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
