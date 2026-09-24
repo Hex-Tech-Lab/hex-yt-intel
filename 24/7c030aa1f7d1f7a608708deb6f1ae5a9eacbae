@@ -1,0 +1,45 @@
+web/app/billing/page.tsx
+  s_c073eb8d34bab0::t_183390663f905f 62
+  s_c073eb8d34bab0::t_51a8e1e504b059 12
+web/components/billing/billing-dashboard-client.tsx
+  s_c073eb8d34bab0::t_a2ce48fc2bbdb9 11
+  s_c073eb8d34bab0::t_8540a86ad0e4c1 29
+web/app/api/usage/summary/route.ts
+  s_c073eb8d34bab0::t_70368e88e038a5 54
+  s_c073eb8d34bab0::t_66217bb4ed4831 7
+web/lib/services/billing-data.ts
+  s_c073eb8d34bab0::t_95172b53e32c21 55
+  s_c073eb8d34bab0::t_02e80345260cde 4
+web/lib/types/billing.ts
+  s_c073eb8d34bab0::t_a26aa19b8f4c22 14-25
+web/lib/adapters/SupabaseAuthAdapter.ts
+  s_c073eb8d34bab0::t_a274b04554e0c9 25
+  s_c073eb8d34bab0::t_3384d78c03161e 3
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_c073eb8d34bab0::t_c40045164ae669 139
+  s_c073eb8d34bab0::t_d512d1560a20d7 4
+  s_c073eb8d34bab0::t_e1c6745f793e72 105
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_c073eb8d34bab0::t_62fa3a3305fe3d 2
+  s_c073eb8d34bab0::t_ade18ec73d0d26 50-53
+web/lib/__tests__/normalize-user-tier.test.ts
+  s_c073eb8d34bab0::t_30859650fdb2dc 1-41
+web/lib/adapters/__tests__/supabase-auth-adapter.test.ts
+  s_c073eb8d34bab0::t_c69a490712208f 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "247c030aa1f7d1f7a608708deb6f1ae5a9eacbae",
+  "prompts": {},
+  "sessions": {
+    "s_c073eb8d34bab0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cdf5c79ffeHIER9ujIn4O0Qx",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
