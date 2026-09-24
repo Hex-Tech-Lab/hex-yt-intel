@@ -1,0 +1,31 @@
+scripts/research/run-pricing-research.ts
+  s_e303449480d019::t_5e7ebe62c51964 21-33,37-56,60-78,82-98,102-123
+.memory/AGENT_LEDGER.md
+  s_0ad06df9e3ce0b::t_db5c4cf000bf68 1405
+patch_script.cjs
+  s_e303449480d019::t_1c6118d065ec56 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "261312129ba4e0b87ba46beabbc12ed375729837",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e303449480d019": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8b2700ffe4Oez4jq8M3TibK",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
