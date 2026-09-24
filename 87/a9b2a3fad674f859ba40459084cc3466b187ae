@@ -1,0 +1,72 @@
+.claude/MEMORY.md
+  h_60000122af7b55 4,52-53
+.gitignore
+  h_60000122af7b55 57-59
+.mcp.json
+  h_60000122af7b55 3-10,13-16
+.opencode/opencode.json
+  h_60000122af7b55 11-23
+AGENTS.md
+  h_60000122af7b55 137,141
+CLAUDE.md
+  h_60000122af7b55 38,41-42,54
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  h_60000122af7b55 1-44,342-344
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  h_60000122af7b55 1-207
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  h_60000122af7b55 1-238
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  h_60000122af7b55 1-256
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  h_60000122af7b55 1-238
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  h_60000122af7b55 1-235
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  h_60000122af7b55 1-232
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  h_60000122af7b55 1-234
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  h_60000122af7b55 43,142
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  h_60000122af7b55 43,86,148
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  h_60000122af7b55 1-233
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  h_60000122af7b55 1-238
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  h_60000122af7b55 1-231
+docs/agent-prompts/TEMPLATE.md
+  h_60000122af7b55 43,135
+docs/history/ROSTER_2026-07-20.md
+  h_60000122af7b55 600-632
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  h_60000122af7b55 1-78
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  h_60000122af7b55 1-68
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  h_60000122af7b55 35-50
+docs/reviews/2026-09-24-pr320-external-review.md
+  h_60000122af7b55 1-8
+docs/reviews/2026-09-24-pr321-external-review.md
+  h_60000122af7b55 1-9
+docs/reviews/2026-09-24-pr322-external-review.md
+  h_60000122af7b55 1-8
+docs/reviews/2026-09-24-pr324-external-review.md
+  h_60000122af7b55 1-10
+docs/reviews/2026-09-24-pr325-external-review.md
+  h_60000122af7b55 1-23
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  h_60000122af7b55 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "87a9b2a3fad674f859ba40459084cc3466b187ae",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
