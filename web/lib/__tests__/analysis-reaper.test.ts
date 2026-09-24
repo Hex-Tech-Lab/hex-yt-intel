@@ -363,4 +363,103 @@ describe('tryChunkRecovery — partial-set salvage', () => {
   });
 });
 
+/**
+ * RCA (2026-09-24, vector-coverage): reaper-settled rows reached
+ * billing_status='completed' without ever publishing an embedding job (the
+ * embed rode the persist route's validation-chain publish, which a reaper
+ * settle never runs). The reaper must now publish the embed task directly
+ * when its settle completes the row — and NOT when it settles 'failed'
+ * (a partial has no embeddable complete analysis yet; the remediation path
+ * owns the later publish).
+ */
+describe('tryChunkRecovery publishes the embedding task on completed settles only', () => {
+  function makeChunk(index: number, dims: number[], overrides?: Partial<ChunkRow>): ChunkRow {
+    return {
+      chunk_index: index,
+      status: 'completed',
+      payload: { dimensions: dims.map(n => ({ number: n, name: `D${n}`, content: `Body for dimension ${n} with enough length.` })) },
+      ...overrides,
+    };
+  }
+
+  /** Full 11/11 set spread across all 5 streams — the only shape the reaper bills 'completed'. */
+  function fullSetChunks(): ChunkRow[] {
+    return [
+      makeChunk(1, [1]),
+      makeChunk(2, [2, 4, 6]),
+      makeChunk(3, [3, 9, 11]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [8]),
+    ];
+  }
+
+  async function loadWithEmbedMock(chunkRows: ChunkRow[]) {
+    vi.resetModules();
+    const publishEmbeddingTask = vi.fn().mockResolvedValue('msg-id');
+    vi.doMock('@/lib/qstash-client', () => ({
+      publishEmbeddingTask,
+      publishValidationTask: vi.fn(),
+      publishDigestTask: vi.fn(),
+      publishHighlightsTask: vi.fn(),
+    }));
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+          }),
+        }),
+      }),
+    }));
+    vi.doMock('@/lib/adapters', () => ({
+      SupabasePersistenceAdapter: class {
+        updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+      },
+    }));
+
+    const mod = await import('@/lib/services/analysis-reaper');
+    const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
+    return { tryChunkRecovery: mod.tryChunkRecovery, publishEmbeddingTask, persistenceAdapter: new SupabasePersistenceAdapter() as any };
+  }
+
+  it('full-set settle (completed) publishes the embed task with the stitched markdown and owner attribution', async () => {
+    const { tryChunkRecovery, publishEmbeddingTask, persistenceAdapter } = await loadWithEmbedMock(fullSetChunks());
+
+    const result = await tryChunkRecovery('analysis-vec-1', null, persistenceAdapter, 'user-1');
+
+    expect(result).toEqual({ outcome: 'completed' });
+    expect(publishEmbeddingTask).toHaveBeenCalledTimes(1);
+    expect(publishEmbeddingTask).toHaveBeenCalledWith({
+      analysisId: 'analysis-vec-1',
+      markdown: expect.any(String),
+      userId: 'user-1',
+    });
+  });
+
+  it('null-owner rows attribute the embed publish to the reaper (OpenRouter user field must be non-empty)', async () => {
+    const { tryChunkRecovery, publishEmbeddingTask, persistenceAdapter } = await loadWithEmbedMock(fullSetChunks());
+
+    await tryChunkRecovery('analysis-vec-2', null, persistenceAdapter, null);
+
+    expect(publishEmbeddingTask).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'reaper:analysis-vec-2' })
+    );
+  });
+
+  it('partial-set settle (failed) does NOT publish the embed task', async () => {
+    const rows = [
+      makeChunk(1, [1]),
+      makeChunk(3, [2, 4, 6]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [3, 9, 11]),
+    ]; // 10/11 — unbilled partial
+    const { tryChunkRecovery, publishEmbeddingTask, persistenceAdapter } = await loadWithEmbedMock(rows);
+
+    const result = await tryChunkRecovery('analysis-vec-3', null, persistenceAdapter, 'user-1');
+
+    expect(result).toEqual({ outcome: 'failed' });
+    expect(publishEmbeddingTask).not.toHaveBeenCalled();
+  });
+});
+
 

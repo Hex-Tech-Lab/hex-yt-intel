@@ -4,6 +4,7 @@
  * Replaces fire-and-forget promises that Vercel aggressively kills
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { Client, Receiver } from '@upstash/qstash';
 
 // Lazy initialization: only validate token when client is actually used
@@ -195,6 +196,15 @@ export async function publishEmbeddingTask(payload: {
     console.error('[qstash] Failed to publish embedding task', {
       analysisId: payload.analysisId,
       error: error instanceof Error ? error.message : String(error),
+    });
+    // RCA (2026-09-24, vector-coverage): this publish was a silent failure —
+    // the error was swallowed into the 'unknown' return and the callers'
+    // .catch() handlers could never fire (the function never rejects), so a
+    // missing QSTASH_TOKEN/NEXT_PUBLIC_APP_URL dropped the embed job with
+    // zero observability. Capture it so the gap is visible in Sentry.
+    Sentry.captureException(error, {
+      tags: { service: 'qstash', operation: 'publish_embedding_task' },
+      contexts: { analysis: { analysisId: payload.analysisId } },
     });
     return 'unknown';
   }

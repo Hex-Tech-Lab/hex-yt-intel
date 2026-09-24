@@ -68,6 +68,11 @@ export async function POST(request: NextRequest) {
     // well-formed.
     if (!userId || typeof userId !== 'string') {
       console.warn('[embed-webhook] Rejected: missing or invalid userId in payload', { analysisId });
+      Sentry.captureMessage('Embed payload rejected: missing/invalid userId', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'payload_invalid' },
+        contexts: { analysis: { analysisId } },
+      });
       return NextResponse.json({ error: 'Invalid payload: userId is required' }, { status: 400 });
     }
 
@@ -81,6 +86,10 @@ export async function POST(request: NextRequest) {
 
       if (isProduction) {
         console.error('[embed-webhook] CRITICAL: Upstash Vector index credentials are placeholders or missing in PRODUCTION environment!');
+        Sentry.captureMessage(
+          'Upstash Vector credentials missing in production — embed job rejected (503)',
+          { level: 'error', tags: { service: 'webhook', operation: 'embed', phase: 'credentials_missing' } }
+        );
         return NextResponse.json({
           success: false,
           error: 'Service Unavailable: Upstash Vector credentials are not configured in production.'
@@ -96,10 +105,43 @@ export async function POST(request: NextRequest) {
     }
 
     if (!analysisId || !markdown) {
+      Sentry.captureMessage('Embed payload rejected: missing analysisId or markdown', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'payload_invalid' },
+        contexts: { analysis: { analysisId: analysisId ?? null } },
+      });
       return NextResponse.json(
         { error: 'Missing required payload fields: analysisId or markdown' },
         { status: 400 }
       );
+    }
+
+    // RCA (2026-09-24, vector-coverage): the embed job is now published from
+    // MULTIPLE finalize paths (persist route, analysis reaper) and the
+    // upsert itself is idempotent by analysisId, but re-publishing still
+    // re-spends an OpenRouter embedding call. Skip early when the vector
+    // already exists so retried/duplicate publishes are true no-ops.
+    try {
+      const existing = await vectorIndex.fetch([analysisId], {
+        includeVectors: false,
+        includeMetadata: false,
+      });
+      if (Array.isArray(existing) && existing.some(Boolean)) {
+        console.log('[embed-webhook] Vector already present, skipping duplicate embed', { analysisId });
+        return NextResponse.json({
+          success: true,
+          analysisId,
+          skipped: true,
+          alreadyEmbedded: true,
+        });
+      }
+    } catch (fetchErr) {
+      // Presence check is an optimization only — a fetch failure must NOT
+      // prevent the embed (the upsert would still succeed idempotently).
+      console.warn('[embed-webhook] Vector presence check failed, continuing with embed', {
+        analysisId,
+        error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
+      });
     }
 
     console.log('[embed-webhook] Processing embedding', {

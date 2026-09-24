@@ -20,6 +20,7 @@ import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 // ADR 021 Phase 3 — the requeue-partial middle branch lives in its sibling
 // module (same "kept as a sibling, not merged" split dimension-remediation.ts
@@ -114,6 +115,7 @@ export interface SweepResult {
 
 interface StuckRow {
   id: string;
+  user_id: string | null;
   analysis_markdown: string | null;
   validation_report: Record<string, unknown> | null;
   created_at?: string;
@@ -253,7 +255,8 @@ function decideChunkSalvagePolicy(
 export async function tryChunkRecovery(
   analysisId: string,
   existingReport: unknown,
-  persistenceAdapter: SupabasePersistenceAdapter
+  persistenceAdapter: SupabasePersistenceAdapter,
+  userId: string | null = null
 ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
   const service = getSupabaseServiceClient();
   const { data, error } = await service
@@ -345,6 +348,28 @@ export async function tryChunkRecovery(
   );
   if (!updated) return null; // raced -- a concurrent legitimate settle won; caller treats this row as "handled"
 
+  // RCA (2026-09-24, vector-coverage): reaper-settled rows reached
+  // billing_status='completed' without ever publishing an embedding job
+  // (the embed rode the persist route's validation-chain publish, which a
+  // reaper settle never runs). Publish directly here. Idempotent: the embed
+  // webhook skips when the vector already exists. Best-effort — an embed
+  // publish failure must never change the reap outcome.
+  if (billingStatus === 'completed') {
+    await publishEmbeddingTask({
+      analysisId,
+      markdown: stitchResult.markdown,
+      // OpenRouter cost attribution needs a non-empty user string; rows
+      // settled by the reaper have a real owner when available, otherwise
+      // attribute to the reaper itself (same shape as dimension-remediation).
+      userId: userId || `reaper:${analysisId}`,
+    }).catch((embedErr) => {
+      Sentry.captureException(embedErr, {
+        tags: { service: 'analysis-reaper', phase: 'publish_embedding_task' },
+        extra: { analysisId },
+      });
+    });
+  }
+
   return { outcome: billingStatus === 'completed' ? 'completed' : 'failed' };
 }
 
@@ -360,7 +385,7 @@ async function attemptChunkRecovery(
   persistenceAdapter: SupabasePersistenceAdapter
 ): Promise<{ status: 'recovered'; outcome: Exclude<ReapOutcome, 'requeue-partial'> } | { status: 'not_eligible' } | { status: 'error' }> {
   try {
-    const res = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter);
+    const res = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter, row.user_id);
     if (res) return { status: 'recovered', outcome: res.outcome };
     return { status: 'not_eligible' };
   } catch (chunkErr) {
@@ -414,7 +439,11 @@ async function processStuckRow(
 ): Promise<'completed' | 'failed' | 'requeued' | 'raced' | 'unknown' | 'skipped'> {
   const recovery = await attemptChunkRecovery(row, persistenceAdapter);
   if (recovery.status === 'error') return 'skipped';
-  if (recovery.status === 'recovered') return recovery.outcome;
+  if (recovery.status === 'recovered') {
+    // Embed publish for the chunk-recovery path lives INSIDE tryChunkRecovery
+    // (only that scope has the stitched markdown) — pass the owner through.
+    return recovery.outcome;
+  }
 
   const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
 
@@ -437,6 +466,25 @@ async function processStuckRow(
     return 'skipped';
   }
   if (!count) return 'raced';
+
+  // RCA (2026-09-24, vector-coverage): markdown-path settle — publish the
+  // embed job directly, same as the chunk-recovery path above. Idempotent /
+  // best-effort. outcome==='completed' implies analysis_markdown carried the
+  // full 11 dimensions (decideReapOutcome), so there is always content to
+  // embed here.
+  if (patch.billing_status === 'completed' && row.analysis_markdown) {
+    await publishEmbeddingTask({
+      analysisId: row.id,
+      markdown: row.analysis_markdown,
+      userId: row.user_id || `reaper:${row.id}`,
+    }).catch((embedErr) => {
+      Sentry.captureException(embedErr, {
+        tags: { service: 'analysis-reaper', phase: 'publish_embedding_task_markdown_path' },
+        extra: { analysisId: row.id },
+      });
+    });
+  }
+
   return outcome === 'completed' ? 'completed' : 'failed';
 }
 
@@ -453,7 +501,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
 
   const { data, error } = await service
     .from('analyses')
-    .select('id, analysis_markdown, validation_report, created_at, updated_at')
+    .select('id, user_id, analysis_markdown, validation_report, created_at, updated_at')
     .eq('billing_status', 'processing')
     .or(`updated_at.lt.${cutoffIso},and(updated_at.is.null,created_at.lt.${cutoffIso})`)
     .limit(limit);

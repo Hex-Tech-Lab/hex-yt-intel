@@ -56,6 +56,7 @@ import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
 import { signChannelMetaToken, signCommentsTier3Token } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseAuxRemediationAdapter } from '@/lib/adapters/SupabaseAuxRemediationAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
@@ -346,6 +347,14 @@ export async function remediateAuxGap(gap: AuxGap): Promise<AuxRemediationResult
   }
 
   if (isFullyComplete) {
+    // RCA (2026-09-24, vector-coverage): aux-remediation is one of the four
+    // finalize-to-'completed' paths and previously never published an
+    // embedding job (the embed rode the persist route's validation chain).
+    // Idempotent (embed webhook skips existing vectors) / best-effort.
+    await publishEmbeddingTask({ analysisId: gap.id, markdown: gap.markdown, userId: gap.userId }).catch((err) => {
+      console.error('[aux-remediation] embed publish failed', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
+      Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'embed_publish', analysisId: gap.id } } });
+    });
     return { analysisId: gap.id, stage: AuxRemediationStage.Completed };
   }
   if (currentRetryCount + 1 >= REMEDIATION_MAX_RETRIES) {

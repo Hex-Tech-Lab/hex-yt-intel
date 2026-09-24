@@ -56,8 +56,8 @@ vi.mock('@/lib/qstash-client', () => ({
   publishValidationTask: vi.fn().mockResolvedValue(null),
   publishDigestTask: vi.fn().mockResolvedValue(null),
   publishHighlightsTask: vi.fn().mockResolvedValue(null),
+  publishEmbeddingTask: vi.fn().mockResolvedValue(null),
 }));
-
 vi.mock('@/lib/services/cache', () => ({
   setAnalysisCache: vi.fn().mockResolvedValue(null),
   generateCacheKey: vi.fn().mockReturnValue('cache-key'),
@@ -209,5 +209,73 @@ describe('P0 — parent finalize is an atomic processing→terminal CAS transiti
     expect(adapterInstance.updateAnalysisResult.mock.calls[0][0].guardBillingStatus).toBe('processing');
     // The stale write was rejected — nothing else fired.
     expect(adapterInstance.persistAnalysisChunk).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * RCA (2026-09-24, vector-coverage): embedding jobs previously rode the
+ * transcript_available-gated validation-webhook chain, so completed rows
+ * finalized outside that chain (or metadata-only rows, or rows whose
+ * validate webhook dropped mid-chain) never got vectors — 68/119 completed
+ * rows were missing at RCA time. The finalize now publishes the embed task
+ * DIRECTLY on every completed path, decoupled from transcript availability.
+ */
+describe('finalize publishes the embedding task directly on every completed path', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    verifyContentSig.mockResolvedValue(true);
+    adapterInstance.findAnalysisForPersist.mockResolvedValue(ROW);
+    adapterInstance.persistAnalysisChunk.mockResolvedValue(null);
+    adapterInstance.markChunkFailed.mockResolvedValue(true);
+    adapterInstance.findAnalysisChunks.mockResolvedValue(fullCompletedChunkRows());
+    adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: true });
+  });
+
+  it('chunk-path finalize publishes the embed task (idempotent upsert happens in the webhook)', async () => {
+    const res = await POST(finalizePost());
+    expect(res.status).toBe(200);
+
+    const { publishEmbeddingTask } = await import('@/lib/qstash-client');
+    expect(publishEmbeddingTask).toHaveBeenCalledTimes(1);
+    expect(publishEmbeddingTask).toHaveBeenCalledWith({
+      analysisId: ANALYSIS_ID,
+      markdown: expect.any(String),
+      userId: 'user-1',
+    });
+  });
+
+  it('non-chunk finalize publishes the embed task even WITHOUT a transcript (metadata-only rows embed too)', async () => {
+    adapterInstance.findAnalysisChunks.mockResolvedValue([]);
+    adapterInstance.findAnalysisForPersist.mockResolvedValue({
+      ...ROW,
+      validationReport: {
+        ...ROW.validationReport,
+        transcript_available: false,
+        analysis_type: 'metadata-only',
+      },
+    });
+
+    const res = await POST(
+      post({ markdown: 'final markdown', model: 'm', valid: true, status: 'completed' })
+    );
+    expect(res.status).toBe(200);
+
+    const { publishEmbeddingTask, publishValidationTask } = await import('@/lib/qstash-client');
+    // Embed fires — this is the fix. Validation publish stays
+    // transcript-gated (unchanged behavior).
+    expect(publishEmbeddingTask).toHaveBeenCalledTimes(1);
+    expect(publishValidationTask).not.toHaveBeenCalled();
+  });
+
+  it('CAS loss still publishes zero embed tasks (side effects only fire for the CAS winner)', async () => {
+    adapterInstance.findAnalysisChunks.mockResolvedValue([]);
+    adapterInstance.updateAnalysisResult.mockResolvedValue({ updated: false });
+
+    await POST(
+      post({ markdown: 'final markdown', model: 'm', valid: true, status: 'completed' })
+    );
+
+    const { publishEmbeddingTask } = await import('@/lib/qstash-client');
+    expect(publishEmbeddingTask).not.toHaveBeenCalled();
   });
 });
