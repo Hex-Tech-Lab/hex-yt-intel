@@ -251,6 +251,20 @@ export async function POST(request: NextRequest) {
 
     const parsedBody = bodySchema.safeParse(body);
     if (!parsedBody.success) {
+      // Log which field failed: this branch used to 400 silently, and the
+      // worker retries every non-OK persist, so a schema mismatch surfaced
+      // only as "persist exhausted all retries" with no cause (2026-09-25,
+      // analysis 6047514f stuck in processing after 44 silent 400s).
+      const flattened = parsedBody.error.flatten();
+      console.warn('[analyses/persist] Invalid request payload schema', {
+        analysisId: typeof body?.analysisId === 'string' ? body.analysisId : undefined,
+        chunkIndex: typeof body?.chunkIndex === 'number' ? body.chunkIndex : undefined,
+        fieldErrors: flattened.fieldErrors,
+      });
+      Sentry.captureMessage('persist: invalid request payload schema', {
+        level: 'error',
+        extra: { fieldErrors: flattened.fieldErrors, formErrors: flattened.formErrors },
+      });
       return NextResponse.json({ 
         error: 'Invalid request payload schema', 
         details: parsedBody.error.flatten() 
