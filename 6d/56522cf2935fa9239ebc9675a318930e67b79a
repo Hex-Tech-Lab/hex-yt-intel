@@ -1,0 +1,19 @@
+scripts/quality-engine/infra/TrackedFileEnumeration.ts
+  s_0ad06df9e3ce0b::t_ae84a7f9744c9e 24-25,35,45-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6d56522cf2935fa9239ebc9675a318930e67b79a",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
