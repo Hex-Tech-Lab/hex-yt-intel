@@ -19,9 +19,14 @@ export default {
       return new Response(`upstream fetch failed: ${upstream.status}`, { status: 502 });
     }
 
+    if (url.searchParams.get('mode') === 'passthrough') {
+      // Baseline: no tee, no collect — just relay the body untouched.
+      return new Response(upstream.body, { status: 200, headers: { 'content-type': 'text/plain', 'x-spike-s3': 'passthrough' } });
+    }
+
     const [branch1, branch2] = upstream.body.tee();
 
-    ctx.waitUntil(persistBranch(branch2, env));
+    ctx.waitUntil(persistBranch(branch2, env, url.searchParams.get('mode') === 'collect'));
 
     // Branch 1 back to the client unchanged (pass-through, zero compute per byte).
     return new Response(branch1, {
@@ -31,7 +36,7 @@ export default {
   },
 };
 
-async function persistBranch(body, env) {
+async function persistBranch(body, env, collectOnly) {
   const chunks = [];
   let total = 0;
   const reader = body.getReader();
@@ -49,6 +54,11 @@ async function persistBranch(body, env) {
     off += c.byteLength;
   }
 
+  if (collectOnly) {
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ spike: 's3', mode: 'collect-only', bytes: total }));
+    return;
+  }
   const digest = await crypto.subtle.digest('SHA-256', flat);
   const key = await crypto.subtle.importKey(
     'raw',
