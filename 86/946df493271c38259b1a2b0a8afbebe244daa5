@@ -1,0 +1,21 @@
+.memory/SESSION_TODO.md
+  s_c0862af7ca0281::t_ee5845ecf9d343 1,8,24,30
+docs/history/THOS_2026-09-25_0100_TRANSCRIPT_INCIDENT_APIFY_ADR032_SPIKES_QA_RULES_MERGE_WAVE.md
+  s_c0862af7ca0281::t_c3032f6204feec 18,22,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "86946df493271c38259b1a2b0a8afbebe244daa5",
+  "prompts": {},
+  "sessions": {
+    "s_c0862af7ca0281": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aad9b5affeU2vp9oYfwSJAoy",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
