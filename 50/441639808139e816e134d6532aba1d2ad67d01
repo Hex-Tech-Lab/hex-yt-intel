@@ -1,0 +1,36 @@
+web/lib/__tests__/contracts/export-pdf.contract.test.ts
+  s_08f77637d9daf0::t_e2658fed33207d 127
+  s_08f77637d9daf0::t_8c59aa8ec98bc7 147-159
+  s_08f77637d9daf0::t_2cbc008af4efbe 17-18
+web/app/api/analyses/[id]/export/route.ts
+  s_08f77637d9daf0::t_8a108c2fb49289 14-16,18
+.memory/AGENT_LEDGER.md
+  s_08f77637d9daf0::t_943714bf953dc9 1403
+web/app/api/analyses/[id]/export/__tests__/route.test.ts
+  s_08f77637d9daf0::t_59343ef77e9e89 5-6,11-12
+  s_32b8426b238ccd::t_da8faf31a8fdf1 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "50441639808139e816e134d6532aba1d2ad67d01",
+  "prompts": {},
+  "sessions": {
+    "s_08f77637d9daf0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cdf68caffexFvOzkQScI08j6",
+        "model": "muse-spark-1.3-contributor"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_32b8426b238ccd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cdf4822ffeDuGiWMzKTU31t9",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
