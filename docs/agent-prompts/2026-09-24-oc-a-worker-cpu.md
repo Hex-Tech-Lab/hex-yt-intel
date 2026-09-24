@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Tier STEP 1 round 2 — CC review findings
+# Agent Dispatch Prompt — Worker exceeds Cloudflare Free-plan CPU and gets killed mid-stream
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: OC (openrouter/z-ai/glm-5.3-flash)
-**Effort Level**: low
+**Target Agent**: OC (opencode, openrouter/z-ai/glm-5.3-flash via committed .opencode/opencode.json)
+**Effort Level**: low (pinned); be thorough in the report
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,20 +70,24 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-**Branch `fix/tier-vocabulary-runtime-path`** (your own STEP 1 work, commits cf423aa8 + f40fa7df). CC review found:
+**Verified incident (2026-09-23 20:39 UTC, analysis ac7d0fa6-19ab-41c4-b9cd-806ef113a3e2, video 4mTLpuQpB80, ~28 min):** Cloudflare Workers Logs show outcome `exceededCpu` / "Worker exceeded CPU time limit." for 4 of 5 `POST /analyze-llm-stream` requests and all their retries; only bundle 3 persisted. Client saw "Stream ended without a terminal signal." (web/hooks/useSSEStream.ts:523). CF GraphQL: first-ever exceededCpu on 09-23 (16 req); the 20:49 analysis (fa95072b…, 0/5) had 11/11 requests killed at exactly 10,000 µs CPU; successes the same day reached ~650 ms, i.e. Free-plan enforcement is lenient until load, then strict. Five parallel streams per analysis. Account is on the Free plan and will stay there.
 
-P1 (security, must fix). `web/app/api/billing/webhook/route.ts` `resolveEventTier`: when the price ID is not recognised it falls back to `mapPlanStringToUserTier(event.data.custom_data?.planTier)` / price `custom_data.plan_tier`. That contradicts the fail-closed contract (your own `pricing.ts` doc comment says no webhook may re-derive a tier from custom_data plan strings): an unrecognised price with `custom_data.planTier: "max"` would grant Max. Remove the fallback; unrecognised price ⇒ tier unchanged + Sentry (already present). Check `web/app/api/webhooks/paddle/route.ts` / `ProcessPaddleWebhookUseCase.ts` / `GetUserEntitlementsUseCase.ts` for the same pattern (`plan_tier` is read from a DB row in GetUserEntitlements — trace where that row's value is written from). Test with negative control: unrecognised price + planTier 'max' ⇒ tier unchanged.
-P2. The dispatch prompt's `UserTier` importer list was hand-written and partly wrong (e.g. `ProcessChatMessageUseCase.ts` defines `Record<UserTier, number>`). In your report, include a generated list (`rg -n "UserTier" web worker`) of every consumer and literal tier comparison, each marked handled/unchanged-with-reason.
-P2. Interim Light/Max numbers you added in `web/lib/constants/rate-limits.ts` and `CHAT_TURN_LIMIT_FALLBACK` are hardcoded tunables — leave the values (they are an explicit interim, NEEDS USER DECISION) but make sure each is listed in the report's decision section, and that `chat.turnLimit.light/max` registry keys are documented as needing seed rows in STEP 2 (DB) — do not write migrations in this task.
-Also update your `[IN_PROGRESS]` ledger line to `[DONE]` with real commits.
+**Known suspect (verify, don't assume):** `worker/src/services/BracketBuffer.ts:78-82` — when `objectStart > 0` the buffer is sliced and `scanIndex` reset to 0 while `depth`/`inString`/`escaped` state is kept, so the buffer is rescanned from 0 with stale state (wasted CPU on large responses, likely also the repeated "[BracketBuffer] Failed to parse object" warnings). Other candidates in `worker/src/routes/analysis.ts` stream body (~lines 955-1035): per-delta `send()` JSON serialization, `finalText +=` growth, `extractJsonPayload`/repair, persist-time parsing.
 
-**Standing constraints**: FREE plans everywhere. Hex-Lite + DDD-Lite, contract-first, DI, no hardcoded tunables (Settings Registry). Work only in this worktree on the existing branch; commit locally; do NOT push (CC pushes, one PR at a time). NEVER use `git stash` — for negative controls copy the working-tree file aside first, edit against the copy, then restore from the copy (never redirect `git show HEAD:` output over the live file). Get check details via `gh pr checks <n>` / `gh api .../check-runs`; never guess findings. Migrations: follow ADR 018 (after apply_migration, rename local file to the recorded version); do NOT apply any migration to production — write it, CC applies after review.
+**Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
+
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-Work the findings in priority order. Gates: web tsc, affected vitest + full web vitest before finishing, worker typecheck (`tsconfig.typecheck.json`) + build if worker touched, qa-intel diff. Report per finding: fixed / rejected (evidence) / needs user decision.
+1. Measure: add a test/bench harness that replays a realistic ~20k-token Haiku response (build a fixture) through the worker's stream pipeline and reports CPU time per stage. Report the numbers.
+2. Fix every hot path found, starting with BracketBuffer (correct incremental scanning with state reset consistent with the slice). Keep behaviour identical (existing BracketBuffer/emission-boundary tests must stay green).
+3. If after fixes the per-request CPU still cannot plausibly stay near the Free limit, write (do not implement) 2-3 concrete architecture options (e.g. worker becomes a thin byte-pipe and parsing moves to Vercel/client) with measured justification, under NEEDS USER DECISION.
+4. Stuck rows: determine from code whether the reaper (ADR 007/021) will finalize or requeue `ac7d0fa6` (processing, 1/5 chunks) and `fa95072b` (failed, 0/5). Report verdict; if it won't, that is a bug — fix it in this branch with a test.
+5. Gates: worker `tsc`/build/vitest, web vitest for anything touched, qa-intel diff.
+
+Branch: `fix/worker-free-plan-cpu` (already checked out in your worktree).
 
 ---
 

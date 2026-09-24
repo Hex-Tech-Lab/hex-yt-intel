@@ -76,6 +76,16 @@ export default defineConfig({
       'app/api/billing/**/*.test.ts',
       'app/api/analyses/\\[id\\]/export/**/*.test.ts',
       'app/billing/**/*.test.tsx',
+      // PR #326's pricing page gained a copy-contract sibling test
+      // (qa-intel high finding: authorization-relevant file with no
+      // sibling regression test). Named explicitly, same rationale as the
+      // globs above.
+      'app/pricing/__tests__/page.test.ts',
+      // PR #320 round-2 (2026-09-24): the videos/[videoId]/chapters route
+      // boundary test — the middleware EXEMPTS this route's POST from the
+      // session gate, so its own HMAC gate is the only auth boundary and it
+      // must have pinned coverage. Same named-glob rationale as above.
+      'app/api/videos/**/*.test.ts',
       // Real coverage gap found 2026-08-20 (automated PR review P1): a
       // top-level web/middleware.test.ts matched none of the globs above --
       // same class of silent-non-execution as the .tsx gap documented

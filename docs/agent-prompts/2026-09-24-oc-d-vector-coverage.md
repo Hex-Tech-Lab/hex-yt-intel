@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Tier STEP 1 round 2 — CC review findings
+# Agent Dispatch Prompt — Upstash Vector holds 50 vectors for ~115 completed analyses
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -70,20 +70,22 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-**Branch `fix/tier-vocabulary-runtime-path`** (your own STEP 1 work, commits cf423aa8 + f40fa7df). CC review found:
+**Verified 2026-09-19**: `upstash_snapshots` (app's own poll with prod creds) shows the Upstash Vector index healthy (HYBRID, 1536-d, COSINE), 5,035/5,035 polls ok, vector count 10→50 (latest increase 2026-09-18), while `analyses` has ~115-119 `billing_status='completed'` rows. Embeds are written by `web/app/api/webhooks/embed/route.ts:168` (QStash webhook), queried by `web/app/api/search/route.ts:118`. The credential-missing branch returns 503 with only console.error (no Sentry). Supabase pgvector (`analyses.embedding`) is effectively unused (1/239 rows). A similar backfill precedent exists: `scripts/backfill-stance-relations.ts` on branch `feat/stance-dual-persistence-wordcloud`.
 
-P1 (security, must fix). `web/app/api/billing/webhook/route.ts` `resolveEventTier`: when the price ID is not recognised it falls back to `mapPlanStringToUserTier(event.data.custom_data?.planTier)` / price `custom_data.plan_tier`. That contradicts the fail-closed contract (your own `pricing.ts` doc comment says no webhook may re-derive a tier from custom_data plan strings): an unrecognised price with `custom_data.planTier: "max"` would grant Max. Remove the fallback; unrecognised price ⇒ tier unchanged + Sentry (already present). Check `web/app/api/webhooks/paddle/route.ts` / `ProcessPaddleWebhookUseCase.ts` / `GetUserEntitlementsUseCase.ts` for the same pattern (`plan_tier` is read from a DB row in GetUserEntitlements — trace where that row's value is written from). Test with negative control: unrecognised price + planTier 'max' ⇒ tier unchanged.
-P2. The dispatch prompt's `UserTier` importer list was hand-written and partly wrong (e.g. `ProcessChatMessageUseCase.ts` defines `Record<UserTier, number>`). In your report, include a generated list (`rg -n "UserTier" web worker`) of every consumer and literal tier comparison, each marked handled/unchanged-with-reason.
-P2. Interim Light/Max numbers you added in `web/lib/constants/rate-limits.ts` and `CHAT_TURN_LIMIT_FALLBACK` are hardcoded tunables — leave the values (they are an explicit interim, NEEDS USER DECISION) but make sure each is listed in the report's decision section, and that `chat.turnLimit.light/max` registry keys are documented as needing seed rows in STEP 2 (DB) — do not write migrations in this task.
-Also update your `[IN_PROGRESS]` ledger line to `[DONE]` with real commits.
-
-**Standing constraints**: FREE plans everywhere. Hex-Lite + DDD-Lite, contract-first, DI, no hardcoded tunables (Settings Registry). Work only in this worktree on the existing branch; commit locally; do NOT push (CC pushes, one PR at a time). NEVER use `git stash` — for negative controls copy the working-tree file aside first, edit against the copy, then restore from the copy (never redirect `git show HEAD:` output over the live file). Get check details via `gh pr checks <n>` / `gh api .../check-runs`; never guess findings. Migrations: follow ADR 018 (after apply_migration, rename local file to the recorded version); do NOT apply any migration to production — write it, CC applies after review.
+**Standing constraints**: ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU/request, now strictly enforced as of 2026-09-23; Vercel Hobby wall-clock limits; Upstash/Supabase free). Upgrades are not a fix. Architecture: Hex-Lite + DDD-Lite (ports/adapters, domain logic in domain/use cases, route handlers thin, DI, OO with separation of concerns), contract-first (every boundary has a defined, enforced schema).
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-Work the findings in priority order. Gates: web tsc, affected vitest + full web vitest before finishing, worker typecheck (`tsconfig.typecheck.json`) + build if worker touched, qa-intel diff. Report per finding: fixed / rejected (evidence) / needs user decision.
+1. Root-cause why completed analyses lack vectors, with evidence (code path from finalize → QStash publish → embed webhook; check which finalize paths publish the embed job and which don't — reaper/remediation/settled-stitch paths are prime suspects). Use Supabase read-only queries and Upstash vector `fetch`/`range` (read-only) to list which analysis IDs are missing.
+2. Fix the cause so every finalize path embeds (idempotent upsert by analysisId). Add Sentry capture on the embed webhook's failure branches.
+3. Write an idempotent backfill script `scripts/backfill-analysis-embeddings.ts` (dry-run default, `--apply` flag). Do NOT run `--apply` — CC runs it after review.
+4. Do NOT drop pgvector — list exactly what a removal migration would touch under NEEDS USER DECISION (ADR 018 rules).
+5. Tests with a negative control. Gates: web tsc, vitest, qa-intel diff.
+Branch `fix/upstash-vector-coverage` in your worktree. Commit locally; do NOT push/PR. Do NOT use `git stash` (the stash stack is shared across worktrees) — to prove a negative control, use a temporary WIP commit and `git revert`/`git checkout <sha> -- <file>` instead.
+
+Branch: `fix/upstash-vector-coverage`.
 
 ---
 
@@ -139,7 +141,7 @@ Work the findings in priority order. Gates: web tsc, affected vitest + full web 
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw `Response.json`/text pass-throughs and unvalidated boundary payloads (grep/AST based — despite its name it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.

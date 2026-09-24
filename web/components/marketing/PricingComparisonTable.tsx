@@ -24,8 +24,8 @@ const COMPARISON_DATA: FeatureCategory[] = [
   {
     category: "Synthesis Engine",
     features: [
-      { name: "Monthly analyses", free: "Limited (resets monthly)", light: "15 / mo", pro: "60 / mo", max: "~120–150 / mo" },
-      { name: "Video hours / mo", free: "1 analysis", light: "5 hrs", pro: "20 hrs", max: "~40 hrs" },
+      { name: "Monthly analyses", free: "3 / mo", light: "15 / mo", pro: "60 / mo", max: "~120–150 / mo" },
+      { name: "Video hours / mo", free: "3 analyses", light: "5 hrs", pro: "20 hrs", max: "~40 hrs" },
       { name: "Semantic dimensions", free: "Full-quality (single run)", light: "Focused subset", pro: "Full (11)", max: "Full (11)" },
       { name: "UCIS Intelligence", free: true, light: true, pro: true, max: true },
     ]
@@ -43,7 +43,7 @@ const COMPARISON_DATA: FeatureCategory[] = [
   {
     category: "Processing",
     features: [
-      { name: "Processing speed", free: "Standard 48–72hr", light: "Standard", pro: "Standard", max: "Priority (candidate)" },
+      { name: "Processing speed", free: "Minutes", light: "Minutes", pro: "Minutes", max: "Minutes" },
       { name: "PDF / Markdown export", free: false, light: true, pro: true, max: true },
     ]
   },

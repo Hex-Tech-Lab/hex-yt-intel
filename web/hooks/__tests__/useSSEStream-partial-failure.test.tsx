@@ -201,6 +201,43 @@ describe('useSSEStream bundle-level retry and partial-failure settlement (ADR 02
     expect(bundle1Attempts).toBe(2); // initial + one retry, then gave up
   });
 
+  it('reports Partial (n/n) in the final log line on a partial settle, not "completed successfully"', async () => {
+    // RCA (2026-09-24): a 1/5 partial settle printed "Analysis stream
+    // completed successfully." right after "1/5 streams completed." —
+    // success-washing a partial result. NEGATIVE CONTROL: against the old
+    // code this assertion fails, because the settle line was the static
+    // success message.
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/analyses') {
+        return Promise.resolve(new Response(JSON.stringify(PREP_JOB), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      if (url === WORKER_URL) {
+        const chunkIndex = chunkIndexFromBody(init);
+        if (chunkIndex === 1) {
+          return Promise.resolve(new Response('worker overloaded', { status: 503 }));
+        }
+        return Promise.resolve(sseResponse([completeFragmentPayload()]));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useSSEStream());
+
+    await act(async () => {
+      await result.current.startAnalysis(YT_URL, 'UTC');
+    });
+
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().status).toBe('complete');
+    }, { timeout: 3000 });
+
+    const messages = useAnalysisStore.getState().terminalLines.map((l) => l.message);
+    expect(messages).toContain('Partial result: 1/2 streams completed; some dimensions are missing.');
+    expect(messages).not.toContain('Analysis stream completed successfully.');
+  });
+
   it('still settles error when every bundle fails outright (baseline preserved)', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
