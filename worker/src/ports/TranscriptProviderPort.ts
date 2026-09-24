@@ -28,3 +28,10 @@ export interface TranscriptResult {
 export interface TranscriptProviderPort {
   fetch(videoId: string): Promise<TranscriptResult>;
 }
+
+/**
+ * Thrown only when a source affirmatively confirms zero caption tracks exist
+ * (see TranscriptResult.confirmedNoCaptions). Shared across providers so the
+ * chain can distinguish "video has no captions" from "our pipeline failed".
+ */
+export class NoCaptionsConfirmedError extends Error {}
