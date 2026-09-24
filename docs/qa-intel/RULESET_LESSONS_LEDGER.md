@@ -32,6 +32,24 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ## Open
 
+### 2026-09-24 — False negatives: 5 external PR reviews (#320-#322, #324, #325) found defects qa-intel passed (diff + full mode clean on all)
+- **Source**: `docs/reviews/2026-09-24-pr3{20,21,22,24,25}-external-review.md`. qa-intel reported "No new issues" on every branch; every item below was caught by an external reviewer or CC instead. Candidate rules, each needs a positive-fire test on the real file and a negative control:
+- **(R1) Hardcoded entitlement grant in a payment webhook** — `updateUserTier({ ..., tier: '<literal>' })` or any tier literal written inside a `webhook` route (was `web/app/api/billing/webhook/route.ts:39`, grant `pro` for any subscription; PR #325 also found `web/lib/stripe/webhook-handlers.ts`). Security/billing.
+- **(R2) Tier fallback from untrusted payload** — tier derived from `custom_data`/request body when the verified mapping returns null (PR #325 round 1). Security.
+- **IMPLEMENTED (2026-09-24, branch `feat/qa-rules-q1-security`, OC)**: R1, R2, R5, R10 → `scripts/quality-engine/rules/security-lessons-20260924.ts` (registered in rules/index.ts; 16 tests incl. positive-fire on real historical snippets + negative controls in `rules/__tests__/security-lessons-20260924.test.ts`). Full-repo scan (--mode full): zero hits, zero false positives — severity high confirmed. Remaining candidates: R3, R4, R6–R9, R11.
+- **(R3) Full-document JSONB read-modify-write** — `.update({ <jsonb col>: { ...<previously read value>, key } })` (PR #322 relations route + backfill). Data loss under concurrency.
+- **(R4) SECURITY DEFINER SQL function granted to `authenticated` taking a caller-controlled key/column/path** (PR #322 RPC). **Gap: qa-intel only globs TS/TSX — migrations (`supabase/migrations/*.sql`) are never scanned.** Needs a SQL-aware rule or a migration linter step.
+- **(R5) Service-role credential falling back to anon** — `SERVICE_ROLE_KEY || ...ANON_KEY` (PR #322 backfill).
+- **(R6) Silent default on external response shape** — `externalJson?.a?.b || []` / `?? []` without schema validation (PR #321 Observability). Silent-empty-success.
+- **(R7) Server-side `fetch` without timeout/AbortSignal** outside `fetchWithTimeout` (PR #321 second Cloudflare call).
+- **(R8) Untrusted strings interpolated into newline-delimited log text** without sanitizing (PR #321).
+- **(R9) Error-path asymmetry** — Sentry captured on the non-2xx branch but only `console.warn` in the sibling `catch` (PR #320).
+- **(R10) Runtime tier trust** — `tier !== 'free'` as "paid" or `as UserTier` on a DB value without an allowlist normalizer (PR #325).
+- **(R11) Success-guarded persistence** — writes skipped when a result is empty (`if (x.length > 0) persist`), turning a valid empty result into a perpetual recompute (PR #322).
+- **Process lessons (not code rules)**: `[IN_PROGRESS]` ledger lines left in PR diffs; dispatch prompts with hand-written counts/lists that drift (generate them); agent self-reports claiming gates they didn't run (CC skipped qa-intel on its own verification once this session — now mandatory, diff + full, per branch).
+- **Not fixed at the rule level yet** — queued for a dedicated OC dispatch (one rule cluster per prompt, per the Wave A re-scope banner).
+- **Implemented (Wave Q4, 2026-09-24, branch `feat/qa-rules-q4-sql`)**: **R4** (`sql-security-definer-caller-key-param`) and **R13** (`sql-drop-function-default-arg`, the 2026-09-24 Supabase-preview break from PR #328 head b2f1648d) in `scripts/quality-engine/rules/sql-migrations.ts`, plus SQL file collection (`supabase/migrations/*.sql`) in `scripts/verify-quality-engine.ts` full/diff modes and a per-rule `languages` gate (`domain/Rule.ts` + `QualityEngine.analyze`, default `ts`) so the existing text heuristics don't false-fire on SQL (58 FPs on the first ungated full run, zero after the gate). Rules are text/regex based, not SQL-AST (accepted limitation — ts-morph loader parses .sql as plain text); patterns tuned conservative to keep FP rate 0 on the current repo. Pre-wave migrations (filename date < 20260924) report as informational `low` and never block CI. Tests: 14 (positive-fire on verbatim pre-fix snippets afe276a1/b2f1648d + negative controls incl. the on-disk fully-revoked get_prompt_secret shape). Remaining candidates R1-R3, R5-R11 still queued.
+
 ### 2026-08-14 — "Missing finally block for I/O" only recognizes try/finally block syntax, not Promise.finally()
 - **File**: `scripts/quality-engine/rules/architecture.ts:238-239` (WorkflowRule), first hit on `web/app/admin/waitlist/WaitlistAdminClient.tsx`
 - **Symptom**: fires on a `fetch(...).then().catch().finally()` chain even though `.finally()` is present and functionally equivalent to a `try/finally` block.

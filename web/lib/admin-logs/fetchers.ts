@@ -1,5 +1,7 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { computeTimeWindow } from '@/lib/utils/time-range';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
+import { z } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -72,7 +74,7 @@ export async function fetchSynthesisLogs(searchParams: URLSearchParams): Promise
       const level = run.status === 'failed' ? 'ERROR' : 'INFO';
       logLines.push(`[${run.created_at}] [${level}] [comment-sample-run:${statusTag}] runId=${run.id} analysisId=${run.analysis_id} tier=${run.tier} totalCount=${run.total_comment_count} sampledCount=${run.sampled_count || 0}`);
     });
-    logLines.sort((a, b) => a.localeCompare(b));
+    logLines.sort((a: string, b: string) => a.localeCompare(b));
 
     const content = logLines.length > 0
       ? logLines.join('\n')
@@ -416,51 +418,250 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
   }
 }
 
+// Zod contract for the Workers Observability telemetry/query response
+// (live-verified 2026-09-24, and PR #321 round-2 review): events are nested
+// at `result.events.events[]`, NOT `result.events[]`. Validating at runtime
+// distinguishes a genuine "no events in window" (valid empty array) from a
+// malformed/unexpected shape (fail soft with an explicit warning, never a
+// silent empty list).
+const CfObsMetadataSchema = z.object({
+  error: z.string().nullish(),
+  message: z.string().nullish(),
+  level: z.string().nullish(),
+  rayId: z.string().nullish(),
+  service: z.string().nullish(),
+});
+const CfObsWorkersSchema = z.object({
+  scriptName: z.string().nullish(),
+  outcome: z.string().nullish(),
+});
+const CfObsEventSchema = z.object({
+  timestamp: z.number().nullish(),
+  $metadata: CfObsMetadataSchema.nullish(),
+  $workers: CfObsWorkersSchema.nullish(),
+});
+const CfObsResponseSchema = z.object({
+  result: z.object({
+    events: z.object({
+      events: z.array(z.unknown()),
+    }),
+  }),
+});
+
+// Zod contract for the workersInvocationsAdaptive GraphQL row (aggregate
+// buckets: dimensions/quantiles/sum, live-verified 2026-09-24).
+const CfInvocationSchema = z.object({
+  dimensions: z
+    .object({
+      scriptName: z.string().nullish(),
+      status: z.string().nullish(),
+      datetime: z.string().nullish(),
+    })
+    .nullish(),
+  quantiles: z.object({ cpuTimeP50: z.number().nullish() }).nullish(),
+  sum: z.object({ errors: z.number().nullish() }).nullish(),
+});
+export type CfInvocation = z.infer<typeof CfInvocationSchema>;
+export type CfObsEvent = z.infer<typeof CfObsEventSchema>;
+
+// Upper bound for per-window Observability events. Cloudflare's `limit`
+// parameter accepts up to 2000 (API schema, verified 2026-09-24); 100 is the
+// pre-existing value from the first observability wiring — kept, but now
+// EXPOSED: when the API returns exactly this many events the window may
+// contain more, so the snapshot carries `truncated: true` + a warning line
+// instead of silently dropping the tail (PR #321 round-2 completeness
+// contract).
+const OBSERVABILITY_EVENT_LIMIT = 100;
+
+/**
+ * Strips newlines/control characters from externally-supplied strings before
+ * they are interpolated into the newline-delimited log text. Without this, a
+ * malicious error/message field (e.g. an attacker-controlled header echoed
+ * into a Worker exception) can forge additional log lines in the admin
+ * snapshot (PR #321 round-2 P2). Control chars are replaced with a space and
+ * collapsed, never dropped wholesale.
+ */
+function sanitizeLogText(value: string | null | undefined): string {
+  return (value ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ');
+}
+
+function formatInvocationLine(inv: CfInvocation): string {
+  const dims = inv.dimensions ?? {};
+  const time = dims.datetime || new Date().toISOString();
+  const status = dims.status || 'unknown';
+  const level = status === 'success' || status === 'ok' ? 'INFO' : 'ERROR';
+  const p50CpuMs = ((inv.quantiles?.cpuTimeP50 ?? 0) / 1000).toFixed(1);
+  const errors = inv.sum?.errors ?? 0;
+  return `[${time}] [${level}] [cf-worker:${sanitizeLogText(dims.scriptName) || 'yt-intel'}] status=${status} p50CpuTime=${p50CpuMs}ms errors=${errors}`;
+}
+
+function formatObservabilityEvent(evt: CfObsEvent): string {
+  const meta = evt.$metadata ?? {};
+  const workers = evt.$workers ?? {};
+  const time = evt.timestamp ? new Date(evt.timestamp).toISOString() : new Date().toISOString();
+  const level = meta.error ? 'ERROR' : (meta.level || 'info').toUpperCase() === 'ERROR' ? 'ERROR' : 'INFO';
+  const script = sanitizeLogText(workers.scriptName) || sanitizeLogText(meta.service) || 'yt-intel';
+  const outcome = sanitizeLogText(workers.outcome) || 'unknown';
+  const error = sanitizeLogText(meta.error) || 'none';
+  const rayId = sanitizeLogText(meta.rayId) || 'unknown';
+  const message = sanitizeLogText(meta.message);
+  return `[${time}] [${level}] [cf-obs:${script}] outcome=${outcome} error=${error} rayId=${rayId} message=${message}`;
+}
+
 export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
   const token = process.env.CLOUDFLARE_API_TOKEN;
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   if (!token || !accountId) {
     return { status: 503, body: { error: 'CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not configured in Vercel environment variables.', missingEnvVars: ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'].filter((k) => !process.env[k]) } };
   }
+  const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
+  const startTimeIso = new Date(startTimeMs).toISOString();
+  const endTimeIso = new Date(endTimeMs).toISOString();
+  // RCA (2026-09-24): the original query had NO datetime filter — it fetched
+  // the 50 most-recent invocation aggregates (aggregated buckets, not per
+  // request), so a quiet window returned totalEntries: 0 even while the
+  // worker had 78+ invocations incl. exceededResources. Push the requested
+  // window INTO the GraphQL filter (server-side) instead of trusting a
+  // client-side slice of the latest-50.
   const query = `
-    query GetWorkerLogs($accountTag: string!) {
+    query GetWorkerLogs($accountTag: string!, $datetime_geq: Time!, $datetime_leq: Time!) {
       viewer {
         accounts(filter: {accountTag: $accountTag}) {
-          workersInvocationsAdaptive(limit: 50, orderBy: [datetime_DESC]) {
+          workersInvocationsAdaptive(limit: 50, filter: { datetime_geq: $datetime_geq, datetime_leq: $datetime_leq }, orderBy: [datetime_DESC]) {
             dimensions { scriptName status datetime }
             quantiles { cpuTimeP50 }
+            sum { errors }
           }
         }
       }
     }
   `;
   try {
-    const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { accountTag: accountId } }),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Cloudflare GraphQL API returned ${res.status}: ${errText}`);
+    // Shared 10s timeout budget (web/lib/utils/fetch-with-timeout.ts
+    // DEFAULT_FETCH_TIMEOUT_MS — the existing config constant; PR #315
+    // precedent). Without it a hung Cloudflare connection blocks the admin
+    // snapshot's Promise.all forever (PR #321 round-2 P1).
+    const res = await fetchWithTimeout(
+      'https://api.cloudflare.com/client/v4/graphql',
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { accountTag: accountId, datetime_geq: startTimeIso, datetime_leq: endTimeIso } }),
+      },
+      (r) => r.json(),
+    );
+    const rawInvocations: unknown[] = res?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
+    const invocations = rawInvocations
+      .map((inv: unknown) => CfInvocationSchema.safeParse(inv))
+      .flatMap((p) => (p.success ? [p.data] : []));
+    const logLines = invocations.map(formatInvocationLine);
+
+    // Workers Observability (persist=true in worker/wrangler.toml) gives
+    // per-request outcomes (e.g. exceededCpu) that the aggregate
+    // workersInvocationsAdaptive dataset cannot. Contract verified against
+    // POST /accounts/{account_id}/workers/observability/telemetry/query
+    // (developers.cloudflare.com API docs, 2026-09-24): body takes
+    // { queryId, timeframe: {from,to} epoch-ms, view, limit, parameters } and
+    // returns result.events.events[] with $metadata (message/error/level/rayId)
+    // and $workers (scriptName/outcome). Fail-soft on this second call so a
+    // token-scope gap, 4xx, timeout, or malformed shape degrades to a warning
+    // line, never a full 500 — same resilience convention as fetchSentryLogs'
+    // 401/403 fail-soft.
+    let observabilityEvents: CfObsEvent[] = [];
+    let observabilityWarning: string | undefined;
+    let truncated = false;
+    try {
+      const obsBody = {
+        queryId: 'admin-logs-snapshot',
+        timeframe: { from: startTimeMs, to: endTimeMs },
+        view: 'events',
+        limit: OBSERVABILITY_EVENT_LIMIT,
+        parameters: {
+          datasets: ['cloudflare-workers'],
+          // OR filter, live-verified 2026-09-24 (26 events in the incident
+          // window incl. both shapes): catches (a) events carrying
+          // $metadata.error ("Worker exceeded CPU time limit.") AND (b)
+          // request events whose only failure signal is
+          // $workers.outcome != 'ok' (e.g. exceededCpu) — the old
+          // error-exists-only filter silently dropped class (b).
+          // `filterCombination: 'or'` is the documented top-level filter
+          // combinator (Cloudflare telemetry/query API schema, 2026-09-24).
+          filterCombination: 'or',
+          filters: [
+            { key: '$metadata.error', operation: 'exists', type: 'string' },
+            { key: '$workers.outcome', operation: 'neq', type: 'string', value: 'ok' },
+          ],
+        },
+      };
+      const obsRes = await fetchWithTimeout(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/observability/telemetry/query`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(obsBody),
+        },
+        (r) => {
+          if (!r.ok) throw new Error(`Workers Observability API returned ${r.status}`);
+          return r.json();
+        },
+      );
+      // Runtime shape validation (Zod): a valid EMPTY window
+      // (result.events.events: []) is a real result; a malformed envelope is
+      // an explicit warning, never a silent empty list (PR #321 round-2).
+      const parsedShape = CfObsResponseSchema.safeParse(obsRes);
+      if (!parsedShape.success) {
+        throw new Error('unexpected response shape (expected result.events.events[])');
+      }
+      const parsedEvents = parsedShape.data.result.events.events.map((e) => CfObsEventSchema.safeParse(e));
+      const invalidEvents = parsedEvents.filter((p) => !p.success).length;
+      observabilityEvents = parsedEvents.flatMap((p) => (p.success ? [p.data] : []));
+      const obsLines = observabilityEvents.map(formatObservabilityEvent);
+      if (invalidEvents > 0) {
+        obsLines.push(`[${new Date().toISOString()}] [WARN] [cf-obs] ${invalidEvents} observability event(s) failed schema validation and were skipped.`);
+      }
+      // Completeness contract: when the API returns exactly `limit` events,
+      // the window may contain more. Expose `truncated` + a warning line
+      // instead of silently dropping the tail (PR #321 round-2).
+      truncated = observabilityEvents.length >= OBSERVABILITY_EVENT_LIMIT;
+      if (truncated) {
+        obsLines.push(`[${new Date().toISOString()}] [WARN] [cf-obs] Event window truncated at ${OBSERVABILITY_EVENT_LIMIT} events; more may exist.`);
+      }
+      logLines.push(...obsLines);
+      logLines.sort((a: string, b: string) => a.localeCompare(b));
+    } catch (obsError) {
+      if (obsError instanceof Error && obsError.name === 'AbortError') {
+        observabilityWarning = 'Workers Observability query timed out (10s budget); GraphQL invocation data kept.';
+      } else {
+        observabilityWarning = `Workers Observability query failed: ${obsError instanceof Error ? obsError.message : String(obsError)}`;
+      }
+      Sentry.captureMessage(observabilityWarning, { level: 'warning', tags: { operation: 'admin_cloudflare_observability' } });
+      console.warn('[admin-logs]', observabilityWarning);
     }
-    const json = await res.json();
-    const rawInvocations = json?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-    const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
-    const invocations = rawInvocations.filter((inv: any) => {
-      const ts = new Date(inv.dimensions?.datetime || 0).getTime();
-      return ts >= startTimeMs && ts <= endTimeMs;
-    });
-    const logLines = invocations.map((inv: any) => {
-      const dims = inv.dimensions || {};
-      const time = dims.datetime || new Date().toISOString();
-      const status = dims.status || 'unknown';
-      const level = status === 'success' || status === 'ok' ? 'INFO' : 'ERROR';
-      return `[${time}] [${level}] [cf-worker:${dims.scriptName || 'yt-intel'}] status=${status} p50CpuTime=${inv.quantiles?.cpuTimeP50 ?? 0}ms`;
-    });
-    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Cloudflare worker invocations returned.`, invocations } };
+
+    // totalEntries contract (PR #321 round-2): totalEntries counts ALL
+    // formatted log lines (GraphQL invocations + Observability events +
+    // warning/truncation lines). Consumers needing per-source counts must use
+    // invocationCount / observabilityCount / truncated below — the only
+    // known consumers today are the two API routes (pass-through) and
+    // scripts/poll-logs-snapshot.sh (raw JSON dump), neither of which
+    // disambiguates.
+    return {
+      status: 200,
+      body: {
+        totalEntries: logLines.length,
+        invocationCount: invocations.length,
+        observabilityCount: observabilityEvents.length,
+        truncated,
+        logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Cloudflare worker invocations returned.`,
+        invocations,
+        observabilityEvents,
+        ...(observabilityWarning ? { warning: observabilityWarning } : {}),
+      },
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error && error.name === 'AbortError'
+      ? 'Cloudflare GraphQL request timed out (10s budget)'
+      : error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { tags: { operation: 'admin_cloudflare_logs' } });
     return { status: 500, body: { error: `Failed to fetch Cloudflare logs: ${message}` } };
   }
@@ -559,6 +760,7 @@ const SENTRY_ORG_SLUG = 'hex-org';
 const SENTRY_REGION_HOST = 'de.sentry.io';
 const SENTRY_PROJECT_ID = '4511384514461776';
 
+// skipcq: JS-0067, JS-R1005 -- ESM module export, not a global-scope declaration (JS-0067 false positive); the fail-soft 401/403 branching (JS-R1005) is intentional and extraction would obscure the contract (PR #321 round-2)
 export async function fetchSentryLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
   const token = process.env.SENTRY_LOGS_AUTH_TOKEN;
   if (!token) {
