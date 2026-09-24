@@ -55,3 +55,4 @@ export { DatabaseConstraintRule, DefaultValueConsistencyRule, TruncationValidati
 export { SecurityFixWithoutTestRule, NonNullAfterArraySortFilterRule } from "./security-lessons-20260905";
 export { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "./sql-migrations";
 export { HardcodedTierGrantRule, UntrustedTierFallbackRule, ServiceRoleAnonFallbackRule, RuntimeTierTrustRule } from "./security-lessons-20260924";
+export { SilentDefaultOnExternalResponseRule, ServerFetchWithoutTimeoutRule, ErrorPathAsymmetryRule, SuccessGuardedPersistenceRule } from "./reliability-lessons-20260924";
