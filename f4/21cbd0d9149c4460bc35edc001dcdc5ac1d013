@@ -1,0 +1,24 @@
+web/app/api/spikes/chunk-stream/route.ts
+  s_b71ad25f5f25f7::t_0c30e6d7eb2961 1-84,86-91,96-107,109-146
+  s_b71ad25f5f25f7::t_8f1f0f8896b4cd 85,92-95,108
+scripts/spikes/adr032/run-chunk-stream.sh
+  s_b71ad25f5f25f7::t_acdf476a02ca3b 49-52
+  s_b71ad25f5f25f7::t_26d2d04759cb46 5-6
+  s_b71ad25f5f25f7::t_432d8da621d1d7 1-4,7-48,53-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f421cbd0d9149c4460bc35edc001dcdc5ac1d013",
+  "prompts": {},
+  "sessions": {
+    "s_b71ad25f5f25f7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b835344ffeWSWCWXFP7UeE8N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
