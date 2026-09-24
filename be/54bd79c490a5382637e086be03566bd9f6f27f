@@ -1,0 +1,43 @@
+web/app/billing/page.tsx
+  s_50d821e56b50b5::t_bdd0479cd92c53 12,62
+web/lib/services/billing-data.ts
+  s_50d821e56b50b5::t_bdd0479cd92c53 5,56
+web/app/api/usage/summary/route.ts
+  s_50d821e56b50b5::t_bdd0479cd92c53 8,55
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_50d821e56b50b5::t_77d150d78b4061 56
+  s_50d821e56b50b5::t_a5932c4cecb5fc 39-43
+  s_50d821e56b50b5::t_3d2faf2b9f343e 3
+.memory/AGENT_LEDGER.md
+  s_50d821e56b50b5::t_6296cf448f2720 1403
+web/lib/types/billing.ts
+  s_50d821e56b50b5::t_0a0162438cd5c7 14-30
+web/lib/__tests__/normalize-user-tier.test.ts
+  s_50d821e56b50b5::t_a348daad9da6f2 1-28
+web/components/billing/billing-dashboard-client.tsx
+  s_50d821e56b50b5::t_1a5114e5de6e5b 97
+  s_50d821e56b50b5::t_b4dc9c5911c9a4 12
+  s_50d821e56b50b5::t_9ababcec5aa31a 28-29,31
+web/lib/services/console-profile.ts
+  s_50d821e56b50b5::t_4064c974ccd2e8 51
+  s_50d821e56b50b5::t_485081e4bd0b4a 4
+web/lib/adapters/SupabaseAuthAdapter.ts
+  s_50d821e56b50b5::t_344e6e0a43e886 3
+  s_50d821e56b50b5::t_0da794e2342c26 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "be54bd79c490a5382637e086be03566bd9f6f27f",
+  "prompts": {},
+  "sessions": {
+    "s_50d821e56b50b5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cdf3911ffe654f1pDorCuhmm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
