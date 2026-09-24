@@ -1,0 +1,111 @@
+web/vitest.config.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 79-88
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-234
+web/app/pricing/__tests__/page.test.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-27
+docs/history/ROSTER_2026-07-20.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 600-632
+.gitignore
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 57-59
+web/middleware.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 116-127,166-172,174-190,192-195,202-204,206-209,211-280,297,303-320
+worker/src/services/chapter-persist.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-127
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-232
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-238
+web/lib/admin-logs/fetchers.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 3-4,77,421-510,517-525,527,530,533,540-638,640-660,662-664,763
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-235
+docs/reviews/2026-09-24-pr320-external-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-8
+worker/src/__tests__/chapter-persist.test.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-180
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-237
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-10
+docs/agent-prompts/TEMPLATE.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 43,135
+docs/legal/refund-policy.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 3,7-8,10,14,17
+AGENTS.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 137,141
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-68
+docs/reviews/2026-09-24-pr325-external-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-23
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-11
+web/lib/admin-logs/__tests__/fetchCloudflareLogs.test.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-272
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-2,45,86,89,167
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 204-240
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-144
+web/app/waitlist/page.tsx
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 188-189,192,223-224,232,236,238,244,257
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-78
+web/components/marketing/PricingComparisonTable.tsx
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 27-28,46
+web/lib/constants/pricing-plans.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 47,50
+CLAUDE.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 38,41-42,54,101
+.mcp.json
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 3-10,13-16
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-231
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-9
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-238
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-44,342-344
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-233
+web/app/pricing/page.tsx
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 54-57
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-207
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-238
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 43,80,142
+docs/reviews/2026-09-24-pr322-external-review.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 1-8
+web/middleware.test.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 40-67
+worker/src/routes/analysis.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 14,16,149-150,237-240,253,261-266,339,384-388,402-407,1207-1213,1218-1221
+.memory/ADRS.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 26
+web/hooks/useSSEStream.ts
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 15-19,21-96,140,299-300,306-311,423-424,431,438,452-455,457
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_29349810a8cd4d::t_b41f5fe2ec07f1 35-50
+.claude/MEMORY.md
+  s_29349810a8cd4d::t_9db8795a124039 4,52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9f03b08a306603ed571d4fb67de23b8cdb371c3a",
+  "prompts": {},
+  "sessions": {
+    "s_29349810a8cd4d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b835739ffeqCfv11VwVYc7T8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
