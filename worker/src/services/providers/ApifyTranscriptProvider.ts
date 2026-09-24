@@ -41,55 +41,61 @@ export class ApifyTranscriptProvider implements TranscriptProviderPort {
 
     // 130s > the actor's own 120s timeout so Apify's own timeout response
     // arrives before ours cuts the connection.
+    const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(130000)]);
     const url = 'https://api.apify.com/v2/acts/johnvc~youtubetranscripts/run-sync-get-dataset-items?timeout=120&maxTotalChargeUsd=0.05';
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apifyToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
-        // Ordered preference list. The actor returns the FIRST available
-        // transcript matching a listed code and fails if none match, so the
-        // list covers YouTube's caption languages (the site promises 65+),
-        // product targets en/ar first. One call regardless of list length.
-        languages: APIFY_LANGUAGE_PREFERENCE,
-        include_metadata: false,
-      }),
-      signal: AbortSignal.timeout(130000),
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apifyToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
+          // Ordered preference list. The actor returns the FIRST available
+          // transcript matching a listed code and fails if none match, so the
+          // list covers YouTube's caption languages (the site promises 65+),
+          // product targets en/ar first. One call regardless of list length.
+          languages: APIFY_LANGUAGE_PREFERENCE,
+          include_metadata: false,
+        }),
+        signal,
+      });
 
-    if (!response.ok) throw new Error(`Apify fail: ${response.status}`);
+      if (!response.ok) throw new Error(`Apify fail: ${response.status}`);
 
-    const items = await response.json() as ApifyDatasetItem[];
-    const item = Array.isArray(items) ? items[0] : undefined;
-    if (!item) throw new Error('Apify returned no dataset items');
-    if (item.success !== true) {
-      throw new Error(`Apify actor reported failure: ${item.error_message || 'unknown error'}`);
+      const items = await response.json() as ApifyDatasetItem[];
+      const item = Array.isArray(items) ? items[0] : undefined;
+      if (!item) throw new Error('Apify returned no dataset items');
+      if (item.success !== true) {
+        throw new Error(`Apify actor reported failure: ${item.error_message || 'unknown error'}`);
+      }
+
+      const timestamped = item.timestamped ?? [];
+      if (timestamped.length === 0) throw new Error('Apify returned empty timestamped transcript');
+
+      const segments = timestamped
+        .map(s => ({
+          text: (s.text ?? '').replace(/\s+/g, ' ').trim(),
+          start: typeof s.start === 'number' ? s.start : NaN,
+          duration: typeof s.duration === 'number' ? s.duration : NaN,
+        }))
+        .filter(s => s.text.length > 0 && !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400);
+
+      if (segments.length === 0) throw new Error('Apify transcript had no valid segments');
+
+      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
+      if (!transcript) throw new Error('Empty transcript after processing');
+
+      return {
+        videoId,
+        transcript,
+        language: item.language_code || 'en',
+        segments,
+      };
+    } finally {
+      controller.abort();
     }
-
-    const timestamped = item.timestamped ?? [];
-    if (timestamped.length === 0) throw new Error('Apify returned empty timestamped transcript');
-
-    const segments = timestamped
-      .map(s => ({
-        text: (s.text ?? '').replace(/\s+/g, ' ').trim(),
-        start: typeof s.start === 'number' ? s.start : NaN,
-        duration: typeof s.duration === 'number' ? s.duration : NaN,
-      }))
-      .filter(s => s.text.length > 0 && !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400);
-
-    if (segments.length === 0) throw new Error('Apify transcript had no valid segments');
-
-    const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
-    if (!transcript) throw new Error('Empty transcript after processing');
-
-    return {
-      videoId,
-      transcript,
-      language: item.language_code || 'en',
-      segments,
-    };
   }
 }

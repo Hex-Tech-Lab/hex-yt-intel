@@ -7,8 +7,8 @@
  * including the two-independent-source confirmedNoCaptions agreement rule.
  */
 
-import { XMLParser } from 'fast-xml-parser';
 import { captureException } from '@sentry/cloudflare';
+import { XMLParser } from 'fast-xml-parser';
 import { fetchWithProxy } from '../http-utils';
 import { getRandomUserAgent } from '../user-agent';
 import { NoCaptionsConfirmedError } from '../../ports/TranscriptProviderPort';
@@ -29,28 +29,28 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       const { langCode } = await this.fetchCaptionMetadata(videoId);
       const transcript = await this.fetchTranscriptContent(videoId, langCode);
       if (transcript) return { videoId, transcript, language: langCode };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.warn(`[transcript] Standard API failed for ${videoId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-standard-api', videoId } });
-      standardApiConfirmedNone = e instanceof NoCaptionsConfirmedError;
+      captureException(err, { tags: { operation: 'transcript-standard-api', videoId } });
+      standardApiConfirmedNone = err instanceof NoCaptionsConfirmedError;
     }
 
     try {
       return await this.fetchFromPageHTML(videoId);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.warn(`[transcript] Page HTML extraction failed for ${videoId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-page-html-yt-native', videoId } });
+      captureException(err, { tags: { operation: 'transcript-page-html-yt-native', videoId } });
       // Only confirm "no captions" when BOTH independent sources (YouTube's
       // caption-list API and the page's own ytInitialData) agree there are
       // none -- either one alone failing for an unrelated reason (network,
       // proxy, rate limit) must not produce a false "this video has no
       // captions" claim.
-      if (standardApiConfirmedNone && e instanceof NoCaptionsConfirmedError) {
-        throw new NoCaptionsConfirmedError(e.message);
+      if (standardApiConfirmedNone && err instanceof NoCaptionsConfirmedError) {
+        throw new NoCaptionsConfirmedError(err.message);
       }
-      throw e;
+      throw err;
     }
   }
 
@@ -125,9 +125,10 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       if (!transcript) throw new Error('Empty transcript after processing');
 
       return { videoId, transcript, language: langCode, segments };
-    } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-page-html', videoId } });
-      throw e;
+    } catch (err) {
+      console.warn(`[transcript] Page HTML parse for ${videoId}: ${err instanceof Error ? err.message : String(err)}`);
+      captureException(err, { tags: { operation: 'transcript-page-html', videoId } });
+      throw err;
     } finally {
       controller.abort();
     }
@@ -153,10 +154,10 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       let parsed: { transcript_list?: { track?: unknown } };
       try {
         parsed = parser.parse(metadataText);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[transcript] XML parse failed for ${videoId}: ${msg}`);
-        captureException(e, { tags: { operation: 'transcript-xml-parse', videoId } });
+        captureException(err, { tags: { operation: 'transcript-xml-parse', videoId } });
         throw new Error('Failed to parse caption metadata XML');
       }
 
@@ -165,25 +166,25 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
 
       const trackList = Array.isArray(tracks) ? tracks : [tracks];
 
-      const langCode = (t: Record<string, unknown>): string | undefined =>
-        typeof t['@_lang_code'] === 'string' ? t['@_lang_code'] : undefined;
+      const langCode = (track: Record<string, unknown>): string | undefined =>
+        typeof track['@_lang_code'] === 'string' ? track['@_lang_code'] : undefined;
 
-      const asrEn = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && langCode(t) === 'en' && t['@_kind'] === 'asr'
+      const asrEn = trackList.find((track: Record<string, unknown>) =>
+        typeof track === 'object' && langCode(track) === 'en' && track['@_kind'] === 'asr'
       );
       if (asrEn) return { langCode: 'en' };
 
-      const en = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && langCode(t)?.startsWith('en')
+      const en = trackList.find((track: Record<string, unknown>) =>
+        typeof track === 'object' && langCode(track)?.startsWith('en')
       );
       if (en) return { langCode: langCode(en)! };
 
-      const asr = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && t['@_kind'] === 'asr' && langCode(t)
+      const asr = trackList.find((track: Record<string, unknown>) =>
+        typeof track === 'object' && track['@_kind'] === 'asr' && langCode(track)
       );
       if (asr) return { langCode: langCode(asr)! };
 
-      const first = trackList.find((t): t is Record<string, unknown> => typeof t === 'object' && !!langCode(t));
+      const first = trackList.find((track): track is Record<string, unknown> => typeof track === 'object' && !!langCode(track));
       if (first) return { langCode: langCode(first)! };
 
       throw new NoCaptionsConfirmedError('No captions available for this video');
@@ -220,9 +221,10 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
         .trim();
 
       return transcript;
-    } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-content-fetch', videoId } });
-      throw e;
+    } catch (err) {
+      console.warn(`[transcript] Transcript content fetch for ${videoId}: ${err instanceof Error ? err.message : String(err)}`);
+      captureException(err, { tags: { operation: 'transcript-content-fetch', videoId } });
+      throw err;
     } finally {
       controller.abort();
     }

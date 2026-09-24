@@ -29,50 +29,75 @@ describe('ApifyTranscriptProvider', () => {
   });
 
   it('maps a successful dataset item to TranscriptResult (fixture)', async () => {
-    (fetch as any).mockResolvedValue(okResponse(fixture));
-    const result = await new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ');
-    expect(result.videoId).toBe('dQw4w9WgXcQ');
-    expect(result.transcript.length).toBeGreaterThan(100);
-    expect(result.segments!.length).toBeGreaterThan(50);
-    expect(result.language).toBeTruthy();
-    // Segments are in seconds, same unit the chain already uses
-    const first = result.segments![0]!;
-    expect(first.start).toBeGreaterThanOrEqual(0);
-    expect(first.duration).toBeGreaterThan(0);
-    expect(first.text.length).toBeGreaterThan(0);
-    // Request contract
-    const [url, init] = (fetch as any).mock.calls[0];
-    expect(url).toContain('run-sync-get-dataset-items?timeout=120&maxTotalChargeUsd=0.05');
-    const body = JSON.parse(init.body);
-    expect(body.youtube_url).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    expect(body.languages).toEqual([...APIFY_LANGUAGE_PREFERENCE]);
-    expect(body.languages.slice(0, 2)).toEqual(['en', 'ar']);
-    expect(body.languages.length).toBeGreaterThanOrEqual(65);
-    expect(init.headers.Authorization).toBe('Bearer token');
+    try {
+      (fetch as any).mockResolvedValue(okResponse(fixture));
+      const result = await new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ');
+      expect(result.videoId).toBe('dQw4w9WgXcQ');
+      expect(result.transcript.length).toBeGreaterThan(100);
+      expect(result.segments!.length).toBeGreaterThan(50);
+      expect(result.language).toBeTruthy();
+      // Segments are in seconds, same unit the chain already uses
+      const first = result.segments![0]!;
+      expect(first.start).toBeGreaterThanOrEqual(0);
+      expect(first.duration).toBeGreaterThan(0);
+      expect(first.text.length).toBeGreaterThan(0);
+      // Request contract
+      const [url, init] = (fetch as any).mock.calls[0];
+      expect(url).toContain('run-sync-get-dataset-items?timeout=120&maxTotalChargeUsd=0.05');
+      const body = JSON.parse(init.body);
+      expect(body.youtube_url).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      expect(body.languages).toEqual([...APIFY_LANGUAGE_PREFERENCE]);
+      expect(body.languages[0]).toBe('en');
+      expect(body.languages[1]).toBe('ar');
+      expect(body.languages.length).toBeGreaterThanOrEqual(65);
+      expect(init.headers.Authorization).toBe('Bearer token');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('throws (fallthrough) on success:false', async () => {
     (fetch as any).mockResolvedValue(okResponse([{ success: false, error_message: 'No captions found' }]));
-    await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/Apify actor reported failure/);
+    try {
+      await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/Apify actor reported failure/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('throws (fallthrough) on empty timestamped list', async () => {
     (fetch as any).mockResolvedValue(okResponse([{ success: true, language_code: 'en', timestamped: [] }]));
-    await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/empty timestamped/);
+    try {
+      await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/empty timestamped/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('throws (fallthrough) on HTTP non-2xx', async () => {
     (fetch as any).mockResolvedValue({ ok: false, status: 500 } as Response);
-    await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow('Apify fail: 500');
+    try {
+      await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow('Apify fail: 500');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('throws (fallthrough) on timeout', async () => {
     (fetch as any).mockRejectedValue(new Error('The operation was aborted due to timeout'));
-    await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/aborted/);
+    try {
+      await expect(new ApifyTranscriptProvider('token').fetch('dQw4w9WgXcQ')).rejects.toThrow(/aborted/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('throws when no API token is configured', async () => {
-    await expect(new ApifyTranscriptProvider(undefined).fetch('dQw4w9WgXcQ')).rejects.toThrow(/not configured/);
+    try {
+      await expect(new ApifyTranscriptProvider(undefined).fetch('dQw4w9WgXcQ')).rejects.toThrow(/not configured/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
