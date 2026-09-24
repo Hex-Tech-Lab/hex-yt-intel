@@ -1,0 +1,16 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1400-1401
+docs/research/2026-09-24-hex-expan-payments-lessons.md
+  h_60000122af7b55 1-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0f4c3bea6e7bc7d10c6bc55722f139e7975bbdd4",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
