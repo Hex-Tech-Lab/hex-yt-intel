@@ -187,7 +187,7 @@ export async function* computeStanceRelationsStream(
   apiKey: string,
   handshakeSignal?: AbortSignal,
   userId?: string
-): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
+): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string } | { type: 'exhausted' }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
   if (usable.length < 2 || !apiKey) return;
 
@@ -260,7 +260,7 @@ export async function* computeStanceRelationsStream(
       const result = LLMResponseSchema.safeParse(parsed);
       if (!result.success) {
         console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);
-        Sentry.captureMessage(`Validation dropped payload at ${'relations-engine'}`, {
+        Sentry.captureMessage('Validation dropped payload at relations-engine', {
           level: "warning",
           extra: {
             boundary: 'relations-engine',
@@ -293,11 +293,22 @@ export async function* computeStanceRelationsStream(
         console.warn(`[relations/engine] Model ${item.model} JSON schema validation failed:`, result.error.format());
       }
     } catch (parseErr) {
+      // Defensive: safeParse shouldn't throw, but a throw here is a real
+      // compute failure for this model — capture (not console-only) so the
+      // failure class is alertable, matching this function's other branches.
+      Sentry.captureException(parseErr, { tags: { operation: 'relations-engine', phase: 'parse' } });
       console.warn(`[relations/engine] Model ${item.model} JSON parse failed:`, parseErr);
       continue;
     }
   }
 
+  // Terminal marker for callers: distinguishes "cascade genuinely completed
+  // with zero insights" (a valid, persistable result) from "every cascade
+  // model failed/exhausted" (Cubic P1, PR #322 — persisting the latter as an
+  // empty-but-valid result permanently cached an error as if it were an
+  // answer, forcing re-payment only after the Redis TTL expired). The success
+  // path above returns early, so reaching here always means exhaustion.
+  yield { type: 'exhausted' };
   console.warn('[relations/engine] All cascade models exhausted without valid stance relations output');
 }
 

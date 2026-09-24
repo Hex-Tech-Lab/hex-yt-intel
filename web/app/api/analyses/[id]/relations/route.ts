@@ -23,7 +23,7 @@ function parseDimensions(markdown: string): StanceDimension[] {
   const re = /#{1,4}\s*DIMENSION\s+(\d+)\s*[–\-:]?\s*([^\n]*)\n([\s\S]*?)(?=#{1,4}\s*DIMENSION\s+\d+|$)/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(markdown))) {
-    const number = parseInt(match[1]!, 10);
+    const number = Number(match[1]);
     if (number < 1 || number > 11) continue;
     const name = (match[2] || '').trim() || DIMENSION_NAMES[number] || `Dimension ${number}`;
     const content = (match[3] || '').trim();
@@ -166,6 +166,14 @@ export async function GET(
         const apiKey = process.env.OPENROUTER_API_KEY || '';
         const insights: RelationInsight[] = [];
         let modelUsed = 'unknown';
+        // Cubic P1 (PR #322, run 3a5a4683): the engine swallows per-model
+        // failures and terminates without yielding — so a fully-exhausted
+        // cascade used to look identical to "completed with zero insights"
+        // and an empty result was persisted/cached as if valid. The engine
+        // now emits a terminal 'exhausted' marker; on exhaustion we surface a
+        // complete-but-unpersisted result so the next request recomputes
+        // instead of serving the failure forever.
+        let cascadeExhausted = false;
         // PR #322 round-2 P1: persistence below lives INSIDE the success
         // path — a COMPLETED cascade that legitimately produced zero
         // insights is a valid result and is persisted (otherwise every
@@ -187,6 +195,8 @@ export async function GET(
             } else if (chunk.type === 'insight') {
               insights.push(chunk.insight);
               send({ type: 'insight', insight: chunk.insight });
+            } else if (chunk.type === 'exhausted') {
+              cascadeExhausted = true;
             }
           }
 
@@ -197,24 +207,32 @@ export async function GET(
             insights,
           };
 
-          // Write-through: persist to Redis (7d TTL) and Supabase
-          // analysis_payload (permanent). The Supabase write goes through
-          // the atomic key-merge port (jsonb_set RPC) so concurrent payload
-          // writers can never be clobbered by a stale full-payload rewrite.
-          const payloadAdapter = new SupabaseAnalysisPayloadAdapter(supabase);
-          const [, persistOutcome] = await Promise.allSettled([
-            setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).then(() => 'ok', (cacheErr) => {
-              console.warn('[relations/route] Failed to cache relation insights in Redis', { cacheKey, error: String(cacheErr) });
-              return 'failed';
-            }),
-            payloadAdapter.mergePayloadKey(id, 'stance_relations', { ...result, contentHash }),
-          ]);
+          if (cascadeExhausted) {
+            resolvePromise(result);
+            serverInFlight.delete(cacheKey);
+            send({ ...result, type: 'complete' });
+          } else {
+            // Write-through: persist to Redis (7d TTL) and Supabase
+            // analysis_payload (permanent). Skipped entirely when the
+            // cascade exhausted (see cascadeExhausted above). The Supabase
+            // write goes through the atomic key-merge port (jsonb_set RPC)
+            // so concurrent payload writers can never be clobbered by a
+            // stale full-payload rewrite.
+            const payloadAdapter = new SupabaseAnalysisPayloadAdapter(supabase);
+            const [, persistOutcome] = await Promise.allSettled([
+              setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).then(() => 'ok', (cacheErr) => {
+                console.warn('[relations/route] Failed to cache relation insights in Redis', { cacheKey, error: String(cacheErr) });
+                return 'failed';
+              }),
+              payloadAdapter.mergePayloadKey(id, 'stance_relations', { ...result, contentHash }),
+            ]);
 
-          if (persistOutcome.status === 'fulfilled' && !persistOutcome.value.persisted) {
-            console.warn('[relations/route] stance_relations persistence did not land (0 rows affected or failed after retries)', { id });
-          } else if (persistOutcome.status === 'rejected') {
-            Sentry.captureException(persistOutcome.reason, { tags: { operation: 'relations', phase: 'persist' }, contexts: { relations: { id } } });
-            console.warn('[relations/route] stance_relations persistence rejected', { id, error: String(persistOutcome.reason) });
+            if (persistOutcome.status === 'fulfilled' && !persistOutcome.value.persisted) {
+              console.warn('[relations/route] stance_relations persistence did not land (0 rows affected or failed after retries)', { id });
+            } else if (persistOutcome.status === 'rejected') {
+              Sentry.captureException(persistOutcome.reason, { tags: { operation: 'relations', phase: 'persist' }, contexts: { relations: { id } } });
+              console.warn('[relations/route] stance_relations persistence rejected', { id, error: String(persistOutcome.reason) });
+            }
           }
 
           resolvePromise(result);

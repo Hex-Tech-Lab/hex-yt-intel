@@ -31,7 +31,7 @@ vi.mock('@/lib/redis', () => ({
 vi.mock('@/lib/supabase', () => ({
   getSupabaseClientWithAuth: () => ({
     auth: { getUser: mocks.getUser },
-    from: (table: string) => ({
+    from: () => ({
       select: (cols: string) => ({
         eq: () => ({
           eq: () => ({
@@ -60,24 +60,24 @@ vi.mock('@/lib/intelligence/relations-engine', () => ({
 
 import { GET } from '../route';
 
-const mockState: { markdownRow: Record<string, unknown> | null; payloadRow: Record<string, unknown> | null } = {
-  markdownRow: null,
-  payloadRow: null,
-};
+// Hoisted so the vi.mock factory above (which runs before module-level const
+// declarations) can reference it without a use-before-define race.
+const mockState = vi.hoisted(() => ({
+  markdownRow: null as Record<string, unknown> | null,
+  payloadRow: null as Record<string, unknown> | null,
+}));
 
 const SAMPLE_MARKDOWN = '# DIMENSION 1 – Thesis\n\nContent one.\n\n# DIMENSION 2 – Risk\n\nContent two.';
 
-async function sha16(text: string): Promise<string> {
+const sha16 = async (text: string): Promise<string> => {
   const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   const hex = Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
   return hex.match(/^[0-9a-f]{16}/)?.[0] ?? hex;
-}
+};
 
-function makeRequest(): NextRequest {
-  return new NextRequest('http://localhost/api/analyses/a1/relations');
-}
+const makeRequest = (): NextRequest => new NextRequest('http://localhost/api/analyses/a1/relations');
 
-async function run(): Promise<Array<Record<string, unknown>>> {
+const run = async (): Promise<Array<Record<string, unknown>>> => {
   const res = await GET(makeRequest(), { params: Promise.resolve({ id: 'a1' }) });
   const text = await res.text();
   return text
@@ -85,7 +85,7 @@ async function run(): Promise<Array<Record<string, unknown>>> {
     .map((line) => line.replace(/^data: /, ''))
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
-}
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -95,8 +95,10 @@ beforeEach(() => {
   mocks.mergePayloadKey.mockReset();
   mocks.mergePayloadKey.mockResolvedValue({ persisted: true, affectedRows: 1 });
   mocks.setRedisValue.mockReset();
+  // skipcq -- typed vi.fn<[], Promise<void>>() requires an explicit arg for mockResolvedValue
   mocks.setRedisValue.mockResolvedValue(undefined);
   mocks.deleteRedisKey.mockReset();
+  // skipcq -- typed vi.fn<[], Promise<void>>() requires an explicit arg for mockResolvedValue
   mocks.deleteRedisKey.mockResolvedValue(undefined);
   mockState.markdownRow = null;
   mockState.payloadRow = null;
@@ -212,6 +214,22 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     expect(mocks.setRedisValue).toHaveBeenCalled();
   });
 
+  it('EXHAUSTED cascade: failure is NOT persisted or cached as an empty valid result', async () => {
+    mockState.markdownRow = { id: 'a1', analysis_markdown: SAMPLE_MARKDOWN };
+    mockState.payloadRow = null;
+    mocks.getRedisValue.mockResolvedValue(null);
+    mocks.computeStream.mockImplementation(function* () {
+      yield { type: 'model', model: 'model/new' };
+      yield { type: 'exhausted' };
+    });
+
+    const events = await run();
+
+    expect(events.at(-1)).toMatchObject({ type: 'complete' });
+    expect(mocks.mergePayloadKey).not.toHaveBeenCalled();
+    expect(mocks.setRedisValue).not.toHaveBeenCalled();
+  });
+
   it('Redis FAILURE: complete result still delivered, Supabase persistence still attempted', async () => {
     mockState.markdownRow = { id: 'a1', analysis_markdown: SAMPLE_MARKDOWN };
     mockState.payloadRow = null;
@@ -233,7 +251,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mockState.payloadRow = null;
     mocks.getRedisValue.mockResolvedValue(null);
     mocks.mergePayloadKey.mockResolvedValue({ persisted: false, affectedRows: 0 });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       yield { type: 'insight', insight: { kind: 'tangent', source: 1, target: 2, sourceLabel: 'A', targetLabel: 'B', rationale: 'r' } };

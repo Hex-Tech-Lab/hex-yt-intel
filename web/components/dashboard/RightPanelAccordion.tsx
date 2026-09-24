@@ -26,12 +26,16 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   useEffect(() => {
     setOpenStates((prev) => {
       let changed = false;
-      const next = { ...prev };
+      const next: Record<string, boolean> = {};
+      // Add defaults for newly appearing items...
       for (const item of items) {
-        if (next[item.id] === undefined) {
-          next[item.id] = item.defaultOpen || false;
-          changed = true;
-        }
+        next[item.id] = prev[item.id] ?? (item.defaultOpen || false);
+        if (item.id in prev) changed = changed || next[item.id] !== prev[item.id];
+        else changed = true;
+      }
+      // ...and prune entries whose items left, so removed ids don't leak.
+      for (const key of Object.keys(prev)) {
+        if (!(key in next)) changed = true;
       }
       return changed ? next : prev;
     });

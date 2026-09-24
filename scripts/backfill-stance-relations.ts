@@ -179,8 +179,8 @@ interface BackfillRow {
   created_at: string;
 }
 
-async function fetchAnalysesPage(offset: number, pageSize: number): Promise<{ rows: BackfillRow[]; total: number | null }> {
-  const url = `${SUPABASE_URL}/rest/v1/analyses?select=id,video_id,user_id,analysis_markdown,analysis_payload,created_at&billing_status=eq.completed&order=created_at.desc&limit=${pageSize}&offset=${offset}`;
+async function fetchAnalysesPage(offset: number, pageSize: number, runStartIso: string): Promise<{ rows: BackfillRow[]; total: number | null }> {
+  const url = `${SUPABASE_URL}/rest/v1/analyses?select=id,video_id,user_id,analysis_markdown,analysis_payload,created_at&billing_status=eq.completed&created_at=lte.${encodeURIComponent(runStartIso)}&order=created_at.desc&limit=${pageSize}&offset=${offset}`;
   const res = await safeFetch(url, {
     headers: {
       apikey: SUPABASE_KEY!,
@@ -228,7 +228,9 @@ async function main() {
   let scanned = 0;
   let alreadyPresent = 0;
   let backfilled = 0;
+  let planned = 0;
   let skipped = 0;
+  let exhaustedCascade = 0;
   let supabaseErrors = 0;
   let redisErrors = 0;
   let remaining: number | null = null;
@@ -239,16 +241,21 @@ async function main() {
   // very large payloads.
   const pageSize = Math.min(limit, 100);
   let offset = 0;
+  // Cubic P2 (PR #322): offset pagination is unstable while new completed
+  // analyses can enter the result set mid-run (they shift pages and silently
+  // skip rows). Pinning the scan to rows created before the run started
+  // freezes the result set for the run's lifetime.
+  const runStartIso = new Date().toISOString();
 
   while (scanned < limit) {
-    const { rows, total: pageTotal } = await fetchAnalysesPage(offset, Math.min(pageSize, limit - scanned));
+    const { rows, total: pageTotal } = await fetchAnalysesPage(offset, Math.min(pageSize, limit - scanned), runStartIso);
     if (pageTotal !== null) total = pageTotal;
     if (rows.length === 0) break;
 
     for (let i = 0; i < rows.length; i++) {
       const analysis = rows[i]!;
       const rowLabel = `[${scanned + i + 1}] Analysis ${analysis.id} (${analysis.video_id})`;
-      const { id, video_id, user_id, analysis_markdown, analysis_payload } = analysis;
+      const { id, user_id, analysis_markdown, analysis_payload } = analysis;
 
       if (!analysis_markdown || analysis_markdown.trim().length === 0) {
         console.log(`${rowLabel}: Skipped (empty markdown)`);
@@ -284,20 +291,34 @@ async function main() {
 
       if (isDryRun) {
         console.log(`  [dry-run] Would compute relations and persist to Supabase & Redis.`);
-        backfilled++;
+        // Cubic P3 (PR #322): dry-run performed no persistence — counting
+        // rows under "Backfilled" misreported it as done work.
+        planned++;
         continue;
       }
 
       try {
         const insights: RelationInsight[] = [];
         let modelUsed = 'unknown';
+        let cascadeExhausted = false;
 
         for await (const chunk of computeStanceRelationsStream(dimensions, OPENROUTER_API_KEY, undefined, user_id)) {
           if (chunk.type === 'model') {
             modelUsed = chunk.model;
           } else if (chunk.type === 'insight') {
             insights.push(chunk.insight);
+          } else if (chunk.type === 'exhausted') {
+            cascadeExhausted = true;
           }
+        }
+
+        // Cubic P1 (PR #322): a fully-exhausted cascade is a failure, not a
+        // valid zero-insight result — persisting it would cache the failure
+        // permanently. Leave the row untouched; a future run can retry it.
+        if (cascadeExhausted) {
+          console.log(`  ✗ All cascade models exhausted for ${id} — not persisting`);
+          exhaustedCascade++;
+          continue;
         }
 
         // A completed cascade with zero insights is a VALID result and is
@@ -343,6 +364,8 @@ async function main() {
   console.log(`Total Scanned:    ${scanned}${total !== null ? ` of ${total} completed analyses` : ''}`);
   console.log(`Already Present:  ${alreadyPresent}`);
   console.log(`Backfilled:       ${backfilled}`);
+  if (isDryRun) console.log(`Planned (dry-run): ${planned}`);
+  console.log(`Cascade Exhausted (not persisted): ${exhaustedCascade}`);
   console.log(`Skipped:          ${skipped}`);
   console.log(`Supabase Errors:  ${supabaseErrors}`);
   console.log(`Redis Errors:     ${redisErrors}`);

@@ -10,6 +10,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeStanceRelationsStream } from '@/lib/intelligence/relations-engine';
 
+// Keep the real SDK out of the unit test (Cubic P3, PR #322): the engine's
+// schema-validation-drop path calls Sentry.captureMessage.
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
 vi.mock('@/lib/config/cascade', () => ({
   resolveStanceCascade: () => [{ name: 'primary', model: 'test/model-a', providerOrder: undefined }],
 }));
@@ -32,7 +39,7 @@ const DIMS = [
   { number: 2, name: 'Risk', content: 'A risk with enough content to be usable here.' },
 ];
 
-function sseResponse(deltas: string[]): Response {
+const sseResponse = (deltas: string[]): Response => {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
@@ -44,7 +51,7 @@ function sseResponse(deltas: string[]): Response {
     },
   });
   return new Response(stream, { status: 200 });
-}
+};
 
 const GOOD_TAIL = '"rationale":"real words here"}]}';
 
