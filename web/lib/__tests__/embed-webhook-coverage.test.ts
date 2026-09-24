@@ -14,10 +14,15 @@
 import * as Sentry from '@sentry/nextjs';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@sentry/nextjs', () => ({
+// Hoisted so the mock object identity survives vi.resetModules() inside
+// loadRoute(): the factory returns this SAME object on every re-import, so
+// top-level `Sentry` assertions observe the instance the route actually uses.
+const sentryMock = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
 }));
+
+vi.mock('@sentry/nextjs', () => sentryMock);
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
@@ -41,6 +46,7 @@ const vectorIndexMock = vi.hoisted(() => ({
 
 vi.mock('@/lib/upstash-vector', () => ({
   // Mirror the real initializeVectorIndex: null on placeholder/missing creds.
+  // skipcq: JS-R1005 -- branch count mirrors the real credential-guard contract under test
   initializeVectorIndex: () => {
     const url = process.env.UPSTASH_VECTOR_REST_URL || '';
     const token = process.env.UPSTASH_VECTOR_REST_TOKEN || '';
@@ -72,6 +78,7 @@ vi.mock('@/lib/monitoring/sentry-utils', () => ({
 
 const PAYLOAD = { analysisId: 'a-1', markdown: '# analysis markdown', userId: 'user-1' };
 
+// skipcq: JS-0057 -- test helper in a TS ES module, not a browser script; module scope, not global
 function post(body: unknown, headers: Record<string, string> = {}): Request {
   return new Request('http://localhost/api/webhooks/embed', {
     method: 'POST',
@@ -81,6 +88,7 @@ function post(body: unknown, headers: Record<string, string> = {}): Request {
 }
 
 // The route uses initializeVectorIndex() at module load — reset modules per test.
+// skipcq: JS-0057 -- test helper in a TS ES module, not a browser script; module scope, not global
 async function loadRoute() {
   vi.resetModules();
   const mod = await import('@/app/api/webhooks/embed/route');

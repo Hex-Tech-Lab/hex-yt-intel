@@ -29,6 +29,7 @@ export const MIN_SALVAGEABLE_DIMENSIONS = MIN_USABLE_DIMENSIONS;
  * data sources separate means no consumer of this function can silently fall
  * through requeue-partial to a terminal state at the type level.
  */
+// skipcq: JS-0057 -- TS ES module (has imports/exports), not a browser script; module scope, not global
 export function decideReapOutcome(analysisMarkdown: string | null | undefined): {
   outcome: Exclude<ReapOutcome, 'requeue-partial'>;
   dimensionCount: number;
@@ -55,10 +56,14 @@ export function decideReapOutcome(analysisMarkdown: string | null | undefined): 
  *
  * RCA (2026-07-23): this used to map to 'chargeable', which the DB's CHECK
  * constraint (processing|completed|failed) has always rejected. See
- * BillingStatus type for the full RCA -- this is the same bug the chunk-
- * recovery path below was built to route around, just on the reaper's
- * older markdown-only path.
+ * BillingStatus type for the full RCA -- this is the same bug
+ * analysis-reaper.ts's tryChunkRecovery (chunk-recovery path) was built to
+ * route around, just on the reaper's older markdown-only path. NOTE: only
+ * `patch.billing_status` requires the full TOTAL_DIMENSIONS set (strict
+ * 100%-or-failed); the outcome itself completes at MIN_SALVAGEABLE_DIMENSIONS.
  */
+// skipcq: JS-R1005 -- complexity inherent to the settle-patch contract (full/partial/failed), pre-existing shape
+// skipcq: JS-0057 -- TS ES module (has imports/exports), not a browser script; module scope, not global
 export function buildSettlePatch(
   analysisMarkdown: string | null | undefined,
   existingReport: unknown,
@@ -102,13 +107,19 @@ export interface ChunkRow {
  * reaper never treats a genuinely partial/interrupted set as recoverable.
  * Exported for unit testing.
  */
+// skipcq: JS-R1005 -- complexity inherent to the full-chunk-set validation contract, pre-existing shape
+// skipcq: JS-0057 -- TS ES module (has imports/exports), not a browser script; module scope, not global
 export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
   if (chunkRows.length !== TOTAL_STREAMS) return false;
-  const byIndex = new Map(chunkRows.map(c => [c.chunk_index, c]));
+  const byIndex = new Map(chunkRows.map((chunkRow) => [chunkRow.chunk_index, chunkRow]));
   for (let i = 1; i <= TOTAL_STREAMS; i++) {
-    const c = byIndex.get(i);
-    if (!c || c.status !== 'completed') return false;
-    if (!c.payload || !Array.isArray((c.payload as { dimensions?: unknown }).dimensions)) return false;
+    const chunkRow = byIndex.get(i);
+    if (!chunkRow || chunkRow.status !== 'completed') return false;
+    if (
+      !chunkRow.payload ||
+      !Array.isArray((chunkRow.payload as { dimensions?: unknown }).dimensions)
+    )
+      return false;
   }
   return true;
 }

@@ -162,9 +162,33 @@ function decideChunkSalvagePolicy(
  * the markdown-based decision either way, so this can only ADD a recovery
  * option, never take one away.
  */
-// skipcq: JS-R1005 -- cyclomatic complexity inherent to the 3-branch salvage contract (full-set/partial/race), pre-existing shape
-export async function tryChunkRecovery(
+/**
+ * Best-effort embedding publish for a recovered row (extracted from
+ * tryChunkRecovery to keep that function's cyclomatic complexity down):
+ * OpenRouter cost attribution needs a non-empty user string; rows settled
+ * by the reaper have a real owner when available, otherwise attribute to
+ * the reaper itself (same shape as dimension-remediation). Never rethrows —
+ * an embed publish failure must not change the reap outcome.
+ */
+async function publishEmbeddingForRecoveredRow(
   analysisId: string,
+  markdown: string,
+  userId: string | null,
+): Promise<void> {
+  await publishEmbeddingTask({
+    analysisId,
+    markdown,
+    userId: userId || `reaper:${analysisId}`,
+  }).catch((embedErr) => {
+    Sentry.captureException(embedErr, {
+      tags: { service: 'analysis-reaper', phase: 'publish_embedding_task' },
+      extra: { analysisId },
+    });
+  });
+}
+
+// skipcq: JS-R1005 -- cyclomatic complexity inherent to the 3-branch salvage contract (full-set/partial/race), pre-existing shape
+export async function tryChunkRecovery(  analysisId: string,
   existingReport: unknown,
   persistenceAdapter: SupabasePersistenceAdapter,
   userId: string | null = null
@@ -262,23 +286,12 @@ export async function tryChunkRecovery(
   // RCA (2026-09-24, vector-coverage): reaper-settled rows reached
   // billing_status='completed' without ever publishing an embedding job
   // (the embed rode the persist route's validation-chain publish, which a
-  // reaper settle never runs). Publish directly here. Idempotent: the embed
-  // webhook skips when the vector already exists. Best-effort — an embed
-  // publish failure must never change the reap outcome.
+  // reaper settle never runs). Publish directly here (best-effort helper
+  // below -- extracted to keep tryChunkRecovery's cyclomatic complexity
+  // down). Idempotent: the embed webhook skips when the vector already
+  // exists. An embed publish failure must never change the reap outcome.
   if (billingStatus === 'completed') {
-    await publishEmbeddingTask({
-      analysisId,
-      markdown: stitchResult.markdown,
-      // OpenRouter cost attribution needs a non-empty user string; rows
-      // settled by the reaper have a real owner when available, otherwise
-      // attribute to the reaper itself (same shape as dimension-remediation).
-      userId: userId || `reaper:${analysisId}`,
-    }).catch((embedErr) => {
-      Sentry.captureException(embedErr, {
-        tags: { service: 'analysis-reaper', phase: 'publish_embedding_task' },
-        extra: { analysisId },
-      });
-    });
+    await publishEmbeddingForRecoveredRow(analysisId, stitchResult.markdown, userId);
   }
 
   return { outcome: billingStatus === 'completed' ? 'completed' : 'failed' };

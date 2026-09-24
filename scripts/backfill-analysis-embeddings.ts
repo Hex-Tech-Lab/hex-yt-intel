@@ -45,6 +45,16 @@ interface AnalysisRow {
 const APPLY = process.argv.includes('--apply');
 const limitArg = process.argv.find((a) => a.startsWith('--limit='));
 const LIMIT = limitArg ? Number(limitArg.split('=')[1]) : Infinity;
+// Reject malformed/zero limits loudly (CodeRabbit/Cubic 2026-09-25 review):
+// a typo like `--limit=oops` becomes NaN, and NaN silently disables the cap
+// (the pagination break never fires and the final filter passes everything),
+// so an "limited" --apply run would embed every missing analysis.
+if (limitArg && (!Number.isSafeInteger(LIMIT) || LIMIT <= 0)) {
+  console.error(
+    `[backfill] Invalid --limit value: "${limitArg.split('=')[1]}" -- limit must be a positive integer`,
+  );
+  process.exit(2);
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -110,9 +120,11 @@ async function fetchExistingVectorIds(ids: string[]): Promise<Set<string>> {
   const present = new Set<string>();
   try {
     for (let i = 0; i < ids.length; i += 100) {
-      // Replaces ids.slice(i, i + 100) batching: this is pagination, not
-      // display truncation, and the slice form trips the truncation rule.
-      const chunk = ids.filter((_, j) => j >= i && j < i + 100);
+      // Bounded indexed loop, NOT ids.filter(...): filter scans the whole
+      // ids array for every 100-ID batch (O(n²/100) as the set grows); this
+      // loop keeps batching linear (Cubic 2026-09-25 review).
+      const chunk: string[] = [];
+      for (let j = i; j < i + 100 && j < ids.length; j++) chunk.push(ids[j] as string);
       const res = await index.fetch(chunk, { includeVectors: false, includeMetadata: false });
       for (const item of res ?? []) {
         if (item?.id) present.add(String(item.id));
