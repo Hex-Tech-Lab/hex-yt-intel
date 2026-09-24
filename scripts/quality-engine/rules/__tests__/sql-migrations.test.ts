@@ -239,12 +239,17 @@ describe("WAVE Q4: SqlDropFunctionDefaultArgRule (R13)", () => {
 // supabase/migrations/*.sql run BOTH the SQL rules (R4/R13) and R12
 // (ConflictMarkerRule, opted into languages ["ts","sql"]).
 describe("migration SQL runs the full gated rule set AND ConflictMarkerRule (PR #334)", () => {
+  // Markers built via concat so this file itself never contains literal
+  // conflict-marker lines (the pre-commit `git grep` gate would trip).
+  const START = "<" + "<".repeat(6) + " HEAD";
+  const SEP = "=".repeat(7);
+  const END = ">" + ">".repeat(6) + " origin/main";
   const CONFLICTED_MIGRATION = `
-<<<<<<< HEAD
-drop function if exists public.fn_x(p ts timestamptz DEFAULT NULL);
-=======
+${START}
+drop function if exists public.fn_x(p_ts timestamptz DEFAULT NULL);
+${SEP}
 drop function if exists public.fn_x(p_ts timestamptz);
->>>>>>> origin/main
+${END}
 `;
 
   test("R12 (ConflictMarkerRule) flags a conflicted SQL migration", () => {
