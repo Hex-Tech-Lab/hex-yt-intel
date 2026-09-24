@@ -1,0 +1,19 @@
+worker/wrangler.toml
+  s_c0862af7ca0281::t_03c9254f1cc0d9 64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ff17e56e7e7299b99555a7cafe7950e165d2eeaa",
+  "prompts": {},
+  "sessions": {
+    "s_c0862af7ca0281": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aad9b5affeU2vp9oYfwSJAoy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
