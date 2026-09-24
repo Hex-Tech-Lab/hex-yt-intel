@@ -1,0 +1,93 @@
+.scratch/gate-vitest.txt
+  s_39dd8150e158eb::t_e106b3a30e13fd 1-12
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_39dd8150e158eb::t_1984afa49739be 45
+  s_39dd8150e158eb::t_bfb125791a1e47 89
+  s_39dd8150e158eb::t_551b0a6fe9b26f 167
+  s_39dd8150e158eb::t_5667071cee7210 86
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_5667071cee7210 83
+  s_39dd8150e158eb::t_551b0a6fe9b26f 145
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_39dd8150e158eb::t_ca20066165b63d 6
+.scratch/triage.md
+  s_39dd8150e158eb::t_ad9344675a828c 1-33
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_39dd8150e158eb::t_5a8242e07124ec 3,63,77,111,231
+  s_39dd8150e158eb::t_ca20066165b63d 70-73
+docs/agent-prompts/TEMPLATE.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_551b0a6fe9b26f 135
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_551b0a6fe9b26f 146
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_39dd8150e158eb::t_5667071cee7210 144
+  s_39dd8150e158eb::t_1984afa49739be 43
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_39dd8150e158eb::t_dd28f78c974697 2,9-10
+docs/reviews/2026-09-24-pr325-external-review.md
+  s_39dd8150e158eb::t_dd28f78c974697 13
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_39dd8150e158eb::t_551b0a6fe9b26f 142
+  s_39dd8150e158eb::t_1984afa49739be 43
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_5667071cee7210 87
+  s_39dd8150e158eb::t_551b0a6fe9b26f 149
+.scratch/gate-lint.txt
+  s_39dd8150e158eb::t_c08aa15b46206b 1-41
+CLAUDE.md
+  s_39dd8150e158eb::t_bfb125791a1e47 54
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  s_39dd8150e158eb::t_dd28f78c974697 25
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_551b0a6fe9b26f 143
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_5667071cee7210 80
+  s_39dd8150e158eb::t_551b0a6fe9b26f 142
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_39dd8150e158eb::t_5667071cee7210 88
+  s_39dd8150e158eb::t_551b0a6fe9b26f 149
+  s_39dd8150e158eb::t_1984afa49739be 43
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_39dd8150e158eb::t_1984afa49739be 43
+  s_39dd8150e158eb::t_551b0a6fe9b26f 148
+  s_39dd8150e158eb::t_5667071cee7210 86
+AGENTS.md
+  s_39dd8150e158eb::t_bfb125791a1e47 137,141
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_39dd8150e158eb::t_dd28f78c974697 1
+.scratch/gate-qaintel-diff.txt
+  s_39dd8150e158eb::t_e106b3a30e13fd 1
+.scratch/gate-qaintel-full.txt
+  s_39dd8150e158eb::t_e106b3a30e13fd 1-465
+  s_39dd8150e158eb::t_bd05ce58ea0474 466-8076
+.scratch/inline-comments.json
+  s_39dd8150e158eb::t_dc3ee591b77d66 1
+.memory/AGENT_LEDGER.md
+  s_39dd8150e158eb::t_e1addd8151f851 1418
+.scratch/gate-contract.txt
+  s_39dd8150e158eb::t_bd05ce58ea0474 1-119
+.claude/MEMORY.md
+  s_39dd8150e158eb::t_a5c7d357a89842 52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b3cc3f114220959067b55453611da9178fb20fa2",
+  "prompts": {},
+  "sessions": {
+    "s_39dd8150e158eb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c2652ebffeH1fdLBh1sQlvPI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
