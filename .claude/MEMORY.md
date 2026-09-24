@@ -1,7 +1,7 @@
 # CLAUDE MEMORY — Credential Sanitization & Security Rules
 
 **Loaded on session start.**
-Last updated: 2026-05-16 19:02 (UTC+3)
+Last updated: 2026-09-19 (UTC+3) — rows 8-9 added after restore from HEAD; "Active Security Status" below is the 2026-05-16 snapshot and has NOT been re-verified
 
 ---
 
@@ -49,3 +49,5 @@ Archived credential files under `docs/specs/.env_*` must contain only placeholde
 | 5 | Docs archive | docs/code_review_report.md et al. | 7d54285 |
 | 6 | Security directive to Gemini | .gemini/SECURITY.md | adcf436 |
 | 7 | Security directive to Claude | .claude/SECURITY.md | adcf436 |
+| 8 | Hardcoded testsprite test-account credential removed from tracked TC*.py scripts + docs, password rotated (PR #316) | testsprite_tests/TC*.py, docs/history | 291e91d8 |
+| 9 | Next.js bumped 16.2.11 → 16.3.3 (PR #317; CVE closure UNVERIFIED until coverage by the fixed versions is confirmed; Codacy Wave A-security item 1 of N — remaining items open) | web/package.json, pnpm-lock.yaml | 9fac1671 |

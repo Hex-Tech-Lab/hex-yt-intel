@@ -8,7 +8,19 @@
         "z-ai/glm-5.3-flash": {
           "options": {
             "reasoning_effort": "low",
-            "provider": { "order": ["relace"], "only": ["relace"], "allow_fallbacks": false }
+            "provider": {
+              "order": [
+                "coreweave",
+                "together",
+                "relace"
+              ],
+              "only": [
+                "coreweave",
+                "together",
+                "relace"
+              ],
+              "allow_fallbacks": true
+            }
           }
         }
       }

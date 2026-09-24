@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Log snapshot never returns Cloudflare data; UI reports success on 1/5
+# Agent Dispatch Prompt — Tier STEP 1 round 2 — CC review findings
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: OC (opencode, openrouter/z-ai/glm-5.3-flash via committed .opencode/opencode.json)
-**Effort Level**: low (pinned); be thorough in the report
+**Target Agent**: OC (openrouter/z-ai/glm-5.3-flash)
+**Effort Level**: low
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,20 +70,20 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-**Verified:** (1) `web/lib/admin-logs/fetchers.ts` `fetchCloudflareLogs` queries `workersInvocationsAdaptive(limit: 50, orderBy: [datetime_DESC])` with NO datetime filter and fields that omit outcome detail; `scripts/poll-logs-snapshot.sh` returned `totalEntries: 0` while the worker had 78+ invocations incl. `exceededResources` in the window. A correct query with `filter:{datetime_geq,datetime_leq}` returns data with the same credentials. Workers Logs (observability, persist=true in worker/wrangler.toml) are also queryable via `POST /accounts/{id}/workers/observability/telemetry/query` and give per-request outcomes like `exceededCpu` — use them. (2) The client log printed "Analysis stream completed successfully." after "1/5 streams completed." (web/hooks/useSSEStream.ts).
+**Branch `fix/tier-vocabulary-runtime-path`** (your own STEP 1 work, commits cf423aa8 + f40fa7df). CC review found:
 
-**Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
+P1 (security, must fix). `web/app/api/billing/webhook/route.ts` `resolveEventTier`: when the price ID is not recognised it falls back to `mapPlanStringToUserTier(event.data.custom_data?.planTier)` / price `custom_data.plan_tier`. That contradicts the fail-closed contract (your own `pricing.ts` doc comment says no webhook may re-derive a tier from custom_data plan strings): an unrecognised price with `custom_data.planTier: "max"` would grant Max. Remove the fallback; unrecognised price ⇒ tier unchanged + Sentry (already present). Check `web/app/api/webhooks/paddle/route.ts` / `ProcessPaddleWebhookUseCase.ts` / `GetUserEntitlementsUseCase.ts` for the same pattern (`plan_tier` is read from a DB row in GetUserEntitlements — trace where that row's value is written from). Test with negative control: unrecognised price + planTier 'max' ⇒ tier unchanged.
+P2. The dispatch prompt's `UserTier` importer list was hand-written and partly wrong (e.g. `ProcessChatMessageUseCase.ts` defines `Record<UserTier, number>`). In your report, include a generated list (`rg -n "UserTier" web worker`) of every consumer and literal tier comparison, each marked handled/unchanged-with-reason.
+P2. Interim Light/Max numbers you added in `web/lib/constants/rate-limits.ts` and `CHAT_TURN_LIMIT_FALLBACK` are hardcoded tunables — leave the values (they are an explicit interim, NEEDS USER DECISION) but make sure each is listed in the report's decision section, and that `chat.turnLimit.light/max` registry keys are documented as needing seed rows in STEP 2 (DB) — do not write migrations in this task.
+Also update your `[IN_PROGRESS]` ledger line to `[DONE]` with real commits.
 
+**Standing constraints**: FREE plans everywhere. Hex-Lite + DDD-Lite, contract-first, DI, no hardcoded tunables (Settings Registry). Work only in this worktree on the existing branch; commit locally; do NOT push (CC pushes, one PR at a time). NEVER use `git stash` — for negative controls copy the working-tree file aside first, edit against the copy, then restore from the copy (never redirect `git show HEAD:` output over the live file). Get check details via `gh pr checks <n>` / `gh api .../check-runs`; never guess findings. Migrations: follow ADR 018 (after apply_migration, rename local file to the recorded version); do NOT apply any migration to production — write it, CC applies after review.
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-1. Fix the Cloudflare fetcher: time-window filter from the requested range, include status/outcome, and add Workers Observability events (errors + outcomes) to the snapshot. Test with a mocked API response.
-2. Make the final UI/log message reflect reality for partial results (e.g. "Partial: 1/5 streams completed — missing dimensions will be regenerated") without changing settle semantics.
-3. Gates: tsc, vitest, qa-intel diff.
-
-Branch: `fix/observability-blind-spots` (already checked out in your worktree).
+Work the findings in priority order. Gates: web tsc, affected vitest + full web vitest before finishing, worker typecheck (`tsconfig.typecheck.json`) + build if worker touched, qa-intel diff. Report per finding: fixed / rejected (evidence) / needs user decision.
 
 ---
 

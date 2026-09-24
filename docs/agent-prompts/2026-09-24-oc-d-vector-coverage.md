@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Log snapshot never returns Cloudflare data; UI reports success on 1/5
+# Agent Dispatch Prompt — Upstash Vector holds 50 vectors for ~115 completed analyses
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: OC (opencode, openrouter/z-ai/glm-5.3-flash via committed .opencode/opencode.json)
-**Effort Level**: low (pinned); be thorough in the report
+**Target Agent**: OC (openrouter/z-ai/glm-5.3-flash)
+**Effort Level**: low
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,20 +70,22 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-**Verified:** (1) `web/lib/admin-logs/fetchers.ts` `fetchCloudflareLogs` queries `workersInvocationsAdaptive(limit: 50, orderBy: [datetime_DESC])` with NO datetime filter and fields that omit outcome detail; `scripts/poll-logs-snapshot.sh` returned `totalEntries: 0` while the worker had 78+ invocations incl. `exceededResources` in the window. A correct query with `filter:{datetime_geq,datetime_leq}` returns data with the same credentials. Workers Logs (observability, persist=true in worker/wrangler.toml) are also queryable via `POST /accounts/{id}/workers/observability/telemetry/query` and give per-request outcomes like `exceededCpu` — use them. (2) The client log printed "Analysis stream completed successfully." after "1/5 streams completed." (web/hooks/useSSEStream.ts).
+**Verified 2026-09-19**: `upstash_snapshots` (app's own poll with prod creds) shows the Upstash Vector index healthy (HYBRID, 1536-d, COSINE), 5,035/5,035 polls ok, vector count 10→50 (latest increase 2026-09-18), while `analyses` has ~115-119 `billing_status='completed'` rows. Embeds are written by `web/app/api/webhooks/embed/route.ts:168` (QStash webhook), queried by `web/app/api/search/route.ts:118`. The credential-missing branch returns 503 with only console.error (no Sentry). Supabase pgvector (`analyses.embedding`) is effectively unused (1/239 rows). A similar backfill precedent exists: `scripts/backfill-stance-relations.ts` on branch `feat/stance-dual-persistence-wordcloud`.
 
-**Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
-
+**Standing constraints**: ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU/request, now strictly enforced as of 2026-09-23; Vercel Hobby wall-clock limits; Upstash/Supabase free). Upgrades are not a fix. Architecture: Hex-Lite + DDD-Lite (ports/adapters, domain logic in domain/use cases, route handlers thin, DI, OO with separation of concerns), contract-first (every boundary has a defined, enforced schema).
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-1. Fix the Cloudflare fetcher: time-window filter from the requested range, include status/outcome, and add Workers Observability events (errors + outcomes) to the snapshot. Test with a mocked API response.
-2. Make the final UI/log message reflect reality for partial results (e.g. "Partial: 1/5 streams completed — missing dimensions will be regenerated") without changing settle semantics.
-3. Gates: tsc, vitest, qa-intel diff.
+1. Root-cause why completed analyses lack vectors, with evidence (code path from finalize → QStash publish → embed webhook; check which finalize paths publish the embed job and which don't — reaper/remediation/settled-stitch paths are prime suspects). Use Supabase read-only queries and Upstash vector `fetch`/`range` (read-only) to list which analysis IDs are missing.
+2. Fix the cause so every finalize path embeds (idempotent upsert by analysisId). Add Sentry capture on the embed webhook's failure branches.
+3. Write an idempotent backfill script `scripts/backfill-analysis-embeddings.ts` (dry-run default, `--apply` flag). Do NOT run `--apply` — CC runs it after review.
+4. Do NOT drop pgvector — list exactly what a removal migration would touch under NEEDS USER DECISION (ADR 018 rules).
+5. Tests with a negative control. Gates: web tsc, vitest, qa-intel diff.
+Branch `fix/upstash-vector-coverage` in your worktree. Commit locally; do NOT push/PR. Do NOT use `git stash` (the stash stack is shared across worktrees) — to prove a negative control, use a temporary WIP commit and `git revert`/`git checkout <sha> -- <file>` instead.
 
-Branch: `fix/observability-blind-spots` (already checked out in your worktree).
+Branch: `fix/upstash-vector-coverage`.
 
 ---
 
@@ -139,7 +141,7 @@ Branch: `fix/observability-blind-spots` (already checked out in your worktree).
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw `Response.json`/text pass-throughs and unvalidated boundary payloads (grep/AST based — despite its name it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.
