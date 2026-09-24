@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  s_2ff85c71e1bc20::t_355031eaba0336 1401-1402
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_359814ab92e866::t_aeeb62f78e124d 39
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_2ff85c71e1bc20::t_f4a95d6ebfa532 1-187,199-203,212-222,225-227,232-244
+  s_2ff85c71e1bc20::t_d20145cbfeaec6 188-198,204-211
+  s_2ff85c71e1bc20::t_d08cc52d18be15 223-224,228-231
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_2ff85c71e1bc20::t_4ac50704c2f142 4,14
+  s_2ff85c71e1bc20::t_9e1e40dafedb93 1-3,5-13,15-255
+scripts/quality-engine/rules/index.ts
+  s_2ff85c71e1bc20::t_5aa801a0c75080 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d57ecdc4c5e8dc67b903f518b34951e1630375be",
+  "prompts": {},
+  "sessions": {
+    "s_2ff85c71e1bc20": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b82d6e1ffeSD37RCQQpPPt5g",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_359814ab92e866": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2faa50ffeJMYoPxk4VjzRJZ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
