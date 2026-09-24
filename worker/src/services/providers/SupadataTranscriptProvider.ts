@@ -119,15 +119,34 @@ export class SupadataTranscriptProvider implements TranscriptProviderPort {
    * so the chain falls through.
    */
   private async callApi(url: string): Promise<SupadataFirstResponse | null> {
-    const response = await fetch(url, {
-      headers: { 'x-api-key': this.apiKey! },
-      signal: AbortSignal.timeout(30000),
-    });
+    const response = await this.request(url);
     if (response.status === 206) return null;
     if (!response.ok) throw new Error(`Supadata fail: ${response.status}`);
-    const body = await response.json() as SupadataFirstResponse;
+    const body = response.payload as SupadataFirstResponse;
     if (!body || typeof body !== 'object') throw new Error('Supadata returned malformed body');
     return body;
+  }
+
+  /**
+   * Authenticated GET with a 30s deadline. The body is buffered inside the
+   * try so the controller can be released in finally (same pattern as
+   * TranscriptApiProvider).
+   */
+  private async request(url: string): Promise<{ status: number; ok: boolean; payload: unknown }> {
+    const apiKey = this.apiKey;
+    if (!apiKey) throw new Error('Supadata API key not configured');
+    const controller = new AbortController();
+    try {
+      const response = await fetch(url, {
+        headers: { 'x-api-key': apiKey },
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
+      });
+      // Only a 200/202 carries a JSON body we use; 206 and failures are decided by status.
+      const payload: unknown = response.ok && response.status !== 206 ? await response.json() : null;
+      return { status: response.status, ok: response.ok, payload };
+    } finally {
+      controller.abort();
+    }
   }
 
   /** Poll a 202/200 jobId until completed/failed or the 60s job deadline. */
@@ -137,12 +156,9 @@ export class SupadataTranscriptProvider implements TranscriptProviderPort {
       if (Date.now() >= deadline) throw new Error(`Supadata job ${jobId} did not complete within the 60s polling deadline`);
       await new Promise(resolve => setTimeout(resolve, this.pollIntervalMs));
       const url = `${BASE_URL}/${encodeURIComponent(jobId)}`;
-      const response = await fetch(url, {
-        headers: { 'x-api-key': this.apiKey! },
-        signal: AbortSignal.timeout(30000),
-      });
+      const response = await this.request(url);
       if (!response.ok) throw new Error(`Supadata job poll fail: ${response.status}`);
-      const body = await response.json() as SupadataJobStatusBody;
+      const body = response.payload as SupadataJobStatusBody;
       if (!body || typeof body !== 'object') throw new Error('Supadata returned malformed job body');
       if (body.status === 'failed') throw new Error(`Supadata job failed: ${body.error?.message ?? body.error?.details ?? 'unknown error'}`);
       if (body.status === 'completed') return { content: body.content, lang: body.lang };
