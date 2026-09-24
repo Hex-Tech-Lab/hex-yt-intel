@@ -1,0 +1,39 @@
+.memory/AGENT_LEDGER.md
+  s_00ba3f6be0d13c::t_aa290570d4d857 1402
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  s_cbe94151e1e560::t_c57c1e3f00675f 20-21,29,37-40,42,45,52-54,57,59-65,67,127-128,132-148
+worker/src/services/BracketBuffer.ts
+  s_3045aa20fc7b90::t_69955a5bdce7a4 31-32,40,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "807287a914b334903cfdef335f7fc1ac4339d7b4",
+  "prompts": {},
+  "sessions": {
+    "s_00ba3f6be0d13c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bbe29b5ffejvyJPZC8ksDRRQ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_3045aa20fc7b90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2ba1f531ffeqkWduwixrb5FY1",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cbe94151e1e560": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc513e0ffeuThVqxjsNqeZeI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
