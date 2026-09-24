@@ -54,7 +54,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const idsParam = new URL(request.url).searchParams.get('ids');
+  const params = new URL(request.url).searchParams;
+  const idsParam = params.get('ids');
   if (!idsParam) {
     return NextResponse.json({ error: 'Missing ?ids=' }, { status: 400 });
   }
@@ -63,8 +64,14 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'No ids provided' }, { status: 400 });
   }
 
-  const proxyUrl = process.env.RESIDENTIAL_PROXY_URL;
-  const decodoKey = process.env.DECODO_API_KEY;
+  // tier=native omits the Decodo key so TranscriptExtractor falls straight
+  // through to the YouTube-native tier — the true "does YouTube block raw
+  // Vercel datacenter IPs" measurement (Decodo would mask it behind the
+  // residential proxy).
+  const forcedNative = params.get('tier') === 'native';
+
+  const proxyUrl = forcedNative ? undefined : process.env.RESIDENTIAL_PROXY_URL;
+  const decodoKey = forcedNative ? undefined : process.env.DECODO_API_KEY;
   const ytKey = process.env.YOUTUBE_API_KEY;
 
   const results = await Promise.all(
