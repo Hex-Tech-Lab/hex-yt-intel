@@ -1,0 +1,76 @@
+web/lib/intelligence/relations-engine.ts
+  s_02ca2176cd094a::t_4876b9c82ac9d2 263
+  s_02ca2176cd094a::t_4e5a3c0bbbde47 190
+  s_02ca2176cd094a::t_d3fc4a31493392 296-299
+  s_02ca2176cd094a::t_ecf9da8960ef68 305-311
+web/components/dashboard/RightPanelAccordion.tsx
+  s_02ca2176cd094a::t_e2d235e8afbd47 29-30,32-38
+scripts/backfill-stance-relations.ts
+  s_02ca2176cd094a::t_3512940436c139 294-296,303,310-311,315-321
+  s_02ca2176cd094a::t_ed0485b45474c5 251
+  s_02ca2176cd094a::t_d31760fcf689b8 258
+  s_02ca2176cd094a::t_cc277829a8df38 231,233
+  s_02ca2176cd094a::t_69d5fd8ecba4a0 183
+  s_02ca2176cd094a::t_9f9e790ef0720b 182
+  s_02ca2176cd094a::t_a6e2518097400e 244-248
+  s_02ca2176cd094a::t_4b69f9cac1ceac 367-368
+  s_542d19c0732260::t_15887908cf2473 322-323
+web/app/api/analyses/[id]/relations/__tests__/route.test.ts
+  s_02ca2176cd094a::t_072d662a498b25 98
+  s_02ca2176cd094a::t_52d8c1ec09f908 217-232
+  s_02ca2176cd094a::t_840f2a90a68150 63-68,72,76,78,80,88
+  s_02ca2176cd094a::t_a10777ab88f4d0 101
+  s_02ca2176cd094a::t_f1957cd69ce14d 254
+  s_02ca2176cd094a::t_be6b76db324d3d 34
+web/lib/__tests__/contracts/stance-relations-persistence.contract.test.ts
+  s_02ca2176cd094a::t_194814e8506e12 32,34-35
+  s_02ca2176cd094a::t_653fac3c34303c 25
+  s_02ca2176cd094a::t_47df1fa3764cd5 83-89
+  s_02ca2176cd094a::t_b73a784fa6a4de 72
+  s_02ca2176cd094a::t_5a0be1abc8ee4f 21,24
+  s_02ca2176cd094a::t_e4f7d8f189bdbb 82,104,113-114
+web/app/api/analyses/[id]/relations/route.ts
+  s_02ca2176cd094a::t_54353b4c542bd2 169-176
+  s_02ca2176cd094a::t_0f3a9fc054b3bf 215-235
+  s_02ca2176cd094a::t_bb9f9d96cf788a 198-199,210-214
+  s_02ca2176cd094a::t_d281c29b87718d 26
+web/lib/__tests__/relations-engine-repair.test.ts
+  s_02ca2176cd094a::t_f450c69f0e2ac4 54
+  s_02ca2176cd094a::t_a67d7a227fd3fe 13-19
+  s_02ca2176cd094a::t_a55d165d97e4c3 42
+supabase/migrations/20260925090000_seed_relations_registry_keys.sql
+  s_02ca2176cd094a::t_7f952e2ca2d945 1-14,16-23,25-29
+  s_02ca2176cd094a::t_5d007b34a1b861 30-35
+  s_02ca2176cd094a::t_da8c5d9fdbfc94 15
+  s_02ca2176cd094a::t_295c9ee8674aa0 24
+web/lib/adapters/SupabaseAnalysisPayloadAdapter.ts
+  s_02ca2176cd094a::t_89b9911e6eeed4 27-35,37,51,60-73,76,78-81,97
+  s_02ca2176cd094a::t_5c31e0b4f69ee6 41-42,49-50,74-75,77,82-96
+web/lib/ports/index.ts
+  s_02ca2176cd094a::t_8242275c35b934 52-56
+  s_542d19c0732260::t_e6dc859d0cd87b 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a6f00c206f4a1285361371bf66a6e22e6536fda3",
+  "prompts": {},
+  "sessions": {
+    "s_02ca2176cd094a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a7b7be7ffeMvRcp3GvpNpgch",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_542d19c0732260": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8ab9bcffeqoaVAzK2sWt6S2",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
