@@ -1,0 +1,29 @@
+.memory/AGENT_LEDGER.md
+  s_494fa24a1a11a4::t_d174c396c00331 1417
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_494fa24a1a11a4::t_0152830f431db4 35-50
+docs/reviews/2026-09-24-pr320-external-review.md
+  s_494fa24a1a11a4::t_c2e0baa630cfba 1-8
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_494fa24a1a11a4::t_99a1f6a5fe650d 1-9
+docs/reviews/2026-09-24-pr322-external-review.md
+  s_494fa24a1a11a4::t_5a0cc1e33d7e2b 1-8
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_494fa24a1a11a4::t_e07f645a6a8166 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c753a33eabc53fbabf23f1d161edbeeb971f1eb7",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
