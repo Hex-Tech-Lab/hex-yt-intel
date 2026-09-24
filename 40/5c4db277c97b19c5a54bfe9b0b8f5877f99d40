@@ -1,0 +1,84 @@
+web/app/api/analyses/persist/route.ts
+  s_b17cfcf53fe350::t_171eea60b8b90e 11,1080-1097,1463-1474
+  s_b17cfcf53fe350::t_fa8f8dec35fdab 1475-1476
+web/app/api/webhooks/embed/route.ts
+  s_b17cfcf53fe350::t_aeb6d3eae797ea 125
+  s_b17cfcf53fe350::t_d796833c4a6cb9 129
+  s_b17cfcf53fe350::t_dd6784b1d79bde 71-75
+  s_b17cfcf53fe350::t_051d2c40e8505c 89-92
+  s_b17cfcf53fe350::t_994daeed24ff8b 108-112,119-124,126-128,130-144
+  s_b17cfcf53fe350::t_7c3339295b1303 145-146
+web/lib/__tests__/embed-webhook-coverage.test.ts
+  s_b17cfcf53fe350::t_f71c28d93fc9da 41-47
+  s_b17cfcf53fe350::t_b86499448548f0 96-99
+  s_b17cfcf53fe350::t_7f2fdf1eb7b305 1-40,48-95,100-158
+.memory/AGENT_LEDGER.md
+  s_05dfd9b483c0e3::t_1c05ef9c162f2e 1400
+  s_b17cfcf53fe350::t_740eaf4573a61e 1401
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_b17cfcf53fe350::t_48229bc1af1dee 59
+  s_b17cfcf53fe350::t_a1f44cd2b44874 214-281
+web/lib/__tests__/analysis-reaper.test.ts
+  s_b17cfcf53fe350::t_d5ae62b08a984e 366-464
+package.json
+  s_b17cfcf53fe350::t_d6bf6852bdc71d 14
+web/lib/__tests__/persist-cas-race-and-primitive-payload.test.ts
+  s_b17cfcf53fe350::t_48229bc1af1dee 74
+web/lib/services/aux-remediation.ts
+  s_b17cfcf53fe350::t_4ea005ef652538 59
+  s_b17cfcf53fe350::t_373a04485adc18 350-357
+web/lib/__tests__/persist-payloadless-chunk.test.ts
+  s_b17cfcf53fe350::t_48229bc1af1dee 71
+web/lib/services/analysis-reaper.ts
+  s_b17cfcf53fe350::t_171eea60b8b90e 23,118,258-259,351-371,388,442-446,469-487,504
+  s_b17cfcf53fe350::t_4ada6b8a9dfd93 372
+web/lib/__tests__/persist-side-effect-outbox.test.ts
+  s_b17cfcf53fe350::t_48229bc1af1dee 58
+scripts/backfill-analysis-embeddings.ts
+  s_b17cfcf53fe350::t_eb95043f961195 1-172
+web/lib/services/dimension-remediation.ts
+  s_b17cfcf53fe350::t_ce069d55a104dd 49
+  s_b17cfcf53fe350::t_766b5d1e09864d 904-914
+web/lib/qstash-client.ts
+  s_b17cfcf53fe350::t_4adbf917f5ecf5 205
+  s_b17cfcf53fe350::t_89cac67f03c540 7
+  s_b17cfcf53fe350::t_8bc7391ce86c43 200-204,206-208
+web/lib/__tests__/persist-chunk-payload-classification.test.ts
+  s_b17cfcf53fe350::t_48229bc1af1dee 63
+pnpm-lock.yaml
+  s_b17cfcf53fe350::t_ea8c5d239269b3 44-46
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_494fa24a1a11a4::t_7d6229b723bdb4 1-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "405c4db277c97b19c5a54bfe9b0b8f5877f99d40",
+  "prompts": {},
+  "sessions": {
+    "s_05dfd9b483c0e3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2f9953ffffeXVyKv8XiDH9Bse",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b17cfcf53fe350": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c4eaa72ffeRPnoZfBEdQP4oP",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
