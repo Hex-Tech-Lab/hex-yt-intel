@@ -1,0 +1,30 @@
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  h_60000122af7b55 73-75,77,89,175
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  h_60000122af7b55 214-215
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  h_60000122af7b55 1-144
+web/middleware.test.ts
+  h_60000122af7b55 40-67
+web/middleware.ts
+  h_60000122af7b55 116-127,166-172,174-190,192-195,202-204,206-209,211-280,297,303-320
+web/vitest.config.ts
+  h_60000122af7b55 70,76-82
+worker/src/__tests__/chapter-persist.test.ts
+  h_60000122af7b55 1-180
+worker/src/routes/analysis.ts
+  h_60000122af7b55 14,16,149-150,237-240,253,261-266,339,384-388,402-407,1207-1213,1218-1221
+worker/src/services/chapter-persist.ts
+  h_60000122af7b55 1-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "227ec1fdcf124fa1a9beb382c5b03cf68c3c7795",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
