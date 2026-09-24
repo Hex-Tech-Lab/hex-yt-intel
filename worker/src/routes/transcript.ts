@@ -6,6 +6,8 @@ type TranscriptEnv = {
   DECODO_API_KEY?: string;
   APIFY_TOKEN?: string;
   TRANSCRIPTAPI_API_KEY?: string;
+  SUPADATA_API_KEY?: string;
+  SUPADATA_MAX_AI_MINUTES?: string;
   TRANSCRIPT_PROVIDER_ORDER?: string;
   TRANSCRIPT_CHAIN_BUDGET_MS?: string;
 };
@@ -21,7 +23,7 @@ transcript.post("/fetch-transcript", async (c) => {
   }
 
   try {
-    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY, c.env.TRANSCRIPT_PROVIDER_ORDER, c.env.APIFY_TOKEN, parseChainBudgetMs(c.env.TRANSCRIPT_CHAIN_BUDGET_MS));
+    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY, c.env.TRANSCRIPT_PROVIDER_ORDER, c.env.APIFY_TOKEN, parseChainBudgetMs(c.env.TRANSCRIPT_CHAIN_BUDGET_MS), c.env.TRANSCRIPTAPI_API_KEY, c.env.SUPADATA_API_KEY, 0);
     const result = await extractor.fetch(videoId);
 
     return c.json(
