@@ -28,6 +28,8 @@ export class BracketBuffer {
   private objectStart: number = -1;
   private scanIndex: number = 0;
   private emittedDimensions: Set<number> = new Set();
+  /** Cumulative characters iterated by feed()'s scan loop (observability only; no behavioural effect). */
+  private scannedChars: number = 0;
 
   feed(chunk: string): DimensionFragment[] {
     this.buffer += chunk;
@@ -35,6 +37,7 @@ export class BracketBuffer {
     const startAt = this.scanIndex;
 
     for (let i = startAt; i < this.buffer.length; i++) {
+      this.scannedChars++;
       const char = this.buffer[i];
 
       if (this.escaped) {
@@ -222,6 +225,7 @@ export class BracketBuffer {
   getState() {
     return {
       bufferLength: this.buffer.length,
+      scannedChars: this.scannedChars,
       depth: this.depth,
       inString: this.inString,
       emitted: [...this.emittedDimensions],

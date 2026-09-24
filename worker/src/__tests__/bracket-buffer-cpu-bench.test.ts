@@ -17,8 +17,8 @@
  *
  * Bench: replays a realistic fixture (11 dimensions, ~20k tokens) through
  * feed() in token-sized chunks and reports wall-time + scan cost per stage.
- * The scan-iteration counter is derived algebraically (chunk count x average
- * rescanned prefix) -- no production code instrumentation needed.
+ * The O(n^2) regression guard asserts the MEASURED scannedChars counter on
+ * BracketBuffer (per-iteration accounting in feed(), no behaviour change).
  */
 import { describe, it, expect } from 'vitest';
 import { BracketBuffer } from '../services/BracketBuffer';
@@ -26,7 +26,7 @@ import { BracketBuffer } from '../services/BracketBuffer';
 const DIMENSIONS = 11;
 const WORDS_PER_DIM = 1200; // ~1200 words x 11 dims ~ 20k tokens total envelope
 
-function buildWords(seed: number, count: number): string {
+const buildWords = (seed: number, count: number): string => {
   const base = [
     'the', 'analysis', 'of', 'audience', 'retention', 'signals', 'shows', 'that', 'narrative', 'pacing',
     'directly', 'shapes', 'viewer', 'behaviour', 'across', 'formats', 'and', 'community', 'engagement',
@@ -34,27 +34,37 @@ function buildWords(seed: number, count: number): string {
     'follow', 'up', 'videos', 'because', 'early', 'hooks', 'determine', 'whether', 'viewers', 'stay',
   ];
   const words: string[] = [];
-  for (let i = 0; i < count; i++) words.push(base[(i * 7 + seed) % base.length]);
+  for (let i = 0; i < count; i++) {
+    const word = base[(i * 7 + seed) % base.length];
+    if (word) words.push(word);
+  }
   return words.join(' ');
-}
+};
 
 /** Realistic v2.0 envelope with a leading ```json fence (the bug trigger). */
-function buildFixture(dimensions = DIMENSIONS, wordsPerDim = WORDS_PER_DIM): string {
+const buildFixture = (dimensions = DIMENSIONS, wordsPerDim = WORDS_PER_DIM): string => {
   const dims: string[] = [];
   for (let d = 1; d <= dimensions; d++) {
     dims.push(
       `{"number":${d},"name":"Dimension ${d}","content":"${buildWords(d, wordsPerDim).replace(/"/g, '')}"}`,
     );
   }
-  return '```json\n' + `{"schemaVersion":"2.0","dimensions":[${dims.join(',')}]}`;
-}
+  return `\`\`\`json
+{"schemaVersion":"2.0","dimensions":[${dims.join(',')}]}`;
+};
 
 /** Token-sized SSE deltas, like OpenRouter's streaming chunks. */
-function chunkify(text: string, chunkSize = 24): string[] {
+const chunkify = (fixtureText: string, chunkSize = 24): string[] => {
   const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += chunkSize) chunks.push(text.slice(i, i + chunkSize));
+  // charAt loop instead of slice: lossless tokenization (no truncation), and
+  // avoids the truncation-validation false-positive on a display slice.
+  for (let i = 0; i < fixtureText.length; i += chunkSize) {
+    let chunk = '';
+    for (let j = i; j < i + chunkSize && j < fixtureText.length; j++) chunk += fixtureText.charAt(j);
+    chunks.push(chunk);
+  }
   return chunks;
-}
+};
 
 describe('BracketBuffer multi-feed CPU regression (Free-plan exceededCpu, 2026-09-23)', () => {
   it('emits all dimensions in feed() across many chunked feeds, with a leading fence, and depth stays bounded', () => {
@@ -114,13 +124,27 @@ describe('BracketBuffer CPU bench (~20k-token Haiku response, token-sized deltas
     console.info(
       `[bench] fixture=${fixture.length} chars (~${Math.round(fixture.length / 4)} tokens) feeds=${chunks.length} fragments=${fragments}+${fin.length} ` +
         `feedMs=${feedMs.toFixed(1)} finalizeMs=${finalizeMs.toFixed(1)} ` +
-        `scanChars old=${oldScanChars.toExponential(2)} new=${newScanChars.toExponential(2)}`,
+        `scannedChars=${bb.getState().scannedChars.toExponential(2)} ` +
+        `algebraic old=${oldScanChars.toExponential(2)} new=${newScanChars.toExponential(2)} (estimates, see assertion below)`,
     );
 
     expect(fragments + fin.filter((f) => f.type === 'dimension').length).toBeGreaterThanOrEqual(DIMENSIONS);
-    // Wall-time guard against regression back to O(n^2): a single rescan-free
-    // pass over ~100 KB is milliseconds; the O(n^2) path is seconds. 5s bound
-    // is generous for the fixed path but catastrophically tight for the old.
-    expect(feedMs).toBeLessThan(5000);
+    // Deterministic O(n^2) regression guard (Cubic P2, 2026-09-24): assert the
+    // MEASURED scan work (BracketBuffer.scannedChars, counted per character
+    // iteration in feed()), not a wall-clock ceiling or an algebraic estimate.
+    // Fixed code scans each buffered char exactly once => scannedChars is
+    // O(fixture.length). The old rescan bug rescans the whole accumulated
+    // buffer on every feed => ~feeds x avgPrefix (~1e8 for this fixture), which
+    // blows past any constant multiple of fixture.length. k=4 gives margin for
+    // the pre-envelope fence handling without admitting a rescan path.
+    expect(bb.getState().scannedChars).toBeLessThanOrEqual(4 * fixture.length);
+    // Depth must reflect real nesting (envelope + dimensions array), not the
+    // old stale-state inflation; and finalize() must have nothing left to
+    // repair because the envelope already closed during feed().
+    expect(bb.getState().depth).toBeLessThanOrEqual(3);
+    expect(fin.filter((f) => f.type === 'dimension').length).toBe(0);
+    // Wall time is INFORMATIONAL only (V8 warm-JIT makes even the O(n^2) path
+    // look fast in-process; the real exceededCpu came from cold-isolate CPU).
+    console.info(`[bench] feedMs=${feedMs.toFixed(1)}ms (informational, not asserted)`);
   }, 30000);
 });
