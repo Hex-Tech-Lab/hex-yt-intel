@@ -1,0 +1,31 @@
+docs/research/2026-09-24-hex-expan-payments-lessons.md
+  s_ca4246c6c59506::t_0d52a0d0cf9143 221,223,228-238,242,246-252,256
+  s_ca4246c6c59506::t_c76d1d399ac187 176-178
+  s_ca4246c6c59506::t_e610ae368bf0f3 259-269
+  s_ca4246c6c59506::t_5fba21f64c3838 284-285
+  s_ca4246c6c59506::t_5e76e0f59917ea 286-287
+  s_ca4246c6c59506::t_de3fce093ad203 24
+  s_ca4246c6c59506::t_090f865bc3ef74 154
+  s_ca4246c6c59506::t_e877df7e358c01 291
+  s_ca4246c6c59506::t_e7278dfd67b3d9 155-158
+  s_ca4246c6c59506::t_b8b78573e7f002 103-110
+  s_ca4246c6c59506::t_c26d311a56d6f6 9-16
+.memory/AGENT_LEDGER.md
+  s_ca4246c6c59506::t_7e6d5a5118eb79 1402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c82d7e5b5b98cdb455f65d9ed5a99e4a1033d57e",
+  "prompts": {},
+  "sessions": {
+    "s_ca4246c6c59506": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2ad713fdffe8rMUVea6gfXs0M",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
