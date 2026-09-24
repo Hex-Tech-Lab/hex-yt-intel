@@ -1,6 +1,8 @@
 import * as Sentry from '@sentry/nextjs';
 import { nanoid } from 'nanoid';
 
+import type { UserTier } from '@/lib/types/billing';
+
 /**
  * Performance monitoring utilities for Sentry integration
  * Tracks API latency, database operations, and external service calls
@@ -166,7 +168,7 @@ export async function trackExternalCall<T>(
 export function setUserContext(
   userId: string,
   email?: string,
-  tier?: 'free' | 'light' | 'pro' | 'max' | 'enterprise'
+  tier?: UserTier
 ): void {
   Sentry.setUser({
     id: userId,
