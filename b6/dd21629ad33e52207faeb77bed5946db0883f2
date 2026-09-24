@@ -1,0 +1,43 @@
+scripts/verify-quality-engine.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 103-109,146-151,173,216
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-244
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-150
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-134
+worker/src/services/BracketBuffer.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 31-32,40,81-88,90,228
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-235
+scripts/quality-engine/rules/index.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 56-57
+scripts/quality-engine/rules/sql-migrations.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-215
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_bc7bf73162d55e::t_f18b777ee438b4 39,52
+.memory/AGENT_LEDGER.md
+  s_bc7bf73162d55e::t_f4c44b4b8d1cfa 1402
+scripts/quality-engine/domain/Rule.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 6-13,35
+scripts/quality-engine/application/QualityEngine.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 52-59
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_bc7bf73162d55e::t_f18b777ee438b4 1-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b6dd21629ad33e52207faeb77bed5946db0883f2",
+  "prompts": {},
+  "sessions": {
+    "s_bc7bf73162d55e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aadc62dffeDGxjXLs7IKleJB",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
