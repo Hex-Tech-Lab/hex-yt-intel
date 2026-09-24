@@ -40,7 +40,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning minimal — see CLAUDE.md "OC model standard")
 Flash low) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
