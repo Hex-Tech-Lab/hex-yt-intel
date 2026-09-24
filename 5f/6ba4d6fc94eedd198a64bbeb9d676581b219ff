@@ -1,0 +1,31 @@
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_ad5a12d058f528::t_6fd4cb6a1a6105 157-158,160
+  s_ad5a12d058f528::t_57d4bcb2d313d5 41-42,44,50-51,53
+  s_ad5a12d058f528::t_f36477826929a4 169-170,172-173,177-178,182-183,187
+  s_ad5a12d058f528::t_6f954512727795 128-131
+  s_ad5a12d058f528::t_bb841cbea39985 224-227
+  s_ad5a12d058f528::t_4d55548dc40628 11
+  s_ad5a12d058f528::t_651eaee124700b 32-33,35-36
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_ad5a12d058f528::t_b55e8d944e1a09 61-65,70-74,79-83,88-92,96-100
+  s_ad5a12d058f528::t_2c18a2b0051a92 32-56
+worker/src/services/providers/ApifyTranscriptProvider.ts
+  s_ad5a12d058f528::t_40ca2fb18e5c49 66,68-73,75-76,78-84,86,88-89,91-99
+  s_ad5a12d058f528::t_60c3dfe191ab6a 44-45,47-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5f6ba4d6fc94eedd198a64bbeb9d676581b219ff",
+  "prompts": {},
+  "sessions": {
+    "s_ad5a12d058f528": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2acf88bcffetkwBdfaVmsw6Oj",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
