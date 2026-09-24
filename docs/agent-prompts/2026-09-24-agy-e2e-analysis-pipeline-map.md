@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — <TASK_NAME>
+# Agent Dispatch Prompt — STEP 1 of 3 — End-to-end map of the analysis pipeline (read-only investigation, no code changes)
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
-**Effort Level**: <high | medium | low>
+**Target Agent**: AGY (gemini-3.8-flash-low)
+**Effort Level**: low
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,13 +70,27 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-<Context>
+**Why**: 2026-09-23 analyses failed because Cloudflare killed worker requests with `exceededCpu` (Free plan 10 ms/request, strictly enforced since 09-23; the same requests used 370-876 ms CPU and succeeded for a month). A bench (OC, 2026-09-24) shows the worker's BracketBuffer alone costs ~35 ms CPU per ~24k-token stream even after a fix. Decided direction (user-approved, pending ADR 032): the Cloudflare worker becomes a near-zero-CPU pass-through for the long LLM stream (network wait is free), the browser does live display parsing, and persistence/parsing moves to short server-side steps (Vercel `/persist`). We went Vercel→Cloudflare originally because Vercel could not hold the long stream — the long stream MUST stay on Cloudflare. This step produces the evidence base for that ADR and for a full end-to-end refactor (not a point fix).
+
+**Standing constraints**: ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU/request, now strictly enforced as of 2026-09-23; Vercel Hobby wall-clock limits; Upstash/Supabase free). Upgrades are not a fix. Architecture: Hex-Lite + DDD-Lite (ports/adapters, domain logic in domain/use cases, route handlers thin, DI, OO with separation of concerns), contract-first (every boundary has a defined, enforced schema).
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-<Directives>
+Produce ONE report: `docs/research/2026-09-24-analysis-pipeline-e2e-map.md`. Read-only: no source edits. Every claim needs file:line.
+
+1. **Flow map, input → output**: URL submit → Vercel prepare/quota/cache (Law #1) → stream token (HMAC) → client `web/hooks/useSSEStream.ts` (5 bundles, retry) → worker `worker/src/routes/analysis.ts` `/analyze-llm-stream` (transcript, metadata, comments, chapters, LLMCascade, SSE event protocol, BracketBuffer, MarkdownReconstructor/extractJsonPayload, PersistService) → Vercel `/api/analyses/persist` (chunks, stitch, finalize, billing) → webhooks (digest, embed, validate) → reaper/remediation (ADR 007/019/021) → restore/reattach → dashboard UI. Include a sequence diagram (mermaid).
+2. **Worker CPU inventory**: every CPU-doing operation on the worker per request (parsing, string building, JSON serialize per delta, regex, HTML parsing of YouTube pages, jsonrepair, crypto), estimated cost class, and whether it could move off-worker.
+3. **Duplication inventory**: every place the same data is parsed/validated/transformed more than once (worker vs browser vs Vercel) — what, where, and WHY it was introduced (git log/blame + ADRs).
+4. **Failure/state matrix** — for each: client tab closed, navigation, network drop, browser crash, worker CPU kill, worker persist failure, Vercel persist failure, retry, duplicate chunk: who owns the source of truth, what gets persisted, what the user sees, what recovers it. Identify what breaks if display parsing becomes browser-only and persistence must stay client-independent.
+5. **Contract inventory**: every boundary payload (client→Vercel, Vercel→worker token, worker SSE events→client, worker→/persist S2S, persist→DB) — is there a schema (Zod/TS), is it enforced at runtime, where are gaps.
+6. **Hex/DDD-lite violations** on this path (business logic in routes, adapters doing domain work, missing ports, god objects e.g. persist/route.ts 1507 LOC (measured 2026-09-24; remeasure before citing)).
+7. **Tangents**: every other defect you notice on the path, each with file:line and severity — do NOT fix.
+8. **Proposal**: 2-3 target architectures for the pass-through worker + where parsing/persistence moves, each with a risk register (risk, likelihood, impact, mitigation) — mark NEEDS USER DECISION.
+Commit the report on branch `docs/research-e2e-pipeline-map` in your worktree. Do not push. Do not touch other worktrees or `git stash`.
+
+Branch: `docs/research-e2e-pipeline-map`.
 
 ---
 

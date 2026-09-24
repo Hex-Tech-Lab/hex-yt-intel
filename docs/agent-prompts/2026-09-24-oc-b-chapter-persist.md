@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — <TASK_NAME>
+# Agent Dispatch Prompt — Chapter persist returns non-2xx on every stream
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,8 +8,8 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
-**Effort Level**: <high | medium | low>
+**Target Agent**: OC (opencode, openrouter/z-ai/glm-5.3-flash via committed .opencode/opencode.json)
+**Effort Level**: low (pinned); be thorough in the report
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
 > prompt below. It mechanizes this file's own Model-tuning rule and report
@@ -70,13 +70,21 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-<Context>
+**Verified:** Cloudflare Workers Logs 2026-09-23 20:39 UTC show `[analyze-llm-stream] Chapter persist returned non-2xx` on every analyze stream (video 4mTLpuQpB80, channel UCPjNBjflYl0-HQtUvOx0Ibw). Start at the worker code that emits that message (worker/src/routes/analysis.ts) and the Vercel route it calls. Status code and body are not logged — that is part of the finding.
+
+**Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
+
 
 ---
 
 ## 2. Contract & Implementation Directives
 
-<Directives>
+1. Find the endpoint, reproduce the failure path in a test, determine the root cause with file:line evidence.
+2. Fix it. Also make the log include status code + truncated body so the next failure is diagnosable.
+3. Check whether 5 streams each persisting chapters is redundant; if so, make it once per analysis (idempotent) and justify.
+4. Gates: tsc, vitest (web + worker), qa-intel diff.
+
+Branch: `fix/chapter-persist-non-2xx` (already checked out in your worktree).
 
 ---
 
