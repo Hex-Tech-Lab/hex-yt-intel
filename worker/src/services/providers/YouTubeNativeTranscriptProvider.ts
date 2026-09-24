@@ -200,18 +200,23 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       );
       if (asrEn) return { langCode: 'en' };
 
-      const en = trackList.find((track: Record<string, unknown>) =>
-        typeof track === 'object' && langCode(track)?.startsWith('en')
-      );
-      if (en) return { langCode: langCode(en)! };
+      const enCode = trackList
+        .filter((track): track is Record<string, unknown> => typeof track === 'object' && track !== null)
+        .map(langCode)
+        .find((code) => code?.startsWith('en'));
+      if (enCode) return { langCode: enCode };
 
-      const asr = trackList.find((track: Record<string, unknown>) =>
-        typeof track === 'object' && track['@_kind'] === 'asr' && langCode(track)
-      );
-      if (asr) return { langCode: langCode(asr)! };
+      const asrCode = trackList
+        .filter((track: Record<string, unknown>) => typeof track === 'object' && track['@_kind'] === 'asr')
+        .map(langCode)
+        .find((code) => code !== undefined);
+      if (asrCode) return { langCode: asrCode };
 
-      const first = trackList.find((track): track is Record<string, unknown> => typeof track === 'object' && !!langCode(track));
-      if (first) return { langCode: langCode(first)! };
+      const firstCode = trackList
+        .filter((track): track is Record<string, unknown> => typeof track === 'object' && track !== null)
+        .map(langCode)
+        .find((code) => code !== undefined);
+      if (firstCode) return { langCode: firstCode };
 
       throw new NoCaptionsConfirmedError('No captions available for this video');
     } finally {

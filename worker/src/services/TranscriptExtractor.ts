@@ -21,8 +21,6 @@ import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
 const DEFAULT_PROVIDER_ORDER = 'apify,decodo,native';
-/** Floor of chain time intentionally left for the non-Apify fallback tiers (see DEFAULT_CHAIN_BUDGET_MS). */
-const FALLBACK_FLOOR_MS = 30000;
 
 /**
  * Parses TRANSCRIPT_CHAIN_BUDGET_MS from env into a finite budget in ms.
