@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_494fa24a1a11a4::t_54d416cb2682b6 1415
+.opencode/opencode.json
+  s_494fa24a1a11a4::t_768427432b5811 10
+CLAUDE.md
+  s_494fa24a1a11a4::t_e7becf2f972276 38,41
+docs/agent-prompts/TEMPLATE.md
+  s_494fa24a1a11a4::t_9437d9645608df 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4d6dd88a7e24e4bdf0b0a15ffab1107bcc36b3aa",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
