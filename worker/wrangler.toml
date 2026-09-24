@@ -62,11 +62,16 @@ command = "pnpm run build"
 #   wrangler secret put DECODO_API_KEY --env production
 #   wrangler secret put APIFY_TOKEN --env production
 #   wrangler secret put TRANSCRIPTAPI_API_KEY --env production
+#   wrangler secret put SUPADATA_API_KEY --env production
+# SUPADATA_MAX_AI_MINUTES is a plain (non-secret) var: max video minutes the
+# Supadata AI-transcription mode (2 credits/min) may run for, default 60.
 # TRANSCRIPT_PROVIDER_ORDER is a plain (non-secret) var: comma list, default
-# "transcriptapi,apify,decodo,native" — the placeholder tier is always the final fallback.
+# "transcriptapi,apify,decodo,native,supadata" — the placeholder tier is always
+# the final fallback.
 # TRANSCRIPT_CHAIN_BUDGET_MS is a plain (non-secret) var: total ms budget for
-# the whole transcript provider chain (default 160000 = Apify's 130s worst
-# case + a 30s floor for the fallback tiers). Not a secret.
+# the whole transcript provider chain (default 250000 = TranscriptAPI 30s +
+# Apify's 130s worst case + decodo/native 30s floor + Supadata 60s AI job
+# reservation + 30s placeholder floor). Not a secret.
 #
 # Upstash KV REST API endpoints (from Upstash console):
 #   UPSTASH_REDIS_REST_URL: https://your-project-region.upstash.io

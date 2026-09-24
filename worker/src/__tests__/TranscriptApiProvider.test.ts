@@ -114,7 +114,7 @@ describe('TranscriptApiProvider', () => {
 describe('TranscriptExtractor transcriptapi registration', () => {
   it('accepts transcriptapi in the provider order and makes transcriptapi the default first tier', () => {
     expect(TranscriptExtractor.parseProviderOrder('apify, transcriptapi, native')).toEqual(['apify', 'transcriptapi', 'native']);
-    expect(TranscriptExtractor.parseProviderOrder()).toEqual(['transcriptapi', 'apify', 'decodo', 'native']);
+    expect(TranscriptExtractor.parseProviderOrder()).toEqual(['transcriptapi', 'apify', 'decodo', 'native', 'supadata']);
   });
 
   it('builds a TranscriptApiProvider instance for the transcriptapi tier', () => {
