@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as Sentry from "@sentry/cloudflare";
-import { TranscriptExtractor } from "../services/TranscriptExtractor";
+import { TranscriptExtractor, parseChainBudgetMs } from "../services/TranscriptExtractor";
 import { MetadataScraper, type VideoComment } from "../services/MetadataScraper";
 import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
@@ -11,8 +11,9 @@ import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
 import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter";
 import { PersistService } from "../services/PersistService";
+import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
+import { hmacHex, secretFingerprint } from "../crypto";
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { isValidAppUrl } from "../middleware/cors";
@@ -44,6 +45,9 @@ export type AnalysisEnv = {
   DEV_HMAC_SECRET?: string;
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
+  APIFY_TOKEN?: string;
+  TRANSCRIPT_PROVIDER_ORDER?: string;
+  TRANSCRIPT_CHAIN_BUDGET_MS?: string;
 };
 
 if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
@@ -145,6 +149,8 @@ interface TokenVerificationResult {
 }
 
 /** Verify HMAC signature of stream request token using stored secret. Returns validation result and secret. */
+// skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic in this module (DS "wrap in IIFE" is a false positive);
+// complexity 9 is pre-existing and a refactor is out of this PR's blast radius (untouched lines, chronic finding).
 async function verifyStreamToken(
   videoId: string,
   analysisId: string,
@@ -231,6 +237,10 @@ export const CHANNEL_META_CONFIG_FALLBACK = { timeoutMs: 4000, maxPayloadBytes: 
 // 5x per analysis (once per parallel bundle stream) -- see call site.
 const CHANNEL_META_CACHE_TTL = 604_800;
 
+/**
+ * Drop channel metadata that exceeds the payload cap (returns null, reports once).
+ */
+// skipcq: JS-0067 -- module-scope fn is idiomatic here; DS "wrap in IIFE" is a false positive (pre-existing line).
 function truncateChannelMeta(
   meta: Record<string, unknown> | null,
   channelId: string | undefined,
@@ -243,7 +253,7 @@ function truncateChannelMeta(
   // non-ok/exception branches -- "has_channel_meta" chip consistently grey with no
   // corresponding issue anywhere was the symptom that led here.
   console.warn(`[analyze-llm-stream] channelMeta exceeds ${config.maxPayloadBytes}B (${serialized.length}B), dropping`);
-  Sentry.captureMessage(`channel-meta dropped: exceeds size cap`, {
+  Sentry.captureMessage('channel-meta dropped: exceeds size cap', {
     level: 'warning',
     tags: { operation: 'channel-meta-truncate', channelId: channelId ?? 'unknown' },
     extra: { channelId, byteSize: serialized.length, capBytes: config.maxPayloadBytes },
@@ -251,6 +261,12 @@ function truncateChannelMeta(
   return null;
 }
 
+/**
+ * Fetch + cache channel-level metadata (Decodo scrape merged with the typed
+ * YouTube Data API stats), time-bounded and size-capped.
+ */
+// skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic here (DS "wrap in IIFE" false positive);
+// complexity 17 is pre-existing on untouched lines -- a split is out of this PR's blast radius.
 export async function fetchChannelMetaCached(
   channelId: string | undefined,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
@@ -323,7 +339,7 @@ export async function fetchChannelMetaCached(
     // all, making a "always grey, never any errors" symptom appear directly
     // caused by this gap.
     console.warn(`[analyze-llm-stream] channel-meta fetch exceeded ${config.timeoutMs}ms budget for ${channelId}, proceeding without it`);
-    Sentry.captureMessage(`channel-meta dropped: fetch exceeded time budget`, {
+    Sentry.captureMessage('channel-meta dropped: fetch exceeded time budget', {
       level: 'warning',
       tags: { operation: 'channel-meta-timeout', channelId: channelId ?? 'unknown' },
       extra: { channelId, budgetMs: config.timeoutMs },
@@ -368,6 +384,11 @@ export async function fetchChannelMetaCached(
 const COMMENTS_CONFIG_FALLBACK = { maxResults: 20, maxAttempts: 2, timeoutPerAttemptMs: 4000, maxPayloadBytes: 20_000 };
 const COMMENTS_CACHE_TTL = 604_800;
 
+/**
+ * Trim the comments list (from the end, relevance-ordered) until it fits maxBytes.
+ */
+// skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic here (DS "wrap in IIFE" false positive);
+// complexity 7 is pre-existing on untouched lines, out of this PR's blast radius.
 function truncateComments(comments: VideoComment[] | null, maxBytes: number): VideoComment[] | null {
   if (!comments || comments.length === 0) return null;
   const serialized = JSON.stringify(comments);
@@ -381,6 +402,12 @@ function truncateComments(comments: VideoComment[] | null, maxBytes: number): Vi
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * Fetch + cache the flat single-page comments fallback (stale clients only);
+ * sized against the known comment count, raced against the attempt budget.
+ */
+// skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic here (DS "wrap in IIFE" false positive);
+// complexity 11 is pre-existing on untouched lines, out of this PR's blast radius.
 async function fetchCommentsCached(
   videoId: string,
   env: Pick<AnalysisEnv, "YOUTUBE_API_KEY" | "RESIDENTIAL_PROXY_URL">,
@@ -564,7 +591,7 @@ async function fetchSampledCommentsCached(
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
@@ -623,7 +650,7 @@ async function fetchTranscriptIfMissing(
     }
 
     try {
-      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
+      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN, parseChainBudgetMs(env.TRANSCRIPT_CHAIN_BUDGET_MS));
       const result = await extractor.fetch(videoId);
       // Gate on the explicit flag, not a substring match against the
       // placeholder text -- a new placeholder string was added for the
@@ -669,7 +696,7 @@ function buildStreamResponse(
   httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   cache?: UpstashCacheAdapter,
 ): Response {
   const encoder = new TextEncoder();
@@ -865,7 +892,7 @@ function buildStreamResponse(
       const [fetchResult] = await Promise.allSettled([fetchTranscriptIfMissing(
         req.transcript,
         req.videoId,
-        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY },
+        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY, APIFY_TOKEN: env.APIFY_TOKEN, TRANSCRIPT_PROVIDER_ORDER: env.TRANSCRIPT_PROVIDER_ORDER, TRANSCRIPT_CHAIN_BUDGET_MS: env.TRANSCRIPT_CHAIN_BUDGET_MS },
         (req.metadata as { channelId?: string }).channelId,
         cache,
         (() => {
@@ -1180,50 +1207,21 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
     // Decoupled chapter persistence: parse chapters from the video description
     // (already available in req.metadata, no need to wait for the LLM stream)
-    // and fire-and-forget to the new /api/videos/[videoId]/chapters endpoint.
-    // This runs in parallel with the LLM stream — chapters are independent of
-    // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
-    const description = (req.metadata as { description?: string }).description;
-    if (description !== undefined) {
-      const chapters = parseChapters(description);
+    // and fire-and-forget one signed S2S POST per analysis. Gate contract and
+    // reporting paths live in ../services/chapter-persist.ts (bundle-1-
+    // authoritative; extracted 2026-09-24 for testability).
+    enqueueChapterPersist({
+      description: (req.metadata as { description?: string }).description,
+      chunkIndex: req.chunkIndex,
+      signingKey,
       // Same fallback as the persist callback above (line ~769) -- previously
       // fell back to '' here, which silently skipped chapter persistence with
       // no error when both req.appUrl and APP_URL were absent (real P1 found
       // by automated PR review on #244, fixed same session).
-      const appUrl = req.appUrl || c.env.APP_URL || "https://getvintel.com";
-      if (appUrl && signingKey) {
-        c.executionCtx.waitUntil((async () => {
-          try {
-            const exp = Date.now() + 120_000;
-            const canonical = JSON.stringify({ chapters });
-            const sig = await signBoundContent(signingKey, 'chapters', req.videoId, exp, canonical);
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10_000);
-            const response = await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chapters, sig, exp }),
-              signal: controller.signal,
-            });
-            clearTimeout(timeout);
-            if (!response.ok) {
-              const bodyText = await response.text();
-              const bodySnippet = bodyText.length > 200 ? bodyText.slice(0, 200) + '...' : bodyText;
-              console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
-                videoId: req.videoId,
-                status: response.status,
-                body: bodySnippet,
-              });
-            }
-          } catch (err) {
-            console.warn('[analyze-llm-stream] Chapter persist failed (non-blocking)', {
-              videoId: req.videoId,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          }
-        })());
-      }
-    }
+      appUrl: req.appUrl || c.env.APP_URL || "https://getvintel.com",
+      videoId: req.videoId,
+      waitUntil: (p) => c.executionCtx.waitUntil(p),
+    });
 
     const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs), new ValidationService(), cache);
 

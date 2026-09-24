@@ -100,7 +100,13 @@ const rules = Object.values(legacyRules)
 // Get file list based on mode
 let fileList: string[] = [];
 if (mode === "full" || mode === "watch") {
-  fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
+  // Wave Q4 (2026-09-24): SQL migrations joined the scan surface (R4/R13
+  // rules, rules/sql-migrations.ts) — qa-intel previously never scanned
+  // supabase/migrations/*.sql at all.
+  fileList = [
+    ...glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }),
+    ...glob.sync("supabase/migrations/*.sql"),
+  ].map(f => f.replace(/\\/g, "/"));
 } else {
   let diffArgs: readonly string[] = [];
   if (mode === "diff") {
@@ -137,7 +143,12 @@ if (mode === "full" || mode === "watch") {
     const diffOutput = execFileSync("git", diffArgs, { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
-      .filter(line => line.trim().endsWith(".ts") || line.trim().endsWith(".tsx"))
+      .filter(line => {
+        const trimmed = line.trim();
+        if (trimmed.endsWith(".ts") || trimmed.endsWith(".tsx")) return true;
+        // SQL migrations joined the scan surface (Wave Q4, 2026-09-24).
+        return trimmed.startsWith("supabase/migrations/") && trimmed.endsWith(".sql");
+      })
       .map(f => f.trim())
       .filter(f => f.length > 0);
   } catch (e: unknown) {
@@ -159,7 +170,7 @@ fileList = fileList.filter(f => fsAdapter.exists(f));
 
 if (fileList.length === 0) {
   if (mode === "diff" || mode === "working-tree" || mode === "HEAD") {
-    console.log(`✅ qa-intel: No changed TS/TSX files detected to scan (mode: ${mode}).`);
+    console.log(`✅ qa-intel: No changed TS/TSX/SQL-migration files detected to scan (mode: ${mode}).`);
     process.exit(0);
   }
   console.error("❌ qa-intel: No files found to scan.");
@@ -202,7 +213,7 @@ async function run() {
     }
   );
   console.log("--- Source Provenance & Runtime Honesty Audit ---");
-  console.log(`Runtime scan sources: ${fileList.length} files scanned via TS/TSX globs (excl. node_modules)`);
+  console.log(`Runtime scan sources: ${fileList.length} files scanned via TS/TSX globs + supabase/migrations/*.sql (excl. node_modules)`);
   console.log("Calibration sources: Juliet/SARD (CWE-22, CWE-259), CRBench, Big-Vul/Devign (CWE-89)");
   console.log("Calibration source visibility: CALIBRATION-ONLY (none affect live PR scans)");
   const hasActiveGraphRule = rules.some(r => r.scope === "graph");

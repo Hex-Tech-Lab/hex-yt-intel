@@ -44,10 +44,10 @@ export const PRICING_PLANS: PricingPlan[] = [
     monthlyPrice: PRICING_REGISTRY_FALLBACK.free.amountCents !== null ? PRICING_REGISTRY_FALLBACK.free.amountCents / 100 : 0,
     desc: "Try a full analysis, no card required",
     features: [
-      { label: "Limited analyses/month (paced, resets monthly)", tooltip: "A small monthly allowance that resets automatically — no card required to try it." },
+      { label: "3 analyses per month", tooltip: "A small monthly allowance that resets at the start of each calendar month — no card required to try it." },
       { label: "Executive Digest + Apex Intelligence", tooltip: "A concise, high-level summary of a video's key claims and takeaways — same content as Light, just fewer analyses per month." },
       { label: "WordCloud", tooltip: "A visual map of the key terms and topics extracted from the video." },
-      { label: "Standard 48–72hr processing", tooltip: "Typical time from submitting a video to a completed analysis." },
+      { label: "Results in minutes", tooltip: "Analyses stream in as they are generated, and usually complete within a few minutes." },
     ],
     recommended: false,
   },
@@ -85,7 +85,6 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       { label: "~120–150 analyses/mo & ~40 hrs of video", tooltip: "A larger monthly quota for teams or heavy research use — exact volume confirmed at signup." },
       { label: "Everything in Pro, at double the quota", tooltip: "Same full 11-dimension breakdown and Knowledge Graph as Pro, at roughly double the monthly volume." },
-      { label: "Priority processing (candidate)", tooltip: "Faster turnaround than standard processing — under evaluation, not yet locked in." },
     ],
     recommended: false,
   },
