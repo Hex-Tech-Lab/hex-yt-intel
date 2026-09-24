@@ -161,6 +161,9 @@ export async function middleware(request: NextRequest) {
     // app/api/admin/logs/snapshot/route.ts) -- same pattern as the S2S
     // persist routes above, this was just missed when the route was added.
     '/api/admin/logs/snapshot',
+    // SPIKE (ADR 032 wave 2a S2, spike branch only, never merges): gated on
+    // x-spike-secret === LOGS_SNAPSHOT_HMAC_SECRET inside the route itself.
+    '/api/spikes/youtube-fetch',
     // TestSprite auth-bypass: legitimate caller has NO session by definition
     // (that's the entire point of the route -- it mints one). Real gap found
     // 2026-08-20: this route was launch-blocked in production despite being
