@@ -1,0 +1,29 @@
+worker/src/__tests__/SupadataTranscriptProvider.test.ts
+  s_542d19c0732260::t_bff15b550d1bfe 43-60,64-72,76-88,92-101,105-112,116-122,126-134,136-137,142-158,160-161,166-173,177-181,202-213
+worker/src/services/providers/SupadataTranscriptProvider.ts
+  s_0ad06df9e3ce0b::t_1a409e2548b044 122,125,130-151,159,161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fb42a27e07f442ed916175e71bcc462f8f87b5dd",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_542d19c0732260": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8ab9bcffeqoaVAzK2sWt6S2",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
