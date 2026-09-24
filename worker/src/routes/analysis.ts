@@ -49,6 +49,8 @@ export type AnalysisEnv = {
   TRANSCRIPT_PROVIDER_ORDER?: string;
   TRANSCRIPT_CHAIN_BUDGET_MS?: string;
   TRANSCRIPTAPI_API_KEY?: string;
+  SUPADATA_API_KEY?: string;
+  SUPADATA_MAX_AI_MINUTES?: string;
 };
 
 if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
@@ -592,7 +594,7 @@ async function fetchSampledCommentsCached(
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
@@ -651,7 +653,8 @@ async function fetchTranscriptIfMissing(
     }
 
     try {
-      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN, parseChainBudgetMs(env.TRANSCRIPT_CHAIN_BUDGET_MS), env.TRANSCRIPTAPI_API_KEY);
+      const supadataMaxAiMinutes = Number(env.SUPADATA_MAX_AI_MINUTES);
+      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN, parseChainBudgetMs(env.TRANSCRIPT_CHAIN_BUDGET_MS), env.TRANSCRIPTAPI_API_KEY, env.SUPADATA_API_KEY, Number.isFinite(supadataMaxAiMinutes) && supadataMaxAiMinutes > 0 ? supadataMaxAiMinutes : undefined);
       const result = await extractor.fetch(videoId);
       // Gate on the explicit flag, not a substring match against the
       // placeholder text -- a new placeholder string was added for the
@@ -697,7 +700,7 @@ function buildStreamResponse(
   httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   cache?: UpstashCacheAdapter,
 ): Response {
   const encoder = new TextEncoder();
@@ -893,7 +896,7 @@ function buildStreamResponse(
       const [fetchResult] = await Promise.allSettled([fetchTranscriptIfMissing(
         req.transcript,
         req.videoId,
-        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY, APIFY_TOKEN: env.APIFY_TOKEN, TRANSCRIPTAPI_API_KEY: env.TRANSCRIPTAPI_API_KEY, TRANSCRIPT_PROVIDER_ORDER: env.TRANSCRIPT_PROVIDER_ORDER, TRANSCRIPT_CHAIN_BUDGET_MS: env.TRANSCRIPT_CHAIN_BUDGET_MS },
+        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY, APIFY_TOKEN: env.APIFY_TOKEN, TRANSCRIPTAPI_API_KEY: env.TRANSCRIPTAPI_API_KEY, SUPADATA_API_KEY: env.SUPADATA_API_KEY, SUPADATA_MAX_AI_MINUTES: env.SUPADATA_MAX_AI_MINUTES, TRANSCRIPT_PROVIDER_ORDER: env.TRANSCRIPT_PROVIDER_ORDER, TRANSCRIPT_CHAIN_BUDGET_MS: env.TRANSCRIPT_CHAIN_BUDGET_MS },
         (req.metadata as { channelId?: string }).channelId,
         cache,
         (() => {
