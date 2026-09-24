@@ -8,14 +8,14 @@
  * failure, compute failure, unrelated-key preservation (atomic merge
  * contract), and the authorization branch.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   return {
     getRedisValue: vi.fn<[], Promise<unknown>>(),
-    setRedisValue: vi.fn<[], Promise<void>>(async () => {}),
-    deleteRedisKey: vi.fn<[], Promise<void>>(async () => {}),
+    setRedisValue: vi.fn<[], Promise<void>>(() => Promise.resolve()),
+    deleteRedisKey: vi.fn<[], Promise<void>>(() => Promise.resolve()),
     getUser: vi.fn<[], Promise<{ data: { user: { id: string } | null } }>>(),
     mergePayloadKey: vi.fn<[], Promise<{ persisted: boolean; affectedRows: number }>>(),
     computeStream: vi.fn(),
@@ -29,13 +29,13 @@ vi.mock('@/lib/redis', () => ({
 }));
 
 vi.mock('@/lib/supabase', () => ({
-  getSupabaseClientWithAuth: async () => ({
+  getSupabaseClientWithAuth: () => ({
     auth: { getUser: mocks.getUser },
     from: (table: string) => ({
       select: (cols: string) => ({
         eq: () => ({
           eq: () => ({
-            maybeSingle: async () => ({
+            maybeSingle: () => ({
               data: cols.includes('analysis_payload') ? mockState.payloadRow : mockState.markdownRow,
               error: null,
             }),
@@ -69,7 +69,8 @@ const SAMPLE_MARKDOWN = '# DIMENSION 1 – Thesis\n\nContent one.\n\n# DIMENSION
 
 async function sha16(text: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  const hex = Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hex.match(/^[0-9a-f]{16}/)?.[0] ?? hex;
 }
 
 function makeRequest(): NextRequest {
@@ -155,7 +156,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
       },
     };
     mocks.getRedisValue.mockResolvedValue(null);
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       yield { type: 'insight', insight: { kind: 'tangent', source: 1, target: 2, sourceLabel: 'A', targetLabel: 'B', rationale: 'r' } };
     });
@@ -173,7 +174,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mockState.markdownRow = { id: 'a1', analysis_markdown: SAMPLE_MARKDOWN };
     mockState.payloadRow = { analysis_payload: null };
     mocks.getRedisValue.mockResolvedValue(null);
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       yield { type: 'insight', insight: { kind: 'tangent', source: 1, target: 2, sourceLabel: 'A', targetLabel: 'B', rationale: 'r' } };
     });
@@ -197,7 +198,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mockState.markdownRow = { id: 'a1', analysis_markdown: SAMPLE_MARKDOWN };
     mockState.payloadRow = null;
     mocks.getRedisValue.mockResolvedValue(null);
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       // stream ends cleanly with zero insights — a valid result
     });
@@ -216,7 +217,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mockState.payloadRow = null;
     mocks.getRedisValue.mockResolvedValue(null);
     mocks.setRedisValue.mockRejectedValue(new Error('redis down'));
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       yield { type: 'insight', insight: { kind: 'tangent', source: 1, target: 2, sourceLabel: 'A', targetLabel: 'B', rationale: 'r' } };
     });
@@ -233,7 +234,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mocks.getRedisValue.mockResolvedValue(null);
     mocks.mergePayloadKey.mockResolvedValue({ persisted: false, affectedRows: 0 });
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
       yield { type: 'insight', insight: { kind: 'tangent', source: 1, target: 2, sourceLabel: 'A', targetLabel: 'B', rationale: 'r' } };
     });
@@ -268,7 +269,7 @@ describe('GET /api/analyses/[id]/relations (route-level contract)', () => {
     mockState.markdownRow = { id: 'a1', analysis_markdown: SAMPLE_MARKDOWN };
     mockState.payloadRow = { analysis_payload: { unrelated_key: { keep: true } } };
     mocks.getRedisValue.mockResolvedValue(null);
-    mocks.computeStream.mockImplementation(async function* () {
+    mocks.computeStream.mockImplementation(function* () {
       yield { type: 'model', model: 'model/new' };
     });
 

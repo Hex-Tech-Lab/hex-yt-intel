@@ -21,12 +21,12 @@ const serverInFlight = new Map<string, Promise<RelationsResult>>();
 function parseDimensions(markdown: string): StanceDimension[] {
   const out: StanceDimension[] = [];
   const re = /#{1,4}\s*DIMENSION\s+(\d+)\s*[–\-:]?\s*([^\n]*)\n([\s\S]*?)(?=#{1,4}\s*DIMENSION\s+\d+|$)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(markdown))) {
-    const number = parseInt(m[1]!, 10);
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(markdown))) {
+    const number = parseInt(match[1]!, 10);
     if (number < 1 || number > 11) continue;
-    const name = (m[2] || '').trim() || DIMENSION_NAMES[number] || `Dimension ${number}`;
-    const content = (m[3] || '').trim();
+    const name = (match[2] || '').trim() || DIMENSION_NAMES[number] || `Dimension ${number}`;
+    const content = (match[3] || '').trim();
     out.push({ number, name, content });
   }
   return out;

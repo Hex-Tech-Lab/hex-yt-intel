@@ -1,8 +1,9 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/nextjs';
-import type { AnalysisPayloadKeyPort, AnalysisPayloadMergeResult } from '@/lib/ports/AnalysisPayloadKeyPort';
+
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { RELATIONS_REGISTRY_FALLBACK } from '@/lib/utils/relations-settings';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AnalysisPayloadKeyPort, AnalysisPayloadMergeResult } from '@/lib/ports/AnalysisPayloadKeyPort';
 
 /**
  * SupabaseAnalysisPayloadAdapter — AnalysisPayloadKeyPort backed by the

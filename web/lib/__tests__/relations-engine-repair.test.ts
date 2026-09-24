@@ -11,14 +11,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeStanceRelationsStream } from '@/lib/intelligence/relations-engine';
 
 vi.mock('@/lib/config/cascade', () => ({
-  resolveStanceCascade: async () => [{ name: 'primary', model: 'test/model-a', providerOrder: undefined }],
+  resolveStanceCascade: () => [{ name: 'primary', model: 'test/model-a', providerOrder: undefined }],
 }));
 
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', async () => {
   const { RELATIONS_REGISTRY_FALLBACK } = await import('@/lib/utils/relations-settings');
   return {
     SupabaseSettingsAdapter: {
-      getRegistrySettings: async (keys: string[]) => {
+      getRegistrySettings: (keys: string[]) => {
         const out: Record<string, unknown> = {};
         for (const k of keys) out[k] = (RELATIONS_REGISTRY_FALLBACK as Record<string, unknown>)[k] ?? true;
         return out;

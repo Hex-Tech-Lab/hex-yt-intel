@@ -18,7 +18,7 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', async () => {
   const { RELATIONS_REGISTRY_FALLBACK } = await import('@/lib/utils/relations-settings');
   return {
     SupabaseSettingsAdapter: {
-      getRegistrySettings: async (keys: string[]) => {
+      getRegistrySettings: (keys: string[]) => {
         const out: Record<string, unknown> = {};
         for (const k of keys) out[k] = (RELATIONS_REGISTRY_FALLBACK as Record<string, unknown>)[k] ?? true;
         return out;
@@ -70,7 +70,7 @@ describe('migration SQL contract (merge_analysis_payload_key)', () => {
 
 describe('SupabaseAnalysisPayloadAdapter', () => {
   it('calls the merge RPC with only (id, key, value) and reports success', async () => {
-    const client = makeClient(async (_fn, args) => 1);
+    const client = makeClient((_fn, args) => 1);
     const adapter = new SupabaseAnalysisPayloadAdapter(client);
     const result = await adapter.mergePayloadKey('a1', 'stance_relations', { insights: [] });
     expect(result).toEqual({ persisted: true, affectedRows: 1 });
@@ -82,7 +82,7 @@ describe('SupabaseAnalysisPayloadAdapter', () => {
   it('retries transient RPC errors up to relations.persistMaxAttempts then succeeds', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let calls = 0;
-    const client = makeClient(async () => {
+    const client = makeClient(() => {
       calls++;
       if (calls < 3) throw new Error('transient network');
       return 1;
@@ -96,7 +96,7 @@ describe('SupabaseAnalysisPayloadAdapter', () => {
 
   it('zero-row update is surfaced as persisted:false, not success', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const client = makeClient(async () => 0);
+    const client = makeClient(() => 0);
     const adapter = new SupabaseAnalysisPayloadAdapter(client);
     const result = await adapter.mergePayloadKey('a1', 'stance_relations', {});
     expect(result).toEqual({ persisted: false, affectedRows: 0 });
@@ -106,7 +106,7 @@ describe('SupabaseAnalysisPayloadAdapter', () => {
   it('never throws: after final failed attempt returns persisted:false (fail-soft contract)', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const client = makeClient(async () => { throw new Error('permanent'); });
+    const client = makeClient(() => { throw new Error('permanent'); });
     const adapter = new SupabaseAnalysisPayloadAdapter(client);
     await expect(adapter.mergePayloadKey('a1', 'stance_relations', {})).resolves.toEqual({ persisted: false, affectedRows: 0 });
     warnSpy.mockRestore();
