@@ -1,0 +1,54 @@
+scripts/quality-engine/rules/__tests__/data-lessons-20260924.test.ts
+  s_5fc3d264c29b77::t_26c2ac93610d13 138-139
+  s_5fc3d264c29b77::t_31c35af7e707fb 1-76,100-137,140-149,151-182,218-305
+  s_5fc3d264c29b77::t_b5b43b606f3df6 150
+  s_a9265922360c73::t_df93d0e6fbe132 183-217
+  s_a9265922360c73::t_a780cbd125e112 77-99
+scripts/quality-engine/rules/index.ts
+  s_5fc3d264c29b77::t_2b66920ccf70cc 56
+scripts/quality-engine/rules/__tests__/data-lessons-20260924-registration.test.ts
+  s_5fc3d264c29b77::t_ffaaf7ffe7a777 1-40
+.memory/AGENT_LEDGER.md
+  s_5fc3d264c29b77::t_69e25e2b18efde 1401
+scripts/quality-engine/rules/data-lessons-20260924.ts
+  s_5fc3d264c29b77::t_8eb2ec0b4b0c48 142-146
+  s_a9265922360c73::t_0bfd55de106bd7 125-136
+  s_5fc3d264c29b77::t_5f544d2314f5a8 161
+  s_5fc3d264c29b77::t_87fb7eefa64d30 77
+  s_a9265922360c73::t_226574098decd5 49-66
+  s_5fc3d264c29b77::t_6b2368c16adb0a 1-48,67-76,78-112,114-124,137-141,147-160,162-224
+  s_a9265922360c73::t_ec4e273d69f10f 113
+scripts/verify-quality-engine.ts
+  s_5fc3d264c29b77::t_9852e298aff088 102-109,112
+  s_5fc3d264c29b77::t_69b02b14edc52d 168-175,177
+  s_5fc3d264c29b77::t_aa52ab2a8333f3 246-250,252-265
+  s_5fc3d264c29b77::t_404babb6d1b503 251
+  s_5fc3d264c29b77::t_0edaa8d215f142 150
+  s_5fc3d264c29b77::t_6e13989548a09a 220
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_a9265922360c73::t_bb8384175b0c8a 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7e7de7d95ff007baf229acf98c5632e80f73d6da",
+  "prompts": {},
+  "sessions": {
+    "s_5fc3d264c29b77": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b82dd2effewNPpo08AYIUEvw",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a9265922360c73": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2fa70effeGyruD8FLclV8D8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
