@@ -1,0 +1,37 @@
+web/components/marketing/PricingComparisonTable.tsx
+  s_984a50e1b70b18::t_17b5f32e34dd20 27-28
+  s_984a50e1b70b18::t_38e68065ea24f2 46
+web/app/waitlist/page.tsx
+  s_984a50e1b70b18::t_20605a506d7f7c 192
+  s_984a50e1b70b18::t_b9e318e8363971 223-224
+  s_984a50e1b70b18::t_b486bc5ac3cb20 232,236,238
+  s_984a50e1b70b18::t_cdee85a3a5b431 188-189
+  s_984a50e1b70b18::t_216bf7e42e3221 244
+  s_984a50e1b70b18::t_f4c7e33010b55b 246
+  s_984a50e1b70b18::t_1c0e1a556ae1f4 257
+docs/legal/refund-policy.md
+  s_984a50e1b70b18::t_2c87fbea1ff049 3,7-8,10
+  s_984a50e1b70b18::t_1b685f87fa1dcb 17
+  s_984a50e1b70b18::t_f5a007c9fce304 14
+web/lib/constants/pricing-plans.ts
+  s_984a50e1b70b18::t_9440307b3af7e5 50
+  s_984a50e1b70b18::t_d9fc0ae04c6aef 47
+web/app/pricing/page.tsx
+  s_984a50e1b70b18::t_69b0b1119608f2 54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "371093416702c9e56f5ee54c938976b6dcb7314d",
+  "prompts": {},
+  "sessions": {
+    "s_984a50e1b70b18": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cf660b6ffe5ccWdFPnHZWUWe",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
