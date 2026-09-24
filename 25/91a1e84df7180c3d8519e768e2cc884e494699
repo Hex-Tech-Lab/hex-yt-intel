@@ -1,0 +1,38 @@
+web/app/pricing/page.tsx
+  s_b4f620e160a658::t_c24403f59aea28 55
+  s_b4f620e160a658::t_1a81793970390a 54
+  s_b4f620e160a658::t_279f7827c4ffe9 56
+web/components/marketing/PricingComparisonTable.tsx
+  s_b4f620e160a658::t_510dbcfb7b1c2f 27-28
+  s_b4f620e160a658::t_39de793ae8175c 46
+docs/legal/refund-policy.md
+  s_b4f620e160a658::t_ebf36b8bae5567 3
+  s_b4f620e160a658::t_27b1d5a047979f 7-8,10,14
+  s_b4f620e160a658::t_a929b3fea447ad 17
+web/lib/constants/pricing-plans.ts
+  s_b4f620e160a658::t_3a9bbb90c0f2a7 50
+  s_b4f620e160a658::t_f6486dc7a67dd5 47
+web/app/waitlist/page.tsx
+  s_b4f620e160a658::t_962516e7383ec7 244
+  s_b4f620e160a658::t_008bc38e541f00 236,238
+  s_b4f620e160a658::t_7993d5243f5759 188-189,257
+  s_b4f620e160a658::t_8eaaa146fb81df 232
+  s_b4f620e160a658::t_3df8df6a846930 192
+  s_b4f620e160a658::t_1f283a23ac49a1 223-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2591a1e84df7180c3d8519e768e2cc884e494699",
+  "prompts": {},
+  "sessions": {
+    "s_b4f620e160a658": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cf660e9ffeb5JsJqenBGarz6",
+        "model": "muse-spark-1.3-contributor"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
