@@ -78,10 +78,66 @@ describe("HardcodedTierGrantRule (R1)", () => {
       HardcodedTierGrantRule,
       "web/lib/stripe.ts",
       `
-      pro: {
-        tier: 'pro',
-        price: 900,
-      },
+      export const PRICING_TABLE = {
+        pro: {
+          tier: 'pro',
+          price: 900,
+        },
+      };
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("webhook-path counterpart: the same pricing-table shape inside a webhook file DOES fire", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      export const PRICING_TABLE = {
+        pro: {
+          tier: 'pro',
+          price: 900,
+        },
+      };
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("positive: fires on a direct assignment x.tier = 'pro' in a webhook path", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/lib/stripe/webhook-handlers.ts",
+      `
+      export function grantOnSuccess(user: { tier: string }) {
+        user.tier = 'pro';
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.title).toContain("hardcoded paid-tier grant");
+  });
+
+  test("positive: fires on a computed-key assignment obj['tier'] = 'founder' in a webhook path", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      function grant(record: Record<string, string>) {
+        record['tier'] = 'founder';
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("negative control: downgrade assignment x.tier = 'free' in a webhook path does NOT fire", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      record.tier = 'free';
       `,
     );
     expect(findings).toHaveLength(0);
@@ -135,6 +191,41 @@ describe("UntrustedTierFallbackRule (R2)", () => {
     );
     expect(findings).toHaveLength(0);
   });
+
+  test("negative control: updateUserTier call passing userId from custom_data (tier already resolved) does NOT fire", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      await updateUserTier({ userId: event.data.custom_data?.userId, tier: resolvedTier });
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("negative control: presence guard !event.data.custom_data?.userId || !resolvedTier does NOT fire", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      if (!event.data.custom_data?.userId || !resolvedTier) {
+        return NextResponse.json({ error: 'bad request' }, { status: 400 });
+      }
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("positive: fires on plan_tier snake_case read (price.custom_data?.plan_tier fallback)", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const tier = mapPlanStringToUserTier(event.data.items?.[0]?.price?.custom_data?.plan_tier) ?? 'free';
+      `,
+    );
+    expect(findings.length).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe("ServiceRoleAnonFallbackRule (R5)", () => {
@@ -174,6 +265,42 @@ describe("ServiceRoleAnonFallbackRule (R5)", () => {
     );
     expect(findings).toHaveLength(0);
   });
+
+  test("positive: fires across a line break (multiline fallback chain)", () => {
+    const findings = check(
+      ServiceRoleAnonFallbackRule,
+      "scripts/backfill-stance-relations.ts",
+      `
+      const SUPABASE_KEY =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("negative control: the raw pattern inside a comment does NOT fire", () => {
+    const findings = check(
+      ServiceRoleAnonFallbackRule,
+      "scripts/backfill-stance-relations.ts",
+      `
+      // Never do: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("negative control: the raw pattern inside a string literal does NOT fire", () => {
+    const findings = check(
+      ServiceRoleAnonFallbackRule,
+      "scripts/backfill-stance-relations.ts",
+      `
+      const warning = "process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY";
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
 });
 
 describe("RuntimeTierTrustRule (R10)", () => {
@@ -205,6 +332,32 @@ describe("RuntimeTierTrustRule (R10)", () => {
     );
     expect(findings.length).toBe(1);
     expect(findings[0]?.title).toContain("non-'free'");
+  });
+
+  test("positive: a non-normalizer call operand (getTier(profile) !== 'free') DOES fire", () => {
+    const findings = check(
+      RuntimeTierTrustRule,
+      "web/lib/quota.ts",
+      `
+      if (getTier(profile) !== 'free') {
+        allowUnlimited();
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.title).toContain("non-'free'");
+  });
+
+  test("positive: a non-normalizer call cast (getTier(profile) as UserTier) DOES fire", () => {
+    const findings = check(
+      RuntimeTierTrustRule,
+      "web/app/api/usage/summary/route.ts",
+      `
+      const tier = getTier(profile) as UserTier;
+      `,
+    );
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.title).toContain("cast to UserTier");
   });
 
   test("negative control: normalized tier comparison (the recommended fix shape) does NOT fire", () => {

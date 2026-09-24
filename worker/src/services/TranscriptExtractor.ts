@@ -1,29 +1,112 @@
 /**
- * TranscriptExtractor - Adapter implementing TranscriptProviderPort
+ * TranscriptExtractor — chain orchestrator over TranscriptProviderPort providers
  * qa-intel: no stream state here to call settleAnalysis or setError
  *
- * Implements 3-tier fallback chain:
- * 1. Primary: Decodo API
- * 2. Secondary: YouTube Native
- * 3. Tertiary: Placeholder/Fallback
+ * Configurable fallback chain (2026-09-24, Decodo 429 incident): the provider
+ * order comes from TRANSCRIPT_PROVIDER_ORDER (comma list, default
+ * "transcriptapi,apify,decodo,native"). Each provider is tried in order; the placeholder
+ * tier is always the final fallback and is not part of the order.
+ *
+ * NOTE: this worker cannot read the Supabase Settings Registry directly (per
+ * ADR 005 it stays DB-access-free; registry-resolved values reach it only via
+ * request-payload forwarding), so the order is env-var-only here.
  */
 
-import { XMLParser } from 'fast-xml-parser';
-import { captureException, captureMessage } from '@sentry/cloudflare';
+import { addBreadcrumb, captureException, captureMessage } from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
-import { getRandomUserAgent } from './user-agent';
+import { ApifyTranscriptProvider } from './providers/ApifyTranscriptProvider';
+import { TranscriptApiProvider } from './providers/TranscriptApiProvider';
+import { DecodoTranscriptProvider } from './providers/DecodoTranscriptProvider';
+import { YouTubeNativeTranscriptProvider } from './providers/YouTubeNativeTranscriptProvider';
+import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
-/** Thrown only when a source affirmatively confirms zero caption tracks exist (see TranscriptResult.confirmedNoCaptions). */
-class NoCaptionsConfirmedError extends Error {}
+const DEFAULT_PROVIDER_ORDER = 'transcriptapi,apify,decodo,native';
+
+/**
+ * Parses TRANSCRIPT_CHAIN_BUDGET_MS from env into a finite budget in ms.
+ * Guarded coercion: a missing, non-numeric or non-positive value yields
+ * undefined so the caller falls back to DEFAULT_CHAIN_BUDGET_MS.
+ */
+export function parseChainBudgetMs(raw?: string): number | undefined {
+  if (!raw) return undefined;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+// Chain budget derivation (2026-09-25, PR #336 round 2): the Apify tier can
+// block for up to 130000ms (its own abort, > the actor's 120s timeout). The
+// budget must therefore leave at least 30s for the remaining fallback tiers
+// (decodo 30s + native ~25s of internal deadlines) before the placeholder:
+// TranscriptAPI (first tier since 2026-09-25) adds up to 30000ms before Apify:
+// 30000 (TranscriptAPI) + 130000 (Apify worst case) + 30000 (fallback floor) = 190000ms. Overridable
+// via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, so env only).
+const DEFAULT_CHAIN_BUDGET_MS = 190000;
+
+const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native'] as const;
+type ProviderName = typeof VALID_PROVIDER_NAMES[number];
 
 export class TranscriptExtractor implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
   private decodoApiKey?: string;
+  private apifyToken?: string;
+  private providerOrder: ProviderName[];
+  private chainBudgetMs: number;
+  private transcriptApiKey?: string;
 
-  constructor(residentialProxyUrl?: string, decodoApiKey?: string) {
+  constructor(
+    residentialProxyUrl?: string,
+    decodoApiKey?: string,
+    providerOrder?: string,
+    apifyToken?: string,
+    chainBudgetMs?: number,
+    transcriptApiKey?: string,
+  ) {
     this.residentialProxyUrl = residentialProxyUrl;
     this.decodoApiKey = decodoApiKey;
+    this.apifyToken = apifyToken;
+    this.chainBudgetMs = chainBudgetMs ?? DEFAULT_CHAIN_BUDGET_MS;
+    this.transcriptApiKey = transcriptApiKey;
+    this.providerOrder = TranscriptExtractor.parseProviderOrder(providerOrder);
+  }
+
+  static parseProviderOrder(order?: string): ProviderName[] {
+    const raw = order?.trim() || DEFAULT_PROVIDER_ORDER;
+    const parsed = raw.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+    const valid: ProviderName[] = [];
+    const invalid: string[] = [];
+    for (const entry of parsed) {
+      if ((VALID_PROVIDER_NAMES as readonly string[]).includes(entry)) {
+        if (!valid.includes(entry as ProviderName)) valid.push(entry as ProviderName);
+      } else {
+        invalid.push(entry);
+      }
+    }
+    if (invalid.length > 0) {
+      const msg = `[transcript] TRANSCRIPT_PROVIDER_ORDER contains unknown provider name(s): ${invalid.join(', ')} (valid: ${VALID_PROVIDER_NAMES.join(', ')})`;
+      console.warn(msg);
+      // The invalid entry is silently dropped from the chain -- make that
+      // visible in Sentry so a typo in the env var does not silently shrink
+      // the fallback chain in production.
+      addBreadcrumb({
+        level: 'warning',
+        message: 'Unknown transcript provider in TRANSCRIPT_PROVIDER_ORDER',
+        category: 'config',
+        data: { invalid: invalid.join(','), raw },
+      });
+    }
+    return valid.length > 0 ? valid : [...new Set(DEFAULT_PROVIDER_ORDER.split(',') as ProviderName[])];
+  }
+
+  protected buildProviders(): Array<{ name: ProviderName; provider: TranscriptProviderPort }> {
+    const providers: Array<{ name: ProviderName; provider: TranscriptProviderPort }> = [];
+    for (const name of this.providerOrder) {
+      if (name === 'apify') providers.push({ name, provider: new ApifyTranscriptProvider(this.apifyToken) });
+      else if (name === 'transcriptapi') providers.push({ name, provider: new TranscriptApiProvider(this.transcriptApiKey) });
+      else if (name === 'decodo') providers.push({ name, provider: new DecodoTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
+      else providers.push({ name, provider: new YouTubeNativeTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
+    }
+    return providers;
   }
 
   async fetch(videoId: string): Promise<TranscriptResult> {
@@ -31,40 +114,64 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
 
-    // Accumulates one entry per tier tried this run, so a single Sentry
-    // event at the end can show the FULL picture ("Decodo: 429, standard
-    // API: timeout, page HTML: no tracks found") instead of 3 separate,
-    // hard-to-correlate exception events that each only know their own tier.
+    // Accumulates one entry per provider tried this run, so a single Sentry
+    // event at the end can show the FULL picture ("Apify: timeout, Decodo:
+    // 429, standard API: no tracks") instead of separate, hard-to-correlate
+    // exception events that each only know their own tier.
     const tierFailures: Array<{ tier: string; reason: string }> = [];
+    let confirmedNoCaptions = false;
 
-    if (this.decodoApiKey) {
+    // Total chain budget (2026-09-25): the Apify tier alone can block up to
+    // 130s, which previously left nothing for the fallback tiers. Every
+    // provider attempt is now bounded by the remaining budget; when it is
+    // exhausted the remaining providers are skipped (recorded as failures)
+    // and the placeholder still answers. Tunable via TRANSCRIPT_CHAIN_BUDGET_MS.
+    const budgetDeadline = Date.now() + this.chainBudgetMs;
+
+    for (const { name, provider } of this.buildProviders()) {
+      const remainingMs = budgetDeadline - Date.now();
+      if (remainingMs <= 0) {
+        const msg = `chain budget (${this.chainBudgetMs}ms) exhausted before ${name}`;
+        console.warn(`[transcript] ${msg} for ${videoId}`);
+        tierFailures.push({ tier: name, reason: msg });
+        continue;
+      }
+      // try/finally guarantees every provider attempt (success or failure)
+      // reports its latency as a breadcrumb -- per-tier latency is exactly
+      // what you need when RCA'ing which tier is slow/dead (e.g. the Decodo
+      // 429 incident this chain refactor came from).
+      let attemptStarted = 0;
+      let budgetTimer: ReturnType<typeof setTimeout> | undefined;
       try {
-        console.info(`[transcript] Trying Decodo for ${videoId}...`);
-        return await this.fetchWithDecodo(videoId);
+        console.info(`[transcript] Trying ${name} for ${videoId}...`);
+        attemptStarted = Date.now();
+        const attempt = provider.fetch(videoId);
+        const budgetAbort = new Promise<never>((_, reject) => {
+          budgetTimer = setTimeout(() => reject(new Error(`${name} exceeded remaining chain budget (${remainingMs}ms)`)), remainingMs);
+        });
+        return await Promise.race([attempt, budgetAbort]);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.warn(`[transcript] Decodo failed for ${videoId}: ${msg}`);
-        captureException(e, { tags: { operation: 'transcript-decodo', videoId } });
-        tierFailures.push({ tier: 'decodo', reason: msg });
+        console.warn(`[transcript] ${name} failed for ${videoId}: ${msg}`);
+        if (name === 'native') {
+          confirmedNoCaptions = e instanceof NoCaptionsConfirmedError;
+          // The native provider reports its own sub-tier failures to Sentry
+          // with fine-grained tags (transcript-standard-api / transcript-page-html).
+        } else {
+          captureException(e, { tags: { operation: `transcript-${name}`, videoId } });
+        }
+        tierFailures.push({ tier: name, reason: msg });
+      } finally {
+        if (budgetTimer) clearTimeout(budgetTimer);
+        if (attemptStarted > 0) {
+          console.debug(`[transcript] ${name} attempt for ${videoId} settled after ${Date.now() - attemptStarted}ms`);
+        }
       }
-    } else {
-      console.warn(`[transcript] Decodo API key not configured, skipping`);
-      tierFailures.push({ tier: 'decodo', reason: 'not configured' });
-    }
-
-    let confirmedNoCaptions = false;
-    try {
-      return await this.fetchWithYouTubeNative(videoId, tierFailures);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[transcript] YouTube fetch failed for ${videoId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-youtube-native', videoId } });
-      confirmedNoCaptions = e instanceof NoCaptionsConfirmedError;
     }
 
     console.info(`[transcript] Trying Tertiary for ${videoId}...`);
     if (!confirmedNoCaptions) {
-      // Every tier failed and none confirmed the video simply has no
+      // Every provider failed and none confirmed the video simply has no
       // captions -- this is the case that needs full RCA visibility, since
       // it means our pipeline (not the video) is the problem.
       captureMessage(`Transcript pipeline exhausted for ${videoId}`, {
@@ -76,116 +183,15 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return this.fetchWithTertiary(videoId, confirmedNoCaptions);
   }
 
-  private async fetchWithYouTubeNative(videoId: string, tierFailures: Array<{ tier: string; reason: string }>): Promise<TranscriptResult> {
-    let standardApiConfirmedNone = false;
-    try {
-      const { langCode } = await this.fetchCaptionMetadata(videoId);
-      const transcript = await this.fetchTranscriptContent(videoId, langCode);
-      if (transcript) return { videoId, transcript, language: langCode };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[transcript] Standard API failed for ${videoId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-standard-api', videoId } });
-      tierFailures.push({ tier: 'youtube-standard-api', reason: msg });
-      standardApiConfirmedNone = e instanceof NoCaptionsConfirmedError;
-    }
-
-    try {
-      return await this.fetchFromPageHTML(videoId);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[transcript] Page HTML extraction failed for ${videoId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-page-html-yt-native', videoId } });
-      tierFailures.push({ tier: 'youtube-page-html', reason: msg });
-      // Only confirm "no captions" when BOTH independent sources (YouTube's
-      // caption-list API and the page's own ytInitialData) agree there are
-      // none -- either one alone failing for an unrelated reason (network,
-      // proxy, rate limit) must not produce a false "this video has no
-      // captions" claim.
-      if (standardApiConfirmedNone && e instanceof NoCaptionsConfirmedError) {
-        throw new NoCaptionsConfirmedError(e.message);
-      }
-      throw e;
-    }
-  }
-
-  private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> {
-    const controller = new AbortController();
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
-    try {
-      const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
-      const response = await fetchWithProxy(pageUrl, {
-        headers: { 'User-Agent': getRandomUserAgent() },
-        signal,
-      }, this.residentialProxyUrl);
-      if (!response.ok) throw new Error(`Page fetch failed: ${response.status}`);
-
-      const html = await response.text();
-
-      const captionMatch = html.match(/"captionTracks":\s*(\[[\s\S]*?\])\s*,/);
-      if (!captionMatch) throw new NoCaptionsConfirmedError('No caption tracks found in page');
-
-      const trackJson = captionMatch[1];
-      if (!trackJson) throw new Error('Empty caption tracks JSON');
-
-      const tracks = JSON.parse(trackJson) as Array<{
-        baseUrl?: string;
-        langCode?: string;
-        kind?: string;
-      }>;
-
-      if (!tracks.length) throw new NoCaptionsConfirmedError('Empty caption tracks');
-
-      const preferredLangs = ['en', 'ar', 'en-auto', 'ar-auto'];
-      const asrPref = preferredLangs.map(l => tracks.find(t => t.langCode === l && t.kind === 'asr')).find(Boolean);
-      const langPref = preferredLangs.map(l => tracks.find(t => t.langCode?.startsWith(l.split('-')[0]!))).find(Boolean);
-      const asr = tracks.find(t => t.kind === 'asr' && t.langCode);
-      const first = tracks[0];
-
-      const chosen = asrPref || langPref || asr || first;
-      if (!chosen?.baseUrl) throw new Error('No suitable caption track');
-
-      const langCode = chosen.langCode || 'en';
-
-      const transcriptUrl = chosen.baseUrl.includes('fmt=json')
-        ? chosen.baseUrl
-        : `${chosen.baseUrl}&fmt=json`;
-
-      const transcriptResponse = await fetchWithProxy(transcriptUrl, {
-        headers: { 'User-Agent': getRandomUserAgent() },
-        signal: controller.signal,
-      }, this.residentialProxyUrl);
-      if (!transcriptResponse.ok) throw new Error(`Transcript content fetch failed: ${transcriptResponse.status}`);
-
-      const captionData = await transcriptResponse.json() as {
-        events?: Array<{ segs?: Array<{ utf8?: string }>, tStartMs?: number, dDurationMs?: number }>;
-      };
-
-      if (!captionData.events?.length) throw new Error('Empty transcript data');
-
-      let cumulative = 0;
-      const segments = captionData.events.filter(e => e.segs).map(e => {
-        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
-        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : cumulative * 3;
-        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : 3;
-        cumulative++;
-        return { start, duration, text };
-      }).filter(s => s.text.length > 0)
-        .filter(s => {
-          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
-        });
-
-      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
-
-      if (!transcript) throw new Error('Empty transcript after processing');
-
-      return { videoId, transcript, language: langCode, segments };
-    } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-page-html', videoId } });
-      throw e;
-    } finally {
-      controller.abort();
-    }
+  private fetchWithTertiary(videoId: string, confirmedNoCaptions: boolean): TranscriptResult {
+    return {
+      videoId,
+      transcript: confirmedNoCaptions
+        ? '[No captions available for this video]'
+        : '[Transcript unavailable for this video - content ingestion failed across all available sources]',
+      language: 'en',
+      confirmedNoCaptions,
+    };
   }
 
   async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
@@ -231,181 +237,5 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       captureException(e, { tags: { operation: 'transcript-channel-metadata', channelId } });
       return null;
     } finally { controller.abort(); }
-  }
-
-  private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
-    if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
-    const controller = new AbortController();
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
-    try {
-      const response = await fetchWithProxy('https://scraper-api.decodo.com/v2/scrape', {
-        method: 'POST',
-        signal,
-        headers: {
-          'Authorization': `Basic ${this.decodoApiKey}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          target: 'youtube_subtitles',
-          query: videoId,
-        }),
-      }, this.residentialProxyUrl);
-      if (!response.ok) throw new Error(`Decodo fail: ${response.status}`);
-      const data = await response.json() as {
-        results?: Array<{ content?: Record<string, unknown> }>;
-      };
-      const content = data.results?.[0]?.content;
-      if (!content) throw new Error('Decodo returned empty content');
-
-      let langCode = 'en';
-      let events: Array<{ segs?: Array<{ utf8?: string }>, tStartMs?: number, dDurationMs?: number, tStart?: number, dDuration?: number }> | undefined;
-
-      const autoGen = content.auto_generated as Record<string, { events?: typeof events }> | undefined;
-      if (autoGen && typeof autoGen === 'object') {
-        const langs = Object.keys(autoGen);
-        const preferred = ['en', 'ar', 'en-auto', 'a-en'];
-        langCode = preferred.find(l => langs.includes(l)) || langs[0] || 'en';
-        events = autoGen[langCode]?.events;
-      }
-      if (!events) {
-        const langs = Object.keys(content).filter(k => typeof content[k] === 'object');
-        const preferred = ['en', 'ar', 'en-auto', 'a-en', 'ar-auto'];
-        langCode = preferred.find(l => langs.includes(l)) || (langs.includes('en') ? 'en' : (langs[0] ?? 'en'));
-        const langData = content[langCode] as { events?: typeof events } | undefined;
-        events = langData?.events;
-      }
-      if (!events?.length) throw new Error('No transcript events found');
-
-      let cumulative = 0;
-      const segments = events.filter(e => e.segs).map(e => {
-        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
-        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : typeof e.tStart === 'number' ? e.tStart : cumulative * 3;
-        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : typeof e.dDuration === 'number' ? e.dDuration : 3;
-        cumulative++;
-        return { start, duration, text };
-      }).filter(s => s.text.length > 0)
-        .filter(s => {
-          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
-        });
-
-      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
-
-      if (!transcript) throw new Error('Empty transcript after processing');
-
-      return { videoId, transcript, language: langCode, segments };
-    } catch (e) {
-      throw e;
-    } finally {
-      controller.abort();
-    }
-  }
-
-  private fetchWithTertiary(videoId: string, confirmedNoCaptions: boolean): TranscriptResult {
-    return {
-      videoId,
-      transcript: confirmedNoCaptions
-        ? '[No captions available for this video]'
-        : '[Transcript unavailable for this video - content ingestion failed across all available sources]',
-      language: 'en',
-      confirmedNoCaptions,
-    };
-  }
-
-  private async fetchCaptionMetadata(videoId: string): Promise<{ langCode: string }> {
-    const controller = new AbortController();
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
-    try {
-      const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
-      const response = await fetchWithProxy(metadataUrl, {
-        headers: { 'User-Agent': getRandomUserAgent() },
-        signal,
-      }, this.residentialProxyUrl);
-      if (!response.ok) throw new Error(`Caption metadata fetch failed: ${response.status}`);
-      const metadataText = await response.text();
-
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '@_',
-      });
-
-      let parsed: { transcript_list?: { track?: unknown } };
-      try {
-        parsed = parser.parse(metadataText);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.warn(`[transcript] XML parse failed for ${videoId}: ${msg}`);
-        captureException(e, { tags: { operation: 'transcript-xml-parse', videoId } });
-        throw new Error('Failed to parse caption metadata XML');
-      }
-
-      const tracks = parsed.transcript_list?.track;
-      if (!tracks) throw new NoCaptionsConfirmedError('No captions available for this video');
-
-      const trackList = Array.isArray(tracks) ? tracks : [tracks];
-
-      const langCode = (t: Record<string, unknown>): string | undefined =>
-        typeof t['@_lang_code'] === 'string' ? t['@_lang_code'] : undefined;
-
-      const asrEn = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && langCode(t) === 'en' && t['@_kind'] === 'asr'
-      );
-      if (asrEn) return { langCode: 'en' };
-
-      const en = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && langCode(t)?.startsWith('en')
-      );
-      if (en) return { langCode: langCode(en)! };
-
-      const asr = trackList.find((t: Record<string, unknown>) =>
-        typeof t === 'object' && t['@_kind'] === 'asr' && langCode(t)
-      );
-      if (asr) return { langCode: langCode(asr)! };
-
-      const first = trackList.find((t): t is Record<string, unknown> => typeof t === 'object' && !!langCode(t));
-      if (first) return { langCode: langCode(first)! };
-
-      throw new NoCaptionsConfirmedError('No captions available for this video');
-    } catch (e) {
-      throw e;
-    } finally {
-      controller.abort();
-    }
-  }
-
-  private async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {
-    const controller = new AbortController();
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
-    try {
-      const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
-      const response = await fetchWithProxy(transcriptUrl, {
-        headers: { 'User-Agent': getRandomUserAgent() },
-        signal,
-      }, this.residentialProxyUrl);
-      if (!response.ok) throw new Error(`Transcript content fetch failed: ${response.status}`);
-
-      const captionData = (await response.json()) as {
-        events?: Array<{
-          segs?: Array<{ utf8?: string }>
-        }>
-      };
-
-      if (!captionData.events || captionData.events.length === 0) {
-        throw new Error('Transcript data structure empty');
-      }
-
-      const transcript = captionData.events
-        .map(e => e.segs?.map(s => s.utf8 || '').join('') || '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      return transcript;
-    } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-content-fetch', videoId } });
-      throw e;
-    } finally {
-      controller.abort();
-    }
   }
 }
