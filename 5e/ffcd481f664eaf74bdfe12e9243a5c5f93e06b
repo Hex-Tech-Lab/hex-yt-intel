@@ -1,0 +1,26 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  h_60000122af7b55 39
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  h_60000122af7b55 1-255
+scripts/quality-engine/rules/index.ts
+  h_60000122af7b55 57
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  h_60000122af7b55 1-244
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  h_60000122af7b55 1-150
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  h_60000122af7b55 1-134
+worker/src/services/BracketBuffer.ts
+  h_60000122af7b55 31-32,40,81-88,90,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5effcd481f664eaf74bdfe12e9243a5c5f93e06b",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
