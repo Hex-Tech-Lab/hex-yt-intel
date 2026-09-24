@@ -70,6 +70,26 @@ export async function GET(request: Request): Promise<NextResponse> {
   // residential proxy).
   const forcedNative = params.get('tier') === 'native';
 
+  // Raw HTTP probe from the Vercel datacenter IP (no extractor, no proxy):
+  // the direct answer to R2 — does YouTube block datacenter IPs at all?
+  let probe: { watch: { status: number; blocked: boolean; snippet: string } | null; timedtext: { status: number } | null } | null = null;
+  if (params.get('probe') === '1') {
+    const probeId = ids[0] as string;
+    const watchRes = await fetch(`https://www.youtube.com/watch?v=${probeId}&hl=en`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36' },
+    });
+    const body = await watchRes.text();
+    const blocked = /consent\.youtube\.com|class="g-recaptcha"|LOGIN_REQUIRED|Sign in to confirm you/.test(body) || body.length < 2000;
+    probe = {
+      watch: { status: watchRes.status, blocked, snippet: body.slice(0, 200).replace(/\s+/g, ' ') },
+      timedtext: null,
+    };
+    const ttRes = await fetch(`https://www.youtube.com/api/timedtext?v=${probeId}&lang=en`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36' },
+    });
+    probe.timedtext = { status: ttRes.status };
+  }
+
   const proxyUrl = forcedNative ? undefined : process.env.RESIDENTIAL_PROXY_URL;
   const decodoKey = forcedNative ? undefined : process.env.DECODO_API_KEY;
   const ytKey = process.env.YOUTUBE_API_KEY;
@@ -110,5 +130,5 @@ export async function GET(request: Request): Promise<NextResponse> {
       ? 'PASS'
       : 'FAIL';
 
-  return NextResponse.json({ verdict, transcriptOk, total: results.length, results });
+  return NextResponse.json({ verdict, transcriptOk, total: results.length, probe, results });
 }
