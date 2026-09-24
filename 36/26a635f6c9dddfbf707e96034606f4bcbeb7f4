@@ -1,0 +1,19 @@
+web/lib/monitoring/sentry-utils.ts
+  s_542d19c0732260::t_7c13761daa9843 4-5,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3626a635f6c9dddfbf707e96034606f4bcbeb7f4",
+  "prompts": {},
+  "sessions": {
+    "s_542d19c0732260": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8ab9bcffeqoaVAzK2sWt6S2",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
