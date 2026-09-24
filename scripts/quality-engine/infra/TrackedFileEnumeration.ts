@@ -21,8 +21,8 @@ import { execFileSync } from "child_process";
 
 export const TEXT_FILE_EXT = /\.(md|mdx|sql|json|ya?ml|sh|txt)$/;
 
-export const isSqlMigration = (f: string): boolean =>
-  f.startsWith("supabase/migrations/") && f.endsWith(".sql");
+export const isSqlMigration = (filePath: string): boolean =>
+  filePath.startsWith("supabase/migrations/") && filePath.endsWith(".sql");
 
 const TEXT_DENYLIST = [/^pnpm-lock\.yaml$/];
 
@@ -32,7 +32,7 @@ export function listTrackedFiles(cwd: string = process.cwd()): string[] {
   return out
     .split("\0")
     .filter(Boolean)
-    .map((f) => f.replace(/\\/g, "/"));
+    .map((filePath) => filePath.replace(/\\/g, "/"));
 }
 
 /**
@@ -42,9 +42,9 @@ export function listTrackedFiles(cwd: string = process.cwd()): string[] {
  */
 export function selectScannableTextFiles(files: string[]): string[] {
   return files.filter(
-    (f) =>
-      TEXT_FILE_EXT.test(f) &&
-      !isSqlMigration(f) &&
-      !TEXT_DENYLIST.some((re) => re.test(f)),
+    (filePath) =>
+      TEXT_FILE_EXT.test(filePath) &&
+      !isSqlMigration(filePath) &&
+      !TEXT_DENYLIST.some((re) => re.test(filePath)),
   );
 }
