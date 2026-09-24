@@ -1,0 +1,54 @@
+scripts/quality-engine/rules/__tests__/data-lessons-20260924.test.ts
+  s_8b8bfc8e3e2d04::t_aded3fd1bf3e6c 346-427
+  s_8b8bfc8e3e2d04::t_f9ddd34a2db227 163-203
+scripts/quality-engine/rules/__tests__/tracked-file-enumeration.test.ts
+  s_8b8bfc8e3e2d04::t_68ea4a2f1e2cc9 34
+  s_8b8bfc8e3e2d04::t_ac083818365c21 3
+  s_8b8bfc8e3e2d04::t_cd3c461e0f90d7 1-2,4-33,35-61
+scripts/quality-engine/rules/data-lessons-20260924.ts
+  s_8b8bfc8e3e2d04::t_3034f5c72f06c4 1
+  s_8b8bfc8e3e2d04::t_556caac4b79304 205-208,211
+  s_8b8bfc8e3e2d04::t_81b0f9c9cc58f1 255-277
+  s_8b8bfc8e3e2d04::t_d2d7479f976a03 29-40
+  s_8b8bfc8e3e2d04::t_e713fb341deb36 112-116
+  s_8b8bfc8e3e2d04::t_b01be5337a3e77 166-173,184,189-204,209-210,212-216
+  s_8b8bfc8e3e2d04::t_53b52a30148325 139-142
+  s_8b8bfc8e3e2d04::t_24bbf24d4c3173 229-237
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_8b8bfc8e3e2d04::t_cc0f99d7a3b75b 232-236
+.memory/AGENT_LEDGER.md
+  s_6eaa11b0e75cef::t_099d3973ac6b79 1402
+  s_8b8bfc8e3e2d04::t_d3b6e47dd9929e 1404
+  s_8b8bfc8e3e2d04::t_aab23a984424b3 1403
+scripts/quality-engine/infra/TrackedFileEnumeration.ts
+  s_8b8bfc8e3e2d04::t_0709e28ad57733 1-50
+scripts/verify-quality-engine.ts
+  s_8b8bfc8e3e2d04::t_e7e154ff51c34a 8
+  s_8b8bfc8e3e2d04::t_121cdca551b6d5 108-111,116-117,125-127
+  s_8b8bfc8e3e2d04::t_91c3c945470a59 188
+  s_8b8bfc8e3e2d04::t_ea3763c2781f43 273-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "140186b4c46984158af80d9479a36e131fb9037c",
+  "prompts": {},
+  "sessions": {
+    "s_6eaa11b0e75cef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2acf1d8dffeFSB27OiRZh3twm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_8b8bfc8e3e2d04": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aadc595ffeYD2YYsmM0hEW5k",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
