@@ -1,4 +1,4 @@
-import { Node, SyntaxKind } from "ts-morph";
+import { Node } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { Finding } from "../domain/Finding";
 import type { Rule, RuleContext } from "../domain/Rule";
@@ -26,6 +26,18 @@ function normalizePosixPath(p: string): string {
  * Upserts into whole columns have the same race, but the shipped fix only
  * covered `.update`; keep this rule scoped to `.update` to match the lesson
  * exactly (FP-first discipline: zero false positives on the current repo).
+ *
+ * KNOWN GAPS (documented 2026-09-25, round-2 review — accepted, no detector):
+ * 1. `.update({...})` only — the same race reached via a PATCH body built by
+ *    spreading a previously read value (the backfill script shape,
+ *    scripts/backfill-stance-relations.ts:217) is NOT flagged. Fixing it
+ *    would need a whole new sink detector (fetch/JSON.stringify bodies).
+ * 2. The spread-provenance heuristic is syntactic: it accepts
+ *    identifier/member (optionally `|| {}`) as "stale read" and rejects
+ *    conditional spreads as "fresh". It cannot see dataflow, so a stale
+ *    snapshot re-packed through an intermediate variable of a shape it
+ *    doesn't recognize may pass unflagged, and a genuinely fresh value
+ *    routed through an identifier could theoretically false-positive.
  */
 export const JsonbReadModifyWriteRule: Rule = {
   name: "jsonb-read-modify-write",
@@ -97,7 +109,11 @@ export const JsonbReadModifyWriteRule: Rule = {
  * assignment `lines += \`...\``) into an array/builder that the same file
  * later joins with a '\n'-containing separator, unless every interpolated
  * expression visibly sanitizes newlines (`.replace(/[\r\n]/...` or a
- * `sanitize`-named helper). Deliberately NOT flagging plain
+ * `sanitize`-named helper). The `.push()` form is gated on the receiver
+ * appearing in a `join('\n')` call; the `+=` string-builder form (round 2,
+ * 2026-09-25) is gated on the log-naming test directly -- a string builder
+ * is never itself the receiver of `join('\n')` (it already IS the
+ * newline-delimited text). Deliberately NOT flagging plain
  * `console.log(\`...${x}...\`)` -- that shape is pervasive and benign
  * here; the forgery risk is specifically newline-joined rendered log text.
  */
@@ -120,7 +136,10 @@ export const UntrustedLogInterpolationRule: Rule = {
       const receiver = expr.getExpression();
       if (Node.isIdentifier(receiver)) joinedReceivers.add(receiver.getText());
     });
-    if (joinedReceivers.size === 0) return findings;
+    // NOTE: no early return when joinedReceivers is empty -- the += string-
+    // builder form (below) never appears in a join() receiver set, so an
+    // empty set must not disable the whole scan. The .push form guards
+    // itself via set membership.
 
     // FP gate (tightened after the first full-repo scan): newline-joined
     // string builders are also used for markdown reconstruction
@@ -144,17 +163,14 @@ export const UntrustedLogInterpolationRule: Rule = {
     const isServerGenerated = (exprText: string): boolean =>
       exprText.startsWith("new Date(") || /^Date\.now\(/.test(exprText) || /^\d+$/.test(exprText);
 
-    source.forEachDescendant((node) => {
-      if (!Node.isCallExpression(node)) return;
-      const expr = node.getExpression();
-      if (!Node.isPropertyAccessExpression(expr) || expr.getName() !== "push") return;
-      const receiver = expr.getExpression();
-      if (!Node.isIdentifier(receiver) || !joinedReceivers.has(receiver.getText())) return;
-
-      const arg = node.getArguments()[0];
-      if (!arg || !Node.isTemplateExpression(arg)) return;
-
-      const interpolations = arg
+    // Shared interpolation audit for both write forms in the contract:
+    // `receiver.push(\`...\`)` and `receiver += \`...\`` (string-builder form).
+    const checkTemplateIntoReceiver = (
+      receiverName: string,
+      template: Node,
+      describeSite: (receiver: string) => string,
+    ): void => {
+      const interpolations = template
         .getDescendants()
         .filter((d) => Node.isTemplateSpan(d))
         .map((d) => d.getExpression().getText());
@@ -165,11 +181,39 @@ export const UntrustedLogInterpolationRule: Rule = {
         file: filePath,
         severity: "medium",
         title: "Data Integrity: untrusted value interpolated into newline-delimited log text",
-        why: `${receiver.getText()}.push() interpolates un-sanitized values (${unsanitized
+        why: `${describeSite(receiverName)} interpolates un-sanitized values (${unsanitized
           .slice(0, 3)
           .join(", ")}${unsanitized.length > 3 ? ", ..." : ""}) into a log line that is later join('\\n')-ed. A value containing a newline forges extra log lines in the rendered log view (log-line forgery; PR #321).`,
         fix: `Sanitize every interpolated value before rendering it as a log line, e.g. wrap with a helper: String(value).replace(/[\\r\\n]+/g, ' '), or JSON.stringify(value) for opaque fields.`,
       });
+    };
+
+    source.forEachDescendant((node) => {
+      // Form 1: receiver.push(`...${x}...`)
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression();
+        if (!Node.isPropertyAccessExpression(expr) || expr.getName() !== "push") return;
+        const receiver = expr.getExpression();
+        if (!Node.isIdentifier(receiver) || !joinedReceivers.has(receiver.getText())) return;
+
+        const arg = node.getArguments()[0];
+        if (!arg || !Node.isTemplateExpression(arg)) return;
+        checkTemplateIntoReceiver(receiver.getText(), arg, (r) => `${r}.push()`);
+        return;
+      }
+
+      // Form 2: receiver += `...${x}...` (string-builder append). A string
+      // builder is never the receiver of .join('\n') (it already IS the
+      // newline-delimited text), so the FP gate here is the same log-naming
+      // test applied to the joinedReceivers set above, not set membership.
+      if (Node.isBinaryExpression(node) && node.getOperatorToken().getText() === "+=") {
+        const left = node.getLeft();
+        if (!Node.isIdentifier(left) || !isLogNamed(left.getText())) return;
+
+        const right = node.getRight();
+        if (!Node.isTemplateExpression(right)) return;
+        checkTemplateIntoReceiver(left.getText(), right, (r) => `${r} +=`);
+      }
     });
 
     return findings;
@@ -182,11 +226,15 @@ export const UntrustedLogInterpolationRule: Rule = {
  * docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md:73/77 -- `<<<<<<<
  * HEAD` / `>>>>>>> origin/main`). qa-intel never scans non-TS files, so
  * nothing caught it. Contract: flag any line starting with `<<<<<<< `,
- * `>>>>>>> `, `||||||| `, or the exact conflict separator line `=======`
- * (exactly 7 equals, no trailing content -- deliberately NOT flagging
- * setext-style `======` headers of other lengths). High severity: a
- * committed conflict marker means the merge was never resolved before
- * landing. Runs on TS/TSX AND tracked text files (.md/.sql/.json/...) --
+ * `>>>>>>> `, or `||||||| `, and the exact conflict separator line `=======`
+ * (exactly 7 equals, no trailing content) — but ONLY when the `=======` sits
+ * inside an OPEN conflict block (a `<<<<<<< ` line opened earlier and not
+ * yet closed by `>>>>>>> `). A standalone `=======` outside any open block
+ * is the Markdown Setext H1 underline (previous line non-empty text) —
+ * valid prose, not a conflict remnant (round-2 review FP, 2026-09-25).
+ * Deliberately NOT flagging setext-style `======` headers of other lengths.
+ * High severity: a committed conflict marker means the merge was never
+ * resolved before landing. Runs on TS/TSX AND tracked text files (.md/.sql/.json/...) --
  * scripts/verify-quality-engine.ts routes non-code text files to this rule
  * only, so the other rules' input set is unchanged.
  */
@@ -204,10 +252,29 @@ export const ConflictMarkerRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     const text = source.getText();
 
-    const startMarker = /^[<]{7}( |$)/m.test(text);
-    const endMarker = /^[>]{7}( |$)/m.test(text);
-    const baseMarker = /^\|{7}( |$)/m.test(text);
-    const sepMarker = /^={7}$/m.test(text);
+    // Line-scan state machine: the `=======` separator only counts inside an
+    // OPEN conflict block (opened by `<<<<<<< ` and not yet closed by
+    // `>>>>>>> `). A standalone `=======` outside a block is a Markdown
+    // Setext H1 underline — valid prose, not a conflict remnant.
+    const lines = text.split(/\r?\n/);
+    let open = false;
+    let startMarker = false;
+    let endMarker = false;
+    let baseMarker = false;
+    let sepMarker = false;
+    for (const line of lines) {
+      if (/^[<]{7}( |$)/.test(line)) {
+        startMarker = true;
+        open = true;
+      } else if (/^[>]{7}( |$)/.test(line)) {
+        endMarker = true;
+        open = false;
+      } else if (/^\|{7}( |$)/.test(line)) {
+        baseMarker = true;
+      } else if (open && /^={7}$/.test(line)) {
+        sepMarker = true;
+      }
+    }
     if (!startMarker && !endMarker && !sepMarker && !baseMarker) return findings;
 
     const kinds: string[] = [];

@@ -160,6 +160,47 @@ describe("UntrustedLogInterpolationRule (R8)", () => {
     expect(findings).toHaveLength(0);
   });
 
+  test("round-2: fires on the += string-builder form (contract's second write shape)", () => {
+    const source = "web/lib/admin-logs/fetchers.ts";
+    const content = `
+      export async function fetchTextLogs(row: any) {
+        let logText = "";
+        logText += \`[\${row.updated_at}] [WARN] title="\${row.title}"\`;
+        return { logs: logText.split("\\n") };
+      }
+    `;
+    const project = projectWith(source, content);
+    const findings = UntrustedLogInterpolationRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("medium");
+    expect(findings[0]!.title).toContain("newline-delimited log text");
+  });
+
+  test("round-2: sanitized += form does not fire", () => {
+    const source = "web/lib/admin-logs/fetchers.ts";
+    const content = `
+      function sanitizeLogValue(value: string) {
+        return String(value).replace(/[\\r\\n]+/g, ' ');
+      }
+      export async function fetchTextLogs(row: any) {
+        let logText = "";
+        logText += \`[\${sanitizeLogValue(row.updated_at)}] title="\${sanitizeLogValue(row.title)}"\`;
+        return { logs: logText.split("\\n") };
+      }
+    `;
+    const project = projectWith(source, content);
+    const findings = UntrustedLogInterpolationRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(0);
+  });
+
   test("negative control: push with no interpolation into a joined array is not flagged", () => {
     const source = "web/lib/admin-logs/fetchers.ts";
     const content = `
@@ -301,5 +342,87 @@ describe("ConflictMarkerRule (R12)", () => {
       allFiles: [source],
     });
     expect(findings).toHaveLength(0);
+  });
+
+  test("round-2 FP fix: standalone '======= ' Setext H1 underline (previous line non-empty text, no open block) does not fire", () => {
+    const source = "docs/heading-setext.md";
+    const project = projectWith(source, "Introduction\n=======\nThis docs page explains the merge flow.\n");
+    const findings = ConflictMarkerRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(0);
+  });
+
+  test("round-2 FP fix: '=======' AFTER a closed conflict block is not re-flagged as separator (though block markers still are)", () => {
+    const source = "docs/after-block.md";
+    const content = [
+      "before",
+      "<<<<<<< HEAD",
+      "ours",
+      ">>>>>>> origin/main",
+      "after text",
+      "=======",
+      "trailing prose",
+    ].join("\n");
+    const project = projectWith(source, content);
+    const findings = ConflictMarkerRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.why).not.toContain("'=======' separator");
+  });
+
+  test("full conflict block in a Markdown file still fires (incl. separator inside the open block)", () => {
+    const source = "docs/agent-prompts/conflicted.md";
+    const project = projectWith(source, MARKER_SNIPPET);
+    const findings = ConflictMarkerRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.why).toContain("'=======' separator");
+  });
+
+  test("full conflict block in a SQL migration still fires", () => {
+    const source = "supabase/migrations/20260925000000_conflicted.sql";
+    const project = projectWith(source, MARKER_SNIPPET);
+    const findings = ConflictMarkerRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("high");
+  });
+
+  test("two conflict blocks in one file: separators in both open blocks fire", () => {
+    const source = "docs/two-blocks.md";
+    const content = [
+      "a",
+      "<<<<<<< HEAD",
+      "x1",
+      "=======",
+      "y1",
+      ">>>>>>> origin/main",
+      "b",
+      "<<<<<<< HEAD",
+      "x2",
+      "=======",
+      "y2",
+      ">>>>>>> origin/main",
+      "c",
+    ].join("\n");
+    const project = projectWith(source, content);
+    const findings = ConflictMarkerRule.check({
+      filePath: source,
+      ast: project.getSourceFileOrThrow(source),
+      allFiles: [source],
+    });
+    expect(findings).toHaveLength(1);
   });
 });

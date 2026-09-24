@@ -5,6 +5,7 @@ import { CacheAdapter } from "./quality-engine/infra/CacheAdapter";
 import { wrapLegacyRule } from "./quality-engine/infra/LegacyRuleAdapter";
 import { createCache } from "./quality-engine/cache";
 import * as legacyRules from "./quality-engine/rules";
+import { listTrackedFiles, selectScannableTextFiles, isSqlMigration } from "./quality-engine/infra/TrackedFileEnumeration";
 import * as glob from "glob";
 import * as path from "path";
 import * as fs from "fs";
@@ -104,14 +105,16 @@ let fileList: string[] = [];
 // it. Extend the file list with tracked TEXT files (never more TS than
 // before, so the other rules' input set is unchanged); text files are
 // routed to ConflictMarkerRule ONLY (partition below in run()).
+// R12 round 2 (2026-09-25): full mode enumerates TRACKED files via
+// `git ls-files -z` with a deliberate text-extension policy (incl. hidden
+// dirs like .memory/AGENT_LEDGER.md, never untracked files) — see
+// quality-engine/infra/TrackedFileEnumeration.ts. TS/TSX set unchanged.
 const TEXT_FILE_EXT = /\.(md|mdx|sql|json|ya?ml|sh|txt)$/;
-const TEXT_GLOBS = ["{web,worker,docs,scripts,supabase}/**/*.{md,mdx,sql,sh,txt}", "{web,worker,docs,scripts,supabase}/**/*.{json,yml,yaml}", "*.md", "*.json"];
-const TEXT_GLOB_IGNORE = ["**/node_modules/**", "**/.git/**", "**/.scratch/**", "**/.qa-intel/**", "**/pnpm-lock.yaml", "**/playwright-report/**", "**/test-results/**", "**/coverage/**"];
 if (mode === "full" || mode === "watch") {
 // Wave Q4 (2026-09-24): SQL migrations joined the scan surface (R4/R13
   // rules, rules/sql-migrations.ts) — qa-intel previously never scanned
-  // supabase/migrations/*.sql at all. They are covered by TEXT_GLOBS too;
-  // include main's explicit glob so the intent survives TEXT_GLOBS edits.
+  // supabase/migrations/*.sql at all. They are covered by the tracked-file
+  // enumeration too; include the explicit glob so the intent survives edits.
   // R12 (Q3): tracked text files join the scan, routed to ConflictMarkerRule
   // only (partition below in run()); migration SQL additionally goes through
   // the language-gated full rule set (partition: supabase/migrations/*.sql
@@ -119,7 +122,9 @@ if (mode === "full" || mode === "watch") {
   fileList = Array.from(new Set([
     ...glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }),
     ...glob.sync("supabase/migrations/*.sql"),
-    ...TEXT_GLOBS.flatMap(g => glob.sync(g, { ignore: TEXT_GLOB_IGNORE })),
+    // R12 round 2: tracked-file enumeration with deliberate text-extension
+    // policy (hidden dirs incl. .memory/, never untracked files).
+    ...selectScannableTextFiles(listTrackedFiles()),
   ])).map(f => f.replace(/\\/g, "/"));
 } else {
   let diffArgs: readonly string[] = [];
@@ -180,7 +185,7 @@ fileList = fileList.filter(f => fsAdapter.exists(f));
 // tracked text files (.md/.sql/...) go to ConflictMarkerRule ONLY -- they
 // are parsed by ts-morph error-tolerantly and running the other text/AST
 // rules on prose would fabricate findings outside this change's scope.
-const isSqlMigration = (f: string) => f.startsWith("supabase/migrations/") && f.endsWith(".sql");
+// (isSqlMigration / TEXT_FILE_EXT policy lives in TrackedFileEnumeration.ts.)
 const codeFiles = fileList.filter(f => /\.(ts|tsx)$/.test(f) || isSqlMigration(f));
 const textFiles = fileList.filter(f => TEXT_FILE_EXT.test(f) && !isSqlMigration(f));
 
@@ -265,6 +270,12 @@ console.log(`Runtime scan sources: ${fileList.length} files scanned (${codeFiles
       try {
         const ast = await loader.load(file);
         textFindings.push(...conflictRule.check({ filePath: file, ast, graph: undefined, allFiles: textFiles }));
+        // R12 round 2 (2026-09-25): the text set grew to every tracked text
+        // file incl. hidden dirs (~660 files). ts-morph retains every loaded
+        // SourceFile in the shared Project, which OOM'd the default heap on a
+        // full run; conflict markers are a per-file line scan, so release the
+        // source immediately after its check instead of retaining 660 docs.
+        project.removeSourceFile(ast);
       } catch (err) {
         console.error(`[qa-intel] ConflictMarkerRule failed on ${file}:`, err);
         process.exit(1);
