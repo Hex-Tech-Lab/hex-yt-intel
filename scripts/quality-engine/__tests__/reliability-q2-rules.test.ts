@@ -104,6 +104,43 @@ describe('R6: SilentDefaultOnExternalResponseRule', () => {
     const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
     expect(findings.length).toBe(0);
   });
+
+  test('fires through a simple alias chain (const payload = json)', () => {
+    const code = `
+      async function load() {
+        const res = await fetch('https://api.example.com/shape');
+        const json = await res.json();
+        const payload = json;
+        return payload?.deep?.items || [];
+      }
+    `;
+    const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(1);
+    expect(findings[0].title).toContain("'payload'");
+  });
+
+  test('negative control: shadowed unrelated same-name variable does not fire', () => {
+    const code = `
+      const json = await (await fetch('https://api.example.com/x')).json();
+      function renderUnrelated(json: { note?: string }) {
+        return json?.note || [];
+      }
+    `;
+    const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(0);
+  });
+
+  test('negative control: comments and string literals mentioning fetch/.json() do not create roots', () => {
+    const code = `
+      // TODO: call .json() and fetch( the real endpoint later.
+      function makeHint() {
+        const hint = 'use .json() and fetch( here';
+        return hint?.trimFallback || [];
+      }
+    `;
+    const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(0);
+  });
 });
 
 describe('R7: ServerFetchWithoutTimeoutRule', () => {
@@ -172,6 +209,53 @@ describe('R7: ServerFetchWithoutTimeoutRule', () => {
       }
     `;
     const findings = check(ServerFetchWithoutTimeoutRule, code, 'worker/src/routes/transcript.ts');
+    expect(findings.length).toBe(0);
+  });
+
+  test('fires when signal is undefined (no deadline at all)', () => {
+    const code = `
+      async function callUpstream(url: string) {
+        const res = await fetch(url, { headers: { Authorization: 'Bearer x' }, signal: undefined });
+        return res;
+      }
+    `;
+    const findings = check(ServerFetchWithoutTimeoutRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(1);
+    expect(findings[0].title).toContain('without timeout');
+  });
+
+  test('fires when the controller is never aborted (no setTimeout wired)', () => {
+    const code = `
+      async function callUpstream(url: string) {
+        const controller = new AbortController();
+        const res = await fetch(url, { signal: controller.signal });
+        return res;
+      }
+    `;
+    const findings = check(ServerFetchWithoutTimeoutRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(1);
+    expect(findings[0].title).toContain('without timeout');
+  });
+
+  test('negative control: AbortSignal.timeout() is bounded and does not fire', () => {
+    const code = `
+      async function callUpstream(url: string) {
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        return res;
+      }
+    `;
+    const findings = check(ServerFetchWithoutTimeoutRule, code, 'web/lib/admin-logs/fetchers.ts');
+    expect(findings.length).toBe(0);
+  });
+
+  test('negative control: AbortSignal.any([...AbortSignal.timeout(...)]) is bounded and does not fire', () => {
+    const code = `
+      async function callUpstream(url: string, external: AbortSignal) {
+        const res = await fetch(url, { signal: AbortSignal.any([external, AbortSignal.timeout(8000)]) });
+        return res;
+      }
+    `;
+    const findings = check(ServerFetchWithoutTimeoutRule, code, 'web/lib/admin-logs/fetchers.ts');
     expect(findings.length).toBe(0);
   });
 });
@@ -281,6 +365,48 @@ describe('R9: ErrorPathAsymmetryRule', () => {
     const findings = check(ErrorPathAsymmetryRule, code, 'worker/src/services/PersistService.ts');
     expect(findings.length).toBe(0);
   });
+
+  test('negative control: Sentry capture inside a nested function in the try block is not sibling asymmetry', () => {
+    // A capture inside a .map(() => ...) callback runs in a different
+    // execution branch than the try's own failure path — must NOT count.
+    const code = `
+      import * as Sentry from '@sentry/cloudflare';
+      async function batch(items: string[]) {
+        try {
+          items.map((it) => {
+            if (!it) Sentry.captureMessage('empty item', { level: 'warning' });
+            return process(it);
+          });
+        } catch (err) {
+          console.warn('[batch] item failed (non-blocking)', err);
+        }
+      }
+    `;
+    const findings = check(ErrorPathAsymmetryRule, code, 'worker/src/routes/analysis.ts');
+    expect(findings.length).toBe(0);
+  });
+
+  test('a comment mentioning Sentry.capture does not mask the asymmetry (AST check, not textual)', () => {
+    const code = `
+      import * as Sentry from '@sentry/cloudflare';
+      async function persist() {
+        try {
+          const response = await doWork();
+          if (!response.ok) {
+            console.error('non-2xx', response.status);
+            Sentry.captureMessage('persist returned non-2xx', { level: 'error' });
+          }
+        } catch (err) {
+          // Not capturing here: Sentry.captureException would double-report
+          // since the non-2xx branch above already captures.
+          console.warn('[persist] failed (non-blocking)', err);
+        }
+      }
+    `;
+    const findings = check(ErrorPathAsymmetryRule, code, 'worker/src/routes/analysis.ts');
+    expect(findings.length).toBe(1);
+    expect(findings[0].title).toContain('console-only');
+  });
 });
 
 describe('R11: SuccessGuardedPersistenceRule', () => {
@@ -333,5 +459,20 @@ describe('R11: SuccessGuardedPersistenceRule', () => {
     `;
     const findings = check(SuccessGuardedPersistenceRule, code, 'web/app/api/persist/route.ts');
     expect(findings.length).toBe(0);
+  });
+
+  test('fires on the truthiness variant: if (x.length) gating an update write-through', () => {
+    const code = `
+      export async function route(id: string, insights: unknown[], payload: unknown, supabase: any) {
+        const result = { insights };
+        if (insights.length) {
+          await supabase.from('analyses').update({ analysis_payload: { ...(payload || {}), stance_relations: result } }).eq('id', id);
+        }
+        return result;
+      }
+    `;
+    const findings = check(SuccessGuardedPersistenceRule, code, 'web/app/api/analyses/[id]/relations/route.ts');
+    expect(findings.length).toBe(1);
+    expect(findings[0].title).toContain("'insights.length'");
   });
 });

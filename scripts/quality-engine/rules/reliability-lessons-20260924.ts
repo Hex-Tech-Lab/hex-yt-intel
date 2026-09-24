@@ -63,6 +63,29 @@ function rootIdentifierOf(expr: Node): string | undefined {
   }
 }
 
+/** Root identifier NODE of a member/call chain — the actual Identifier node
+ * (not just its text) so symbol resolution can distinguish shadowed names.
+ * Returns undefined for non-chain bases. */
+function findRootIdentifierNode(expr: Node): Node | undefined {
+  let current = expr;
+  for (;;) {
+    if (Node.isIdentifier(current)) return current;
+    if (Node.isPropertyAccessExpression(current) || Node.isElementAccessExpression(current)) {
+      current = current.getExpression();
+      continue;
+    }
+    if (Node.isCallExpression(current)) {
+      current = current.getExpression();
+      continue;
+    }
+    if (Node.isNonNullExpression(current) || Node.isAwaitExpression(current)) {
+      current = current.getExpression();
+      continue;
+    }
+    return undefined;
+  }
+}
+
 /**
  * R6 — Silent default on an external response shape.
  *
@@ -72,9 +95,13 @@ function rootIdentifierOf(expr: Node): string | undefined {
  * []` swallowed a real shape and returned 200 with zero entries).
  *
  * Scope guard (false-positive control): only fires when the chain's root
- * identifier is a local variable whose initializer traces to a fetch/JSON
- * boundary (`await fetch(`, `.json()`, or `fetchWithTimeout(`). Internal
- * optional data (`store?.items ?? []`, props/params) is not flagged.
+ * identifier resolves — via the type checker's symbol bindings, so shadowed
+ * or unrelated same-name variables are NOT matched — to a local variable
+ * whose initializer is an AST fetch/JSON boundary (`await fetch(...)`,
+ * `x.json()`, `fetchWithTimeout(...)`) or a simple alias of one
+ * (`const payload = json`). Comments and string literals mentioning
+ * `.json()`/`fetch(` are ignored (AST-based detection, not textual).
+ * Internal optional data (`store?.items ?? []`, props/params) is not flagged.
  */
 export const SilentDefaultOnExternalResponseRule: Rule = {
   name: "silent-default-on-external-response-shape",
@@ -85,17 +112,54 @@ export const SilentDefaultOnExternalResponseRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath)) return findings;
 
-    const fetchedRoots = new Set<string>();
+    /** VariableDeclaration nodes whose initializer is a fetch/JSON boundary. */
+    const fetchedDecls = new Set<Node>();
+    /** Map of alias declaration node -> initializer Identifier node. */
+    const aliasInits = new Map<Node, Node>();
+
     source.forEachDescendant((node) => {
       if (!Node.isVariableDeclaration(node)) return;
-      const init = node.getInitializer();
+      let init = node.getInitializer();
       if (!init) return;
-      const text = init.getText();
-      if (text.includes(".json()") || text.includes("fetch(") || text.includes("fetchWithTimeout(")) {
-        fetchedRoots.add(node.getName());
+      if (Node.isAwaitExpression(init)) init = init.getExpression();
+      if (Node.isIdentifier(init)) {
+        aliasInits.set(node, init);
+        return;
+      }
+      if (Node.isCallExpression(init)) {
+        const expr = init.getExpression();
+        // `.json()` boundary: last property access in the callee chain.
+        if (Node.isPropertyAccessExpression(expr) && expr.getName() === "json") {
+          fetchedDecls.add(node);
+          return;
+        }
+        const calleeText = expr.getText();
+        if (calleeText === "fetch" || calleeText === "globalThis.fetch") {
+          fetchedDecls.add(node);
+          return;
+        }
+        if (calleeText === "fetchWithTimeout") {
+          fetchedDecls.add(node);
+          return;
+        }
       }
     });
-    if (fetchedRoots.size === 0) return findings;
+
+    if (fetchedDecls.size === 0) return findings;
+
+    /** Resolve an identifier to a fetched-root declaration, following alias
+     * initializers transitively (depth-capped) and honoring symbol bindings
+     * so a shadowed same-name variable does not resolve to the outer root. */
+    const resolvesToFetched = (ident: Node, depth = 0): boolean => {
+      if (depth > 4) return false;
+      const decls = ident.getSymbol()?.getDeclarations() ?? [];
+      for (const decl of decls) {
+        if (fetchedDecls.has(decl)) return true;
+        const aliasInit = aliasInits.get(decl);
+        if (aliasInit && resolvesToFetched(aliasInit, depth + 1)) return true;
+      }
+      return false;
+    };
 
     source.forEachDescendant((node) => {
       if (!Node.isBinaryExpression(node)) return;
@@ -107,13 +171,15 @@ export const SilentDefaultOnExternalResponseRule: Rule = {
       const lhs = node.getLeft();
       if (!hasOptionalAccess(lhs)) return;
       const root = rootIdentifierOf(lhs);
-      if (!root || !fetchedRoots.has(root)) return;
+      if (!root) return;
+      const rootIdent = findRootIdentifierNode(lhs);
+      if (!rootIdent || rootIdent.getText() !== root || !resolvesToFetched(rootIdent)) return;
 
       findings.push({
         file: filePath,
         severity: "medium",
         title: `Reliability: silent empty-default on fetched response shape ('${root}')`,
-        why: `'${node.getText()}' defaults an optionally-chained read of a fetched response (${root} traces to a fetch/.json() boundary) to an empty array. An upstream shape change, auth drift or error envelope silently becomes an empty success instead of surfacing.`,
+        why: `'${node.getText()}' defaults an optionally-chained read of a fetched response (${root} resolves to a fetch/.json() boundary) to an empty array. An upstream shape change, auth drift or error envelope silently becomes an empty success instead of surfacing.`,
         fix: "Validate the response shape explicitly (Zod schema, or explicit checks that throw/log a warning with the raw shape) before defaulting; never turn an unknown shape into an empty success.",
       });
     });
@@ -121,6 +187,53 @@ export const SilentDefaultOnExternalResponseRule: Rule = {
     return findings;
   },
 };
+
+/**
+ * True when the `signal:` value provably enforces a deadline. Only bounded
+ * patterns count (PR #335 review): `AbortSignal.timeout(n)`,
+ * `AbortSignal.any([...])` containing a bounded element, or an
+ * AbortController whose `signal` is wired to a `setTimeout(...abort...)`
+ * in the same enclosing function scope. A bare `signal: undefined`,
+ * an untraceable spread, or a never-aborted controller does NOT count —
+ * those recreate the exact "no deadline" bug this rule guards against.
+ */
+function controllerHasBoundedTimeout(controllerId: string, from: Node): boolean {
+  let scope: Node | undefined = from;
+  while (scope && !Node.isFunctionDeclaration(scope) && !Node.isMethodDeclaration(scope) &&
+         !Node.isArrowFunction(scope) && !Node.isFunctionExpression(scope)) {
+    scope = scope.getParent();
+  }
+  if (!scope) scope = from.getSourceFile();
+  const abortRe = new RegExp(`\\b${controllerId}\\s*\\.\\s*abort\\b`);
+  return scope.getDescendants().some((d) => {
+    if (!Node.isCallExpression(d) || d.getExpression().getText() !== "setTimeout") return false;
+    return d.getArguments().some((a) => abortRe.test(a.getText()));
+  });
+}
+
+function signalExprIsBounded(expr: Node): boolean {
+  const text = expr.getText();
+  if (text === "undefined" || text === "null") return false;
+  if (/^AbortSignal\.timeout\s*\(/.test(text)) return true;
+  // AbortSignal.any([...]) — bounded iff at least one element is bounded.
+  if (Node.isCallExpression(expr) && /^AbortSignal\.any/.test(text)) {
+    const first = expr.getArguments()[0];
+    if (first && Node.isArrayLiteralExpression(first)) {
+      return first.getElements().some((el) => {
+        const elText = el.getText();
+        if (/^AbortSignal\.timeout\s*\(/.test(el.getText())) return true;
+        const m = /^([\w$.]+)\.signal$/.exec(el.getText());
+        return m ? controllerHasBoundedTimeout(m[1], expr) : false;
+      });
+    }
+    return /^AbortSignal\.timeout/.test(text);
+  }
+  // controller.signal — bounded only if the controller is aborted via
+  // setTimeout somewhere in the same enclosing function/file scope.
+  const m = /^([\w$.]+)\.signal$/.exec(text);
+  if (m) return controllerHasBoundedTimeout(m[1], expr);
+  return false;
+}
 
 /**
  * R7 — Server-side fetch without a timeout/AbortSignal.
@@ -131,8 +244,14 @@ export const SilentDefaultOnExternalResponseRule: Rule = {
  *
  * Scope: server-side files only (web/app/api/**, worker/src/**, and the
  * server-only web/lib/admin-logs/**). Client components/hooks legitimately
- * stream long responses and are NOT flagged. Calls through
- * `fetchWithTimeout(...)` or with an explicit `signal:` option are safe.
+ * stream long responses and are NOT flagged. A `signal:` option only counts
+ * as a timeout when it is a BOUNDED pattern: `AbortSignal.timeout(n)`,
+ * `AbortSignal.any([...timeout...])`, or a controller with a
+ * `setTimeout(...abort(...))` in the same scope (e.g. the fetchers.ts
+ * `setTimeout(() => controller.abort(), QSTASH_LOGS_TIMEOUT_MS)` idiom).
+ * `signal: undefined` or a never-aborted controller still fires. Calls
+ * through known bounded wrappers (`fetchWithTimeout`, web/lib/utils/fetch-with-timeout.ts)
+ * are safe.
  */
 export const ServerFetchWithoutTimeoutRule: Rule = {
   name: "server-fetch-without-timeout",
@@ -158,21 +277,26 @@ export const ServerFetchWithoutTimeoutRule: Rule = {
       if (!isPlainFetch) return;
 
       const callText = node.getText();
-      // Guard against nested/inner fetch matching twice (e.g. fetch inside
-      // the arguments of another call) — only check top-level argument
-      // object literals for `signal:`.
-      const hasSignal = node.getArguments().some((arg) => {
-        if (Node.isObjectLiteralExpression(arg)) {
-          return arg.getProperties().some((prop) => {
-            if (Node.isPropertyAssignment(prop)) return prop.getName() === "signal";
-            if (Node.isShorthandPropertyAssignment(prop)) return prop.getName() === "signal";
-            if (Node.isSpreadAssignment(prop)) return /\bsignal\b/.test(prop.getText());
+      // Only a BOUNDED signal counts as a timeout. Top-level argument object
+      // literals only (nested/inner fetch must not double-match).
+      const hasBoundedSignal = node.getArguments().some((arg) => {
+        if (!Node.isObjectLiteralExpression(arg)) return false;
+        return arg.getProperties().some((prop) => {
+          if (Node.isPropertyAssignment(prop)) {
+            if (prop.getNameNode().getText() !== "signal") return false;
+            return signalExprIsBounded(prop.getInitializer());
+          }
+          if (Node.isShorthandPropertyAssignment(prop)) {
+            if (prop.getName() !== "signal") return false;
+            // `signal` shorthand: value is a variable; only bounded if it
+            // resolves to a bounded pattern — untraceable, so not accepted.
             return false;
-          });
-        }
-        return /\bsignal\b\s*:/.test(arg.getText());
+          }
+          // Spread assignments carry an unknown signal — not provably bounded.
+          return false;
+        });
       });
-      if (hasSignal) return;
+      if (hasBoundedSignal) return;
 
       findings.push({
         file: filePath,
@@ -186,6 +310,29 @@ export const ServerFetchWithoutTimeoutRule: Rule = {
     return findings;
   },
 };
+
+/** AST-based Sentry capture detection: a real `Sentry.capture*` CALL, never a
+ * comment or string literal (both are excluded by node-kind inspection). */
+function isSentryCaptureCall(node: Node): boolean {
+  return Node.isCallExpression(node) && node.getExpression().getText().startsWith("Sentry.capture");
+}
+
+/** True if `node` sits inside a nested function (arrow/function expression/
+ * declaration/method) whose enclosing scope is strictly INSIDE `outer` — e.g.
+ * a Sentry capture inside a `.map(() => ...)` or `setTimeout(() => ...)`
+ * callback within a try block runs in a DIFFERENT execution branch than the
+ * try's own failure path, so it is not sibling asymmetry. */
+function isInsideNestedFunctionOf(node: Node, outer: Node): boolean {
+  let current = node.getParent();
+  while (current && current !== outer) {
+    if (Node.isFunctionDeclaration(current) || Node.isFunctionExpression(current) ||
+        Node.isArrowFunction(current) || Node.isMethodDeclaration(current)) {
+      return true;
+    }
+    current = current.getParent();
+  }
+  return false;
+}
 
 /**
  * R9 — Error-path asymmetry.
@@ -215,7 +362,10 @@ export const ErrorPathAsymmetryRule: Rule = {
       const bodyText = body.getText();
       const hasConsoleLog = /console\.(warn|error|log)\(/.test(bodyText);
       if (!hasConsoleLog) return;
-      if (bodyText.includes("Sentry.")) return;
+      // AST-based: a real Sentry.capture* CALL in the catch body (comments and
+      // string literals are node kinds, not call expressions, so explanatory
+      // text like "Sentry.captureException would double-report" can't mask it).
+      if (body.getDescendants().some(isSentryCaptureCall)) return;
       if (/\bthrow\b/.test(bodyText)) return; // error is re-raised upstream, not swallowed
 
       // The asymmetry must be BETWEEN SIBLING BRANCHES OF THE SAME try — the
@@ -227,13 +377,14 @@ export const ErrorPathAsymmetryRule: Rule = {
       // established convention, not the bug.
       const tryStmt = node.getFirstAncestorByKind(SyntaxKind.TryStatement);
       if (!tryStmt) return;
-      // AST-based, not textual: "Sentry.capture" in explanatory comments
-      // (e.g. middleware.ts's "console.warn only here (not Sentry.captureMessage)")
-      // must not count as a real sibling capture.
+      // Same-try sibling only, AND in the try's direct flow: a Sentry capture
+      // inside a nested function in the try block (a .map(() => ...) or
+      // setTimeout(() => ...) callback) is a different execution branch, not
+      // the asymmetry the rule targets.
       const hasSiblingSentryCapture = tryStmt
         .getTryBlock()
         .getDescendants()
-        .some((d) => Node.isCallExpression(d) && d.getExpression().getText().startsWith("Sentry.capture"));
+        .some((d) => isSentryCaptureCall(d) && !isInsideNestedFunctionOf(d, tryStmt.getTryBlock()));
       if (!hasSiblingSentryCapture) return;
 
       // Do not double-flag nested catches when the outer function body
@@ -261,11 +412,18 @@ export const ErrorPathAsymmetryRule: Rule = {
  * around the stance-relations write-through → paid recompute on every cache
  * expiry for legitimately-empty results).
  *
- * False-positive control: fires only on the write-through shape — an
- * `.update(...)` on a Supabase table or a Redis SET inside the guard. An
- * empty-batch `.insert()` guard is a legitimate pattern and is NOT flagged
- * (there is genuinely nothing to insert); an empty-result update skip is the
- * bug (the correct write is "empty result" itself).
+ * INTENDED SCOPE (documented per PR #335 review — the rule is deliberately
+ * narrow, not a general "guard" detector):
+ * - Supported predicates: `x.length > 0` AND the truthiness variant
+ *   `if (x.length)` (same semantic: empty result treated as "skip write").
+ * - Supported sinks (write-through shapes where persisting the EMPTY result
+ *   itself is the correct terminal state): a Supabase `.update(...)` chain
+ *   and the project's `setRedisValue(...)` helper.
+ * - NOT flagged (deliberate): `.insert(...)` guarded on non-empty (legitimate
+ *   empty-batch skip — there is genuinely nothing to insert), reads, deletes,
+ *   and any other sink.
+ *
+ * False-positive control: fires only on the write-through shapes above.
  */
 export const SuccessGuardedPersistenceRule: Rule = {
   name: "success-guarded-persistence",
@@ -279,7 +437,7 @@ export const SuccessGuardedPersistenceRule: Rule = {
     source.forEachDescendant((node) => {
       if (!Node.isIfStatement(node)) return;
       const condText = node.getExpression().getText().trim();
-      const condMatch = /^([\w$.]+)\.length\s*>\s*0$/.exec(condText);
+      const condMatch = /^([\w$.]+)\.length(?:\s*>\s*0)?$/.exec(condText);
       if (!condMatch) return;
       const thenText = node.getThenStatement().getText();
       const isWriteThrough = /\.update\(/.test(thenText) || /setRedisValue\(/.test(thenText);
@@ -288,7 +446,7 @@ export const SuccessGuardedPersistenceRule: Rule = {
       findings.push({
         file: filePath,
         severity: "medium",
-        title: `Reliability: persistence skipped on empty result ('${condMatch[1]}.length > 0')`,
+        title: `Reliability: persistence skipped on empty result ('${condText}')`,
         why: `An .update()/Redis write-through is gated on '${condText}'. A valid empty result skips the write, so no cached/persisted value ever exists for that state and every later request recomputes (PR #322: empty stance-relations → paid recompute on every cache expiry).`,
         fix: "Persist the empty result too (it is a valid terminal state), or add an explicit tombstone/negative-cache marker instead of skipping the write entirely.",
       });
