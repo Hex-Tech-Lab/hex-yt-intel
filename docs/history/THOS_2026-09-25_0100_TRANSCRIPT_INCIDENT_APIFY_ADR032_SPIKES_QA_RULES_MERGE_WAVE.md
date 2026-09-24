@@ -15,11 +15,11 @@
 ### 1a. Transcripts (OPEN until #336 is live)
 - Symptom: every analysis gets the 95-byte "[Transcript unavailable...]" placeholder (verified live, even dQw4w9WgXcQ).
 - Cause: Decodo Web Scraping API free plan exhausted ($1/$1) → HTTP 429 (verified with the key directly). Native YouTube tier is blocked from datacenter IPs. Residential-proxy code path is dead: `worker/src/services/http-utils.ts fetchWithProxy` uses a non-standard `proxy` fetch option Cloudflare ignores (Decodo dashboard shows 0 bytes proxy traffic).
-- Fix: PR #336 — `ApifyTranscriptProvider` (actor `johnvc/youtubetranscripts`, `run-sync-get-dataset-items`, ~$0.001/video, Apify free plan $5/mo credit) first in a configurable chain `TRANSCRIPT_PROVIDER_ORDER` default `apify,decodo,native`, 75-language preference list (en/ar first). Live-verified: en 61 segs 7 s, ar 483 segs, 2h13m 2,196 segs 39 s, de auto-only 602 segs. `APIFY_TOKEN` set on CF worker `yt-intel` + Vercel (prod+preview, Sensitive) + `web/.env.local`.
+- Fix: PR #336 — `ApifyTranscriptProvider` (actor `johnvc/youtubetranscripts`, `run-sync-get-dataset-items`, ~$0.001/video, Apify free plan $5/mo credit) first in a configurable chain `TRANSCRIPT_PROVIDER_ORDER` default `apify,decodo,native`, 75-language preference list (en/ar first). Provider live-verified by direct API calls (not yet via the deployed app): en 61 segs 7 s, ar 483 segs, 2h13m 2,196 segs 39 s, de auto-only 602 segs. `APIFY_TOKEN` set on CF worker `yt-intel` + Vercel (prod+preview, Sensitive) + `web/.env.local`.
 - New option from user: **TranscriptAPI** (`https://transcriptapi.com/api/v2/youtube/transcript?video_url=<id>&format=json`, Bearer key, key name `transapi-expan-prod`) — key saved to `web/.env.local` as `TRANSCRIPTAPI_API_KEY`. Not tested yet. Candidate second provider in the chain (add adapter behind `TranscriptProviderPort`, same pattern as Apify). CF worker env already has `BRIGHT_DATA_TOKEN` too (unused in code).
 - Decodo $19 upgrade: on hold (user investigating); not needed if Apify holds.
 ### 1b. Cloudflare Free-plan CPU kills (from 09-23)
-- **User upgraded to Cloudflare Workers Paid (active, renews Oct 9, 2026)** — 30 s default CPU/request, up to 5 min. Production analyses should work again once transcripts are fixed. TODO: set a worker CPU limit (`[limits] cpu_ms` in `worker/wrangler.toml`, e.g. 2000–5000) to cap runaway cost, then run a real end-to-end analysis.
+- **User upgraded to Cloudflare Workers Paid (active, renews Oct 9, 2026)** — 30 s default CPU/request, up to 5 min. Production analyses should work again once transcripts are fixed. TODO: set a worker CPU limit (`[limits] cpu_ms` in `worker/wrangler.toml`) to cap runaway cost — measure per-route CPU first (CF observability, p99 + headroom), no value picked yet, then run a real end-to-end analysis.
 - #330 merged: BracketBuffer O(n²) → O(n) + a deterministic scanned-chars guard (fails on the old algorithm: 1.1e9 vs 1.1e6 bound).
 
 ## 2. ADR 032 (accepted, now needs rewrite)
@@ -38,7 +38,7 @@ Landing rule: squash with "(#N)"; merge `main` into the next branch before mergi
 
 ## 4. qa-intel
 - Rules from the 09-24 lessons ledger: Q1 R1/R2/R5/R10 (merged), Q4 R4/R13 SQL + SQL-migration scanning (merged), Q3 R3/R8/R12 conflict markers (#334), Q2 R6/R7/R9/R11 (#335). Each has positive-fire tests from the real bug and negative controls.
-- **True positives live on main (not fixed yet — dispatch one OC task after #334/#335 land):** R1 `web/lib/stripe/webhook-handlers.ts` hardcoded 'pro'; R1 legacy billing webhook + R10 usage-summary (both fixed by #325); R7 ×9 server fetch without timeout (`web/lib/admin-logs/fetchers.ts` ×6, upstash-snapshot-poll ×2, transcript-purge); R8 ×4 log injection (`fetchers.ts:70/75/684/688`); R9 `relations-engine.ts:274`; R11 `relations/route.ts:155` empty-result recompute bug.
+- **True positives live on main (not fixed yet — dispatch one OC task after #334/#335 land):** R1 `web/lib/stripe/webhook-handlers.ts` hardcoded 'pro'; R1 legacy billing webhook + R10 usage-summary (fixed on #325 branch, not yet on main); R7 ×9 server fetch without timeout (`web/lib/admin-logs/fetchers.ts` ×6, upstash-snapshot-poll ×2, transcript-purge); R8 ×4 log injection (`fetchers.ts:70/75/684/688`); R9 `relations-engine.ts:274`; R11 `relations/route.ts:155` empty-result recompute bug.
 - The Q1 agent wrongly reported "0 hits" (grepped rule name, findings print titles) — corrected on #332.
 
 ## 5. Billing / product
