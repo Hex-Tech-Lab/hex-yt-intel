@@ -1,0 +1,29 @@
+scripts/research/run-pricing-research.ts
+  s_c0862af7ca0281::t_e535ef3999e8ca 1-156
+docs/research/2026-09-25-business-case-cogs-pricing.md
+  s_e540d9b857f7aa::t_a6f3a644a5ca30 1-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f9379be52364dc3b88516d4f3d1f5664b301c60d",
+  "prompts": {},
+  "sessions": {
+    "s_c0862af7ca0281": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aad9b5affeU2vp9oYfwSJAoy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e540d9b857f7aa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aad9d2fffekceA9653QxG3K4",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
