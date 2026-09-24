@@ -54,3 +54,5 @@ export { AsyncWithoutAwaitRule, DeadCodeRule, VariableNamingRule, TimeoutCleanup
 export { DatabaseConstraintRule, DefaultValueConsistencyRule, TruncationValidationRule } from "./data-integrity";
 export { SecurityFixWithoutTestRule, NonNullAfterArraySortFilterRule } from "./security-lessons-20260905";
 export { JsonbReadModifyWriteRule, UntrustedLogInterpolationRule, ConflictMarkerRule } from "./data-lessons-20260924";
+export { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "./sql-migrations";
+export { HardcodedTierGrantRule, UntrustedTierFallbackRule, ServiceRoleAnonFallbackRule, RuntimeTierTrustRule } from "./security-lessons-20260924";

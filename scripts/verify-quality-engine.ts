@@ -108,8 +108,19 @@ const TEXT_FILE_EXT = /\.(md|mdx|sql|json|ya?ml|sh|txt)$/;
 const TEXT_GLOBS = ["{web,worker,docs,scripts,supabase}/**/*.{md,mdx,sql,sh,txt}", "{web,worker,docs,scripts,supabase}/**/*.{json,yml,yaml}", "*.md", "*.json"];
 const TEXT_GLOB_IGNORE = ["**/node_modules/**", "**/.git/**", "**/.scratch/**", "**/.qa-intel/**", "**/pnpm-lock.yaml", "**/playwright-report/**", "**/test-results/**", "**/coverage/**"];
 if (mode === "full" || mode === "watch") {
-  fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
-  fileList = fileList.concat(TEXT_GLOBS.flatMap(g => glob.sync(g, { ignore: TEXT_GLOB_IGNORE })));
+// Wave Q4 (2026-09-24): SQL migrations joined the scan surface (R4/R13
+  // rules, rules/sql-migrations.ts) — qa-intel previously never scanned
+  // supabase/migrations/*.sql at all. They are covered by TEXT_GLOBS too;
+  // include main's explicit glob so the intent survives TEXT_GLOBS edits.
+  // R12 (Q3): tracked text files join the scan, routed to ConflictMarkerRule
+  // only (partition below in run()); migration SQL additionally goes through
+  // the language-gated full rule set (partition: supabase/migrations/*.sql
+  // are code files for Rule.languages gating purposes).
+  fileList = Array.from(new Set([
+    ...glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }),
+    ...glob.sync("supabase/migrations/*.sql"),
+    ...TEXT_GLOBS.flatMap(g => glob.sync(g, { ignore: TEXT_GLOB_IGNORE })),
+  ])).map(f => f.replace(/\\/g, "/"));
 } else {
   let diffArgs: readonly string[] = [];
   if (mode === "diff") {
@@ -146,7 +157,7 @@ if (mode === "full" || mode === "watch") {
     const diffOutput = execFileSync("git", diffArgs, { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
-      .map(f => f.trim())
+.map(f => f.trim())
       .filter(f => f.length > 0 && (f.endsWith(".ts") || f.endsWith(".tsx") || TEXT_FILE_EXT.test(f)));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
@@ -169,12 +180,13 @@ fileList = fileList.filter(f => fsAdapter.exists(f));
 // tracked text files (.md/.sql/...) go to ConflictMarkerRule ONLY -- they
 // are parsed by ts-morph error-tolerantly and running the other text/AST
 // rules on prose would fabricate findings outside this change's scope.
-const codeFiles = fileList.filter(f => /\.(ts|tsx)$/.test(f));
-const textFiles = fileList.filter(f => TEXT_FILE_EXT.test(f));
+const isSqlMigration = (f: string) => f.startsWith("supabase/migrations/") && f.endsWith(".sql");
+const codeFiles = fileList.filter(f => /\.(ts|tsx)$/.test(f) || isSqlMigration(f));
+const textFiles = fileList.filter(f => TEXT_FILE_EXT.test(f) && !isSqlMigration(f));
 
 if (codeFiles.length === 0 && textFiles.length === 0) {
   if (mode === "diff" || mode === "working-tree" || mode === "HEAD") {
-    console.log(`✅ qa-intel: No changed TS/TSX/text files detected to scan (mode: ${mode}).`);
+console.log(`✅ qa-intel: No changed TS/TSX/SQL-migration/text files detected to scan (mode: ${mode}).`);
     process.exit(0);
   }
   console.error("❌ qa-intel: No files found to scan.");
@@ -217,7 +229,7 @@ async function run() {
     }
   );
   console.log("--- Source Provenance & Runtime Honesty Audit ---");
-  console.log(`Runtime scan sources: ${fileList.length} files scanned (${codeFiles.length} TS/TSX via globs, ${textFiles.length} tracked text files routed to ConflictMarkerRule; excl. node_modules)`);
+console.log(`Runtime scan sources: ${fileList.length} files scanned (${codeFiles.length} TS/TSX + supabase/migrations/*.sql via the language-gated full rule set, ${textFiles.length} tracked text files routed to ConflictMarkerRule; excl. node_modules)`);
   console.log("Calibration sources: Juliet/SARD (CWE-22, CWE-259), CRBench, Big-Vul/Devign (CWE-89)");
   console.log("Calibration source visibility: CALIBRATION-ONLY (none affect live PR scans)");
   const hasActiveGraphRule = rules.some(r => r.scope === "graph");

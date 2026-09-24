@@ -194,6 +194,10 @@ export const ConflictMarkerRule: Rule = {
   name: "committed-conflict-markers",
   scope: "file",
   allowSelfAnalysis: false,
+  // Opt into SQL too: supabase/migrations/*.sql run the language-gated full
+  // rule set (Wave Q4), and a conflict marker in a migration is just as
+  // fatal — default ["ts"] would silently skip it there.
+  languages: ["ts", "sql"],
   check: (ctx: RuleContext) => {
     const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
