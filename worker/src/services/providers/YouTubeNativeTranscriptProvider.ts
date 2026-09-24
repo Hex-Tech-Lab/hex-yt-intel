@@ -14,6 +14,14 @@ import { getRandomUserAgent } from '../user-agent';
 import { NoCaptionsConfirmedError } from '../../ports/TranscriptProviderPort';
 import type { TranscriptProviderPort, TranscriptResult } from '../../ports/TranscriptProviderPort';
 
+/**
+ * YouTubeNativeTranscriptProvider — Adapter implementing TranscriptProviderPort.
+ *
+ * Scrapes YouTube's own surfaces (timedtext caption-list API, then the watch
+ * page's ytInitialData) directly. Two independent sources, so a
+ * NoCaptionsConfirmedError is only thrown when BOTH agree the video has no
+ * captions (see the agreement rule in {@link fetch}).
+ */
 export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
   private decodoApiKey?: string;
@@ -23,7 +31,13 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
     this.decodoApiKey = decodoApiKey;
   }
 
-  async fetch(videoId: string): Promise<TranscriptResult> {
+  /**
+   * Tries the caption-list API first (returns the transcript when it works),
+   * then falls back to scraping the watch page HTML. Throws
+   * NoCaptionsConfirmedError only when both sources affirmatively agree the
+   * video has no caption tracks; every other failure is rethrown as-is.
+   */
+  async fetch(videoId: string): Promise<TranscriptResult> { // skipcq: JS-R1005 (orchestrates two sub-sources; splitting adds indirection, not clarity)
     let standardApiConfirmedNone = false;
     try {
       const { langCode } = await this.fetchCaptionMetadata(videoId);
@@ -54,7 +68,14 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
     }
   }
 
-  private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> {
+  /**
+   * Fetches the watch page, extracts "captionTracks" from ytInitialData and
+   * downloads the chosen track as JSON. Page fetch and track fetch share one
+   * 15s deadline via the same AbortSignal (P1 fix 2026-09-25: the track
+   * fetch previously used the bare controller signal with no timeout, so a
+   * stalled request hung the tier until the outer finally abort).
+   */
+  private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> { // skipcq: JS-R1005 (linear parse pipeline; branches are sequential extraction steps)
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     try {
@@ -82,9 +103,9 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       if (!tracks.length) throw new NoCaptionsConfirmedError('Empty caption tracks');
 
       const preferredLangs = ['en', 'ar', 'en-auto', 'ar-auto'];
-      const asrPref = preferredLangs.map(l => tracks.find(t => t.langCode === l && t.kind === 'asr')).find(Boolean);
-      const langPref = preferredLangs.map(l => tracks.find(t => t.langCode?.startsWith(l.split('-')[0]!))).find(Boolean);
-      const asr = tracks.find(t => t.kind === 'asr' && t.langCode);
+      const asrPref = preferredLangs.map(lang => tracks.find(track => track.langCode === lang && track.kind === 'asr')).find(Boolean);
+      const langPref = preferredLangs.map(lang => tracks.find(track => track.langCode?.startsWith(lang.split('-')[0] ?? lang))).find(Boolean);
+      const asr = tracks.find(track => track.kind === 'asr' && track.langCode);
       const first = tracks[0];
 
       const chosen = asrPref || langPref || asr || first;
@@ -98,7 +119,10 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
 
       const transcriptResponse = await fetchWithProxy(transcriptUrl, {
         headers: { 'User-Agent': getRandomUserAgent() },
-        signal: controller.signal,
+        // P1 fix (2026-09-25): use the combined signal (15s timeout + abort)
+        // instead of the bare controller signal -- a stalled content request
+        // previously hung until the finally-block abort, blocking the chain.
+        signal,
       }, this.residentialProxyUrl);
       if (!transcriptResponse.ok) throw new Error(`Transcript content fetch failed: ${transcriptResponse.status}`);
 
@@ -109,18 +133,19 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       if (!captionData.events?.length) throw new Error('Empty transcript data');
 
       let cumulative = 0;
-      const segments = captionData.events.filter(e => e.segs).map(e => {
-        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
-        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : cumulative * 3;
-        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : 3;
+      const segments = captionData.events.map(event => {
+        const segs = event.segs ?? [];
+        const text = segs.map(seg => seg.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+        const start = typeof event.tStartMs === 'number' ? event.tStartMs / 1000 : cumulative * 3;
+        const duration = typeof event.dDurationMs === 'number' ? event.dDurationMs / 1000 : 3;
         cumulative++;
         return { start, duration, text };
-      }).filter(s => s.text.length > 0)
-        .filter(s => {
-          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
+      }).filter(segment => segment.text.length > 0)
+        .filter(segment => {
+          return !isNaN(segment.start) && !isNaN(segment.duration) && segment.start >= 0 && segment.duration > 0 && segment.start < 86400;
         });
 
-      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
+      const transcript = segments.map(segment => segment.text).join(' ').replace(/\s+/g, ' ').trim();
 
       if (!transcript) throw new Error('Empty transcript after processing');
 
@@ -134,6 +159,7 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
     }
   }
 
+  /** Fetches the timedtext caption-track list and picks the preferred track's language. */
   private async fetchCaptionMetadata(videoId: string): Promise<{ langCode: string }> {
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
@@ -193,6 +219,7 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
     }
   }
 
+  /** Downloads the timedtext transcript content for `langCode` as JSON and joins the segment texts. */
   async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
@@ -215,7 +242,7 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
       }
 
       const transcript = captionData.events
-        .map(e => e.segs?.map(s => s.utf8 || '').join('') || '')
+        .map(event => event.segs?.map(seg => seg.utf8 || '').join('') || '')
         .join(' ')
         .replace(/\s+/g, ' ')
         .trim();

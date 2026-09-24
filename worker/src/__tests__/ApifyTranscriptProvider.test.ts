@@ -8,6 +8,7 @@ import { TranscriptExtractor } from '../services/TranscriptExtractor';
 vi.mock('@sentry/cloudflare', () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
+  addBreadcrumb: vi.fn(),
 }));
 
 const fixture = JSON.parse(

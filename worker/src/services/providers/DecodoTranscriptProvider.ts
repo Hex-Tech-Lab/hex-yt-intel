@@ -8,6 +8,12 @@
 import { fetchWithProxy } from '../http-utils';
 import type { TranscriptProviderPort, TranscriptResult } from '../../ports/TranscriptProviderPort';
 
+/**
+ * DecodoTranscriptProvider — Adapter implementing TranscriptProviderPort.
+ *
+ * Uses Decodo's youtube_subtitles scrape target as an alternative transcript
+ * source behind the residential proxy (second tier in the default chain).
+ */
 export class DecodoTranscriptProvider implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
   private decodoApiKey?: string;
@@ -17,7 +23,8 @@ export class DecodoTranscriptProvider implements TranscriptProviderPort {
     this.decodoApiKey = decodoApiKey;
   }
 
-  async fetch(videoId: string): Promise<TranscriptResult> {
+  /** Scrapes the transcript via Decodo's youtube_subtitles target and normalises its events into segments. */
+  async fetch(videoId: string): Promise<TranscriptResult> { // skipcq: JS-R1005 (linear scrape/parse pipeline; branches are sequential extraction steps)
     if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
@@ -49,31 +56,32 @@ export class DecodoTranscriptProvider implements TranscriptProviderPort {
       if (autoGen && typeof autoGen === 'object') {
         const langs = Object.keys(autoGen);
         const preferred = ['en', 'ar', 'en-auto', 'a-en'];
-        langCode = preferred.find(l => langs.includes(l)) || langs[0] || 'en';
+        langCode = preferred.find(lang => langs.includes(lang)) || langs[0] || 'en';
         events = autoGen[langCode]?.events;
       }
       if (!events) {
         const langs = Object.keys(content).filter(k => typeof content[k] === 'object');
         const preferred = ['en', 'ar', 'en-auto', 'a-en', 'ar-auto'];
-        langCode = preferred.find(l => langs.includes(l)) || (langs.includes('en') ? 'en' : (langs[0] ?? 'en'));
+        langCode = preferred.find(lang => langs.includes(lang)) || (langs.includes('en') ? 'en' : (langs[0] ?? 'en'));
         const langData = content[langCode] as { events?: typeof events } | undefined;
         events = langData?.events;
       }
       if (!events?.length) throw new Error('No transcript events found');
 
       let cumulative = 0;
-      const segments = events.filter(e => e.segs).map(e => {
-        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
-        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : typeof e.tStart === 'number' ? e.tStart : cumulative * 3;
-        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : typeof e.dDuration === 'number' ? e.dDuration : 3;
+      const segments = events.map(event => {
+        const segs = event.segs ?? [];
+        const text = segs.map(seg => seg.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+        const start = typeof event.tStartMs === 'number' ? event.tStartMs / 1000 : typeof event.tStart === 'number' ? event.tStart : cumulative * 3;
+        const duration = typeof event.dDurationMs === 'number' ? event.dDurationMs / 1000 : typeof event.dDuration === 'number' ? event.dDuration : 3;
         cumulative++;
         return { start, duration, text };
-      }).filter(s => s.text.length > 0)
-        .filter(s => {
-          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
+      }).filter(segment => segment.text.length > 0)
+        .filter(segment => {
+          return !isNaN(segment.start) && !isNaN(segment.duration) && segment.start >= 0 && segment.duration > 0 && segment.start < 86400;
         });
 
-      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
+      const transcript = segments.map(segment => segment.text).join(' ').replace(/\s+/g, ' ').trim();
 
       if (!transcript) throw new Error('Empty transcript after processing');
 

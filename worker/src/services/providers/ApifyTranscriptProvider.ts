@@ -29,6 +29,14 @@ export const APIFY_LANGUAGE_PREFERENCE: readonly string[] = [
   'en', 'ar', 'es', 'fr', 'de', 'pt', 'it', 'ru', 'ja', 'ko', 'zh-Hans', 'zh-Hant', 'hi', 'bn', 'ur', 'id', 'ms', 'tr', 'fa', 'he', 'nl', 'sv', 'no', 'da', 'fi', 'pl', 'cs', 'sk', 'hu', 'ro', 'bg', 'uk', 'el', 'sr', 'hr', 'sl', 'lt', 'lv', 'et', 'vi', 'th', 'tl', 'ta', 'te', 'ml', 'kn', 'mr', 'gu', 'pa', 'sw', 'am', 'yo', 'zu', 'af', 'sq', 'hy', 'az', 'eu', 'be', 'bs', 'ca', 'gl', 'ka', 'kk', 'km', 'lo', 'mk', 'mn', 'ne', 'si', 'uz', 'cy', 'is', 'ga', 'mt',
 ];
 
+/**
+ * ApifyTranscriptProvider — Adapter implementing TranscriptProviderPort.
+ *
+ * Paid fallback (first tier by default) backed by the Apify actor
+ * `johnvc~youtubetranscripts` via run-sync-get-dataset-items. Throws on any
+ * failure so the chain falls through to the next provider; the actor's own
+ * 120s timeout is bounded by our 130s client abort.
+ */
 export class ApifyTranscriptProvider implements TranscriptProviderPort {
   private apifyToken?: string;
 
@@ -36,7 +44,8 @@ export class ApifyTranscriptProvider implements TranscriptProviderPort {
     this.apifyToken = apifyToken;
   }
 
-  async fetch(videoId: string): Promise<TranscriptResult> {
+  /** Runs the Apify actor synchronously for `videoId` and normalises the dataset items into segments. */
+  async fetch(videoId: string): Promise<TranscriptResult> { // skipcq: JS-R1005 (single fetch + response normalisation)
     if (!this.apifyToken) throw new Error('Apify API token not configured');
 
     // 130s > the actor's own 120s timeout so Apify's own timeout response
@@ -76,16 +85,16 @@ export class ApifyTranscriptProvider implements TranscriptProviderPort {
       if (timestamped.length === 0) throw new Error('Apify returned empty timestamped transcript');
 
       const segments = timestamped
-        .map(s => ({
-          text: (s.text ?? '').replace(/\s+/g, ' ').trim(),
-          start: typeof s.start === 'number' ? s.start : NaN,
-          duration: typeof s.duration === 'number' ? s.duration : NaN,
+        .map(item => ({
+          text: (item.text ?? '').replace(/\s+/g, ' ').trim(),
+          start: typeof item.start === 'number' ? item.start : NaN,
+          duration: typeof item.duration === 'number' ? item.duration : NaN,
         }))
-        .filter(s => s.text.length > 0 && !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400);
+        .filter(segment => segment.text.length > 0 && !isNaN(segment.start) && !isNaN(segment.duration) && segment.start >= 0 && segment.duration > 0 && segment.start < 86400); // skipcq: JS-R1005 (single boolean validity predicate)
 
       if (segments.length === 0) throw new Error('Apify transcript had no valid segments');
 
-      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
+      const transcript = segments.map(segment => segment.text).join(' ').replace(/\s+/g, ' ').trim();
       if (!transcript) throw new Error('Empty transcript after processing');
 
       return {

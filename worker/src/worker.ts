@@ -31,6 +31,7 @@ type Env = {
   DECODO_API_KEY?: string;
   APIFY_TOKEN?: string;
   TRANSCRIPT_PROVIDER_ORDER?: string;
+  TRANSCRIPT_CHAIN_BUDGET_MS?: string;
   COMMENTS_TIER3_QUEUE: Queue<CommentsTier3QueueMessage>;
 };
 
