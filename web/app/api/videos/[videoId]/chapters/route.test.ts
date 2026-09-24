@@ -36,16 +36,16 @@ const CHAPTERS = [
   { idx: 1, start_seconds: 60, end_seconds: 300, label: 'Deep dive' },
 ];
 
-async function hmacHex(secret: string, message: string): Promise<string> {
+const hmacHex = async (secret: string, message: string): Promise<string> => {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+};
 
-async function makeSignedRequest(
+const makeSignedRequest = async (
   chapters: typeof CHAPTERS,
   opts: { purpose?: 'chapters' | 'persist'; exp?: number; omitSig?: boolean } = {},
-): Promise<Response> {
+): Promise<Response> => {
   const canonical = JSON.stringify({ chapters });
   const exp = opts.exp ?? Date.now() + 60_000;
   const sig = opts.omitSig ? undefined : await hmacHex(SECRET, boundContentMessage(opts.purpose ?? 'chapters', VIDEO_ID, exp, canonical));
@@ -55,14 +55,14 @@ async function makeSignedRequest(
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
   });
-}
+};
 
 const params = Promise.resolve({ videoId: VIDEO_ID });
 
 describe('POST /api/videos/[videoId]/chapters (route-boundary HMAC contract)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    upsertChapters.mockResolvedValue(undefined);
+    upsertChapters.mockImplementation(() => Promise.resolve());
   });
 
   it('valid signed POST persists chapters and returns inserted count', async () => {
@@ -114,5 +114,31 @@ describe('POST /api/videos/[videoId]/chapters (route-boundary HMAC contract)', (
     const res = await POST(req, { params });
     expect(res.status).toBe(400);
     expect(upsertChapters).not.toHaveBeenCalled();
+  });
+
+  // Cubic P2: the route has three documented persistence states; these pin
+  // the two branches no other test covers.
+  it('empty chapters array writes the attempted-but-empty sentinel (orange chip state)', async () => {
+    const res = await POST(await makeSignedRequest([]), { params });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true, inserted: 0 });
+    expect(upsertChapters).toHaveBeenCalledWith(VIDEO_ID, [], { attemptedButEmpty: true });
+  });
+
+  it('all-malformed chapters (end <= start) skip persistence entirely and never touch existing rows', async () => {
+    const res = await POST(await makeSignedRequest([
+      { idx: 0, start_seconds: 120, end_seconds: 60, label: 'inverted' },
+    ]), { params });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true, inserted: 0, skipped: 'all_malformed' });
+    // A malformed submission must never write OR delete (attemptedButEmpty
+    // with rows present deletes idx>=0 rows) -- the sentinel must not fire.
+    expect(upsertChapters).not.toHaveBeenCalled();
+    expect(captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining('all submitted chapters malformed'),
+      expect.objectContaining({ level: 'warning' }),
+    );
   });
 });

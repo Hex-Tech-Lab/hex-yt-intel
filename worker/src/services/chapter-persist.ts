@@ -23,7 +23,9 @@ import { signBoundContent } from '../crypto';
  * the bounded error-snippet, and the non-2xx/exception reporting paths are
  * unit-testable without standing up a full Hono route.
  */
-export function shouldPersistChaptersForChunk(chunkIndex: number | undefined): boolean {
+// skipcq: JS-0057 -- named exported function declaration is this repo's
+// convention; the "wrap in an IIFE" advice doesn't apply to ES module scope.
+export function shouldPersistChaptersForChunk(chunkIndex?: number | undefined): boolean {
   return chunkIndex === undefined || chunkIndex === 1;
 }
 
@@ -36,8 +38,10 @@ export const CHAPTER_PERSIST_BODY_SNIPPET_MAX = 200;
  * signed request payload, or cookies -- so the worst it can carry is whatever
  * the Vercel route itself put in an error response (route-generated error JSON).
  */
+// skipcq: JS-0057 -- named exported function declaration is this repo's
+// convention; the "wrap in an IIFE" advice doesn't apply to ES module scope.
 export function truncateBodySnippet(bodyText: string, max = CHAPTER_PERSIST_BODY_SNIPPET_MAX): string {
-  return bodyText.length > max ? bodyText.slice(0, max) + '...' : bodyText;
+  return bodyText.length > max ? `${bodyText.slice(0, max)}...` : bodyText;
 }
 
 export interface ChapterPersistDeps {
@@ -63,6 +67,8 @@ export function enqueueChapterPersist(deps: ChapterPersistDeps): void {
   if (!deps.signingKey) return;
 
   const chapters = parseChapters(deps.description);
+  // skipcq: JS-0057 -- named exported function declaration is this repo's
+  // convention; the "wrap in an IIFE" advice doesn't apply to ES module scope.
   deps.waitUntil((async () => {
     try {
       const exp = Date.now() + 120_000;
@@ -70,32 +76,38 @@ export function enqueueChapterPersist(deps: ChapterPersistDeps): void {
       const sig = await signBoundContent(deps.signingKey, 'chapters', deps.videoId, exp, canonical);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10_000);
-      const doFetch = deps.fetchFn ?? fetch;
-      const response = await doFetch(`${deps.appUrl}/api/videos/${deps.videoId}/chapters`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapters, sig, exp }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (!response.ok) {
-        const bodyText = await response.text();
-        const bodySnippet = truncateBodySnippet(bodyText);
-        console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
-          videoId: deps.videoId,
-          status: response.status,
-          body: bodySnippet,
+      try {
+        const doFetch = deps.fetchFn ?? fetch;
+        const response = await doFetch(`${deps.appUrl}/api/videos/${deps.videoId}/chapters`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapters, sig, exp }),
+          signal: controller.signal,
         });
-        // console.error alone made this failure invisible to alerting --
-        // the 2026-09-23 production incident ("non-2xx on every stream")
-        // ran for weeks with zero Sentry signal. Captured so the next
-        // auth/route regression on this endpoint pages instead of
-        // silently degrading every analysis' chapters chip.
-        Sentry.captureMessage('Chapter persist returned non-2xx', {
-          level: 'error',
-          tags: { component: 'analyze-llm-stream', phase: 'chapter-persist' },
-          extra: { videoId: deps.videoId, status: response.status, bodySnippet },
-        });
+        if (!response.ok) {
+          // The abort timer stays active through the body read (cleared in
+          // finally below): a stalled non-2xx body would otherwise hang the
+          // waitUntil task forever with the timer already cleared.
+          const bodyText = await response.text();
+          const bodySnippet = truncateBodySnippet(bodyText);
+          console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
+            videoId: deps.videoId,
+            status: response.status,
+            body: bodySnippet,
+          });
+          // console.error alone made this failure invisible to alerting --
+          // the 2026-09-23 production incident ("non-2xx on every stream")
+          // ran for weeks with zero Sentry signal. Captured so the next
+          // auth/route regression on this endpoint pages instead of
+          // silently degrading every analysis' chapters chip.
+          Sentry.captureMessage('Chapter persist returned non-2xx', {
+            level: 'error',
+            tags: { component: 'analyze-llm-stream', phase: 'chapter-persist' },
+            extra: { videoId: deps.videoId, status: response.status, bodySnippet },
+          });
+        }
+      } finally {
+        clearTimeout(timeout);
       }
     } catch (err) {
       // Rejected fetch (timeout/DNS/connection reset) previously only

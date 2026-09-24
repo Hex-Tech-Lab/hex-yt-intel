@@ -171,37 +171,95 @@ const publicRoutes = [
 // anyone noticing. These routes have no legitimate child paths.
 const exactPublicRoutes = ['/api/test-auth/login'];
 
+// Method-aware public allowlist (Cubic P3, PR #320 round 3): S2S POSTs whose
+// legitimate caller has no session and whose sibling GET must stay fail-closed
+// live here instead of as an inline regex inside isPublicApiRequest, so the
+// whole method-scoped exemption surface stays enumerable in one place.
+const publicPostRoutes = [
+    // S2S chapters persist: the Cloudflare Worker posts this from ctx.waitUntil
+    // with NO cookies; gated by an HMAC content signature with purpose
+    // 'chapters' inside the handler itself, same pattern as /api/analyses/persist).
+    // Method-scoped to POST only: the sibling GET is a browser-session read
+    // (useChapters) and must stay fail-closed. Live-caught 2026-09-23 -- this
+    // exemption was missing since the decoupled chapter persist shipped
+    // (PR #206, 2026-08-06), so EVERY worker chapter persist 401'd at this
+    // gate with {"error":"Unauthorized"} before the route's own HMAC check
+    // ever ran (same bug class as /api/waitlist 2026-08-14 and
+    // /api/test-auth 2026-08-20, both documented above).
+    /^\/api\/videos\/[^/]+\/chapters$/,
+  ];
+
 // skipcq: JS-0067 -- module-scope helpers are idiomatic in a Next.js edge
 // middleware module; DeepSource's "wrap in an IIFE" advice is a false
 // positive here (same class as the other module-level fns in this file).
-function isPublicApiRequest(method: string, pathname: string): boolean {
-  if (exactPublicRoutes.includes(pathname)) {
-    return true;
+function handleDevBypass(request: NextRequest): NextResponse | null {
+  // Development-only test validation bypass — allows E2E test suites to bypass auth
+  // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const devBypassToken = process.env.DEV_BYPASS_TOKEN;
+  const testSecret = request.headers.get('X-Hex-Test-Secret');
+
+  if (isProduction || !devBypassToken || !testSecret) {
+    return null;
   }
 
-  // Segment-boundary match so a public prefix can't unintentionally exempt a
-  // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').
-  if (publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
-    return true;
+  try {
+    if (timingSafeStringEqual(testSecret, devBypassToken)) {
+      console.info('[middleware] Development bypass credential accepted; skipping auth.');
+      return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
+    }
+  } catch {
+    // Token comparison failed — treat as unauthorized bypass attempt
+    console.warn('[middleware] Invalid bypass credential format');
+  }
+  return null;
+}
+
+// skipcq: JS-0067 -- module-scope helpers are idiomatic in a Next.js edge
+// middleware module; DeepSource's "wrap in an IIFE" advice is a false
+// positive here (same class as the other module-level fns in this file).
+function buildUnauthorizedResponse(
+  request: NextRequest,
+  pathname: string,
+  diag: Record<string, unknown>,
+): NextResponse {
+  // Only report to Sentry when a real credential was present but failed
+  // validation — that's an auth regression worth investigating. Anonymous,
+  // credential-less hits on the (now much larger) fail-closed surface are
+  // expected (scanners, logged-out navigation) and would only create noise.
+  // A present Bearer credential counts too, so API clients stay observable.
+  const hadAuthCookie = Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0;
+  const hadCredential = hadAuthCookie || (request.headers.get('authorization')?.startsWith('Bearer ') ?? false);
+  if (hadCredential) {
+    Sentry.captureMessage('Auth Failure', {
+      level: 'warning',
+      tags: {
+        pathname,
+        outcome: String(diag.outcome ?? 'unknown'),
+        hadAuthCookie: String(hadAuthCookie),
+      },
+      extra: {
+        ...diag,
+        userAgent: request.headers.get('user-agent'),
+        secFetchSite: request.headers.get('sec-fetch-site'),
+      },
+    });
   }
 
-  // S2S chapters persist (the Cloudflare Worker posts this from ctx.waitUntil
-  // with NO cookies; gated by an HMAC content signature with purpose
-  // 'chapters' inside the handler itself, same pattern as /api/analyses/persist).
-  // Method-scoped to POST only: the sibling GET is a browser-session read
-  // (useChapters) and must stay fail-closed. Live-caught 2026-09-24 -- this
-  // exemption was missing since the decoupled chapter persist shipped
-  // (PR #206, 2026-08-06), so EVERY worker chapter persist 401'd at this
-  // gate with {"error":"Unauthorized"} before the route's own HMAC check
-  // ever ran (same bug class as /api/waitlist 2026-08-14 and
-  // /api/test-auth 2026-08-20, both documented above).
-  return method === 'POST' && /^\/api\/videos\/[^/]+\/chapters$/.test(pathname);
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const signInUrl = new URL('/auth/signin', request.url);
+  // Redirect to dashboard after sign-in, not back to raw page paths
+  const callbackTarget = pathname.startsWith('/analyses') ? pathname : '/';
+  signInUrl.searchParams.append('callbackUrl', callbackTarget);
+  return NextResponse.redirect(signInUrl);
 }
 
 export async function middleware(request: NextRequest) {
   // CORS Preflight Handling (Fixes 401 on OPTIONS)
   if (request.method === 'OPTIONS') {
-    return new NextResponse(null, { 
+    return new NextResponse(null, {
       status: 204,
       headers: {
         'Access-Control-Allow-Origin': '*',
@@ -217,24 +275,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Development-only test validation bypass — allows E2E test suites to bypass auth
-  // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
-  const isProduction = process.env.NODE_ENV === 'production';
-  const devBypassToken = process.env.DEV_BYPASS_TOKEN;
-  const testSecret = request.headers.get('X-Hex-Test-Secret');
-
-  if (!isProduction && devBypassToken && testSecret) {
-    try {
-      const isValidBypass = timingSafeStringEqual(testSecret, devBypassToken);
-
-      if (isValidBypass) {
-        console.info('[middleware] Development bypass credential accepted; skipping auth.');
-        return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
-      }
-    } catch {
-      // Token comparison failed — treat as unauthorized bypass attempt
-      console.warn('[middleware] Invalid bypass credential format');
-    }
+  const bypassResponse = handleDevBypass(request);
+  if (bypassResponse) {
+    return bypassResponse;
   }
 
   // Fail-CLOSED: every route the matcher sees (see `config.matcher` below:
@@ -251,41 +294,29 @@ export async function middleware(request: NextRequest) {
   const { ok: isAuthenticated, diag } = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
-    // Only report to Sentry when a real credential was present but failed
-    // validation — that's an auth regression worth investigating. Anonymous,
-    // credential-less hits on the (now much larger) fail-closed surface are
-    // expected (scanners, logged-out navigation) and would only create noise.
-    // A present Bearer credential counts too, so API clients stay observable.
-    const hadAuthCookie = Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0;
-    const hadCredential = hadAuthCookie || (request.headers.get('authorization')?.startsWith('Bearer ') ?? false);
-    if (hadCredential) {
-      Sentry.captureMessage('Auth Failure', {
-        level: 'warning',
-        tags: {
-          pathname,
-          outcome: String(diag.outcome ?? 'unknown'),
-          hadAuthCookie: String(hadAuthCookie),
-        },
-        extra: {
-          ...diag,
-          userAgent: request.headers.get('user-agent'),
-          secFetchSite: request.headers.get('sec-fetch-site'),
-        },
-      });
-    }
-
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const signInUrl = new URL('/auth/signin', request.url);
-    // Redirect to dashboard after sign-in, not back to raw page paths
-    const callbackTarget = pathname.startsWith('/analyses') ? pathname : '/';
-    signInUrl.searchParams.append('callbackUrl', callbackTarget);
-    return NextResponse.redirect(signInUrl);
+    return buildUnauthorizedResponse(request, pathname, diag);
   }
 
   // Return the supabaseResponse so any refreshed cookies are forwarded to the browser
   return supabaseResponse;
+}
+// skipcq: JS-0067 -- module-scope helpers are idiomatic in a Next.js edge
+// middleware module; DeepSource's "wrap in an IIFE" advice is a false
+// positive here (same class as the other module-level fns in this file).
+function isPublicApiRequest(method: string, pathname: string): boolean {
+  if (exactPublicRoutes.includes(pathname)) {
+    return true;
+  }
+
+  // Segment-boundary match so a public prefix can't unintentionally exempt a
+  // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').
+  if (publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
+    return true;
+  }
+
+  // Method-scoped S2S POST exemptions (see publicPostRoutes above for the
+  // full rationale; segment-anchored patterns so prefixes can't leak).
+  return method === 'POST' && publicPostRoutes.some(pattern => pattern.test(pathname));
 }
 
 export const config = {

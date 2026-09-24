@@ -28,6 +28,8 @@ import {
   CHAPTER_PERSIST_BODY_SNIPPET_MAX,
   enqueueChapterPersist,
 } from '../services/chapter-persist';
+import { parseChapters } from '../services/chapter-parser';
+import { signBoundContent } from '../crypto';
 
 const BASE_DEPS = {
   description: '0:00 Intro\n5:00 Deep dive',
@@ -35,14 +37,14 @@ const BASE_DEPS = {
   signingKey: 'test-secret',
   appUrl: 'https://getvintel.com',
   videoId: '4mTLpuQpB80',
-  waitUntil: (promise: Promise<unknown>) => { void promise; },
+  waitUntil: (promise: Promise<unknown>) => { return promise; },
 };
 
-function collectWaitUntil(): { promises: Promise<unknown>[]; deps: typeof BASE_DEPS } {
+const collectWaitUntil = (): { promises: Promise<unknown>[]; deps: typeof BASE_DEPS } => {
   const promises: Promise<unknown>[] = [];
   const deps = { ...BASE_DEPS, waitUntil: (promise: Promise<unknown>) => { promises.push(promise); } };
   return { promises, deps };
-}
+};
 
 describe('shouldPersistChaptersForChunk (bundle-1-authoritative gate)', () => {
   it('persists for bundle 1', () => {
@@ -56,7 +58,7 @@ describe('shouldPersistChaptersForChunk (bundle-1-authoritative gate)', () => {
   });
 
   it('preserves always-persist behavior for stale clients (undefined chunkIndex)', () => {
-    expect(shouldPersistChaptersForChunk(undefined)).toBe(true);
+    expect(shouldPersistChaptersForChunk()).toBe(true);
   });
 
   it('does NOT persist for 0 or null-ish values (not valid bundle ids)', () => {
@@ -97,6 +99,17 @@ describe('enqueueChapterPersist', () => {
     expect((init as RequestInit).method).toBe('POST');
     const body = JSON.parse((init as RequestInit).body as string) as { sig: string; exp: number; chapters: unknown[] };
     expect(body.sig).toMatch(/^[0-9a-f]{64}$/);
+    // HMAC authenticity (Cubic P3): a 64-hex shape check alone would pass a
+    // regression in the signed-message layout; recompute the expected sig
+    // for the exact same inputs and require equality.
+    const expectedSig = await signBoundContent(
+      'test-secret',
+      'chapters',
+      deps.videoId,
+      body.exp,
+      JSON.stringify({ chapters: parseChapters(deps.description) }),
+    );
+    expect(body.sig).toBe(expectedSig);
     expect(captureMessage).not.toHaveBeenCalled();
     expect(captureException).not.toHaveBeenCalled();
   });
