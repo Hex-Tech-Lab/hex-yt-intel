@@ -1,0 +1,25 @@
+scripts/spikes/adr032/db-sizes.ts
+  s_e45cd799eecf16::t_61eded58cbb836 14,16
+  s_e45cd799eecf16::t_dbe650c9c30b88 1-13,15,17-55
+scripts/spikes/adr032/sse-overhead.ts
+  s_e45cd799eecf16::t_78e7634977069b 42-43
+  s_e45cd799eecf16::t_724243b8af0306 1-41,44-66,71-73,75-93,96
+  s_e45cd799eecf16::t_1ef89bb697b344 94-95
+  s_e45cd799eecf16::t_5932ef222467b8 67-70,74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "54ea2601c424488a2cd2ddae7833ca620e8982b8",
+  "prompts": {},
+  "sessions": {
+    "s_e45cd799eecf16": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc4e45affevHfanKg8jWWyeR",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
