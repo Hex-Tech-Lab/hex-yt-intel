@@ -99,8 +99,17 @@ const rules = Object.values(legacyRules)
 
 // Get file list based on mode
 let fileList: string[] = [];
+// R12 (committed-conflict-markers, 2026-09-24): conflict markers shipped to
+// main inside a .md file (commit 1adb86ca) -- the TS/TSX-only globs never saw
+// it. Extend the file list with tracked TEXT files (never more TS than
+// before, so the other rules' input set is unchanged); text files are
+// routed to ConflictMarkerRule ONLY (partition below in run()).
+const TEXT_FILE_EXT = /\.(md|mdx|sql|json|ya?ml|sh|txt)$/;
+const TEXT_GLOBS = ["{web,worker,docs,scripts,supabase}/**/*.{md,mdx,sql,sh,txt}", "{web,worker,docs,scripts,supabase}/**/*.{json,yml,yaml}", "*.md", "*.json"];
+const TEXT_GLOB_IGNORE = ["**/node_modules/**", "**/.git/**", "**/.scratch/**", "**/.qa-intel/**", "**/pnpm-lock.yaml", "**/playwright-report/**", "**/test-results/**", "**/coverage/**"];
 if (mode === "full" || mode === "watch") {
   fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
+  fileList = fileList.concat(TEXT_GLOBS.flatMap(g => glob.sync(g, { ignore: TEXT_GLOB_IGNORE })));
 } else {
   let diffArgs: readonly string[] = [];
   if (mode === "diff") {
@@ -137,9 +146,8 @@ if (mode === "full" || mode === "watch") {
     const diffOutput = execFileSync("git", diffArgs, { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
-      .filter(line => line.trim().endsWith(".ts") || line.trim().endsWith(".tsx"))
       .map(f => f.trim())
-      .filter(f => f.length > 0);
+      .filter(f => f.length > 0 && (f.endsWith(".ts") || f.endsWith(".tsx") || TEXT_FILE_EXT.test(f)));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     console.error('[qa-intel]', { message, operation: 'git-diff', command: diffArgs });
@@ -157,9 +165,16 @@ const fsAdapter = new NodeFileSystem();
 // Ensure files exist
 fileList = fileList.filter(f => fsAdapter.exists(f));
 
-if (fileList.length === 0) {
+// Partition (R12, 2026-09-24): TS/TSX goes through the full rule set;
+// tracked text files (.md/.sql/...) go to ConflictMarkerRule ONLY -- they
+// are parsed by ts-morph error-tolerantly and running the other text/AST
+// rules on prose would fabricate findings outside this change's scope.
+const codeFiles = fileList.filter(f => /\.(ts|tsx)$/.test(f));
+const textFiles = fileList.filter(f => TEXT_FILE_EXT.test(f));
+
+if (codeFiles.length === 0 && textFiles.length === 0) {
   if (mode === "diff" || mode === "working-tree" || mode === "HEAD") {
-    console.log(`✅ qa-intel: No changed TS/TSX files detected to scan (mode: ${mode}).`);
+    console.log(`✅ qa-intel: No changed TS/TSX/text files detected to scan (mode: ${mode}).`);
     process.exit(0);
   }
   console.error("❌ qa-intel: No files found to scan.");
@@ -202,7 +217,7 @@ async function run() {
     }
   );
   console.log("--- Source Provenance & Runtime Honesty Audit ---");
-  console.log(`Runtime scan sources: ${fileList.length} files scanned via TS/TSX globs (excl. node_modules)`);
+  console.log(`Runtime scan sources: ${fileList.length} files scanned (${codeFiles.length} TS/TSX via globs, ${textFiles.length} tracked text files routed to ConflictMarkerRule; excl. node_modules)`);
   console.log("Calibration sources: Juliet/SARD (CWE-22, CWE-259), CRBench, Big-Vul/Devign (CWE-89)");
   console.log("Calibration source visibility: CALIBRATION-ONLY (none affect live PR scans)");
   const hasActiveGraphRule = rules.some(r => r.scope === "graph");
@@ -228,7 +243,26 @@ async function run() {
     if (norm.startsWith(cwdPosix + '/')) return norm.slice(cwdPosix.length + 1);
     return norm.replace(/^\.\//, '');
   };
-  const findings = (await engine.analyze(fileList)).map(f => ({
+  const codeFindings = (await engine.analyze(codeFiles));
+  // Text-file pass: ConflictMarkerRule only, same ctx shape QualityEngine.analyze() builds.
+  const conflictRule = rules.find(r => r.name === "committed-conflict-markers");
+  const textFindings: import("./quality-engine/domain/Finding").Finding[] = [];
+  if (conflictRule && textFiles.length > 0) {
+    const loader = new TsMorphLoader(project);
+    for (const file of textFiles) {
+      try {
+        const ast = await loader.load(file);
+        textFindings.push(...conflictRule.check({ filePath: file, ast, graph: undefined, allFiles: textFiles }));
+      } catch (err) {
+        console.error(`[qa-intel] ConflictMarkerRule failed on ${file}:`, err);
+        process.exit(1);
+      }
+    }
+  } else if (!conflictRule) {
+    console.error("❌ qa-intel: committed-conflict-markers rule not registered but text files are in scan scope.");
+    process.exit(1);
+  }
+  const findings = codeFindings.concat(textFindings).map(f => ({
     ...f,
     file: toRepoRelative(f.file),
   }));
