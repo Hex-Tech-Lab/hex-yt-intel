@@ -1,0 +1,19 @@
+vercel.json
+  s_0ad06df9e3ce0b::t_3a730b5e205d96 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5008d01c1eabda6f702dc982841b9e14f0cbf43e",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
