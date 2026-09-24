@@ -1,4 +1,9 @@
-# Business Case: COGS, Pricing & Competitors
+import re
+
+with open('docs/research/2026-09-25-business-case-cogs-pricing.md', 'r') as f:
+    text = f.read()
+
+new_text = """# Business Case: COGS, Pricing & Competitors
 
 ## 1. Thesis & Headline Recommendation
 **Recommendation:** Implement a tier structure of $9/mo (Light) and $15/mo (Pro) with reduced quotas (e.g., 28 videos for Pro), using `nemotron-3-nano-30b` for draft passes and `claude-haiku-4.5` for refinement, as defined in the `worker/src` cascade config.
@@ -113,3 +118,8 @@ Evaluating a pool of 300 analyses at p90 COGS ($0.187/analysis = $56.10 total co
 * Pricing scraped via `scripts/research/run-pricing-research.ts` on 2026-09-25.
 * LLM costs pulled from OpenRouter API on 2026-09-25.
 * Prior insights referenced from `.memory/` and `docs/private/` study docs (August 2026).
+"""
+
+with open('docs/research/2026-09-25-business-case-cogs-pricing.md', 'w') as f:
+    f.write(new_text)
+
