@@ -7,7 +7,7 @@
       "models": {
         "z-ai/glm-5.3-flash": {
           "options": {
-            "reasoning_effort": "minimal",
+            "reasoning_effort": "low",
             "provider": { "order": ["coreweave"], "only": ["coreweave"], "allow_fallbacks": false }
           }
         }
