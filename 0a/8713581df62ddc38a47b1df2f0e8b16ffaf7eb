@@ -1,0 +1,58 @@
+web/lib/__tests__/persist-finalize-cas.test.ts
+  s_21b888b82106b9::t_beb88c6934b7c5 281-293,295-299
+  s_21b888b82106b9::t_67d950c2f3f0ef 294
+scripts/backfill-analysis-embeddings.ts
+  s_21b888b82106b9::t_f16a0988f44b07 88-89,92-102,113-114
+  s_21b888b82106b9::t_eb19a5dee38b6e 106
+  s_21b888b82106b9::t_3357b6c72d13e9 90-91,103-104,111-112,115-119,121-122
+web/lib/qstash-client.ts
+  s_21b888b82106b9::t_d10fcee9afeaa6 218-220
+  s_21b888b82106b9::t_9170c81528d465 50,95,152,186,235
+  s_21b888b82106b9::t_2b4494ab14833b 225
+  s_21b888b82106b9::t_59303ac478483e 13-19
+  s_21b888b82106b9::t_0281aeb39fa5e3 66,111,168,206
+web/lib/__tests__/analysis-reaper.test.ts
+  s_21b888b82106b9::t_a812923b8907c6 396,398-405
+  s_21b888b82106b9::t_351369c3d51f29 429
+  s_21b888b82106b9::t_98b8b211f46fe5 470-479
+web/lib/services/analysis-reaper.ts
+  s_21b888b82106b9::t_222742cab66628 165
+  s_21b888b82106b9::t_90c3a38e048f6d 19
+  s_21b888b82106b9::t_4f3ab94029d3e9 34
+  s_21b888b82106b9::t_fd7b1e7c957b69 29-33
+  s_21b888b82106b9::t_d9cbb436cc5bed 41-51
+web/lib/services/analysis-reap-policy.ts
+  s_21b888b82106b9::t_ff7288963204b6 1-8,10-114
+  s_21b888b82106b9::t_4f3ab94029d3e9 9
+web/app/api/webhooks/embed/route.ts
+  s_21b888b82106b9::t_1204f1cfeb7025 122-126
+  s_21b888b82106b9::t_ada6e2751fa1b7 180-181
+  s_21b888b82106b9::t_222742cab66628 30,133,153
+  s_21b888b82106b9::t_86f83749584c44 149-152,154
+web/lib/__tests__/embed-webhook-coverage.test.ts
+  s_21b888b82106b9::t_4a74fd550fd6de 7-10
+  s_21b888b82106b9::t_27f05bbdcf6d32 14
+  s_21b888b82106b9::t_c7a4ac64d0f5f4 102
+web/lib/__tests__/qstash-embed-rethrow.test.ts
+  s_21b888b82106b9::t_366c96eec13976 1-47
+web/lib/services/aux-remediation.ts
+  s_21b888b82106b9::t_8bc66ce4180417 237
+  s_21b888b82106b9::t_e16a8f0fa743e8 46-48
+  s_21b888b82106b9::t_222742cab66628 171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0a8713581df62ddc38a47b1df2f0e8b16ffaf7eb",
+  "prompts": {},
+  "sessions": {
+    "s_21b888b82106b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c384452ffeNmXO0Gd9J7h5kM",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
