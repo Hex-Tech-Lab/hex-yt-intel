@@ -1,0 +1,79 @@
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_6eaa11b0e75cef::t_3778e844df03fd 73,97,104,128,133,136,141,146,152,164,172,174,178,187-188,193,196,201,213,221,229,231,235-266
+  s_6eaa11b0e75cef::t_b6a8d1c8a6cd9c 16
+  s_6eaa11b0e75cef::t_149f96c4f7a95b 13-15
+  s_6eaa11b0e75cef::t_4855f3942281de 17-19,70-72
+  s_6eaa11b0e75cef::t_0bffb9f2b24c15 74-76,94-96
+  s_6eaa11b0e75cef::t_bac3ba7c312caa 98-103
+  s_6eaa11b0e75cef::t_fb3e871ff91676 105-107,125-127
+  s_6eaa11b0e75cef::t_c5af7d44d03ff8 129-132
+  s_6eaa11b0e75cef::t_20d61f11a18d7a 134-135
+  s_6eaa11b0e75cef::t_f414b38eb27822 137-140
+  s_6eaa11b0e75cef::t_19e63a58b947c6 142-145
+  s_6eaa11b0e75cef::t_0c8fe7058556a9 147-151
+  s_6eaa11b0e75cef::t_7eb5dd06f923f0 153-155,161-163
+  s_6eaa11b0e75cef::t_67eccb024482f6 165-167,169-171
+  s_6eaa11b0e75cef::t_642989ba513158 173
+  s_6eaa11b0e75cef::t_5f38c913397ea0 175-177
+  s_6eaa11b0e75cef::t_f3c0e2b465bfb1 179-181,184-186
+  s_6eaa11b0e75cef::t_ab75d40a345c9c 189-192
+  s_6eaa11b0e75cef::t_3cddfea66fdd94 194-195
+  s_6eaa11b0e75cef::t_23e78b4766e818 197-200
+  s_6eaa11b0e75cef::t_e165ad7eea701d 202-204,210-212
+  s_6eaa11b0e75cef::t_938b44320ed9db 214-216,218-220
+  s_6eaa11b0e75cef::t_9b4b5265562510 222-224,226-228
+  s_6eaa11b0e75cef::t_524ee7d2431020 230
+  s_6eaa11b0e75cef::t_5c3f5aff7a85e8 232-234
+scripts/verify-quality-engine.ts
+  s_6eaa11b0e75cef::t_0f69dc8095a81a 232
+  s_6eaa11b0e75cef::t_0b64ce3617022b 111-123
+  s_6eaa11b0e75cef::t_d2934b70a95165 183-185
+  s_6eaa11b0e75cef::t_c71622fcb7e30a 160
+  s_6eaa11b0e75cef::t_363d1051f20cb1 189
+scripts/quality-engine/rules/data-lessons-20260924.ts
+  s_6eaa11b0e75cef::t_4c01318935d33f 197-200
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_19ea79c5e44b8c::t_cf050dbfcc2b1c 39,52
+scripts/quality-engine/application/QualityEngine.ts
+  s_19ea79c5e44b8c::t_2e38c4a29f2488 52-59
+scripts/quality-engine/domain/Rule.ts
+  s_19ea79c5e44b8c::t_ef376982900ee7 6-13,35
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_19ea79c5e44b8c::t_e2577c3b0f25be 1-255
+scripts/quality-engine/rules/index.ts
+  s_19ea79c5e44b8c::t_6d5ebcf6b19962 57-58
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_19ea79c5e44b8c::t_45f46c1037fd94 1-244
+scripts/quality-engine/rules/sql-migrations.ts
+  s_19ea79c5e44b8c::t_5692c2b1c14824 1-215
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  s_19ea79c5e44b8c::t_395c2f13b963dd 1-150
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  s_19ea79c5e44b8c::t_3adc2e27954208 1-134
+worker/src/services/BracketBuffer.ts
+  s_19ea79c5e44b8c::t_255a7be47d3bb6 31-32,40,81-88,90,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "01b0032a6cc07092303c24687955b8f826d40743",
+  "prompts": {},
+  "sessions": {
+    "s_19ea79c5e44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46bc1605-f1d2-4288-9b3b-5d43e467032d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6eaa11b0e75cef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2acf1d8dffeFSB27OiRZh3twm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
