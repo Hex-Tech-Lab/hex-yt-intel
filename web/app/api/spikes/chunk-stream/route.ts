@@ -88,6 +88,7 @@ export async function GET(request: Request): Promise<Response> {
         const { done, value } = await reader.read();
         if (done) break;
         metrics.rawBytes += value.byteLength;
+        metrics.textBytes += value.byteLength;
         if (metrics.firstByteAt === null) metrics.firstByteAt = new Date().toISOString();
         lineBuf += decoder.decode(value, { stream: true });
         const lines = lineBuf.split('\n');
