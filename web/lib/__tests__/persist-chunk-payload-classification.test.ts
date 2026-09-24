@@ -60,6 +60,7 @@ vi.mock('@/lib/qstash-client', () => ({
   publishValidationTask: vi.fn().mockResolvedValue(null),
   publishDigestTask: vi.fn().mockResolvedValue(null),
   publishHighlightsTask: vi.fn().mockResolvedValue(null),
+  publishEmbeddingTask: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/lib/services/cache', () => ({
