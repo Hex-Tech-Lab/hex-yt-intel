@@ -1,0 +1,166 @@
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_89c152446c7029::t_e8e2af98920466 204-240
+docs/research/2026-09-24-payments-lessons-triage.md
+  s_89c152446c7029::t_e8e2af98920466 1-60
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_89c152446c7029::t_e8e2af98920466 35-52
+docs/legal/refund-policy.md
+  s_89c152446c7029::t_e8e2af98920466 3,7-8,10,14,17
+web/app/pricing/__tests__/page.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-27
+.gitignore
+  s_89c152446c7029::t_e8e2af98920466 57-59
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-237
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  s_89c152446c7029::t_e8e2af98920466 1-68
+docs/history/THOS_2026-09-25_0100_TRANSCRIPT_INCIDENT_APIFY_ADR032_SPIKES_QA_RULES_MERGE_WAVE.md
+  s_89c152446c7029::t_e8e2af98920466 1-59
+docs/history/ROSTER_2026-07-20.md
+  s_89c152446c7029::t_e8e2af98920466 600-632
+scripts/quality-engine/domain/Rule.ts
+  s_89c152446c7029::t_e8e2af98920466 6-13,35
+docs/research/2026-09-24-analysis-pipeline-e2e-map.md
+  s_89c152446c7029::t_e8e2af98920466 1-306
+scripts/quality-engine/rules/sql-migrations.ts
+  s_89c152446c7029::t_e8e2af98920466 1-215
+worker/src/services/providers/DecodoTranscriptProvider.ts
+  s_89c152446c7029::t_e8e2af98920466 1-93
+web/app/waitlist/page.tsx
+  s_89c152446c7029::t_e8e2af98920466 188-189,192,223-224,232,236,238,244,257
+web/app/pricing/page.tsx
+  s_89c152446c7029::t_e8e2af98920466 54-57
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  s_89c152446c7029::t_e8e2af98920466 1-78
+web/lib/admin-logs/fetchers.ts
+  s_89c152446c7029::t_e8e2af98920466 3-4,77,421-510,517-525,527,530,533,540-638,640-660,662-664,763
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_89c152446c7029::t_e8e2af98920466 1-235
+scripts/quality-engine/application/QualityEngine.ts
+  s_89c152446c7029::t_e8e2af98920466 52-59
+worker/src/__tests__/TranscriptExtractor.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-5,11,35-40,65,91,121,135-311
+CLAUDE.md
+  s_89c152446c7029::t_e8e2af98920466 38,41-42,54,101
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_89c152446c7029::t_e8e2af98920466 1-44,342-344
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_89c152446c7029::t_e8e2af98920466 1-238
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-136
+worker/src/routes/analysis.ts
+  s_89c152446c7029::t_e8e2af98920466 3,14,16,48-50,152-153,240-243,256,264-269,342,387-391,405-410,594,653,699,895,1210-1216,1221-1224
+worker/src/services/BracketBuffer.ts
+  s_89c152446c7029::t_e8e2af98920466 31-32,40,81-88,90,228
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_89c152446c7029::t_e8e2af98920466 1-238
+web/components/marketing/PricingComparisonTable.tsx
+  s_89c152446c7029::t_e8e2af98920466 27-28,46
+worker/src/services/TranscriptExtractor.ts
+  s_89c152446c7029::t_e8e2af98920466 2,5-12,15,17-20,23-45,50-60,63-103,111-114,116,118-138,140-146,149-162,168,180-188,235
+web/hooks/useSSEStream.ts
+  s_89c152446c7029::t_e8e2af98920466 15-19,21-96,140,299-300,306-311,423-424,431,438,452-455,457
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-234
+worker/src/worker.ts
+  s_89c152446c7029::t_e8e2af98920466 32-34
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_89c152446c7029::t_e8e2af98920466 1-256
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-255
+worker/src/routes/transcript.ts
+  s_89c152446c7029::t_e8e2af98920466 2,7-9,23
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_89c152446c7029::t_e8e2af98920466 1-244
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_89c152446c7029::t_e8e2af98920466 1-264
+worker/src/__tests__/chapter-persist.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-180
+scripts/quality-engine/rules/index.ts
+  s_89c152446c7029::t_e8e2af98920466 56-57
+worker/src/services/providers/ApifyTranscriptProvider.ts
+  s_89c152446c7029::t_e8e2af98920466 1-110
+worker/src/ports/TranscriptProviderPort.ts
+  s_89c152446c7029::t_e8e2af98920466 31-37
+web/middleware.ts
+  s_89c152446c7029::t_e8e2af98920466 116-127,166-172,174-190,192-195,202-204,206-209,211-280,297,303-320
+.memory/SESSION_TODO.md
+  s_89c152446c7029::t_e8e2af98920466 1-34
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_89c152446c7029::t_e8e2af98920466 43,87,149
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_89c152446c7029::t_e8e2af98920466 1-232
+docs/reviews/2026-09-24-pr320-external-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-8
+docs/research/2026-09-24-hex-expan-payments-lessons.md
+  s_89c152446c7029::t_e8e2af98920466 1-304
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-9
+worker/src/__tests__/bracket-buffer-cpu-bench.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-150
+docs/reviews/2026-09-24-pr325-external-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-23
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-235
+scripts/verify-quality-engine.ts
+  s_89c152446c7029::t_e8e2af98920466 103-109,146-151,173,216
+worker/src/__tests__/fixtures/apify-transcript-dQw4w9WgXcQ.json
+  s_89c152446c7029::t_e8e2af98920466 1-342
+worker/wrangler.toml
+  s_89c152446c7029::t_e8e2af98920466 63-68,72
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_89c152446c7029::t_e8e2af98920466 1-207
+docs/reviews/2026-09-24-pr322-external-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-8
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  s_89c152446c7029::t_e8e2af98920466 1-11
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-144
+web/vitest.config.ts
+  s_89c152446c7029::t_e8e2af98920466 71-73,75-80
+  s_89c152446c7029::t_4ab8055073878d 70
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-132
+docs/agent-prompts/TEMPLATE.md
+  s_89c152446c7029::t_e8e2af98920466 43,135
+worker/src/services/chapter-persist.ts
+  s_89c152446c7029::t_e8e2af98920466 1-127
+.mcp.json
+  s_89c152446c7029::t_e8e2af98920466 3-10,13-16
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_89c152446c7029::t_e8e2af98920466 1-10
+web/lib/admin-logs/__tests__/fetchCloudflareLogs.test.ts
+  s_89c152446c7029::t_e8e2af98920466 1-272
+AGENTS.md
+  s_89c152446c7029::t_e8e2af98920466 137,141
+web/lib/constants/pricing-plans.ts
+  s_89c152446c7029::t_e8e2af98920466 47,50
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_89c152446c7029::t_e8e2af98920466 1-231
+web/middleware.test.ts
+  s_89c152446c7029::t_e8e2af98920466 40-67
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_89c152446c7029::t_e8e2af98920466 1-233
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_89c152446c7029::t_e8e2af98920466 1-231
+.claude/MEMORY.md
+  s_89c152446c7029::t_8c5081888f87ec 4,52-53
+.opencode/opencode.json
+  s_89c152446c7029::t_617c4d6ee62778 11-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "425c4cda9c47809e7adbd03f07d6cec131fb6276",
+  "prompts": {},
+  "sessions": {
+    "s_89c152446c7029": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8b26f5ffeGec5zkEWUpmbAN",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
