@@ -1,0 +1,35 @@
+.memory/AGENT_LEDGER.md
+  s_516d6cbc77786b::t_856ce49a8c2918 1405
+worker/src/services/providers/SupadataTranscriptProvider.ts
+  s_516d6cbc77786b::t_49e22af941ac05 16-22,28-32,34-40,94-97,99,109-117,143,148-152,157-161,163,167,171,177,182-184,188-192,194,219-222
+worker/src/ports/TranscriptProviderPort.ts
+  s_0ad06df9e3ce0b::t_7c7c15b16ad270 29-35
+worker/src/routes/analysis.ts
+  s_0ad06df9e3ce0b::t_dfd017adfadebf 3,598,657-658,900-902
+worker/src/services/TranscriptExtractor.ts
+  s_0ad06df9e3ce0b::t_7ed1daeb5607a4 38-79,154,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9ff78ad8ece40bc69221a92c4123617181eb13ef",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_516d6cbc77786b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a6248f3ffeSLcgUb7K8FY1b4",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
