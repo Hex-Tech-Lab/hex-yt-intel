@@ -1,0 +1,85 @@
+web/lib/adapters/PaddleBillingAdapter.ts
+  s_542d19c0732260::t_4eca0408be8999 280,282-284
+  s_542d19c0732260::t_90c29906433cc9 204,372-376
+  s_542d19c0732260::t_c1a12d629283ee 370-371
+  s_542d19c0732260::t_579d1b9daf121d 403-409
+  s_542d19c0732260::t_94f0a03a823118 127-133
+  s_542d19c0732260::t_8a3376ffd3cd7a 200-203,205-234
+web/lib/config/report-tiers.ts
+  s_542d19c0732260::t_f62edcf5e7be5b 1-11
+web/components/billing/billing-dashboard-client.tsx
+  s_542d19c0732260::t_99649d12f4092b 28-30
+  s_542d19c0732260::t_54ad9e37ab7826 106
+  s_542d19c0732260::t_d69b36c6a36071 114-130
+web/lib/__tests__/contracts/export-pdf.contract.test.ts
+  s_542d19c0732260::t_5972ed49882985 16
+web/lib/stripe.ts
+  s_542d19c0732260::t_c1468887cc871e 39-50,64-70,74-75
+  s_542d19c0732260::t_dcb0a7668b8b4c 71-73
+web/app/api/analyses/[id]/export/__tests__/route.test.ts
+  s_542d19c0732260::t_5972ed49882985 2
+web/lib/adapters/__tests__/supabase-auth-adapter.test.ts
+  s_542d19c0732260::t_23c56ef7010abf 31-38
+web/app/api/billing/checkout/route.ts
+  s_542d19c0732260::t_58485b2a44680f 50-55
+web/app/api/billing/webhook/__tests__/route.test.ts
+  s_542d19c0732260::t_a12229ef78e3ac 2-3,29,57,59,178
+web/lib/ports/BillingPort.ts
+  s_542d19c0732260::t_56d8bae15b6440 3-6
+  s_542d19c0732260::t_3307644e25f705 1
+web/app/billing/__tests__/page.test.tsx
+  s_542d19c0732260::t_0f6f5f692b8237 22-24,26-29
+web/lib/__tests__/tier-vocabulary.test.ts
+  s_542d19c0732260::t_dc4bf898d23eb7 22-25,28,33-44,114-119,200-244,261-267
+  s_542d19c0732260::t_a12229ef78e3ac 127,139
+web/lib/adapters/__tests__/paddle-checkout.test.ts
+  s_542d19c0732260::t_a12229ef78e3ac 72
+web/lib/types/billing.ts
+  s_542d19c0732260::t_4eca0408be8999 31-32,34
+web/lib/adapters/SupabaseSettingsAdapter.ts
+  s_542d19c0732260::t_8c5ac667ae4aba 87,92-100
+  s_542d19c0732260::t_932a268ceb3ce8 113-115
+  s_542d19c0732260::t_5ec8a98424cdb5 101
+web/app/api/analyses/[id]/export/route.ts
+  s_542d19c0732260::t_5972ed49882985 11
+web/lib/adapters/__tests__/postgres-billing.test.ts
+  s_542d19c0732260::t_065489e9a8098d 12-18,45-48,51
+web/lib/types/__tests__/contracts.test.ts
+  s_542d19c0732260::t_23c56ef7010abf 19,30-31
+  s_542d19c0732260::t_646fe8d8549b18 32-33
+web/app/api/billing/checkout/__tests__/route.test.ts
+  s_542d19c0732260::t_89e31d57852b47 27-29,34-38,99
+.memory/AGENT_LEDGER.md
+  s_542d19c0732260::t_ab3c8aef30b424 1405-1407
+  s_542d19c0732260::t_839d07b7bdc08e 1403
+web/lib/constants/rate-limits.ts
+  s_542d19c0732260::t_95954e7574e9f2 11,15
+web/lib/adapters/__tests__/paddle-billing-adapter.test.ts
+  s_542d19c0732260::t_8c5ac667ae4aba 133
+web/lib/adapters/SettingsModelAdapter.ts
+  s_542d19c0732260::t_154d9161655ee6 90-96
+web/lib/config/pricing.ts
+  s_542d19c0732260::t_0ae1e0cafa6814 260-273
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_542d19c0732260::t_19cabd0b976bfc 13-15
+web/app/billing/page.tsx
+  s_542d19c0732260::t_6e319ebdfb964b 13,65-68,74
+web/lib/services/billing-data.ts
+  s_542d19c0732260::t_e3d2d63d429c66 5,58-61,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5da539f0a33f746a6f51cd9ca5526ef636adcd22",
+  "prompts": {},
+  "sessions": {
+    "s_542d19c0732260": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8ab9bcffeqoaVAzK2sWt6S2",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
