@@ -1,0 +1,21 @@
+.memory/AGENT_LEDGER.md
+  s_b71ad25f5f25f7::t_f2097af0d4aa5c 1404
+scripts/spikes/adr032/run-chunk-stream.sh
+  s_b71ad25f5f25f7::t_4212b2c4345c56 23-24,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "eee78275b6a7176977e0e1d7da75285fd5d4a769",
+  "prompts": {},
+  "sessions": {
+    "s_b71ad25f5f25f7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b835344ffeWSWCWXFP7UeE8N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
