@@ -1,0 +1,19 @@
+web/middleware.ts
+  s_cbe94151e1e560::t_c29d523cf8373d 164-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ffa4b053641d5a821684b1e15b140c979df0832b",
+  "prompts": {},
+  "sessions": {
+    "s_cbe94151e1e560": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc513e0ffeuThVqxjsNqeZeI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
