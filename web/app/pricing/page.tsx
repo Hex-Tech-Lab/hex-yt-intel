@@ -54,7 +54,7 @@ export default async function PricingPage() {
             { q: "Can I change my plan anytime?", a: "Yes. You can upgrade, downgrade or cancel from your billing page. Plan changes are handled by our payment provider Paddle." },
             { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Max tiers can synthesize longer videos with timestamp mapping, up to each tier's quota." },
             { q: "Which languages are supported?", a: "We currently support 65+ languages, tested and confirmed for real transcription/analysis accuracy. Analysis output is in English." },
-            { q: "Do you offer refunds?", a: "Yes — within 7 days of purchase, if you haven't used any analysis credits on that purchase, it's fully refundable. Once an analysis has run, that credit is considered used." },
+            { q: "Do you offer refunds?", a: "Yes — the 7-day refund applies to your first purchase, if no analysis has been run on it. Once an analysis has run on the purchase, it's non-refundable." },
             { q: "Is my data secure?", a: "Absolutely. All synthesis data is encrypted and stored in your private knowledge graph. Transcripts are held in transient cache for up to 72hrs and automatically removed. We never use user data to train third-party models." }
           ]} />
         </section>

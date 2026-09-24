@@ -11,7 +11,7 @@ Your first purchase is eligible for a full refund if you request it within 7 day
 
 ## 2. Subscription Fees vs. Usage-Based Charges
 - **Subscription Fees:** You may cancel your recurring subscription at any time via your billing dashboard. Cancellation prevents future charges. You will retain access to your plan's features until the end of the current billing cycle.
-- **Usage-Based Charges (Credits):** Credits purchased for extended token usage are non-refundable, and any credit expiry is stated at purchase.
+- **Usage-Based Charges (Credits):** An unused purchase is refundable within 7 days under section 1. Credits already consumed are non-refundable, and any credit expiry is stated at purchase.
 
 ## 3. EU Right of Withdrawal Waiver
 Under EU consumer protection laws, users generally have a 14-day right of withdrawal for online purchases. However, by purchasing a vIntel subscription and immediately utilizing the Service to process a video or generate an AI summary, you expressly consent to the immediate delivery of the digital service and acknowledge that you lose your right of withdrawal once the service has been performed, consistent with the 7-day usage-gated refund terms in section 1.
