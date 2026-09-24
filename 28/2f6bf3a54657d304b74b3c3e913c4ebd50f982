@@ -1,0 +1,19 @@
+web/app/api/spikes/youtube-fetch/route.ts
+  s_cbe94151e1e560::t_79c2b642cf0ce5 57-58,67-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "282f6bf3a54657d304b74b3c3e913c4ebd50f982",
+  "prompts": {},
+  "sessions": {
+    "s_cbe94151e1e560": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc513e0ffeuThVqxjsNqeZeI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
