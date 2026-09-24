@@ -1,0 +1,33 @@
+docs/research/2026-09-25-business-case-cogs-pricing.md
+  s_30b3df4d6cf469::t_6a03e3d81b4dc8 1-115
+patch_script.cjs
+  s_30b3df4d6cf469::t_0460570a2aa5f4 1-15
+patch_script.js
+  s_30b3df4d6cf469::t_b36bf283cb6382 1-15
+rewrite.py
+  s_30b3df4d6cf469::t_e352793a3f291f 1-125
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_30b3df4d6cf469::t_e4fd70437276e9 81-140,194-228,268-303,337-362
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_30b3df4d6cf469::t_9b7a9992fef5c9 1,50-52,57,60-91,122-130,136-137,145,154,178-182,194-197,199-219,221,246-251,255-259,287-289,294,296-303
+scripts/quality-engine/rules/sql-migrations.ts
+  s_30b3df4d6cf469::t_b5e8c1ce7b81d0 26-29,50-56,58-61,64-95,99,102-104,106-112,122-125,129,132-135,137,139,146-152,158-165,169-171,174-187,206-213,216-218,234-238,243,245-246,260-263,275,278-316
+scripts/research/run-pricing-research.ts
+  s_30b3df4d6cf469::t_638e4bc515df2e 1-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1a9c12a644265b3a48adcac9cb66715b353adf69",
+  "prompts": {},
+  "sessions": {
+    "s_30b3df4d6cf469": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a818512ffefnzPnCOPcmOJCD",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
