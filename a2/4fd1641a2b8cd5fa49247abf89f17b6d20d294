@@ -1,0 +1,81 @@
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_3ad3b0108166c1::t_0739ff3d0905b3 11
+worker/src/services/providers/ApifyTranscriptProvider.ts
+  s_3ad3b0108166c1::t_88db5111dc04e2 32-39
+  s_3ad3b0108166c1::t_e4c0dba5d96113 47-48
+  s_3ad3b0108166c1::t_5caaf3ca8d8ffc 88-91
+  s_3ad3b0108166c1::t_c817a14d493e2d 93,97
+worker/src/routes/analysis.ts
+  s_3ad3b0108166c1::t_38972cf3fbee2c 50
+  s_3ad3b0108166c1::t_3793b38f008024 653
+  s_3ad3b0108166c1::t_837a00eb051ad9 699
+  s_3ad3b0108166c1::t_9cece48284729a 594
+  s_3ad3b0108166c1::t_0dabf87d7dc434 895
+  s_3ad3b0108166c1::t_d784e0b6cc0486 3
+worker/src/services/TranscriptExtractor.ts
+  s_3ad3b0108166c1::t_98b2e7f32f636b 129-134,140,144-148
+  s_3ad3b0108166c1::t_59e09f1dd9c6e0 27-37
+  s_3ad3b0108166c1::t_1d1b672b455bf3 128
+  s_3ad3b0108166c1::t_31f4f8c64040f6 15,26,38-44
+  s_3ad3b0108166c1::t_57329b0a6c4e02 24-25
+  s_3ad3b0108166c1::t_a12aa20608b69e 120-126
+  s_3ad3b0108166c1::t_91ef713479397a 54,56-62,66,72-95
+  s_3ad3b0108166c1::t_a0749b26f093f4 161
+worker/src/services/providers/DecodoTranscriptProvider.ts
+  s_3ad3b0108166c1::t_62f09d7f5d480f 11-16
+  s_3ad3b0108166c1::t_80277e66fa0bc1 26-27
+  s_3ad3b0108166c1::t_1d405b9b0b43ce 72-76,79-81,84
+  s_3ad3b0108166c1::t_74de6528d007f3 59,65
+worker/src/__tests__/TranscriptExtractor.test.ts
+  s_3ad3b0108166c1::t_3286304ef6b04e 240-248,250,260-267
+  s_3ad3b0108166c1::t_53f4bef6fdece3 1
+  s_3ad3b0108166c1::t_9b56fa85034419 172,177-179,182-199,206,209-210
+  s_3ad3b0108166c1::t_c57ace490cf0f7 180,232-233,273-275,283
+  s_3ad3b0108166c1::t_ef328a0ec4cbdf 254
+  s_3ad3b0108166c1::t_6a9bcecaa870e1 2
+  s_3ad3b0108166c1::t_c2486b8f429012 3,5
+  s_3ad3b0108166c1::t_97d079535d5c08 11
+  s_3ad3b0108166c1::t_1ac3738b8ad48e 135-171,173-176,181,200-205,207-208,211-231,234-239,249,251-253,255-259,268-272,276-282,284-311
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_3ad3b0108166c1::t_232e2df5e098fa 122-125
+  s_3ad3b0108166c1::t_5714b370897a65 17-24
+  s_3ad3b0108166c1::t_809c2a6d51d0b4 222
+  s_3ad3b0108166c1::t_30b57f258440c4 34-40
+  s_3ad3b0108166c1::t_ae398d15e7aa0e 106-108
+  s_3ad3b0108166c1::t_ab33386daa4ea5 143-145,148
+  s_3ad3b0108166c1::t_11ab90adf72d80 245
+  s_3ad3b0108166c1::t_027341b7c26bef 136-138
+  s_3ad3b0108166c1::t_21306e89b24a92 162
+  s_3ad3b0108166c1::t_b6b826e0569583 71-78
+  s_3ad3b0108166c1::t_ea4888be42542e 139-140
+worker/wrangler.toml
+  s_3ad3b0108166c1::t_6c9adc3f0c7717 66-68,72
+worker/src/worker.ts
+  s_3ad3b0108166c1::t_38972cf3fbee2c 34
+worker/src/routes/transcript.ts
+  s_3ad3b0108166c1::t_d784e0b6cc0486 2
+  s_3ad3b0108166c1::t_2cf4356eebc410 23
+  s_3ad3b0108166c1::t_67d3f66760dd58 9
+worker/src/__tests__/transcript-path-cpu-bench.test.ts
+  s_3ad3b0108166c1::t_050c6d7a43d0f1 17
+  s_3ad3b0108166c1::t_7a9291d6e766d5 23
+  s_3ad3b0108166c1::t_6f8a11d0e28d81 75-78,82
+.memory/AGENT_LEDGER.md
+  s_3ad3b0108166c1::t_17df96849c8f16 1405
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a24fd1641a2b8cd5fa49247abf89f17b6d20d294",
+  "prompts": {},
+  "sessions": {
+    "s_3ad3b0108166c1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aadc7e9ffeG4nP0Owm5j3BWV",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
