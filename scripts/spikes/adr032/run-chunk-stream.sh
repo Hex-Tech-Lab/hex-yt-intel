@@ -20,10 +20,10 @@ PROJ=prj_jKAo3z8jKyHwi3qXqSIeoZO1ILku
 TEAM=team_vgnBI2s3ynPBzQdOLqhGvBnK
 
 # Get or create a protection bypass for the preview deployment's SSO.
-BYPASS=$(curl -s -X GET "https://api.vercel.com/v1/projects/$PROJ/protection-bypass?teamId=$TEAM" \
-  -H "Authorization: Bearer $VERCEL_TOKEN")
+BYPASS=$(curl -s -X POST "https://api.vercel.com/v1/projects/$PROJ/protection-bypass?teamId=$TEAM" \
+  -H "Authorization: Bearer $VERCEL_TOKEN" -H "Content-Type: application/json" -d '{}' 2>/dev/null || true)
 if ! echo "$BYPASS" | grep -q "bypassTokenKey\|href\|creationDate"; then
-  BYPASS=$(curl -s -X POST "https://api.vercel.com/v1/projects/$PROJ/protection-bypass?teamId=$TEAM" \
+  BYPASS=$(curl -s "https://api.vercel.com/v1/projects/$PROJ/protection-bypass?teamId=$TEAM" \
     -H "Authorization: Bearer $VERCEL_TOKEN")
 fi
 echo "$BYPASS" > "$REPO_ROOT/.scratch/vercel-protection-bypass.json"
