@@ -1,0 +1,21 @@
+.memory/ADRS.md
+  s_8840014c0848c9::t_effcfbed9e978c 26
+CLAUDE.md
+  s_8840014c0848c9::t_2d3a6d11781764 101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1f287c5eb2c60f53e4a88f2fbf25d474c9b57852",
+  "prompts": {},
+  "sessions": {
+    "s_8840014c0848c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc7de30ffeCgQWFVosphgaOo",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
