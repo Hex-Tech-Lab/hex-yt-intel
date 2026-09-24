@@ -1,0 +1,38 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  h_60000122af7b55 52-53
+scripts/quality-engine/__tests__/reliability-q2-rules.test.ts
+  h_60000122af7b55 1-478
+scripts/quality-engine/rules/index.ts
+  h_60000122af7b55 59
+scripts/quality-engine/rules/reliability-lessons-20260924.ts
+  h_60000122af7b55 1-457
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  h_60000122af7b55 111-113
+worker/src/__tests__/TranscriptApiProvider.test.ts
+  h_60000122af7b55 1-127
+worker/src/__tests__/TranscriptExtractor.test.ts
+  h_60000122af7b55 160
+worker/src/routes/analysis.ts
+  h_60000122af7b55 51,595,654,700,896
+worker/src/routes/transcript.ts
+  h_60000122af7b55 8
+worker/src/services/TranscriptExtractor.ts
+  h_60000122af7b55 7,18,24,41-42,44,46,55,63,69,105
+worker/src/services/providers/TranscriptApiProvider.ts
+  h_60000122af7b55 1-80
+worker/src/worker.ts
+  h_60000122af7b55 33
+worker/wrangler.toml
+  h_60000122af7b55 64,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5cb896dc662f4cd3792cf8311466556a6ad04cfc",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
