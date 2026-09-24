@@ -1,0 +1,21 @@
+.memory/AGENT_LEDGER.md
+  s_29349810a8cd4d::t_7b20ea485694f3 1404
+.opencode/opencode.json
+  s_29349810a8cd4d::t_42026a7eca18a0 11-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d890b23686c518233dc6b32f5aafc9a3b6732d70",
+  "prompts": {},
+  "sessions": {
+    "s_29349810a8cd4d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b835739ffeqCfv11VwVYc7T8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
