@@ -70,7 +70,11 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
+<<<<<<< HEAD
+**Verified:** Cloudflare Workers Logs 2026-09-23 20:39 UTC show `[analyze-llm-stream] Chapter persist returned non-2xx` on every analyze stream (video 4mTLpuQpB80, channel UCPjNBjflYl0-HQtUvOx0Ibw). Start at the worker code that emits that message (worker/src/routes/analysis.ts) and the Vercel route it calls. Status code and body are not logged — that is part of the finding. (Historical note, corrected per Cubic round-3 review: the current implementation DOES log status + a truncated response-body snippet to console.error and Sentry — this prompt predates round 2's fix.)
+=======
 **Verified:** Cloudflare Workers Logs 2026-09-23 20:39 UTC show `[analyze-llm-stream] Chapter persist returned non-2xx` on every analyze stream (video 4mTLpuQpB80, channel UCPjNBjflYl0-HQtUvOx0Ibw). Start at the worker code that emits that message (worker/src/routes/analysis.ts) and the Vercel route it calls. Status code and body are not logged — that is part of the finding.
+>>>>>>> origin/main
 
 **Constraints for every task**: the ENTIRE infra is on FREE plans (Cloudflare Workers Free = 10 ms CPU per request, Vercel Hobby, Upstash free, Supabase free). Never propose an upgrade as the fix. Code-only unless stated. Work only in your worktree/branch; commit locally; do NOT push, do NOT open a PR — CC reviews and re-runs gates independently. Mandatory negative control: prove each new test fails against the old code. List adjacent findings; don't fix them.
 
@@ -82,7 +86,7 @@ Before writing sections 1–2 below, decide:
 1. Find the endpoint, reproduce the failure path in a test, determine the root cause with file:line evidence.
 2. Fix it. Also make the log include status code + truncated body so the next failure is diagnosable.
 3. Check whether 5 streams each persisting chapters is redundant; if so, make it once per analysis (idempotent) and justify.
-4. Gates: tsc, vitest (web + worker), qa-intel diff.
+4. Gates: tsc, vitest (web + worker), qa-intel `--mode diff` AND `--mode full` (never one mode alone — standing project rule; bare `--full` is silently inert, the flag is `--mode full`).
 
 Branch: `fix/chapter-persist-non-2xx` (already checked out in your worktree).
 
@@ -168,7 +172,7 @@ Branch: `fix/chapter-persist-non-2xx` (already checked out in your worktree).
   - `planetscale-postgres-safety-review` is **NOT applicable to this repo** (wrong DB platform — Supabase Postgres, not PlanetScale). Do not invoke.
 
 - **IF `scripts/**` | `.memory/**` | `*.config.*` | `.*ignore` (Monorepo / CI)**:
-  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run in `--full` mode per the ALWAYS rule above).
+  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run `--mode full` explicitly per the ALWAYS rule above).
   - pr-review-toolkit plugin: `comment-analyzer` + `pr-test-analyzer` — PR description/test-coverage sanity.
 
 - **High-stakes / genuinely contested decisions ONLY (not a per-PR gate)**:
