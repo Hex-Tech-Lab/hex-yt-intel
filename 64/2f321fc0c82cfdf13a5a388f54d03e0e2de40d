@@ -1,0 +1,35 @@
+.memory/AGENT_LEDGER.md
+  s_8840014c0848c9::t_cb233e91ca58c1 1400
+web/app/pricing/page.tsx
+  s_a66ee17d720504::t_ad82148959eac6 57
+docs/legal/refund-policy.md
+  s_a66ee17d720504::t_224caaed236ce5 14
+web/app/pricing/__tests__/page.test.ts
+  s_8840014c0848c9::t_f440e094b3015a 1-27
+web/vitest.config.ts
+  s_8840014c0848c9::t_2bcb96af97f34d 70-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "642f321fc0c82cfdf13a5a388f54d03e0e2de40d",
+  "prompts": {},
+  "sessions": {
+    "s_8840014c0848c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc7de30ffeCgQWFVosphgaOo",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a66ee17d720504": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c3821f2ffelnUaXvg7s0ZIGV",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
