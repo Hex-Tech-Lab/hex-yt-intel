@@ -1,0 +1,23 @@
+scripts/spikes/adr032/run-local-transcript.ts
+  s_cbe94151e1e560::t_75df2b5081cec6 2-14
+  s_cbe94151e1e560::t_885e1d205d0aa6 1
+web/app/api/spikes/youtube-fetch/route.ts
+  s_cbe94151e1e560::t_988892fe7c1198 73-92
+  s_cbe94151e1e560::t_d68dd419cbc2df 133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "23630bf7d3abcdf4f6028a27a3e7f8415bbb3073",
+  "prompts": {},
+  "sessions": {
+    "s_cbe94151e1e560": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc513e0ffeuThVqxjsNqeZeI",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
