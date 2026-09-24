@@ -5,6 +5,7 @@ type TranscriptEnv = {
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
   APIFY_TOKEN?: string;
+  TRANSCRIPTAPI_API_KEY?: string;
   TRANSCRIPT_PROVIDER_ORDER?: string;
   TRANSCRIPT_CHAIN_BUDGET_MS?: string;
 };
