@@ -14,13 +14,13 @@
  * these numbers as relative shares, not absolute Workers CPU.
  */
 import { describe, it, expect, vi, type Mock } from 'vitest';
-import { TranscriptExtractor } from '../services/TranscriptExtractor';
+import { YouTubeNativeTranscriptProvider } from '../services/providers/YouTubeNativeTranscriptProvider';
 import { parseChapters } from '../services/chapter-parser';
 import { groupSegmentsIntoChunks } from '../services/ChunkGrouping';
 import { stratifiedSampleIndices, type StratifiableComment } from '../../../web/lib/services/comment-sampling';
 import type { TranscriptResult } from '../ports/TranscriptProviderPort';
 
-vi.mock('@sentry/cloudflare', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
+vi.mock('@sentry/cloudflare', () => ({ captureException: vi.fn(), captureMessage: vi.fn(), addBreadcrumb: vi.fn() }));
 vi.mock('../services/http-utils', () => ({ fetchWithProxy: vi.fn() }));
 vi.mock('../services/user-agent', () => ({ getRandomUserAgent: vi.fn(() => 'Mozilla/5.0') }));
 
@@ -72,12 +72,14 @@ describe('Transcript/metadata path CPU bench (~28-min video, realistic fixtures)
 
     // Stage 1+2: page-HTML fetch->regex->captionTracks JSON.parse, then
     // timedtext JSON parse + event->segment mapping (mocked network).
-    const extractor = new TranscriptExtractor();
-    const fetchFromPageHTML = (extractor as unknown as {
+    // fetchFromPageHTML now lives on the native provider adapter (2026-09-24
+    // configurable-provider-chain refactor), not on the chain orchestrator.
+    const nativeProvider = new YouTubeNativeTranscriptProvider();
+    const fetchFromPageHTML = (nativeProvider as unknown as {
       fetchFromPageHTML: (videoId: string) => Promise<TranscriptResult>;
     }).fetchFromPageHTML;
     const t0 = performance.now();
-    const result = await fetchFromPageHTML.call(extractor, 'bench_video_01');
+    const result = await fetchFromPageHTML.call(nativeProvider, 'bench_video_01');
     const pageHtmlMs = performance.now() - t0;
 
     // Stage 2 isolated (regex + JSON.parse over the HTML, no caption mapping):
