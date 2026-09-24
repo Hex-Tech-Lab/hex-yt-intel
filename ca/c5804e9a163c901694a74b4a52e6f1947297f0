@@ -1,0 +1,25 @@
+web/app/api/analyses/[id]/export/__tests__/route.test.ts
+  s_68e558ea23c283::t_8915d561a373e0 5-6,11,13
+web/lib/__tests__/contracts/export-pdf.contract.test.ts
+  s_68e558ea23c283::t_c4a262ffa65b72 16
+  s_68e558ea23c283::t_b191bbd9ca8c24 125-129,142-146,154-160,164,171,175-177
+  s_68e558ea23c283::t_43aad70c36a252 178
+web/app/api/analyses/[id]/export/route.ts
+  s_68e558ea23c283::t_25c7fe1279f427 14-15,17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cac5804e9a163c901694a74b4a52e6f1947297f0",
+  "prompts": {},
+  "sessions": {
+    "s_68e558ea23c283": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2cdf4d44ffeU5gcenW4F0QsJw",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
