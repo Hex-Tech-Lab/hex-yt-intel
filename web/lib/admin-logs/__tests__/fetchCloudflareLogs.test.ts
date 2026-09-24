@@ -1,0 +1,272 @@
+/**
+ * Contract coverage for fetchCloudflareLogs (admin-logs/fetchers.ts).
+ *
+ * RCA (2026-09-24): the fetcher queried workersInvocationsAdaptive with NO
+ * datetime filter (limit 50, orderBy datetime_DESC), so scripts/poll-logs-
+ * snapshot.sh returned totalEntries: 0 while the worker had 78+ invocations
+ * in the window. A correct query with filter:{datetime_geq,datetime_leq}
+ * returns data with the same credentials. This file pins the fixed contract:
+ * the time window is pushed INTO the GraphQL filter, and the Workers
+ * Observability telemetry endpoint (persist=true in worker/wrangler.toml) is
+ * queried for per-request outcomes (e.g. exceededCpu) that the aggregate
+ * dataset cannot show.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fetchCloudflareLogs } from '../fetchers';
+
+const originalEnv = { ...process.env };
+
+// skipcq: JS-0067 -- vitest describe-local test helper, ESM-export-free by design
+function okJson(json: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(json),
+    text: () => Promise.resolve(''),
+  } as Response;
+}
+
+// skipcq: JS-0067 -- vitest describe-local test helper, ESM-export-free by design
+function makeObsMock(events: unknown[]) {
+  return vi.fn().mockResolvedValueOnce(okJson({ result: { events: { events } } }));
+}
+
+function makeFetchMock(graphqlMock: ReturnType<typeof vi.fn>, obsMock: ReturnType<typeof vi.fn>) {
+  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    return url.includes('/graphql') ? graphqlMock(input, init) : obsMock(input, init);
+  });
+}
+
+describe('fetchCloudflareLogs', () => {
+  beforeEach(() => {
+    process.env.CLOUDFLARE_API_TOKEN = 'test-cf-token';
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'test-account-id';
+  });
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('pushes the requested time window into the GraphQL datetime filter (NEGATIVE CONTROL: old code sent no filter)', async () => {
+    const start = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const end = new Date().toISOString();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    const obsMock = vi.fn().mockResolvedValueOnce(okJson({ result: { events: { events: [] } } }));
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      return url.includes("/graphql") ? graphqlMock(input, init) : obsMock(input, init);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchCloudflareLogs(new URLSearchParams({ range: 'custom', start, end }));
+
+    expect(graphqlMock).toHaveBeenCalledTimes(1);
+    const [graphqlUrl, graphqlInit] = graphqlMock.mock.calls[0] as [string, RequestInit];
+    expect(graphqlUrl).toBe('https://api.cloudflare.com/client/v4/graphql');
+    const body = JSON.parse(graphqlInit.body as string) as { variables: { datetime_geq: string; datetime_leq: string }; query: string };
+    expect(body.variables.datetime_geq).toBe(start);
+    expect(body.variables.datetime_leq).toBe(end);
+    expect(body.query).toContain('datetime_geq: $datetime_geq');
+    // Old code's query had no filter at all — this assertion fails against it.
+    expect(body.query).toContain('filter: { datetime_geq: $datetime_geq, datetime_leq: $datetime_leq }');
+  });
+
+  it('queries Workers Observability telemetry for per-request errors/outcomes and formats them into the snapshot', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(
+      okJson({
+        data: { viewer: { accounts: [{ workersInvocationsAdaptive: [{ dimensions: { scriptName: 'yt-intel', status: 'success', datetime: new Date(now - 1000).toISOString() }, quantiles: { cpuTimeP50: 5 }, sum: { errors: 0 } }] }] } },
+      }),
+    );
+    const obsMock = vi.fn().mockResolvedValueOnce(
+      okJson({
+        // Real API shape (live-verified 2026-09-24): result.events.events[]
+        result: {
+          events: {
+            events: [
+              {
+                timestamp: now - 500,
+                $metadata: { error: 'Worker exceeded CPU time limit.', rayId: 'ray-1', service: 'yt-intel' },
+                $workers: { scriptName: 'yt-intel', outcome: 'exceededCpu' },
+              },
+            ],
+          },
+        },
+      }),
+    );
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/graphql')) return graphqlMock();
+      expect(url).toBe('https://api.cloudflare.com/client/v4/accounts/test-account-id/workers/observability/telemetry/query');
+      const body = JSON.parse(init?.body as string) as { timeframe: { from: number; to: number }; view: string };
+      expect(body.view).toBe('events');
+      expect(typeof body.timeframe.from).toBe('number');
+      expect(typeof body.timeframe.to).toBe('number');
+      return obsMock();
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalEntries).toBe(2);
+    const logs = res.body.logs as string;
+    expect(logs).toContain('[cf-worker:yt-intel]');
+    expect(logs).toContain('outcome=exceededCpu');
+    expect(logs).toContain('ray-1');
+    expect((res.body as Record<string, unknown>).observabilityEvents).toHaveLength(1);
+  });
+
+  it('degrades to a warning line (still 200) when the Observability call fails, keeping GraphQL data', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(
+      okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [{ dimensions: { scriptName: 'yt-intel', status: 'success', datetime: new Date(now).toISOString() }, quantiles: { cpuTimeP50: 3 }, sum: { errors: 0 } }] }] } } }),
+    );
+    const obsMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 403, json: () => Promise.resolve({}), text: () => Promise.resolve('forbidden') } as Response);
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, obsMock));
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalEntries).toBe(1);
+    const body = res.body as Record<string, unknown>;
+    expect(typeof body.warning).toBe('string');
+    expect((body.warning as string)).toContain('Workers Observability query failed');
+  });
+
+  it('returns an outcome-only event (no $metadata.error) in the snapshot — the round-2 P1 filter gap', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    const obsMock = makeObsMock([
+      { timestamp: now, $metadata: { message: 'unrelated info', rayId: 'ray-2' }, $workers: { scriptName: 'yt-intel', outcome: 'exceededCpu' } },
+    ]);
+    const fetchMock = makeFetchMock(graphqlMock, obsMock);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalEntries).toBe(1);
+    expect(res.body.logs as string).toContain('outcome=exceededCpu');
+  });
+
+  it('sends the verified OR filter ($metadata.error exists OR $workers.outcome != ok), limit, and datasets in the request payload', async () => {
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    const obsMock = makeObsMock([]);
+    const fetchMock = makeFetchMock(graphqlMock, obsMock);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    const [, obsInit] = obsMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(obsInit.body as string) as {
+      view: string; limit: number;
+      parameters: { datasets: string[]; filterCombination: string; filters: { key: string; operation: string; type: string; value?: string }[] };
+    };
+    expect(body.view).toBe('events');
+    expect(body.limit).toBe(100);
+    expect(body.parameters.datasets).toEqual(['cloudflare-workers']);
+    expect(body.parameters.filterCombination).toBe('or');
+    expect(body.parameters.filters).toContainEqual({ key: '$metadata.error', operation: 'exists', type: 'string' });
+    expect(body.parameters.filters).toContainEqual({ key: '$workers.outcome', operation: 'neq', type: 'string', value: 'ok' });
+  });
+
+  it('pins the µs→ms CPU conversion (Cloudflare returns microseconds; the line must show milliseconds)', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(
+      okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [{ dimensions: { scriptName: 'yt-intel', status: 'success', datetime: new Date(now).toISOString() }, quantiles: { cpuTimeP50: 5000 }, sum: { errors: 7 } }] }] } } }),
+    );
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, makeObsMock([])));
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    // 5000 µs → 5.0ms, NOT "5000ms" (µs mislabeled as ms) and not 5000 raw
+    expect(res.body.logs as string).toContain('p50CpuTime=5.0ms');
+    // aggregate errors count is carried through verbatim
+    expect(res.body.logs as string).toContain('errors=7');
+  });
+
+  it('marks the window truncated (truncated: true + warning line) when the event limit is hit', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    const fullWindow = Array.from({ length: 100 }, (_eventTemplate, i) => ({
+      timestamp: now + i,
+      $metadata: { error: `err-${i}`, rayId: `ray-${i}` },
+      $workers: { scriptName: 'yt-intel', outcome: 'exceededCpu' },
+    }));
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, makeObsMock(fullWindow)));
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    expect(res.status).toBe(200);
+    expect((res.body as Record<string, unknown>).truncated).toBe(true);
+    expect(res.body.logs as string).toContain('truncated at 100 events');
+  });
+
+  it('warns on a MALFORMED Observability shape (valid empty stays silent) — round-2 P1/P2', async () => {
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    // Old/wrong shape: events directly on result.events (not .events.events)
+    const obsMock = vi.fn().mockResolvedValueOnce(okJson({ result: { events: [] } }));
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, obsMock));
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    expect(res.status).toBe(200);
+    const body = res.body as Record<string, unknown>;
+    expect(body.warning).toContain('unexpected response shape');
+    expect((body.observabilityEvents as unknown[]).length).toBe(0);
+  });
+
+  it('returns 200 + warning and keeps GraphQL data when the Observability call times out', async () => {
+    vi.useFakeTimers();
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(
+      okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [{ dimensions: { scriptName: 'yt-intel', status: 'success', datetime: new Date(now).toISOString() }, quantiles: { cpuTimeP50: 3 }, sum: { errors: 0 } }] }] } } }),
+    );
+    const obsMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_neverResolves, rejectOnAbort) => {
+      init?.signal?.addEventListener('abort', () => rejectOnAbort(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' })));
+    }));
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, obsMock));
+
+    const pending = fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+    await vi.advanceTimersByTimeAsync(10_000);
+    const res = await pending;
+
+    expect(res.status).toBe(200);
+    const body = res.body as Record<string, unknown>;
+    expect(body.warning).toContain('timed out');
+    // GraphQL data kept despite the observability timeout
+    expect(body.invocationCount).toBe(1);
+    expect(res.body.totalEntries).toBe(1);
+  });
+
+  it('sanitizes newline/control characters injected through external error/message fields', async () => {
+    const now = Date.now();
+    const graphqlMock = vi.fn().mockResolvedValueOnce(okJson({ data: { viewer: { accounts: [{ workersInvocationsAdaptive: [] }] } } }));
+    const obsMock = makeObsMock([
+      { timestamp: now, $metadata: { error: 'real error\n[FORGED] [ERROR] forged line\r\nsecond', message: 'msg\u0000with\u001fctrl' }, $workers: { scriptName: 'yt-intel', outcome: 'exceededCpu' } },
+    ]);
+    vi.stubGlobal('fetch', makeFetchMock(graphqlMock, obsMock));
+
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+
+    const logs = (res.body.logs as string).split(/\r?\n/);
+    expect(res.status).toBe(200);
+    // exactly one log line — the injected newlines never forge extra lines
+    expect(logs.length).toBe(1);
+    expect(logs[0]).toContain('real error [FORGED] [ERROR] forged line second');
+    expect(logs[0]).not.toContain('\r');
+  });
+
+  it('returns a controlled 503 when credentials are not configured, without calling fetch', async () => {
+    delete process.env.CLOUDFLARE_API_TOKEN;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await fetchCloudflareLogs(new URLSearchParams({ range: '1h' }));
+    expect(res.status).toBe(503);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

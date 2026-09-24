@@ -40,8 +40,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
-Flash low) does not reliably execute prose *principles* — it executes
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
 often satisfy the injection/entry-site case and stop, treating the
@@ -142,7 +141,7 @@ Branch: `fix/upstash-vector-coverage`.
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw `Response.json`/text pass-throughs and unvalidated boundary payloads (grep/AST based — despite its name it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.
@@ -170,7 +169,7 @@ Branch: `fix/upstash-vector-coverage`.
   - `planetscale-postgres-safety-review` is **NOT applicable to this repo** (wrong DB platform — Supabase Postgres, not PlanetScale). Do not invoke.
 
 - **IF `scripts/**` | `.memory/**` | `*.config.*` | `.*ignore` (Monorepo / CI)**:
-  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run in `--full` mode per the ALWAYS rule above).
+  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run in `--mode full` per the ALWAYS rule above).
   - pr-review-toolkit plugin: `comment-analyzer` + `pr-test-analyzer` — PR description/test-coverage sanity.
 
 - **High-stakes / genuinely contested decisions ONLY (not a per-PR gate)**:
