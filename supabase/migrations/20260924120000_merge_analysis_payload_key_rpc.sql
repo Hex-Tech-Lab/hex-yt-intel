@@ -36,6 +36,15 @@ begin
   if p_key is null or p_key !~ '^[a-zA-Z0-9_]{1,64}$' then
     raise exception 'merge_analysis_payload_key: invalid payload key';
   end if;
+  -- CC review (2026-09-24): this function is callable by any authenticated
+  -- user (the relations route uses the request-scoped client), so without an
+  -- allowlist a user could overwrite ANY top-level key of their own analysis
+  -- (dimensions, digest, highlights -- including shared/public reports)
+  -- straight from the browser. Only client-computable, non-authoritative keys
+  -- may be merged here; add a key deliberately, with review.
+  if p_key not in ('stance_relations') then
+    raise exception 'merge_analysis_payload_key: key % is not merge-allowed', p_key;
+  end if;
   if p_value is null then
     raise exception 'merge_analysis_payload_key: null payload value not allowed';
   end if;
