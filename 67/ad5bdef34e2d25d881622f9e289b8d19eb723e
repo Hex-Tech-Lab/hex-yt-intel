@@ -1,0 +1,44 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_bc7bf73162d55e::t_f65afb381bae7e 50
+scripts/quality-engine/__tests__/reliability-q2-rules.test.ts
+  s_bc7bf73162d55e::t_93ca951af86528 463-477
+  s_bc7bf73162d55e::t_ba9025a52929af 107-143
+  s_bc7bf73162d55e::t_7e3c6318d5b553 392,394-398,401
+  s_bc7bf73162d55e::t_992752f6add948 368-391,393,399-400,402-409
+  s_bc7bf73162d55e::t_39b9bc4d2e51a1 214-260
+scripts/quality-engine/rules/reliability-lessons-20260924.ts
+  s_bc7bf73162d55e::t_e15b904a8ab76c 176
+  s_bc7bf73162d55e::t_af977be0a6dff6 314-336
+  s_bc7bf73162d55e::t_c7744b37bf0457 192-237,247-254
+  s_bc7bf73162d55e::t_8a2730e52bea3e 66-88
+  s_bc7bf73162d55e::t_ec16aca8991e45 175
+  s_bc7bf73162d55e::t_83ca2771ef7fb2 365-368,380-383,387
+  s_bc7bf73162d55e::t_cd1928cff62110 280-292,294-297,299
+  s_bc7bf73162d55e::t_45c6a44de34982 98-104,115-119,122,124-144,147-162,174,182
+  s_bc7bf73162d55e::t_622b53859abd77 415-426,440,449
+  s_8b8bfc8e3e2d04::t_1dfc579d49e320 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "67ad5bdef34e2d25d881622f9e289b8d19eb723e",
+  "prompts": {},
+  "sessions": {
+    "s_8b8bfc8e3e2d04": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aadc595ffeYD2YYsmM0hEW5k",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_bc7bf73162d55e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aadc62dffeDGxjXLs7IKleJB",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
