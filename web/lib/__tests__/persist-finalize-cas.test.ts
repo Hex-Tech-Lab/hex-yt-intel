@@ -278,4 +278,23 @@ describe('finalize publishes the embedding task directly on every completed path
     const { publishEmbeddingTask } = await import('@/lib/qstash-client');
     expect(publishEmbeddingTask).not.toHaveBeenCalled();
   });
+
+  it('an embed publish failure raises the side-effect-failed flag (side_effects_pending claim left set, response still 200)', async () => {
+    const { publishEmbeddingTask } = await import('@/lib/qstash-client');
+    (publishEmbeddingTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('qstash publish failed'));
+
+    const res = await POST(
+      post({ markdown: 'final markdown', model: 'm', valid: true, status: 'completed' })
+    );
+    expect(res.status).toBe(200);
+
+    const sentry = await import('@sentry/nextjs');
+    expect(sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining('side effects partially failed'),
+      expect.objectContaining({ level: 'warning' })
+    );
+    // The side_effects_pending claim-clearing write must NOT have run — the
+    // claim stays set so the outbox reconciliation picks it up.
+    expect(adapterInstance.updateValidationReport).not.toHaveBeenCalled();
+  });
 });

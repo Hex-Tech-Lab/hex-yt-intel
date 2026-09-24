@@ -393,9 +393,16 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
     ];
   }
 
-  async function loadWithEmbedMock(chunkRows: ChunkRow[]) {
+  async function loadWithEmbedMock(chunkRows: ChunkRow[], embedBehavior?: 'reject') {
     vi.resetModules();
-    const publishEmbeddingTask = vi.fn().mockResolvedValue('msg-id');
+    const publishEmbeddingTask = embedBehavior === 'reject'
+      ? vi.fn().mockRejectedValue(new Error('qstash publish failed'))
+      : vi.fn().mockResolvedValue('msg-id');
+    const captureException = vi.fn();
+    vi.doMock('@sentry/nextjs', () => ({
+      captureException,
+      captureMessage: vi.fn(),
+    }));
     vi.doMock('@/lib/qstash-client', () => ({
       publishEmbeddingTask,
       publishValidationTask: vi.fn(),
@@ -419,7 +426,7 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
 
     const mod = await import('@/lib/services/analysis-reaper');
     const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
-    return { tryChunkRecovery: mod.tryChunkRecovery, publishEmbeddingTask, persistenceAdapter: new SupabasePersistenceAdapter() as any };
+    return { tryChunkRecovery: mod.tryChunkRecovery, publishEmbeddingTask, captureException, persistenceAdapter: new SupabasePersistenceAdapter() as any };
   }
 
   it('full-set settle (completed) publishes the embed task with the stitched markdown and owner attribution', async () => {
@@ -459,6 +466,16 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
 
     expect(result).toEqual({ outcome: 'failed' });
     expect(publishEmbeddingTask).not.toHaveBeenCalled();
+  });
+
+  it('an embed publish failure does NOT abort the settle (row still settles completed, failure hits Sentry)', async () => {
+    const { tryChunkRecovery, captureException, persistenceAdapter } = await loadWithEmbedMock(fullSetChunks(), 'reject');
+
+    const result = await tryChunkRecovery('analysis-vec-4', null, persistenceAdapter, 'user-1');
+
+    expect(result).toEqual({ outcome: 'completed' });
+    expect(captureException).toHaveBeenCalledTimes(1);
+    expect(captureException.mock.calls[0][0]).toBeInstanceOf(Error);
   });
 });
 

@@ -27,6 +27,7 @@ interface EmbeddingPayload {
 
 const vectorIndex = initializeVectorIndex();
 
+// skipcq: JS-0067, JS-R1005 -- Next.js App Router requires a named `POST` export at module scope; complexity is inherent to the multi-stage embed contract (same annotation pattern as analyses/persist/route.ts)
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
   let analysisId: string | undefined;
@@ -118,15 +119,18 @@ export async function POST(request: NextRequest) {
 
     // RCA (2026-09-24, vector-coverage): the embed job is now published from
     // MULTIPLE finalize paths (persist route, analysis reaper) and the
-    // upsert itself is idempotent by analysisId, but re-publishing still
-    // re-spends an OpenRouter embedding call. Skip early when the vector
-    // already exists so retried/duplicate publishes are true no-ops.
+    // upsert itself is idempotent by analysisId. The fetch-before-embed
+    // skip here is best-effort only: two concurrent deliveries can both
+    // pass this check and both embed (the idempotent upsert keeps the
+    // result correct) — this check just avoids the common duplicate case,
+    // it does not guarantee no duplicate spend.
     try {
       const existing = await vectorIndex.fetch([analysisId], {
         includeVectors: false,
         includeMetadata: false,
       });
       if (Array.isArray(existing) && existing.some(Boolean)) {
+    // skipcq: JS-0002 -- server-side Node webhook route, not browser code
         console.log('[embed-webhook] Vector already present, skipping duplicate embed', { analysisId });
         return NextResponse.json({
           success: true,
@@ -142,6 +146,12 @@ export async function POST(request: NextRequest) {
         analysisId,
         error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
       });
+    } finally {
+      // qa-intel Missing-finally-for-I/O: timing of the presence probe is
+      // logged either way — a slow/failing vector-index fetch is observable
+      // even when the embed proceeds.
+    // skipcq: JS-0002 -- server-side Node webhook route, not browser code
+      console.log('[embed-webhook] vector presence probe settled', { analysisId });
     }
 
     console.log('[embed-webhook] Processing embedding', {
@@ -167,7 +177,8 @@ export async function POST(request: NextRequest) {
       costUsd: embeddingResult.costUsd,
     });
 
-    // 6. Fetch analysis metadata for vector metadata (using service role to bypass RLS)
+    // 6. Fetch analysis metadata for vector metadata (service role: user
+    // RLS policies do not apply to service-role access)
     let analysis;
     try {
       const supabase = getSupabaseServiceClient();

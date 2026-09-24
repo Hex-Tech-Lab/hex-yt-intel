@@ -16,8 +16,7 @@
  */
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { publishEmbeddingTask } from '@/lib/qstash-client';
@@ -27,22 +26,29 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
 // documents); the reaper owns terminal settlement, the sibling owns the
 // non-terminal requeue bookkeeping.
 import { REMEDIATION_MAX_RETRIES_FALLBACK, tryRequeuePartial } from '@/lib/services/analysis-requeue';
-import type { ReapOutcome, SettlePatch } from '@/lib/services/analysis-requeue';
+import {
+  buildSettlePatch,
+  chunksAreFullyComplete,
+  type ChunkRow,
+} from '@/lib/services/analysis-reap-policy';
+import type { ReapOutcome } from '@/lib/services/analysis-requeue';
 import type { BillingStatus, ValidationReportStatus, DimensionStatus } from '@/lib/types/validation-report';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
-
 // Back-compat re-exports: the requeue-partial outcome and the shared patch
 // shape are part of this module's public surface (existing consumers import
 // them from here).
 export type { ReapOutcome, SettlePatch } from '@/lib/services/analysis-requeue';
-
-/**
- * Minimum dimensions for a partial analysis to be salvaged as `completed`.
- * Re-exports the single-source `MIN_USABLE_DIMENSIONS` so the reaper and the
- * cache read path (SupabaseAnalysisAdapter) can never disagree on what counts
- * as a usable analysis.
- */
-export const MIN_SALVAGEABLE_DIMENSIONS = MIN_USABLE_DIMENSIONS;
+// Settle-policy pure functions (decideReapOutcome / buildSettlePatch /
+// chunksAreFullyComplete / MIN_SALVAGEABLE_DIMENSIONS / ChunkRow) live in the
+// sibling analysis-reap-policy.ts module — re-exported so existing consumers
+// importing them from the reaper keep working.
+export {
+  MIN_SALVAGEABLE_DIMENSIONS,
+  decideReapOutcome,
+  buildSettlePatch,
+  chunksAreFullyComplete,
+  type ChunkRow,
+} from '@/lib/services/analysis-reap-policy';
 
 /**
  * A `processing` row is only reaped once it is older than this. The Worker's
@@ -76,32 +82,6 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
   throw lastError;
 };
 
-/**
- * Pure decision — given a stuck row's markdown, decide salvage-vs-fail and
- * report the derived dimension count. Exported for unit testing.
- *
- * Return type is deliberately the narrow terminal subset of ReapOutcome: the
- * markdown alone can never justify a requeue (requeue needs per-chunk
- * checkpoint data + the retry count, neither of which lives in the markdown).
- * The requeue-partial branch is decided by analysis-requeue.ts's
- * decideRequeuePartial, fed by analysis_chunks — keeping the two decisions'
- * data sources separate means no consumer of this function can silently fall
- * through requeue-partial to a terminal state at the type level.
- */
-export function decideReapOutcome(analysisMarkdown: string | null | undefined): {
-  outcome: Exclude<ReapOutcome, 'requeue-partial'>;
-  dimensionCount: number;
-} {
-  // Count across BOTH persisted formats (```json-fenced payload and stitched
-  // "### DIMENSION" markdown) — the markdown-only parser returned 0 for JSON
-  // rows, which failed salvageable analyses.
-  const dimensionCount = countUcisDimensions(analysisMarkdown);
-  return {
-    outcome: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed',
-    dimensionCount,
-  };
-}
-
 export interface SweepResult {
   scanned: number;
   completed: number;
@@ -120,76 +100,6 @@ interface StuckRow {
   validation_report: Record<string, unknown> | null;
   created_at?: string;
   updated_at?: string | null;
-}
-
-/**
- * Build the terminal-state row patch for a stuck analysis (pure — no I/O).
- * Salvages a full analysis as complete, a usable partial as partial, and
- * anything below the threshold as failed; preserves the prior report fields.
- * Exported for unit testing.
- *
- * Maps ReapOutcome to BillingStatus:
- * - 'completed' (enough dimensions salvaged) → 'completed'
- * - 'failed' (below minimum) → 'failed' (no charge)
- *
- * RCA (2026-07-23): this used to map to 'chargeable', which the DB's CHECK
- * constraint (processing|completed|failed) has always rejected. See
- * BillingStatus type for the full RCA -- this is the same bug the chunk-
- * recovery path below was built to route around, just on the reaper's
- * older markdown-only path.
- */
-export function buildSettlePatch(
-  analysisMarkdown: string | null | undefined,
-  existingReport: unknown,
-  nowIso: string = new Date().toISOString(),
-): { outcome: ReapOutcome; patch: SettlePatch } {
-  const { outcome, dimensionCount } = decideReapOutcome(analysisMarkdown);
-  const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
-  const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
-
-  // ONLY chargeable at 100% (matches buildDimensionStatus/decideChunkSalvagePolicy).
-  // `outcome` alone used to gate this at MIN_SALVAGEABLE_DIMENSIONS (8/11).
-  const billingStatus = isComplete ? 'completed' : 'failed';
-
-  // jsonb can decode to an array/scalar too; only spread a plain object so the
-  // report shape stays consistent.
-  const baseReport =
-    existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
-      ? (existingReport as Record<string, unknown>)
-      : {};
-  return {
-    outcome,
-    patch: {
-      billing_status: billingStatus,
-      validation_passed: isComplete,
-      validation_report: { ...baseReport, status: reportStatus, reaped: true, reaped_at: nowIso, reaped_dimensions: dimensionCount },
-      updated_at: nowIso,
-    },
-  };
-}
-
-export interface ChunkRow {
-  chunk_index: number;
-  payload: Record<string, unknown> | null;
-  status: string;
-}
-
-/**
- * Checks whether every expected bundle-stream chunk (1..TOTAL_STREAMS) is
- * present, `status === 'completed'`, and carries a `dimensions` array --
- * mirroring persist/route.ts's own "CONTRACT VALIDATION" check, so the
- * reaper never treats a genuinely partial/interrupted set as recoverable.
- * Exported for unit testing.
- */
-export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
-  if (chunkRows.length !== TOTAL_STREAMS) return false;
-  const byIndex = new Map(chunkRows.map(c => [c.chunk_index, c]));
-  for (let i = 1; i <= TOTAL_STREAMS; i++) {
-    const c = byIndex.get(i);
-    if (!c || c.status !== 'completed') return false;
-    if (!c.payload || !Array.isArray((c.payload as { dimensions?: unknown }).dimensions)) return false;
-  }
-  return true;
 }
 
 /**
@@ -252,6 +162,7 @@ function decideChunkSalvagePolicy(
  * the markdown-based decision either way, so this can only ADD a recovery
  * option, never take one away.
  */
+// skipcq: JS-R1005 -- cyclomatic complexity inherent to the 3-branch salvage contract (full-set/partial/race), pre-existing shape
 export async function tryChunkRecovery(
   analysisId: string,
   existingReport: unknown,

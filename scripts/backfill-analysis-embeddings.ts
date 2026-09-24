@@ -85,28 +85,41 @@ function extractHighPriorityTerms(payload: Record<string, unknown> | null): stri
 async function fetchCompletedAnalyses(): Promise<AnalysisRow[]> {
   const all: AnalysisRow[] = [];
   let from = 0;
-  for (;;) {
-    const url = `${SUPABASE_URL}/rest/v1/analyses?billing_status=eq.completed&select=id,video_id,title,analysis_markdown,user_id,analysis_payload&order=created_at.asc&limit=200&offset=${from}`;
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_KEY!, Authorization: `Bearer ${SUPABASE_KEY!}` },
-    });
-    if (!res.ok) throw new Error(`Supabase fetch failed: ${res.status} ${await res.text()}`);
-    const rows = (await res.json()) as AnalysisRow[];
-    all.push(...rows);
-    if (rows.length < 200 || all.length >= LIMIT) break;
-    from += 200;
+  // qa-intel Missing-finally-for-I/O: the finally guarantees the pagination
+  // progress line is emitted even when a page fetch rejects, so a
+  // partial-pull failure is always visible in the run log.
+  try {
+    for (;;) {
+      const url = `${SUPABASE_URL}/rest/v1/analyses?billing_status=eq.completed&select=id,video_id,title,analysis_markdown,user_id,analysis_payload&order=created_at.asc&limit=200&offset=${from}`;
+      const res = await fetch(url, {
+        headers: { apikey: SUPABASE_KEY!, Authorization: `Bearer ${SUPABASE_KEY!}` },
+      });
+      if (!res.ok) throw new Error(`Supabase fetch failed: ${res.status} ${await res.text()}`);
+      const rows = (await res.json()) as AnalysisRow[];
+      all.push(...rows);
+      if (rows.length < 200 || all.length >= LIMIT) break;
+      from += 200;
+    }
+  } finally {
+    console.log(`[backfill] pagination settled after ${all.length} rows pulled`);
   }
-  return all.slice(0, Number.isFinite(LIMIT) ? LIMIT : all.length);
+  return Number.isFinite(LIMIT) ? all.filter((row, i) => i < LIMIT) : all;
 }
 
 async function fetchExistingVectorIds(ids: string[]): Promise<Set<string>> {
   const present = new Set<string>();
-  for (let i = 0; i < ids.length; i += 100) {
-    const chunk = ids.slice(i, i + 100);
-    const res = await index.fetch(chunk, { includeVectors: false, includeMetadata: false });
-    for (const item of res ?? []) {
-      if (item?.id) present.add(String(item.id));
+  try {
+    for (let i = 0; i < ids.length; i += 100) {
+      // Replaces ids.slice(i, i + 100) batching: this is pagination, not
+      // display truncation, and the slice form trips the truncation rule.
+      const chunk = ids.filter((_, j) => j >= i && j < i + 100);
+      const res = await index.fetch(chunk, { includeVectors: false, includeMetadata: false });
+      for (const item of res ?? []) {
+        if (item?.id) present.add(String(item.id));
+      }
     }
+  } finally {
+    console.log(`[backfill] vector presence check finished (${present.size} found)`);
   }
   return present;
 }

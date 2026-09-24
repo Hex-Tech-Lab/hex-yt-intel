@@ -10,7 +10,13 @@ import { Client, Receiver } from '@upstash/qstash';
 // Lazy initialization: only validate token when client is actually used
 let qstash: Client | null = null;
 
-function getQStashClient(): Client {
+/**
+ * Get (and lazily initialize) the QStash client singleton. Throws when
+ * QSTASH_TOKEN is absent so callers fail loudly rather than silently
+ * skipping webhook delivery.
+ */
+function getQStashClient(): Client { // skipcq: JS-0067 -- module-scoped singleton accessor by design
+
   if (!qstash) {
     const token = process.env.QSTASH_TOKEN;
     if (!token) {
@@ -41,6 +47,7 @@ export interface ValidationPayload {
  * Guarantees delivery via HTTP webhook retry (default: 3 attempts)
  * Non-blocking: returns immediately, processing happens asynchronously
  */
+// skipcq: JS-0067 -- module-scope declaration is this module's exported API shape
 export async function publishValidationTask(payload: ValidationPayload): Promise<string> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -56,6 +63,7 @@ export async function publishValidationTask(payload: ValidationPayload): Promise
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
+    // skipcq: JS-0002 -- server-side Node webhook client, not browser code
     console.log('[qstash] Validation task published', { videoId: payload.videoId, messageId });
     return messageId;
   } catch (error) {
@@ -84,6 +92,7 @@ export interface DigestPayload {
  * a server-side attempt regardless of what the client does; the client-side
  * trigger stays as-is and is now just a (harmless, idempotent) redundant path.
  */
+// skipcq: JS-0067 -- module-scope declaration is this module's exported API shape
 export async function publishDigestTask(payload: DigestPayload): Promise<string> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -99,6 +108,7 @@ export async function publishDigestTask(payload: DigestPayload): Promise<string>
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
+    // skipcq: JS-0002 -- server-side Node webhook client, not browser code
     console.log('[qstash] Digest task published', { analysisId: payload.analysisId, messageId });
     return messageId;
   } catch (error) {
@@ -139,6 +149,7 @@ export interface HighlightsPayload {
  * re-publish (re-persist, remediation re-run). Best-effort: a publish
  * failure must never affect the persist response.
  */
+// skipcq: JS-0067 -- module-scope declaration is this module's exported API shape
 export async function publishHighlightsTask(payload: HighlightsPayload): Promise<string> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -154,6 +165,7 @@ export async function publishHighlightsTask(payload: HighlightsPayload): Promise
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
+    // skipcq: JS-0002 -- server-side Node webhook client, not browser code
     console.log('[qstash] Highlights task published', { analysisId: payload.analysisId, messageId });
     return messageId;
   } catch (error) {
@@ -171,6 +183,7 @@ export async function publishHighlightsTask(payload: HighlightsPayload): Promise
  * Publish an embedding generation task to QStash
  * For future use: semantic search requires embeddings
  */
+// skipcq: JS-0067 -- module-scope declaration is this module's exported API shape
 export async function publishEmbeddingTask(payload: {
   analysisId: string;
   markdown: string;
@@ -190,6 +203,7 @@ export async function publishEmbeddingTask(payload: {
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
+    // skipcq: JS-0002 -- server-side Node webhook client, not browser code
     console.log('[qstash] Embedding task published', { analysisId: payload.analysisId, messageId });
     return messageId;
   } catch (error) {
@@ -201,12 +215,14 @@ export async function publishEmbeddingTask(payload: {
     // the error was swallowed into the 'unknown' return and the callers'
     // .catch() handlers could never fire (the function never rejects), so a
     // missing QSTASH_TOKEN/NEXT_PUBLIC_APP_URL dropped the embed job with
-    // zero observability. Capture it so the gap is visible in Sentry.
+    // zero observability. Capture it so the gap is visible in Sentry, then
+    // re-throw so every caller's .catch() (persist side-effect-failed flag,
+    // reaper/remediation log-and-continue) actually runs.
     Sentry.captureException(error, {
       tags: { service: 'qstash', operation: 'publish_embedding_task' },
       contexts: { analysis: { analysisId: payload.analysisId } },
     });
-    return 'unknown';
+    throw error;
   }
 }
 
@@ -216,6 +232,7 @@ export async function publishEmbeddingTask(payload: {
  * @param signature The upstash-signature header value
  * @param body The request body as string (must be read before calling verify)
  */
+// skipcq: JS-0067 -- module-scope declaration is this module's exported API shape
 export async function verifyQStashSignature(
   signature: string,
   body: string

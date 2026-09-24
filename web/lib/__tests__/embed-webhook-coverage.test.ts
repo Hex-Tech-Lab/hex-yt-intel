@@ -4,12 +4,14 @@
  * Covers the two behavior changes from the vector-coverage fix:
  * 1. Idempotent skip: the embed job is now published from FOUR finalize
  *    paths (persist route both paths, analysis reaper, aux-remediation,
- *    dimension-remediation) plus the legacy validation-chain route. A
- *    duplicate publish must NOT re-spend an OpenRouter embedding call —
- *    the webhook skips early when the vector already exists.
+ *    dimension-remediation) plus the legacy validation-chain route. The
+ *    webhook's fetch-before-embed skip is best-effort (two concurrent
+ *    deliveries can both embed — the idempotent upsert keeps the result
+ *    correct) and avoids the common duplicate-embed case.
  * 2. The production credential-missing 503 branch previously reported only
  *    console.error (zero Sentry visibility) — it now captures to Sentry.
  */
+import * as Sentry from '@sentry/nextjs';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@sentry/nextjs', () => ({
@@ -68,8 +70,6 @@ vi.mock('@/lib/monitoring/sentry-utils', () => ({
   setUserContext: vi.fn(),
 }));
 
-import * as Sentry from '@sentry/nextjs';
-
 const PAYLOAD = { analysisId: 'a-1', markdown: '# analysis markdown', userId: 'user-1' };
 
 function post(body: unknown, headers: Record<string, string> = {}): Request {
@@ -99,7 +99,7 @@ describe('embed webhook — vector-coverage fix', () => {
     vi.stubEnv('UPSTASH_VECTOR_REST_TOKEN', 'real-token');
   });
 
-  it('skips the duplicate embed when the vector already exists (no OpenRouter re-spend)', async () => {
+  it('best-effort duplicate skip: skips the embed when the vector already exists (concurrent deliveries may still both embed)', async () => {
     vectorIndexMock.fetch.mockResolvedValue([{ id: 'a-1', vector: null, metadata: {} }]);
     const POST_ = await loadRoute();
 
