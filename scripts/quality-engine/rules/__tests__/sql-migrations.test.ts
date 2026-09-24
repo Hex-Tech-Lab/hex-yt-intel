@@ -10,20 +10,24 @@
 
 import { describe, test, expect } from "vitest";
 import { Project } from "ts-morph";
-import type { SourceFile } from "ts-morph";
 import * as legacyRules from "../index";
 import { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "../sql-migrations";
 import { ConflictMarkerRule } from "../data-lessons-20260924";
+import { QualityEngine } from "../../application/QualityEngine";
+import type { Rule } from "../../domain/Rule";
 
-function createSqlSource(code: string, path = "supabase/migrations/20260924000000_test_rule_fixture.sql"): SourceFile {
+function checkSql(
+  rule: Rule,
+  code: string,
+  path = "supabase/migrations/20260924000000_test_rule_fixture.sql",
+  allFiles?: string[],
+) {
   const project = new Project({ useInMemoryFileSystem: true });
-  return project.createSourceFile(path, code);
-}
-
-function checkSql(rule: { check(ctx: { filePath: string; ast: SourceFile }): unknown[] }, code: string, path?: string) {
-  const project = new Project({ useInMemoryFileSystem: true });
-  const source = project.createSourceFile(path ?? "supabase/migrations/20260924000000_test_rule_fixture.sql", code);
-  return rule.check({ filePath: source.getFilePath(), ast: source }) as { severity: string; title: string }[];
+  const source = project.createSourceFile(path, code);
+  // Pass the repo-relative `path` (not source.getFilePath(), which ts-morph's
+  // in-memory fs prefixes with '/') — matches production, where the engine
+  // hands rules repo-relative paths.
+  return rule.check({ filePath: path, ast: source, allFiles }) as { severity: string; title: string }[];
 }
 
 // R4 positive fixture — verbatim pre-fix content of
@@ -173,6 +177,75 @@ describe("WAVE Q4: SqlSecurityDefinerCallerKeyRule (R4)", () => {
     expect(findings[0].severity).toBe("low");
   });
 
+  test("pre-wave migration that IS changed in the current scan (ctx.allFiles) is NOT downgraded (2026-09-25 review gap)", () => {
+    const findings = checkSql(
+      SqlSecurityDefinerCallerKeyRule,
+      R4_HISTORICAL_PRE_FIX,
+      "supabase/migrations/20260701000000_old_pre_wave.sql",
+      ["supabase/migrations/20260701000000_old_pre_wave.sql"]
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe("high");
+  });
+
+  test("balanced-paren signature: vector(1536) before p_key does not hide the key param", () => {
+    const findings = checkSql(
+      SqlSecurityDefinerCallerKeyRule,
+      R4_HISTORICAL_PRE_FIX.replace(
+        "  p_id uuid,\n",
+        "  p_embedding vector(1536),\n  p_id uuid,\n"
+      )
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("'p_key'");
+  });
+
+  test("fires when a SECOND key-like text param is unguarded even if the first is allowlisted", () => {
+    const twoKeyParams = R4_HISTORICAL_PRE_FIX.replace(
+      "  p_value jsonb",
+      "  p_value jsonb,\n  p_sort_col text"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, twoKeyParams);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("'p_key', 'p_sort_col'");
+  });
+
+  test("generic /allowlist/ word in a comment does NOT close the surface (structural guard required)", () => {
+    const commentAllowlist = R4_HISTORICAL_PRE_FIX.replace(
+      "  affected integer;",
+      "  affected integer;\n  -- allowlist enforcement handled elsewhere (TODO)"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, commentAllowlist);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("ACL posture matching survives parenthesized types in the signature (vector(1536))", () => {
+    const vectorSig = R4_HISTORICAL_PRE_FIX
+      .replace("  p_id uuid,\n", "  p_embedding vector(1536),\n  p_id uuid,\n")
+      .replace(
+        "revoke execute on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, public;\ngrant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;",
+        [
+          "revoke all on function public.merge_analysis_payload_key(vector(1536), uuid, text, jsonb) from anon, authenticated, public;",
+          "grant execute on function public.merge_analysis_payload_key(vector(1536), uuid, text, jsonb) to service_role;",
+        ].join("\n")
+      );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, vectorSig);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("ACL posture is matched per exact signature (arity): a grant to a different-arity overload does not expose this block", () => {
+    const overloaded = R4_HISTORICAL_PRE_FIX.replace(
+      "revoke execute on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, public;\ngrant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;",
+      [
+        "revoke all on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, authenticated, public;",
+        "grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to service_role;",
+        "grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb, int) to authenticated;",
+      ].join("\n")
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, overloaded);
+    expect(findings).toHaveLength(0);
+  });
+
   test("is registered in the real Object.values(legacyRules) production set", () => {
     expect(Object.values(legacyRules)).toContain(SqlSecurityDefinerCallerKeyRule);
   });
@@ -218,6 +291,53 @@ describe("WAVE Q4: SqlDropFunctionDefaultArgRule (R13)", () => {
       "DROP FUNCTION IF EXISTS public.ok_fn(uuid, int);"
     );
     expect(findings).toHaveLength(0);
+  });
+
+  test("fires with a trailing CASCADE (2026-09-25 review gap)", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX.replace(/\)\s*;$/, ") CASCADE;")
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("search_analyses_semantic");
+  });
+
+  test("fires with a trailing RESTRICT", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX.replace(/\)\s*;$/, ") RESTRICT;")
+    );
+    expect(findings).toHaveLength(1);
+  });
+
+  test("fires on each target of a multi-target DROP FUNCTION statement", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      `
+      DROP FUNCTION IF EXISTS public.fn_a(vector(1536), timestamptz DEFAULT NULL), public.fn_b(uuid, int);
+      `
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("fn_a");
+  });
+
+  test("balanced-paren args: vector(1536) does not break the argument scan", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("DEFAULT NULL");
+  });
+
+  test("pre-wave migration that IS changed in the current scan (ctx.allFiles) is NOT downgraded", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX,
+      "supabase/migrations/20260701000000_old_pre_wave.sql",
+      ["supabase/migrations/20260701000000_old_pre_wave.sql"]
+    );
+    expect(findings[0].severity).toBe("high");
   });
 
   test("pre-wave migrations are downgraded to informational low severity", () => {
@@ -267,5 +387,48 @@ ${END}
   test("ConflictMarkerRule opts into sql language gating so the engine routes it to migrations", () => {
     expect(ConflictMarkerRule.languages).toContain("sql");
     expect(ConflictMarkerRule.languages).toContain("ts");
+  });
+});
+
+describe("WAVE Q4 integration: SQL migrations reach SQL rules through the real QualityEngine (diff + full)", () => {
+  const TS_FILE_WITH_SQL_TEXT = "web/lib/migration-doc.ts";
+  const SQL_FILE = "supabase/migrations/20260925000000_new_rule_fixture.sql";
+
+  function makeEngine(files: Record<string, string>, mode: "diff" | "full") {
+    const project = new Project({ useInMemoryFileSystem: true });
+    for (const [p, c] of Object.entries(files)) project.createSourceFile(p, c, { overwrite: true });
+    const loader = {
+      load: async (p: string) => project.getSourceFile(p)!,
+      loadFromText: async (p: string, t: string) => project.createSourceFile(p, t, { overwrite: true }),
+      getImports: () => [] as string[],
+    };
+    const fs = {
+      exists: (p: string) => !!project.getSourceFile(p),
+      resolve: (p: string) => p,
+    };
+    const engine = new QualityEngine(
+      [SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule] as Rule[],
+      loader as any,
+      undefined,
+      fs as any,
+      { mode, defaultScope: "file", concurrency: 1 }
+    );
+    return { engine, project };
+  }
+
+  const SQL_RULE_TEXT = R13_HISTORICAL_PRE_FIX;
+
+  test.each(["diff", "full"] as const)("changed .sql file reaches the SQL rules in %s mode; TS is excluded from SQL-only rules", async (mode) => {
+    const files: Record<string, string> = {
+      [SQL_FILE]: SQL_RULE_TEXT,
+      [TS_FILE_WITH_SQL_TEXT]: `export const DOC = \`${SQL_RULE_TEXT}\`;`,
+    };
+    const { engine } = makeEngine(files, mode);
+    const findings = await engine.analyze(Object.keys(files));
+    const sqlFindings = findings.filter((f) => f.file.endsWith(".sql"));
+    const tsFindings = findings.filter((f) => f.file.endsWith(".ts"));
+    expect(sqlFindings).toHaveLength(1);
+    expect(sqlFindings[0]!.severity).toBe("high");
+    expect(tsFindings).toHaveLength(0);
   });
 });
