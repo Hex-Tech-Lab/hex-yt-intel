@@ -1,0 +1,19 @@
+docs/research/2026-09-24-payments-lessons-triage.md
+  s_4c6f0e8c2bf67b::t_0206af5879e033 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4208a1b6f5ef16f1373ee2330fa85150ca19ea6b",
+  "prompts": {},
+  "sessions": {
+    "s_4c6f0e8c2bf67b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc7de25ffeNU4HRBI1WDEtZd",
+        "model": "muse-spark-1.3-contributor"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
