@@ -13,6 +13,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { FULL_REPORT_TIERS } from '@/app/api/analyses/[id]/export/route';
 
 /**
  * Mock data: Analysis object matching the database schema.
@@ -121,9 +122,16 @@ function filterHallucinationContent(markdown: string): string {
 // ============================================================================
 
 describe('Export PDF Contract: Tier Gating', () => {
-  const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
-  const restrictedTiers = ['free'] as const;
-  const allowedTiers = ['pro', 'enterprise', 'admin'] as const;
+  const restrictedTiers = ['free', 'light'] as const;
+  const allowedTiers = ['pro', 'max', 'enterprise', 'admin'] as const;
+
+  it('light is digest-only (product decision 2026-09-24)', () => {
+    expect(FULL_REPORT_TIERS.has('light')).toBe(false);
+  });
+
+  it('max is a full-report tier', () => {
+    expect(FULL_REPORT_TIERS.has('max')).toBe(true);
+  });
 
   it('free user requesting scope=full should be denied (402 Payment Required)', () => {
     const tier = 'free';
@@ -146,14 +154,14 @@ describe('Export PDF Contract: Tier Gating', () => {
   it('enterprise user requesting scope=full should be allowed', () => {
     const tier = 'enterprise';
     // Contract: enterprise must be in FULL_REPORT_TIERS
-    expect(FULL_REPORT_TIERS).toContain(tier);
+    expect(FULL_REPORT_TIERS.has(tier)).toBe(true);
     expect(allowedTiers).toContain(tier);
   });
 
   it('admin user should bypass tier restrictions', () => {
     const tier = 'admin';
     // Contract: admin must be in FULL_REPORT_TIERS
-    expect(FULL_REPORT_TIERS).toContain(tier);
+    expect(FULL_REPORT_TIERS.has(tier)).toBe(true);
     expect(allowedTiers).toContain(tier);
   });
 
