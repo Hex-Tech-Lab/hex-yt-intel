@@ -10,7 +10,7 @@ P1 release blockers:
 3. Runtime code treats any non-`free` string as paid (`tier !== 'free'`, `as UserTier` casts on DB values). Add `normalizeUserTier()` allowlist (unknown/legacy → free) used in quota, model cascade, billing display, auth.
 4. `CheckoutSchema` now accepts Light/Max globally, but only the Paddle branch was widened → other providers (Stripe/LemonSqueezy) may mishandle. Support consistently or reject per provider.
 5. Both Paddle webhook routes retained → possible double processing. Verify registered URL, delete the other, or add event idempotency.
-6. `users.tier` stores Light/Max but `user_subscriptions.plan_tier` is clamped to `pro` by the unchanged DB CHECK → two entitlement stores disagree (step 2 / DB).
+6. `users.tier` stores Light/Max but `user_subscriptions.plan_tier` (CHECK allows `free|founder|pro` per `20260826020000_create_user_subscriptions.sql`) cannot hold them → two entitlement stores disagree (step 2 / DB).
 7. DeepSource failing (complexity, missing docs, global functions) → extract small mapping helpers, keep fail-closed.
 8. DECISION: `export/route.ts` `FULL_REPORT_TIERS` now includes Light (unapproved). Remove Light until approved.
 

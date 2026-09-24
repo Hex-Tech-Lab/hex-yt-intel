@@ -42,8 +42,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
-Flash low) does not reliably execute prose *principles* — it executes
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
 often satisfy the injection/entry-site case and stop, treating the
@@ -84,10 +83,10 @@ Before writing sections 1–2 below, decide:
 **Product truth** (the private council reports are NOT available inside worktrees, so the relevant facts are inlined here): the LLM Council Wave 1 (2026-08-17) fixed the customer-facing structure as **Free / Light / Pro / Max**. On 2026-08-18 the user corrected the framing: tiers differ by **feature exposure and volume, never by which model computes them**. The founder pricing spec (2026-08-14, which predates that structure and still describes the old `free|pro|enterprise` code) says **founder pricing is a *price*, not a tier** — same `pro` feature set, discounted price. ADR 027 proposes a `pricing.tiers` Settings Registry key as the eventual single source of truth; it is **not built** (`web/lib/config/pricing-registry.ts` does not exist) and is **out of scope for this step**.
 
 **Known pointers (start here, do not stop here):**
-- `updateUserTier` is typed `tier: 'pro' | 'free'` in `web/lib/ports/BillingPersistencePort.ts:14`, `web/lib/adapters/SupabasePersistenceAdapter.ts:387`, and `web/lib/adapters/SupabaseBillingAdapter.ts:16`.
+- `updateUserTier` is typed `tier: 'pro' | 'free'` in `web/lib/ports/BillingPersistencePort.ts:12`, `web/lib/adapters/SupabasePersistenceAdapter.ts:387`, and `web/lib/adapters/SupabaseBillingAdapter.ts:14`.
 - The legacy `web/app/api/billing/webhook/route.ts` writes `'pro'` on *every* `subscription.created/updated` (line 39) and `'free'` on cancel (line 47); it is allow-listed in `web/middleware.ts:141`.
 - A newer path exists from the 2026-08-26 Paddle work (commits `85eb4eea`, `2b5d497d`): `web/app/api/webhooks/paddle/route.ts`, `web/lib/usecases/ProcessPaddleWebhookUseCase.ts`, `web/lib/usecases/GetUserEntitlementsUseCase.ts`, `web/lib/adapters/PaddleBillingAdapter.ts`. No price→tier mapping was found in `ProcessPaddleWebhookUseCase.ts` by grep.
-- `UserTier` is imported by 15 files: `web/app/api/usage/summary/route.ts`, `web/components/billing/checkout-button.tsx`, `web/lib/adapters/{PaddleBillingAdapter,PostgresBillingAdapter,RedisTrafficAdapter,SettingsModelAdapter}.ts`, `web/lib/billing-factory.ts`, `web/lib/ports/{AuthPort,BillingPort,BillingQuotaPort,ModelResolutionPort,TrafficGuardPort}.ts`, `web/lib/usecases/{CreateAnalysisUseCase,GetUserEntitlementsUseCase}.ts`.
+- `UserTier` is imported by 10 files (generated via `rg -F "import type { UserTier }" web/`, 2026-09-24): `web/app/api/usage/summary/route.ts`, `web/lib/adapters/{PostgresBillingAdapter,RedisTrafficAdapter,SettingsModelAdapter}.ts`, `web/lib/ports/{AuthPort,BillingQuotaPort,ModelResolutionPort,TrafficGuardPort}.ts`, `web/lib/usecases/{CreateAnalysisUseCase,ProcessChatMessageUseCase}.ts`. Note `ProcessChatMessageUseCase.ts` declares `CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number>` (line 24) — a widening that drops a variant breaks this Record.
 - Price IDs and their provider mapping already live in `web/lib/config/pricing.ts` (`founder_tier_a`/`founder_tier_b` are sandbox placeholders).
 
 **What is NOT yet known (you determine these and report them):** (a) which webhook route Paddle actually calls / whether the legacy one is dead code; (b) how many places branch on tier literal strings and would mishandle `light`/`max`; (c) READ-ONLY: whether the `users.tier` column has a CHECK constraint, and how the SQL quota functions (`supabase/migrations/20260521210000_hardening_wave_4_fixes.sql`, `20260607231000_c1_quota_auth_bypass.sql`, `20260612120000_atomic_compare_and_reserve.sql`) treat tier values other than `free`/`pro`. **Do not write any migration in this task.**
@@ -165,7 +164,7 @@ Before writing sections 1–2 below, decide:
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.

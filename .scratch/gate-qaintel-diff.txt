@@ -1,0 +1,1 @@
+✅ qa-intel: No changed TS/TSX files detected to scan (mode: diff).

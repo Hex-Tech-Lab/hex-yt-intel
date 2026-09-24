@@ -1,0 +1,41 @@
+$ eslint . --ext .ts,.tsx --no-cache
+Pages directory cannot be found at . If using a custom path, please configure with the `no-html-link-for-pages` rule in your eslint config file.
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/app/auth/signin/form.tsx
+  76:6  warning  React Hook useCallback has a missing dependency: 'router'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/components/dashboard/HighlightsScrubber.tsx
+  250:6  warning  React Hook useEffect has a missing dependency: 'data'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/components/templates/console/WordCloud.tsx
+  491:6  warning  React Hook useCallback has an unnecessary dependency: 'wordsLayout'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  624:6  warning  React Hook useEffect has a missing dependency: 'wordsLayout'. Either include it or remove the dependency array         react-hooks/exhaustive-deps
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/components/templates/console/__tests__/video-player-lifecycle.test.tsx
+   2:18   warning  'screen' is defined but never used. Allowed unused vars must match /^_/u                                  @typescript-eslint/no-unused-vars
+  21:9    warning  'mockClearSeek' is assigned a value but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  21:24   warning  'mockSetPlaying' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  21:40   warning  'mockSetCurrentPlaybackSeconds' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  21:92   warning  'mockPlay' is assigned a value but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+  21:102  warning  'mockPause' is assigned a value but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  21:113  warning  'mockSeekTo' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  18:29  warning  'mapGraphPayload' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  18:46  warning  'classifyFailure' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/lib/__tests__/paddle-e2e-billing.integration.test.ts
+  19:47  warning  'cols' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/lib/__tests__/persist-chunk-monotonic.test.ts
+  55:51  warning  'reject' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/lib/hooks/useHighlightsStatus.ts
+  123:6  warning  React Hook useEffect has a missing dependency: 'result.hasHighlights'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/kellyb_dev/projects/hex-yt-intel/.claude/worktrees/pr324/web/lib/prompts/highlights-extraction.ts
+  136:9  warning  'clampedEnd' is never reassigned. Use 'const' instead  prefer-const
+
+✖ 17 problems (0 errors, 17 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

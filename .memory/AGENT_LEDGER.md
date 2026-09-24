@@ -1415,3 +1415,4 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
 [DONE] CC 2026-09-24 13:16 EEST — OC standard reasoning_effort set to low (was minimal for ~10 min); user approved keeping the proven setting.
 [DONE] CC 2026-09-24 13:19 EEST — Wrote THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md + docs/reviews/2026-09-24-pr325-external-review.md. Session handover; next = roster loop (THOS §7).
 [DONE] CC 2026-09-24 13:20 EEST — Housekeeping: saved external reviews for PRs #320/#321/#322/#324/#325 to docs/reviews/; logged 11 qa-intel false-negative rule candidates (R1-R11) + SQL-not-scanned gap in docs/qa-intel/RULESET_LESSONS_LEDGER.md. Rule implementation queued for OC.
+[IN_PROGRESS] OC (opencode, GLM-5.3-flash, low) 2026-09-24 — PR #324 review round: harvest findings, verify, fix, merge main, run gates, push. Worktree .claude/worktrees/pr324, branch chore/restore-claude-files-and-crg-mcp.

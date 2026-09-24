@@ -40,8 +40,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
-Flash low) does not reliably execute prose *principles* — it executes
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
 often satisfy the injection/entry-site case and stop, treating the
@@ -86,7 +85,7 @@ Produce ONE report: `docs/research/2026-09-24-analysis-pipeline-e2e-map.md`. Rea
 3. **Duplication inventory**: every place the same data is parsed/validated/transformed more than once (worker vs browser vs Vercel) — what, where, and WHY it was introduced (git log/blame + ADRs).
 4. **Failure/state matrix** — for each: client tab closed, navigation, network drop, browser crash, worker CPU kill, worker persist failure, Vercel persist failure, retry, duplicate chunk: who owns the source of truth, what gets persisted, what the user sees, what recovers it. Identify what breaks if display parsing becomes browser-only and persistence must stay client-independent.
 5. **Contract inventory**: every boundary payload (client→Vercel, Vercel→worker token, worker SSE events→client, worker→/persist S2S, persist→DB) — is there a schema (Zod/TS), is it enforced at runtime, where are gaps.
-6. **Hex/DDD-lite violations** on this path (business logic in routes, adapters doing domain work, missing ports, god objects e.g. persist/route.ts 1158 LOC).
+6. **Hex/DDD-lite violations** on this path (business logic in routes, adapters doing domain work, missing ports, god objects e.g. persist/route.ts 1507 LOC (measured 2026-09-24; remeasure before citing)).
 7. **Tangents**: every other defect you notice on the path, each with file:line and severity — do NOT fix.
 8. **Proposal**: 2-3 target architectures for the pass-through worker + where parsing/persistence moves, each with a risk register (risk, likelihood, impact, mitigation) — mark NEEDS USER DECISION.
 Commit the report on branch `docs/research-e2e-pipeline-map` in your worktree. Do not push. Do not touch other worktrees or `git stash`.
@@ -147,7 +146,7 @@ Branch: `docs/research-e2e-pipeline-map`.
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.

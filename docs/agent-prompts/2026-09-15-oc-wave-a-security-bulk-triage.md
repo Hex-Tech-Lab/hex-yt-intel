@@ -1,6 +1,6 @@
 > **⚠️ NOT DISPATCHED — reconcile before use (PR #324 review, 2026-09-24).** The cluster counts don't add up (Cluster 1 lists 14 sites but says ~13; Cluster 2 lists 15 but says ~13; the title's "~40 remaining" is ~49 by the lists), and §2 names two different branches (`fix/wave-a-security-backlog`, already used and merged by #317, and `fix/wave-a-security-triage`). Before dispatch: recount against a fresh Codacy export, use one fresh branch, and require the report to list every finding exactly once as fixed / suppressed-with-evidence / unresolved.
 
-# Agent Dispatch Prompt — Wave A-security: triage + fix/suppress remaining ~40 Codacy Critical findings
+# Agent Dispatch Prompt — Wave A-security: triage + fix/suppress remaining ~49 Codacy Critical findings
 
 **Target Agent**: OC (opencode, GLM 5.3 Flash, low effort)
 **Effort Level**: low-medium (many findings, but each individually narrow; real risk is missing a genuine positive inside the noise, not complexity)
@@ -60,25 +60,21 @@ understanding the actual data-flow trust boundary in each case:
 **Your job**: verify CC's 5 read above are actually correct (don't just
 trust it — re-read each file yourself, this instruction exists specifically
 because "report says verified" is not sufficient at this project), THEN
-triage and act on the remaining ~40 findings using the SAME methodology:
+triage and act on the remaining ~49 findings using the SAME methodology:
 check the actual data-flow trust boundary at each site, don't blanket-trust
 or blanket-dismiss Codacy's label.
 
 ## 2. Contract & Implementation Directives
 
 Work in this worktree (already checked out on `main`, clean):
-`.claude/worktrees/oc-wave-a-security-backlog`, branch
-`fix/wave-a-security-backlog`. This branch already has PR #317's Next.js
-bump commit on it (merged separately) — your work is a SEPARATE PR on this
-same branch name continuing forward, or ask CC if a fresh branch is cleaner
-(default: continue on this branch, open PR #317... no wait, #317 is
-already open for the Next.js fix alone — CREATE A NEW BRANCH
-`fix/wave-a-security-triage` off current `main` for this work instead, to
-keep the Next.js bump PR reviewable on its own).
+`.claude/worktrees/oc-wave-a-security-backlog`. Create a NEW branch
+`fix/wave-a-security-triage` off current `main` for this work — PR #317
+(Next.js bump) is a separate, already-open PR on its own branch; do NOT
+touch it.
 
 ### The remaining findings, grouped by real pattern-cluster (not Codacy's raw labels):
 
-**Cluster 1 — Internal-API relative-path fetches flagged as "SSRF"** (~13 sites):
+**Cluster 1 — Internal-API relative-path fetches flagged as "SSRF"** (14 sites):
 `useHighlightsStatus.ts:67`, `useChatStore.ts:76`, `useChatStore.ts:223`,
 `useChatStore.ts:281`, `UsersAdminClient.tsx:123`, `useAuxElementStatus.ts:88`,
 `useKnowledgeGraph.ts:90`, `useRelations.ts:51`, `useStreamReattach.ts:48`,
@@ -112,7 +108,7 @@ exclude for this specific rule+pattern is appropriate — do NOT disable the
 rule repo-wide, only exclude the specific verified-safe pattern if the tool
 allows path/pattern-scoped excludes.
 
-**Cluster 2 — File-system path construction flagged as "path traversal"** (~13 sites):
+**Cluster 2 — File-system path construction flagged as "path traversal"** (15 sites):
 `refund-policy/page.tsx:15`, `terms-and-conditions/page.tsx:15`,
 `privacy-policy/page.tsx:15`, `legal/sub-processors/page.tsx:15` (4 legal
 pages, same pattern), `enforce-bundle.mjs` (5 sites: lines 9,12,14,15,28),
@@ -232,7 +228,7 @@ just assume.
 > RCA → Contract → Fix → E2E proof → Tangents found → Deviations flagged → Skills Run + Findings → Gates → Files changed.
 
 Additionally: produce a summary table (finding → verified-safe/real-bug →
-action taken) so CC can spot-check a sample rather than re-verify all ~40
+action taken) so CC can spot-check a sample rather than re-verify all ~49
 from scratch. Flag explicitly if you found the review-duplication issue in
 Cluster 3 (worker-llm.ts vs WorkerIngestionAdapter.ts User-Agent rotation)
 and whether you consolidated it or left it as a separate tangent for later.

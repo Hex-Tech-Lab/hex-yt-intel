@@ -1,4 +1,4 @@
-# PR #321 (observability) — external review, 2026-09-24 (head cb5d1aa). Status: addressed in round 2 (1c2a4615, ada3b0cb).
+# PR #321 (observability) — external review, 2026-09-24 (head cb5d1aa). Status: P1/P2s addressed in round 2 (1c2a4615, ada3b0cb); the P0 tool failures (CodeFactor, DeepSource web) were only triaged, NOT fixed — still open (see THOS 2026-09-24 §3 'triage DeepSource/CodeFactor on #320/#321/#322'). Netlify = free-plan concurrent-build collision, infra not code.
 - P0 CodeFactor, DeepSource web, Netlify preview failing (Netlify = free-plan concurrent-build collision, not code).
 - P1 Observability query filtered only `$metadata.error` exists → outcome-only events (`exceededCpu`) dropped.
 - P1 second fetch had no timeout → a hung API holds the admin request open despite "fail-soft".

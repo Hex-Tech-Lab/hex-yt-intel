@@ -3,7 +3,7 @@
 # Agent Dispatch Prompt — Wave A: mine Codacy pattern-frequency list into new/improved qa-intel rules
 
 **Target Agent**: OC (opencode, GLM 5.3 Flash, low effort)
-**Effort Level**: medium (investigation + rule design + implementation + negative-control tests across several clusters)
+**Effort Level**: NOT DISPATCHED — see banner above. Original single low-effort dispatch (investigation + rule design + implementation + negative-control tests across several clusters) was rejected; split into investigate / implement-only-approved-clusters / validate-and-report prompts and route implementation to a non-Flash model.
 
 ---
 

@@ -40,8 +40,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")
-Flash low) does not reliably execute prose *principles* — it executes
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
 often satisfy the injection/entry-site case and stop, treating the
@@ -133,7 +132,7 @@ Before writing sections 1–2 below, decide:
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.

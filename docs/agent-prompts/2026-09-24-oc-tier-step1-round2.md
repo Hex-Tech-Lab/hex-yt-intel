@@ -40,8 +40,7 @@
 
 ## Model-tuning rule — [ALWAYS APPLY, not a section to copy-paste]
 
-**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on DeepSeek
-Flash low) does not reliably execute prose *principles* — it executes
+**A "flash"/low-effort-tier model (AGY on Gemini Flash low, OC on GLM-5.3-flash (CoreWeave, reasoning low — see CLAUDE.md "OC model standard")) does not reliably execute prose *principles* — it executes
 literal, numbered, sequential *steps*.** Stating "do contract-def, E2E, and
 tangent-hunt" once as a paragraph is not enough at this tier; the model will
 often satisfy the injection/entry-site case and stop, treating the
@@ -78,7 +77,7 @@ P2. The dispatch prompt's `UserTier` importer list was hand-written and partly w
 P2. Interim Light/Max numbers you added in `web/lib/constants/rate-limits.ts` and `CHAT_TURN_LIMIT_FALLBACK` are hardcoded tunables — leave the values (they are an explicit interim, NEEDS USER DECISION) but make sure each is listed in the report's decision section, and that `chat.turnLimit.light/max` registry keys are documented as needing seed rows in STEP 2 (DB) — do not write migrations in this task.
 Also update your `[IN_PROGRESS]` ledger line to `[DONE]` with real commits.
 
-**Standing constraints**: FREE plans everywhere. Hex-Lite + DDD-Lite, contract-first, DI, no hardcoded tunables (Settings Registry). Work only in this worktree on the existing branch; commit locally; do NOT push (CC pushes, one PR at a time). NEVER use `git stash` — negative controls via `git show HEAD:<file> > <file>` then restore. Get check details via `gh pr checks <n>` / `gh api .../check-runs`; never guess findings. Migrations: follow ADR 018 (after apply_migration, rename local file to the recorded version); do NOT apply any migration to production — write it, CC applies after review.
+**Standing constraints**: FREE plans everywhere. Hex-Lite + DDD-Lite, contract-first, DI, no hardcoded tunables (Settings Registry). Work only in this worktree on the existing branch; commit locally; do NOT push (CC pushes, one PR at a time). NEVER use `git stash` — for negative controls copy the working-tree file aside first, edit against the copy, then restore from the copy (never redirect `git show HEAD:` output over the live file). Get check details via `gh pr checks <n>` / `gh api .../check-runs`; never guess findings. Migrations: follow ADR 018 (after apply_migration, rename local file to the recorded version); do NOT apply any migration to production — write it, CC applies after review.
 
 ---
 
@@ -140,7 +139,7 @@ Work the findings in priority order. Gates: web tsc, affected vitest + full web 
   - `simplify` — reuse/simplification/efficiency/altitude pass, applies fixes.
   - `review-delta` — token-efficient delta review with blast-radius detection.
   - `review-duplication` — scan for reinvented utilities / duplicated logic.
-  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — strict Zod `safeParse`, retain typed `.data`, flag raw pass-throughs.
+  - `contract-auditor`: `pnpm exec tsx web/scripts/contract-auditor.ts` — flags raw boundary pass-throughs and unvalidated payloads (grep/AST based — its name notwithstanding, it contains no Zod `safeParse` call; see the script).
 
 - **IF `web/components/**` | `web/hooks/**` | `web/app/**` (FE / UI)**:
   - `react-best-practices` — hook deps, stale closures, hydration, layout stability, bundle size.

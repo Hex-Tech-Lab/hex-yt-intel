@@ -51,7 +51,7 @@ kind of task*, based on real comparative results this session:
 |---|---|---|
 | UI/frontend, first-pass or grunt-level work | AGY on Gemini Flash (3.7/3.8), no/low effort | Directly observed to excel here — fast, cheap, sufficiently accurate for first-level UI engagement. |
 | Multi-hop or long-horizon reasoning (spans many files/steps, needs to hold state across a long chain) | A non-Flash-tier model — AGY Pro, Claude, or OC on a stronger tier (not its cheap default) | Flash-tier models underperform on multi-hop/long-horizon work regardless of provider — this is a tier property, not an AGY-specific weakness. |
-| Well-scoped, narrow investigation+fix (bug report, PR comment, tech-debt item) | OC on its cheap default (DeepSeek/GLM low-effort tier) | Narrow scope doesn't need a premium model; see the OC row above for prompt-handholding rules. |
+| Well-scoped, narrow investigation+fix (bug report, PR comment, tech-debt item) | OC on its default (GLM-5.3-flash via CoreWeave, low effort — see "OC model standard" above) | Narrow scope doesn't need a premium model; see the OC row above for prompt-handholding rules. |
 | Orchestration, cross-agent verification, merge sign-off | CC (this session) | Not a tier question — this is CC's standing role regardless of model churn. |
 
 **This table decays.** Model quality, pricing, and availability change
