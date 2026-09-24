@@ -164,6 +164,8 @@ export async function middleware(request: NextRequest) {
     // SPIKE (ADR 032 wave 2a S2, spike branch only, never merges): gated on
     // x-spike-secret === LOGS_SNAPSHOT_HMAC_SECRET inside the route itself.
     '/api/spikes/youtube-fetch',
+    // SPIKE (ADR 032 wave 2a S4, spike branch only, never merges): same gate.
+    '/api/spikes/chunk-stream',
     // TestSprite auth-bypass: legitimate caller has NO session by definition
     // (that's the entire point of the route -- it mints one). Real gap found
     // 2026-08-20: this route was launch-blocked in production despite being
