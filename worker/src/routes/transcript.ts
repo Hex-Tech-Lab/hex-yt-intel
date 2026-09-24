@@ -4,6 +4,8 @@ import { TranscriptExtractor } from "../services/TranscriptExtractor";
 type TranscriptEnv = {
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
+  APIFY_TOKEN?: string;
+  TRANSCRIPT_PROVIDER_ORDER?: string;
 };
 
 const transcript = new Hono<{ Bindings: TranscriptEnv }>();
@@ -17,7 +19,7 @@ transcript.post("/fetch-transcript", async (c) => {
   }
 
   try {
-    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
+    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY, c.env.TRANSCRIPT_PROVIDER_ORDER, c.env.APIFY_TOKEN);
     const result = await extractor.fetch(videoId);
 
     return c.json(

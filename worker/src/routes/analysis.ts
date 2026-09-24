@@ -45,6 +45,8 @@ export type AnalysisEnv = {
   DEV_HMAC_SECRET?: string;
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
+  APIFY_TOKEN?: string;
+  TRANSCRIPT_PROVIDER_ORDER?: string;
 };
 
 if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
@@ -588,7 +590,7 @@ async function fetchSampledCommentsCached(
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPT_PROVIDER_ORDER">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
@@ -647,7 +649,7 @@ async function fetchTranscriptIfMissing(
     }
 
     try {
-      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
+      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN);
       const result = await extractor.fetch(videoId);
       // Gate on the explicit flag, not a substring match against the
       // placeholder text -- a new placeholder string was added for the
@@ -693,7 +695,7 @@ function buildStreamResponse(
   httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPT_PROVIDER_ORDER">,
   cache?: UpstashCacheAdapter,
 ): Response {
   const encoder = new TextEncoder();
@@ -889,7 +891,7 @@ function buildStreamResponse(
       const [fetchResult] = await Promise.allSettled([fetchTranscriptIfMissing(
         req.transcript,
         req.videoId,
-        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY },
+        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY, APIFY_TOKEN: env.APIFY_TOKEN, TRANSCRIPT_PROVIDER_ORDER: env.TRANSCRIPT_PROVIDER_ORDER },
         (req.metadata as { channelId?: string }).channelId,
         cache,
         (() => {

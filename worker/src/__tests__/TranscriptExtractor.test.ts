@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TranscriptExtractor } from '../services/TranscriptExtractor';
+import { YouTubeNativeTranscriptProvider } from '../services/providers/YouTubeNativeTranscriptProvider';
 
 // Mock Sentry
 vi.mock('@sentry/cloudflare', () => ({
@@ -28,9 +29,12 @@ describe('TranscriptExtractor', () => {
   it('should fallback to tertiary if primary and secondary fail', async () => {
     const extractor = new TranscriptExtractor();
 
-    // Force Primary and Decodo to fail
-    (extractor as any).fetchWithPrimary = vi.fn().mockRejectedValue(new Error('Primary fail'));
-    (extractor as any).fetchWithDecodo = vi.fn().mockRejectedValue(new Error('Decodo fail'));
+    // Force every provider in the chain to fail
+    (extractor as any).buildProviders = () => [
+      { name: 'apify', provider: { fetch: vi.fn().mockRejectedValue(new Error('Apify fail')) } },
+      { name: 'decodo', provider: { fetch: vi.fn().mockRejectedValue(new Error('Decodo fail')) } },
+      { name: 'native', provider: { fetch: vi.fn().mockRejectedValue(new Error('Native fail')) } },
+    ];
 
     let result;
     try {
@@ -55,7 +59,7 @@ describe('TranscriptExtractor', () => {
     timeoutError.name = 'TimeoutError';
     (fetchWithProxy as any).mockRejectedValue(timeoutError);
 
-    const extractor = new TranscriptExtractor();
+    const extractor = new YouTubeNativeTranscriptProvider();
 
     // Call fetchTranscriptContent which should catch the timeout and report to Sentry
     await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
@@ -81,7 +85,7 @@ describe('TranscriptExtractor', () => {
 
     (fetchWithProxy as any).mockRejectedValue(fetchError);
 
-    const extractor = new TranscriptExtractor();
+    const extractor = new YouTubeNativeTranscriptProvider();
 
     // Call fetchTranscriptContent which should catch the error and report to Sentry
     await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
@@ -111,7 +115,7 @@ describe('TranscriptExtractor', () => {
     };
     (fetchWithProxy as any).mockResolvedValue(mockResponse);
 
-    const extractor = new TranscriptExtractor();
+    const extractor = new YouTubeNativeTranscriptProvider();
 
     await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
 
