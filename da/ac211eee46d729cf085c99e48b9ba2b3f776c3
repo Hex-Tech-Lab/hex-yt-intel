@@ -1,0 +1,43 @@
+scripts/quality-engine/rules/reliability-lessons-20260924.ts
+  s_d480bfb3376306::t_f6ac895854f6aa 153-157
+  s_67edbc5eda11f5::t_fa311d72be4127 1-32,34-36,38-152,158-220,238-240,242-280,282-299
+  s_67edbc5eda11f5::t_518f7464d4ccb5 33,37
+  s_d480bfb3376306::t_73c5561673d87a 221-229
+  s_d480bfb3376306::t_da0719675d24a0 230-237
+  s_67edbc5eda11f5::t_7f8374c3e7f3da 241
+  s_67edbc5eda11f5::t_ec2a616833d0a1 281
+scripts/quality-engine/rules/index.ts
+  s_67edbc5eda11f5::t_4ac0ea51e72201 56
+scripts/quality-engine/__tests__/reliability-q2-rules.test.ts
+  s_d480bfb3376306::t_f16f0b41825566 165-176
+  s_d480bfb3376306::t_e1ca49461f7fb9 262-283
+  s_67edbc5eda11f5::t_3f8e5b726d28d5 1-164,177-261,284-337
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_d480bfb3376306::t_a8b08fb022f3a7 50
+.memory/AGENT_LEDGER.md
+  s_d480bfb3376306::t_3dd6cde0243450 1401
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "daac211eee46d729cf085c99e48b9ba2b3f776c3",
+  "prompts": {},
+  "sessions": {
+    "s_67edbc5eda11f5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b82e3eaffelR49VKwHKgnseO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_d480bfb3376306": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2fa9a0ffePExp55FI677AKp",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
