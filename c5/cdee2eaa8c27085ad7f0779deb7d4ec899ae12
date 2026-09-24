@@ -1,0 +1,57 @@
+.memory/AGENT_LEDGER.md
+  s_c6e3d19109f194::t_a4e09e4d37c987 1400
+  s_c6e3d19109f194::t_9fc2276c5441ab 1401-1402
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_c6e3d19109f194::t_fac0022988d657 215-216
+web/app/api/videos/[videoId]/chapters/route.test.ts
+  s_c6e3d19109f194::t_e25976219c7fd4 118-143
+  s_c6e3d19109f194::t_394c8bf56732aa 39,43,45,48,58
+  s_c6e3d19109f194::t_6baaaed396268c 65
+web/middleware.ts
+  s_c6e3d19109f194::t_e92a0dc10bd77c 195-203,206-246,249-256,262,278-280,297,309,315
+  s_c6e3d19109f194::t_4c33a8ff41b07a 303-306
+  s_c6e3d19109f194::t_020ee4296b0197 174-191
+  s_c6e3d19109f194::t_c56ae36f642fad 319
+  s_c6e3d19109f194::t_1882f7850de7e8 317-318
+  s_c6e3d19109f194::t_f0f92bef5ef329 320
+  s_c43348b2a2610a::t_335ffa20dc1ce2 307-308,310-314,316
+worker/src/services/chapter-persist.ts
+  s_c6e3d19109f194::t_51b615440fe323 26-28
+  s_c6e3d19109f194::t_8e051405b215ce 41-42,44
+  s_c6e3d19109f194::t_97799731ecaee4 93-107
+  s_c6e3d19109f194::t_78aa84e4368006 70-71,79-85,87-92
+  s_c6e3d19109f194::t_6f631fa7961a92 108-110
+worker/src/__tests__/chapter-persist.test.ts
+  s_c6e3d19109f194::t_d43b0112ccc22c 31-32,40,43,47
+  s_c6e3d19109f194::t_8b5c74104f11d6 61
+  s_c6e3d19109f194::t_7879d70e981474 102-112
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_c6e3d19109f194::t_44c98aa3c9c15d 73
+  s_c6e3d19109f194::t_70587bee0ba399 43
+  s_c6e3d19109f194::t_af5a0def8f21cb 171
+  s_c6e3d19109f194::t_9b8eee511372c2 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c5cdee2eaa8c27085ad7f0779deb7d4ec899ae12",
+  "prompts": {},
+  "sessions": {
+    "s_c43348b2a2610a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc7dd8effeFD93xkp17SAF6O",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_c6e3d19109f194": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c2674ddffevtXp2vdRZgfrAT",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
