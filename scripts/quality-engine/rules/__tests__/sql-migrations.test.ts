@@ -12,6 +12,7 @@ import { describe, test, expect } from "vitest";
 import { Project } from "ts-morph";
 import * as legacyRules from "../index";
 import { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "../sql-migrations";
+import { ConflictMarkerRule } from "../data-lessons-20260924";
 import { QualityEngine } from "../../application/QualityEngine";
 import type { Rule } from "../../domain/Rule";
 
@@ -351,6 +352,41 @@ describe("WAVE Q4: SqlDropFunctionDefaultArgRule (R13)", () => {
 
   test("is registered in the real Object.values(legacyRules) production set", () => {
     expect(Object.values(legacyRules)).toContain(SqlDropFunctionDefaultArgRule);
+  });
+});
+
+// Merge semantics of PR #334 (Q3 R12 × Q4 SQL-migration surface):
+// supabase/migrations/*.sql run BOTH the SQL rules (R4/R13) and R12
+// (ConflictMarkerRule, opted into languages ["ts","sql"]).
+describe("migration SQL runs the full gated rule set AND ConflictMarkerRule (PR #334)", () => {
+  // Markers built via concat so this file itself never contains literal
+  // conflict-marker lines (the pre-commit `git grep` gate would trip).
+  const START = "<" + "<".repeat(6) + " HEAD";
+  const SEP = "=".repeat(7);
+  const END = ">" + ">".repeat(6) + " origin/main";
+  const CONFLICTED_MIGRATION = `
+${START}
+drop function if exists public.fn_x(p_ts timestamptz DEFAULT NULL);
+${SEP}
+drop function if exists public.fn_x(p_ts timestamptz);
+${END}
+`;
+
+  test("R12 (ConflictMarkerRule) flags a conflicted SQL migration", () => {
+    const findings = checkSql(ConflictMarkerRule, CONFLICTED_MIGRATION);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].title).toContain("conflict markers");
+  });
+
+  test("R13 (SqlDropFunctionDefaultArgRule) still fires on the same conflicted migration", () => {
+    const findings = checkSql(SqlDropFunctionDefaultArgRule, CONFLICTED_MIGRATION);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].title).toContain("DROP FUNCTION");
+  });
+
+  test("ConflictMarkerRule opts into sql language gating so the engine routes it to migrations", () => {
+    expect(ConflictMarkerRule.languages).toContain("sql");
+    expect(ConflictMarkerRule.languages).toContain("ts");
   });
 });
 
