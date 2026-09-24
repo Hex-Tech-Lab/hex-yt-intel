@@ -1,0 +1,53 @@
+worker/src/services/TranscriptExtractor.ts
+  s_21f47568c79f30::t_84f774850a509e 2,5-12,17-20,23-26,31-32,34,37-58,66-69,71,73,80,82,85-93,103,115-123,170
+  s_21f47568c79f30::t_2cb01f63b9486a 74-78,81,94-97
+.memory/AGENT_LEDGER.md
+  s_21f47568c79f30::t_491f8946561ff0 1401
+worker/src/ports/TranscriptProviderPort.ts
+  s_21f47568c79f30::t_ebe91c62cb1619 31-37
+worker/src/routes/transcript.ts
+  s_21f47568c79f30::t_cc342172c23ca5 7-8
+  s_21f47568c79f30::t_2435f930250605 22
+worker/src/services/providers/ApifyTranscriptProvider.ts
+  s_21f47568c79f30::t_898fde9fe93fbb 1-47,55-92
+  s_21f47568c79f30::t_ef44f4eafa47e9 48-54
+worker/src/worker.ts
+  s_21f47568c79f30::t_505cf5bdc27f28 32-33
+worker/src/__tests__/TranscriptExtractor.test.ts
+  s_21f47568c79f30::t_dc78d6fe9cc779 62
+  s_21f47568c79f30::t_b1341deaf2f3ed 88
+  s_21f47568c79f30::t_f6e74383016d5d 118
+  s_21f47568c79f30::t_affbab781f1032 3
+  s_21f47568c79f30::t_614e9dd562a5e5 32-37
+worker/src/routes/analysis.ts
+  s_21f47568c79f30::t_bd189ab79eacdc 593
+  s_21f47568c79f30::t_eeb0ce666d2e23 698
+  s_21f47568c79f30::t_a13fbe5878b046 48-49
+  s_21f47568c79f30::t_53874f6190f577 652
+  s_21f47568c79f30::t_d4873063da8d10 894
+worker/src/services/providers/DecodoTranscriptProvider.ts
+  s_21f47568c79f30::t_8edf44b145ee32 1-85
+worker/src/__tests__/fixtures/apify-transcript-dQw4w9WgXcQ.json
+  s_21f47568c79f30::t_35fe0f63ace954 1-342
+worker/src/__tests__/ApifyTranscriptProvider.test.ts
+  s_21f47568c79f30::t_565b8713124d1a 48
+  s_21f47568c79f30::t_e2f5f1477eaf8b 1-47,49-104
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_21f47568c79f30::t_e9501782fd4580 1-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d9dab1087db5d842d1f2e7f323482b89f1df10f3",
+  "prompts": {},
+  "sessions": {
+    "s_21f47568c79f30": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2aef6df8ffeVb5klVJNfNmd3W",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
