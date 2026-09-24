@@ -1,0 +1,19 @@
+supabase/migrations/20260924120000_merge_analysis_payload_key_rpc.sql
+  s_494fa24a1a11a4::t_28e161f543d38f 39-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c230345cda664eee72c3f450f5dbf427007b5a8a",
+  "prompts": {},
+  "sessions": {
+    "s_494fa24a1a11a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6b63d3a-3936-4df8-97ea-941d533dea76",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
