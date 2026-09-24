@@ -1,0 +1,94 @@
+web/hooks/useSSEStream.ts
+  s_c43348b2a2610a::t_6ea10ddd53850f 15-19,21-96,140,299-300,306-311,423-424,431,438,452-455,457
+docs/PRE_LAUNCH_CHECKLIST_2026-08-16.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-44,342-344
+docs/history/THOS_2026-09-24_1320_CF_FREE_PLAN_CPU_INCIDENT_PRS_320_TO_325_OC_STANDARD_JEV.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-68
+docs/agent-prompts/2026-09-24-oc-c2-pr321-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-237
+docs/history/THOS_2026-09-19_1140_ROUND2_MERGES_PR314_TO_319_OPENCODE_CONFIG_AND_WAVE_STATUS.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-78
+.gitignore
+  s_c43348b2a2610a::t_6ea10ddd53850f 57-59
+docs/agent-prompts/2026-09-19-oc-tier-vocabulary-step1-runtime.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-256
+.opencode/opencode.json
+  s_c6e3d19109f194::t_f321ce44a6fff3 11-17,20-21,23
+  s_c43348b2a2610a::t_ec099843d40319 18-19,22
+docs/agent-prompts/2026-09-24-oc-b2-pr320-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 43,83,145
+CLAUDE.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 38,41-42,54
+docs/agent-prompts/2026-09-15-oc-wave-a-qaintel-rules.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-207
+docs/agent-prompts/2026-09-24-oc-a-worker-cpu.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-235
+docs/agent-prompts/2026-09-24-oc-e2-pr322-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-238
+docs/reviews/2026-09-24-pr322-external-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-8
+web/lib/admin-logs/fetchers.ts
+  s_c43348b2a2610a::t_6ea10ddd53850f 3-4,77,421-510,517-525,527,530,533,540-638,640-660,662-664,763
+web/lib/admin-logs/__tests__/fetchCloudflareLogs.test.ts
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-272
+docs/agent-prompts/2026-09-24-oc-c-observability.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-231
+docs/agent-prompts/2026-09-24-oc-b-chapter-persist.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 43,73,75-77,147
+docs/history/ROSTER_2026-07-20.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 600-632
+docs/reviews/2026-09-24-pr320-external-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-8
+supabase/migrations/20260924143739_drop_unused_pgvector.sql
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-11
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_c43348b2a2610a::t_6ea10ddd53850f 204-240
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 35-50
+.mcp.json
+  s_c43348b2a2610a::t_6ea10ddd53850f 3-10,13-16
+AGENTS.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 137,141
+docs/reviews/2026-09-24-pr324-external-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-10
+docs/agent-prompts/2026-09-24-oc-tier-step1-round2.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-231
+docs/reviews/2026-09-24-pr321-external-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-9
+docs/agent-prompts/2026-09-24-oc-d-vector-coverage.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-233
+docs/agent-prompts/TEMPLATE.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 43,135
+docs/agent-prompts/2026-09-24-agy-e2e-analysis-pipeline-map.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-238
+docs/reviews/2026-09-24-pr325-external-review.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-23
+docs/agent-prompts/2026-09-15-oc-wave-a-security-bulk-triage.md
+  s_c43348b2a2610a::t_6ea10ddd53850f 1-238
+.claude/MEMORY.md
+  s_c43348b2a2610a::t_ea4817dd2c1204 4,52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3b2d3b144a0d15777668766e05410af3a8722810",
+  "prompts": {},
+  "sessions": {
+    "s_c43348b2a2610a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2bc7dd8effeFD93xkp17SAF6O",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_c6e3d19109f194": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2c2674ddffevtXp2vdRZgfrAT",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
