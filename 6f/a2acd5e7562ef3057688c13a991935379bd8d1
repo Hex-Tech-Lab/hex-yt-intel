@@ -1,0 +1,49 @@
+web/lib/usecases/ProcessPaddleWebhookUseCase.ts
+  s_38b4086ca29971::t_15540863822b84 79
+  s_38b4086ca29971::t_cd30a7b5b15dc9 1-2,4-14,16-21,30,35-36,40-63,70,73-78,80-87,90-98
+  s_29349810a8cd4d::t_ace393dd524594 15,37
+web/lib/config/pricing.ts
+  s_29349810a8cd4d::t_45bdf5a488f34a 8-13
+web/app/api/billing/webhook/__tests__/route.test.ts
+  s_38b4086ca29971::t_5589915dd6b587 9,14-15,55-58,78,82-84,90-113,115,119-128,177
+  s_29349810a8cd4d::t_6f4afb98f7af03 3,6-8,11-13,17-19,22-23,25,27-31,33-35,37-39,42-45,47-48,52,59-63,66-75,79-81,85-89,116,132-158,160-176,178
+  s_38b4086ca29971::t_d3be9b1e606e15 2
+  s_38b4086ca29971::t_1ce3cbea59610a 159
+  s_a9265922360c73::t_92d23aa1071c8b 16
+web/lib/adapters/__tests__/paddle-billing-adapter.test.ts
+  s_29349810a8cd4d::t_9627e3722d0181 102-104,108-110
+web/app/api/billing/webhook/route.ts
+  s_29349810a8cd4d::t_82cc670d97ae07 2-3,6,8-17,21-22,25-26,28-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6fa2acd5e7562ef3057688c13a991935379bd8d1",
+  "prompts": {},
+  "sessions": {
+    "s_29349810a8cd4d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b835739ffeqCfv11VwVYc7T8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_38b4086ca29971": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2fa8fdffeNHWRnfH0INrUAm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a9265922360c73": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2fa70effeGyruD8FLclV8D8",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
