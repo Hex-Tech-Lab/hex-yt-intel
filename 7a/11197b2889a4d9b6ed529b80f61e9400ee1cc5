@@ -1,0 +1,39 @@
+web/lib/__tests__/embed-webhook-coverage.test.ts
+  s_e303449480d019::t_c517b0eb21aa7a 17-20,25
+  s_e303449480d019::t_0a43b4b565721b 91
+  s_e303449480d019::t_0353e68f65a62f 49
+  s_e303449480d019::t_dc8f4602c37219 81
+  s_e303449480d019::t_1604595dbc0685 26
+web/lib/services/analysis-reap-policy.ts
+  s_e303449480d019::t_c0e898ba36fa72 59-63,65
+  s_e303449480d019::t_adda563fdaa652 111
+  s_e303449480d019::t_1e8b0c86330988 32
+  s_e303449480d019::t_49d3ca398700d0 66
+  s_e303449480d019::t_16b47f1aaa9a22 110,114,116-122
+web/lib/services/analysis-reaper.ts
+  s_e303449480d019::t_a174aa7048c31e 165-173,175-189
+  s_e303449480d019::t_a821c84ef51161 191
+  s_e303449480d019::t_210e9cad6cd84d 289-292,294
+  s_e303449480d019::t_4cd9517a2a70f4 190
+scripts/backfill-analysis-embeddings.ts
+  s_e303449480d019::t_2f141994ea72b1 123-127
+  s_e303449480d019::t_02af3829b1b817 48-57
+.memory/AGENT_LEDGER.md
+  s_e303449480d019::t_185e97c2d6fa89 1407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7a11197b2889a4d9b6ed529b80f61e9400ee1cc5",
+  "prompts": {},
+  "sessions": {
+    "s_e303449480d019": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2a8b2700ffe4Oez4jq8M3TibK",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
