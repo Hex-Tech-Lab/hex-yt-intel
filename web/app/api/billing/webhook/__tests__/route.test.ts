@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
-import * as crypto from 'crypto';
+import { captureException } from '@sentry/nextjs';
+import * as nodeCrypto from 'crypto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { POST as legacyPOST } from '@/app/api/billing/webhook/route';
@@ -26,7 +26,7 @@ let processSubscriptionEventMock: ReturnType<typeof vi.fn>;
 
 function sign(rawBody: string): string {
   const ts = String(Math.floor(Date.now() / 1000));
-  const h1 = crypto.createHmac('sha256', SECRET).update(`${ts}:${rawBody}`).digest('hex');
+  const h1 = nodeCrypto.createHmac('sha256', SECRET).update(`${ts}:${rawBody}`).digest('hex');
   return `ts=${ts};h1=${h1}`;
 }
 
@@ -54,9 +54,9 @@ describe('Paddle webhook unification (PR #325 round 4)', () => {
     vi.clearAllMocks();
     // Default: no done marker, lock always acquirable (fresh state).
     vi.mocked(getRedisValue).mockResolvedValue(null);
-    vi.mocked(setRedisValue).mockResolvedValue(undefined);
+    vi.mocked(setRedisValue).mockResolvedValue(undefined); // skipcq: JS-0339
     vi.mocked(acquireRedisLock).mockResolvedValue(`tok-${Math.random()}`);
-    vi.mocked(releaseRedisLock).mockResolvedValue(undefined);
+    vi.mocked(releaseRedisLock).mockResolvedValue(undefined); // skipcq: JS-0339
     vi.spyOn(PaddleBillingAdapter.prototype, 'verifySignature').mockReturnValue(true);
     processSubscriptionEventMock = vi.fn().mockResolvedValue({ success: true });
     vi.spyOn(PaddleBillingAdapter.prototype, 'processSubscriptionEvent').mockImplementation(processSubscriptionEventMock);
@@ -175,6 +175,6 @@ describe('Paddle webhook unification (PR #325 round 4)', () => {
     const res = await post(canonicalPOST, rawBody, sign(rawBody));
 
     expect(res.status).toBe(500);
-    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(captureException).toHaveBeenCalledTimes(1);
   });
 });

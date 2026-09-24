@@ -28,11 +28,14 @@ describe('SupabaseAuthAdapter.authenticate — fail-closed tier normalization', 
     vi.clearAllMocks();
   });
 
-  it('passes through a valid tier unchanged', async () => {
-    mockClient('pro');
-    const identity = await new SupabaseAuthAdapter().authenticate();
-    expect(identity?.tier).toBe('pro');
-  });
+  it.each(['free', 'light', 'pro', 'max', 'enterprise'] as const)(
+    'passes through valid tier %s unchanged',
+    async (dbTier) => {
+      mockClient(dbTier);
+      const identity = await new SupabaseAuthAdapter().authenticate();
+      expect(identity?.tier).toBe(dbTier);
+    },
+  );
 
   it.each(['founder', 'admin', 'PRO', ' pro', '', null, undefined])(
     'normalizes unexpected DB tier %s to free',

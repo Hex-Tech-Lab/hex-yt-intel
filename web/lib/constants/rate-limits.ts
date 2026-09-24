@@ -8,11 +8,11 @@ import type { UserTier } from '@/lib/types/billing';
  * adding a tier to UserTier forces a deliberate entry here instead of the
  * silent `|| 3` free fallback at the call sites.
  */
-export const RATE_LIMITS: Record<UserTier, {
+export const RATE_LIMITS: Readonly<Record<UserTier, Readonly<{
   requestsPerMinute: number;
   requestsPerHour: number;
   description: string;
-}> = {
+}>>> = {
   free: {
     requestsPerMinute: 3,
     requestsPerHour: 50,

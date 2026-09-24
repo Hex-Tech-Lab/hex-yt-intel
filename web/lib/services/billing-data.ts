@@ -2,6 +2,7 @@ import { getBillingProvider } from '@lib/billing-factory';
 import { stripe, STRIPE_PRICING } from '@lib/stripe';
 import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
 import { normalizeUserTier } from '@lib/types/billing';
+import { MONTHLY_QUOTAS } from '@lib/adapters/PostgresBillingAdapter';
 import type { UserTier } from '@lib/types/billing';
 
 /**
@@ -54,12 +55,15 @@ const usageLogCount = await persistence.getUsageLogsCountSince({ userId, since }
   }
 
   const tier = normalizeUserTier(userData.tier);
-  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
+  // No Free fallback: every UserTier now has a STRIPE_PRICING entry
+  // (CodeRabbit review, 2026-09-24) -- analysesLimit reads the shared
+  // MONTHLY_QUOTAS map so display and the quota gate can't drift.
+  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING];
 
   return {
     tier,
     analysesUsed: userData.analysesUsed || 0,
-    analysesLimit: tierConfig.analysesPerMonth,
+    analysesLimit: tierConfig.analysesPerMonth ?? MONTHLY_QUOTAS[tier],
     usageStats,
     invoices
   };

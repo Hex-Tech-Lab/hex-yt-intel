@@ -24,11 +24,18 @@ vi.mock('@/lib/services/traffic', () => ({
   getUserTier: vi.fn().mockResolvedValue('free'),
 }));
 
+// Per-tier mock (Cubic review, 2026-09-24): a flat "always light" mock let a
+// Max→Light price regression pass the suite; each tier must resolve to its
+// own price ID.
 vi.mock('@/lib/config/pricing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/config/pricing')>();
   return {
     ...actual,
-    resolvePriceId: vi.fn().mockResolvedValue('pri_light_test'),
+    resolvePriceId: vi.fn().mockImplementation((plan: string) => {
+      if (plan === 'light') return Promise.resolve('pri_light_test');
+      if (plan === 'max') return Promise.resolve('pri_max_test');
+      return Promise.resolve(null);
+    }),
   };
 });
 
@@ -89,7 +96,7 @@ describe('POST /api/billing/checkout — canonical tier vocabulary', () => {
     const res = await POST(checkoutRequest('max', 'year'));
     expect(res.status).toBe(200);
     expect(paddle.transactions.create).toHaveBeenCalledWith({
-      items: [{ priceId: 'pri_light_test', quantity: 1 }],
+      items: [{ priceId: 'pri_max_test', quantity: 1 }],
       customData: { userId: 'user_light_1', planTier: 'max' },
     });
   });

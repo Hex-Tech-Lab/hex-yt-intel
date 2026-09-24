@@ -10,7 +10,9 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 // real per-tier volume limits are a NEEDS USER DECISION (no empirical data
 // yet). Typed Record<UserTier, ...> so widening UserTier forces a
 // deliberate entry instead of a silent `|| 3` free fallback.
-const MONTHLY_QUOTAS: Record<UserTier, number | null> = {
+// Exported as the shared analysesLimit source for the billing page/service
+// (CodeRabbit review, 2026-09-24) so every display reads one quota map.
+export const MONTHLY_QUOTAS: Record<UserTier, number | null> = {
   free: 3,
   light: null,
   pro: null,

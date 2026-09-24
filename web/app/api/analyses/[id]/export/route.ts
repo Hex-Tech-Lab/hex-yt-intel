@@ -8,14 +8,7 @@ import PDFDocument from 'pdfkit';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { filterHallucinationContent } from '@/lib/utils/hallucination-filter';
-
-/**
- * Tiers permitted to export the FULL report (TOC + all 11 dimensions).
- * 'admin' is a DB-only retention tier (not in UserTier). Light is
- * digest-only (executive summary) by product decision 2026-09-24.
- */
-const FULL_REPORT_TIERS: ReadonlySet<string> = new Set(['pro', 'max', 'enterprise', 'admin']);
-export { FULL_REPORT_TIERS };
+import { FULL_REPORT_TIERS } from '@/lib/config/report-tiers';
 
 /** Sanitize filename to prevent header injection and ensure system compatibility. */
 function sanitizeFilename(name: string): string {

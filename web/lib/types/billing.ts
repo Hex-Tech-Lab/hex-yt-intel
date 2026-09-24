@@ -28,9 +28,10 @@ export function normalizeUserTier(value: unknown): UserTier {
     : 'free';
 }
 
-/** Paid means exactly light | pro | max | enterprise. */
+/** Paid means exactly light | pro | max | enterprise. Normalized compare
+ * (qa-intel R10, 2026-09-24): never infer paid from a raw !== 'free'. */
 export function isPaidTier(tier: UserTier): boolean {
-  return tier !== 'free';
+  return normalizeUserTier(tier) !== 'free';
 }
 
 export type BillingProviderType = 'paddle' | 'stripe' | 'lemonsqueezy';

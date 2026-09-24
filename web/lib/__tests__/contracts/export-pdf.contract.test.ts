@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { FULL_REPORT_TIERS } from '@/app/api/analyses/[id]/export/route';
+import { FULL_REPORT_TIERS } from '@/lib/config/report-tiers';
 
 /**
  * Mock data: Analysis object matching the database schema.

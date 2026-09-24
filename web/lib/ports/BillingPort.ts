@@ -1,7 +1,9 @@
-import type { PlanTier, WebhookPayload } from '../types/billing';
+import type { WebhookPayload } from '../types/billing';
 
-/** Plans a checkout session can be created for (never 'free'). */
-export type PaidPlanTier = Exclude<PlanTier, 'free'> | 'light' | 'max';
+/** Plans a checkout session can be created for (never 'free'; excludes
+ * 'enterprise' -- PlanTier members that PaddleBillingAdapter cannot
+ * actually check out, per Cubic review 2026-09-24). */
+export type PaidPlanTier = 'founder' | 'light' | 'pro' | 'max';
 
 export interface BillingPort {
   verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean;

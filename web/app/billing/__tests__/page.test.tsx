@@ -19,9 +19,14 @@ vi.mock('@/components/Footer', () => ({
 
 vi.mock('@/lib/stripe', () => ({
   stripe: { invoices: { list: vi.fn() } },
+  // Real STRIPE_PRICING entry shape: { tier, price, analysesPerMonth,
+  // features } (Cubic review, 2026-09-24 -- the old mock's priceCents/name/
+  // priceId shape made tierConfig.price undefined and diverged from prod).
   STRIPE_PRICING: {
-    free: { tier: 'free', name: 'Free', priceId: '', priceCents: 0, analysesPerMonth: 3 },
-    pro: { tier: 'pro', name: 'Pro', priceId: 'price_pro', priceCents: 900, analysesPerMonth: null },
+    free: { tier: 'free', price: 0, analysesPerMonth: 3, features: {} },
+    light: { tier: 'light', price: 500, analysesPerMonth: null, features: {} },
+    pro: { tier: 'pro', price: 900, analysesPerMonth: null, features: {} },
+    max: { tier: 'max', price: null, analysesPerMonth: null, features: {} },
   },
 }));
 

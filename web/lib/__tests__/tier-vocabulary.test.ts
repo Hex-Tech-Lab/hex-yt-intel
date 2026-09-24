@@ -19,18 +19,27 @@ function mockRegistry() {
   } as never);
 }
 
-// Minimal service-client mock: only `.from().upsert/.update/.eq/.select/.maybeSingle`
-// shapes the subscription path touches are stubbed.
-function makeSupabaseMock() {
+// Minimal service-client mock: `.from().upsert/.update` plus a generic
+// chainable `.select()` query builder (eq/neq/in/maybeSingle + await-able),
+// since the cancel path now also queries for other active subscriptions.
+function makeSupabaseMock(otherActiveRows: { data: unknown[]; error?: unknown } = { data: [] }) {
   const upsert = vi.fn().mockResolvedValue({ error: null });
   const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null, count: 1 }) });
-  const select = vi.fn().mockReturnValue({
-    eq: vi.fn().mockReturnValue({
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    }),
-  });
+  const select = vi.fn().mockReturnValue(makeQueryBuilder(otherActiveRows));
   const from = vi.fn((table: string) => (table === 'users' ? { update } : { upsert, select }));
   return { from, upsert, update };
+}
+
+function makeQueryBuilder(final: { data: unknown[]; error?: unknown }) {
+  const chain: Record<string, unknown> = {};
+  const build = (): Record<string, unknown> => {
+    for (const method of ['eq', 'neq', 'in']) {
+      chain[method] = vi.fn(() => build());
+    }
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    return Object.assign(Promise.resolve(final), chain);
+  };
+  return build();
 }
 
 vi.mock('@/lib/supabase', () => ({
@@ -102,6 +111,12 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
       process.env.PADDLE_PRO_PRICE_ID = 'pri_env_pro_monthly';
       expect(await resolveUserTierForPriceId('pri_env_pro_monthly')).toBe('pro');
     });
+    it('maps the PADDLE_PRO_ANNUAL_PRICE_ID and PADDLE_FOUNDER_PRICE_ID env overrides to pro (Cubic/CodeRabbit 2026-09-24: chargeable at checkout must be recognised at the webhook)', async () => {
+      process.env.PADDLE_PRO_ANNUAL_PRICE_ID = 'pri_env_pro_yearly';
+      process.env.PADDLE_FOUNDER_PRICE_ID = 'pri_env_founder';
+      expect(await resolveUserTierForPriceId('pri_env_pro_yearly')).toBe('pro');
+      expect(await resolveUserTierForPriceId('pri_env_founder')).toBe('pro');
+    });
     it('maps founder price IDs to pro (founder pricing is a price, not a tier)', async () => {
       expect(await resolveUserTierForPriceId('pri_01m0bjt2sv9qkr4jyq1kpfjgmt')).toBe('pro');
       expect(await resolveUserTierForPriceId('pri_01m0bjt33qc1njber48kx9ewtx')).toBe('pro');
@@ -109,7 +124,7 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
     it('fails closed on an unknown price ID (returns null, never pro)', async () => {
       expect(await resolveUserTierForPriceId('pri_totally_unknown')).toBeNull();
       expect(await resolveUserTierForPriceId(null)).toBeNull();
-      expect(await resolveUserTierForPriceId(undefined)).toBeNull();
+      expect(await resolveUserTierForPriceId(undefined)).toBeNull(); // skipcq: JS-0339 -- undefined is part of the tested contract
     });
   });
 
@@ -121,7 +136,7 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
       expect(mapPlanStringToUserTier('founder')).toBe('pro');
       expect(mapPlanStringToUserTier('enterprise')).toBeNull();
       expect(mapPlanStringToUserTier('garbage')).toBeNull();
-      expect(mapPlanStringToUserTier(undefined)).toBeNull();
+      expect(mapPlanStringToUserTier(undefined)).toBeNull(); // skipcq: JS-0339 -- undefined is part of the tested contract
     });
   });
 
@@ -182,6 +197,51 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
       expect(captureMessage).toHaveBeenCalled();
     });
 
+    it('does NOT grant a paid tier for a paused subscription (CodeRabbit 2026-09-24: only active/trialing are entitled)', async () => {
+      const supabase = makeSupabaseMock();
+      vi.mocked(getSupabaseServiceClient).mockReturnValue(supabase as never);
+      const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
+      const adapter = new PaddleBillingAdapter();
+      const result = await adapter.processSubscriptionEvent(
+        subscriptionPayload({ status: 'paused', priceId: 'pri_01m0azkzf40rxr0s09dacy1bqc' }) as never
+      );
+
+      expect(result.success).toBe(true);
+      expect(updateUserTier).toHaveBeenCalledWith({ userId: 'user_1', tier: 'free' });
+    });
+
+    it('does NOT downgrade users.tier on cancel while another active subscription remains (Cubic 2026-09-24 P1)', async () => {
+      const supabase = makeSupabaseMock({ data: [{ paddle_subscription_id: 'sub_other' }] });
+      vi.mocked(getSupabaseServiceClient).mockReturnValue(supabase as never);
+      const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
+      const adapter = new PaddleBillingAdapter();
+      const result = await adapter.processSubscriptionEvent(
+        subscriptionPayload({ status: 'canceled', priceId: 'pri_01m0azkzf40rxr0s09dacy1bqc' }) as never
+      );
+
+      expect(result.success).toBe(true);
+      // The canceled subscription row is still recorded...
+      expect(supabase.upsert).toHaveBeenCalled();
+      // ...but users.tier is left untouched.
+      expect(updateUserTier).not.toHaveBeenCalled();
+    });
+
+    it('resets tier to free on cancel when no other active subscription remains', async () => {
+      const supabase = makeSupabaseMock({ data: [] });
+      vi.mocked(getSupabaseServiceClient).mockReturnValue(supabase as never);
+      const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
+      const adapter = new PaddleBillingAdapter();
+      const result = await adapter.processSubscriptionEvent(
+        subscriptionPayload({ status: 'canceled', priceId: 'pri_01m0azkzf40rxr0s09dacy1bqc' }) as never
+      );
+
+      expect(result.success).toBe(true);
+      expect(updateUserTier).toHaveBeenCalledWith({ userId: 'user_1', tier: 'free' });
+    });
+
     // Negative control (2026-09-24 round 2, P1): unrecognised price + forged
     // custom_data planTier "max" must NOT grant max (fallback removed).
     it('ignores custom_data planTier "max" on an unrecognised price (no fallback)', async () => {
@@ -197,6 +257,13 @@ describe('tier vocabulary (STEP 1 runtime path)', () => {
       expect(result.success).toBe(false);
       expect(updateUserTier).not.toHaveBeenCalled();
       expect(supabase.upsert).not.toHaveBeenCalled();
+    });
+
+    it('checkout: light/once fails closed at the port boundary (never mapped to month)', async () => {
+      const adapter = new PaddleBillingAdapter();
+      await expect(adapter.createCheckoutSession('user-1', 'u@x.com', 'light', 'once')).rejects.toThrow(
+        'Paddle light does not support a one-time interval'
+      );
     });
   });
 });

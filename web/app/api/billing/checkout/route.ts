@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = user.id;
-    const userEmail = user.email!;
+    if (!user.email) {
+      // Forbidden non-null assertion removed (DeepSource JS-C1003, MAJOR):
+      // a user without an email can't create a Paddle checkout anyway.
+      return NextResponse.json({ error: 'User email is required for checkout' }, { status: 400 });
+    }
+    const userEmail = user.email;
 
     // 1. Validate request
     const body = await request.json();

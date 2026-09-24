@@ -257,9 +257,20 @@ export async function resolveProviderForRegion(regionOrCountryCode: string): Pro
 export async function resolveUserTierForPriceId(priceId: string | null | undefined): Promise<UserTier | null> {
   if (!priceId) return null;
 
-  // Pro/monthly env-var precedence mirrors resolvePriceId()'s backward-compat
-  // override -- the same env var may already point at the live pro price.
-  if (process.env.PADDLE_PRO_PRICE_ID && priceId === process.env.PADDLE_PRO_PRICE_ID) return 'pro';
+  // Every env override createCheckoutSession can charge must be recognised
+  // here, or a paid checkout resolves to null at the webhook and fails
+  // closed (Cubic/CodeRabbit finding, 2026-09-24: PADDLE_PRO_ANNUAL_PRICE_ID
+  // and PADDLE_FOUNDER_PRICE_ID were chargeable at checkout but rejected
+  // here, so yearly/founder buyers stayed on their previous tier while
+  // Paddle retried the event). Mirrors resolvePriceId()'s env precedence.
+  const envOverrides: Array<[string | undefined, UserTier]> = [
+    [process.env.PADDLE_PRO_PRICE_ID, 'pro'],
+    [process.env.PADDLE_PRO_ANNUAL_PRICE_ID, 'pro'],
+    [process.env.PADDLE_FOUNDER_PRICE_ID, 'pro'],
+  ];
+  for (const [envId, tier] of envOverrides) {
+    if (envId && priceId === envId) return tier;
+  }
 
   const registry = await resolvePriceIds();
   const tiers: PriceTier[] = ['light', 'pro', 'max', 'founder', 'founder_tier_a', 'founder_tier_b'];

@@ -130,7 +130,7 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
 
     const validSignature = generateValidSignature(rawBody, secret);
 
-    const { SupabaseBillingAdapter } = await import('../../adapters/SupabaseBillingAdapter');
+    const { SupabaseBillingAdapter } = await import('../SupabaseBillingAdapter');
     const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
 
     const result = await useCase.execute(rawBody, validSignature, secret);

@@ -16,6 +16,7 @@ describe('CheckoutSchema — canonical tier vocabulary', () => {
       ['pro', 'month'],
       ['max', 'month'],
       ['max', 'year'],
+      ['pro', 'year'], // valid subscription combination
     ] as const) {
       const result = CheckoutSchema.safeParse({ ...base, plan, interval });
       expect(result.success, `${plan}/${interval} should parse`).toBe(true);
@@ -24,6 +25,10 @@ describe('CheckoutSchema — canonical tier vocabulary', () => {
 
   it('rejects founder with a recurring interval (founder is once-only)', () => {
     expect(CheckoutSchema.safeParse({ ...base, plan: 'founder', interval: 'month' }).success).toBe(false);
+  });
+
+  it('accepts founder with the one-time interval (successful path)', () => {
+    expect(CheckoutSchema.safeParse({ ...base, plan: 'founder', interval: 'once' }).success).toBe(true);
   });
 
   it('rejects one-time intervals for subscription tiers (fail closed)', () => {

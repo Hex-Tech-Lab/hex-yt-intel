@@ -87,8 +87,13 @@ export class SettingsModelAdapter implements ModelResolutionPort {
       // Reasoning cascade distinguishes only free vs paid (the pro/enterprise
       // branches resolve the same registry key); per the 2026-08-18 product
       // correction tiers differ by feature exposure and volume, never by
-      // which model computes them, so any paid tier maps to the paid branch.
-      const cascade = await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro');
+      // which model computes them, so any KNOWN paid tier maps to the paid
+      // branch. Allowlisted: a malformed/legacy `users.tier` value must
+      // default to free, not unlock the paid cascade (Cubic review
+      // 2026-09-24).
+      const isKnownPaidTier =
+        tier === 'light' || tier === 'pro' || tier === 'max' || tier === 'enterprise';
+      const cascade = await resolveReasoningCascade(isKnownPaidTier ? 'pro' : 'free');
       return cascade.map((item) => item.model);
     }
 

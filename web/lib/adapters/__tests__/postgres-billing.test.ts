@@ -9,7 +9,13 @@ vi.mock('@/lib/supabase', () => ({
 
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   SupabaseSettingsAdapter: {
-    getRegistrySettings: vi.fn().mockResolvedValue({}),
+    // Production-shape defaults (Cubic review, 2026-09-24): the real
+    // getRegistrySettings(keys, REGISTRY_FALLBACK) always yields both keys
+    // with chargeOnCancel=true and a 900_000ms grace window.
+    getRegistrySettings: vi.fn().mockResolvedValue({
+      'billing.chargeOnCancel': true,
+      'billing.quota.processingGraceWindowMs': 900_000,
+    }),
   },
 }));
 
@@ -36,7 +42,12 @@ describe('PostgresBillingAdapter.checkGate — canonical tier vocabulary', () =>
       { id: 'a2', billingStatus: 'completed', createdAt: new Date().toISOString() },
       { id: 'a3', billingStatus: 'completed', createdAt: new Date().toISOString() },
     ]);
+    // Stub the usage-event writer (Cubic review, 2026-09-24): left real, it
+    // dereferences a bare vi.fn() service client and its TypeError was
+    // silently swallowed by checkGate's catch-and-warn.
+    const logUsageEvent = vi.spyOn(SupabasePersistenceAdapter.prototype, 'logUsageEvent').mockResolvedValue();
     const result = await adapter.checkGate({ userId: 'u1', tier: 'free', endpoint: 'analyses' });
     expect(result.allowed).toBe(false);
+    expect(logUsageEvent).toHaveBeenCalled();
   });
 });
