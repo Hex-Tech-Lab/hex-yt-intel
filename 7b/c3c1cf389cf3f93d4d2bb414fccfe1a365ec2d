@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_19ea79c5e44b8c::t_98ef5fafea4b3a 1403
+.memory/SESSION_TODO.md
+  s_19ea79c5e44b8c::t_0b5e1456aa91eb 1-36
+docs/history/THOS_2026-09-25_0100_TRANSCRIPT_INCIDENT_APIFY_ADR032_SPIKES_QA_RULES_MERGE_WAVE.md
+  s_19ea79c5e44b8c::t_054c9ce8ea9d0a 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7bc3c1cf389cf3f93d4d2bb414fccfe1a365ec2d",
+  "prompts": {},
+  "sessions": {
+    "s_19ea79c5e44b8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "46bc1605-f1d2-4288-9b3b-5d43e467032d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
