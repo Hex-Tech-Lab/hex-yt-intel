@@ -1,0 +1,52 @@
+scripts/verify-quality-engine.ts
+  s_2166d21e5baed1::t_c199aba4bac3ec 146-151
+  s_2166d21e5baed1::t_1c1b2c18acf3ae 216
+  s_2166d21e5baed1::t_4fde51e5fed8ad 103-109
+  s_2166d21e5baed1::t_a7abf47559ed05 173
+scripts/quality-engine/rules/sql-migrations.ts
+  s_2166d21e5baed1::t_1420176208e23a 38
+  s_2166d21e5baed1::t_843298f88af84d 1-37,39-146,148-187,189-215
+  s_0549b3b15527f8::t_1e24a3658e307b 147
+  s_0549b3b15527f8::t_cca27e5d08c8ef 188
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0549b3b15527f8::t_a7e9b6fd9de19b 50
+scripts/quality-engine/rules/index.ts
+  s_2166d21e5baed1::t_cd44f781928adf 56
+.memory/AGENT_LEDGER.md
+  s_0549b3b15527f8::t_266221127bbe56 1402
+  s_0549b3b15527f8::t_cf813c8e5db335 1401
+scripts/quality-engine/domain/Rule.ts
+  s_0549b3b15527f8::t_bdd93071bc3fcc 6-13
+  s_0549b3b15527f8::t_f12da8715a6241 35
+scripts/quality-engine/application/QualityEngine.ts
+  s_0549b3b15527f8::t_e94bc9db5f9738 52-59
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_2166d21e5baed1::t_62a01c66f34b6d 1-48,52-133,135-193,195-235
+  s_2166d21e5baed1::t_40394d8b4c8a53 49-51
+  s_2166d21e5baed1::t_5b5e9e27e4fdc8 194
+  s_2166d21e5baed1::t_42ef99dbf99da1 134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "305ef0d0717d577c92dfd800cdc8ae48daf9f038",
+  "prompts": {},
+  "sessions": {
+    "s_0549b3b15527f8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b2faa18ffeJB61Wtu8b2UY9M",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_2166d21e5baed1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2b82d69affebgL7xSPAjxnOjG",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
