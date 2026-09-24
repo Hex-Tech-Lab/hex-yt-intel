@@ -79,15 +79,23 @@ export async function GET(request: Request): Promise<NextResponse> {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36' },
     });
     const body = await watchRes.text();
-    const blocked = /consent\.youtube\.com|class="g-recaptcha"|LOGIN_REQUIRED|Sign in to confirm you/.test(body) || body.length < 2000;
+    const markers = ['consent.youtube.com', 'g-recaptcha', 'LOGIN_REQUIRED', 'Sign in to confirm you'];
+    const matched = markers.filter((m) => body.includes(m));
+    const blocked = matched.length > 0 || body.length < 2000;
     probe = {
-      watch: { status: watchRes.status, blocked, snippet: body.slice(0, 200).replace(/\s+/g, ' ') },
+      watch: {
+        status: watchRes.status,
+        blocked,
+        snippet: matched.length > 0 ? matched.join('|') : `len=${body.length}`,
+      },
       timedtext: null,
     };
     const ttRes = await fetch(`https://www.youtube.com/api/timedtext?v=${probeId}&lang=en`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36' },
     });
     probe.timedtext = { status: ttRes.status };
+    const ttBody = await ttRes.text();
+    if (probe.timedtext) probe.timedtext.status = ttBody.length > 0 ? 200 : -1;
   }
 
   const proxyUrl = forcedNative ? undefined : process.env.RESIDENTIAL_PROXY_URL;
