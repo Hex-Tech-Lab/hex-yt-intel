@@ -70,7 +70,7 @@ export class CommentClassifier implements CommentClassificationPort {
             Authorization: `Bearer ${this.apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": HTTP_REFERER,
-            "X-Title": "Hex YT Intel",
+            "X-Title": "vIntel - Comment Classifier",
           },
           body: JSON.stringify({
             model: entry.model,

@@ -98,7 +98,7 @@ export async function callOpenRouter(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
         'HTTP-Referer': 'https://getvintel.com',
-        'X-Title': 'hex-yt-intel / synthesis-stream',
+        'X-Title': 'vIntel - Synthesis Stream',
       },
       body: JSON.stringify({
         model: translateModelId(currentTier.model),

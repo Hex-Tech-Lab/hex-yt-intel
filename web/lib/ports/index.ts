@@ -49,6 +49,12 @@ export * from './AnalysisPersistencePort';
 export * from './GraphPersistencePort';
 
 /**
+ * Analysis payload key-merge port - Atomically merges a single top-level key
+ * into analyses.analysis_payload (ADR 031 / PR #322 atomic persistence).
+ */
+export * from './AnalysisPayloadKeyPort';
+
+/**
  * Billing persistence port - Manages subscription and billing data.
  */
 export * from './BillingPersistencePort';
