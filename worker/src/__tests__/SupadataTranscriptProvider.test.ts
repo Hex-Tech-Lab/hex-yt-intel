@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SupadataTranscriptProvider } from '../services/providers/SupadataTranscriptProvider';
-import { TranscriptExtractor } from '../services/TranscriptExtractor';
+import { TranscriptExtractor, parseSupadataMaxAiMinutes, parseVideoDurationSeconds } from '../services/TranscriptExtractor';
 import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
 
 vi.mock('@sentry/cloudflare', () => ({
@@ -173,6 +173,100 @@ describe('SupadataTranscriptProvider', () => {
     }
   });
 
+  it('AI mode fail-closed: UNKNOWN duration → native attempted, generate never called', async () => {
+    try {
+      (fetch as any).mockResolvedValueOnce({ ok: true, status: 206, json: () => Promise.resolve({ error: 'transcript-unavailable' }) } as Response);
+      await expect(new SupadataTranscriptProvider('key', 60, POLL).fetch('dQw4w9WgXcQ')).rejects.toThrow(/AI mode skipped/);
+      expect((fetch as any).mock.calls).toHaveLength(1);
+      expect((fetch as any).mock.calls[0][0]).toBe(URL_NATIVE);
+      expect((fetch as any).mock.calls.some((c: unknown[]) => String(c[0]).includes('mode=generate'))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('AI mode fail-closed: non-finite (Infinity) duration → generate never called', async () => {
+    try {
+      (fetch as any).mockResolvedValueOnce({ ok: true, status: 206, json: () => Promise.resolve({ error: 'transcript-unavailable' }) } as Response);
+      await expect(new SupadataTranscriptProvider('key', 60, POLL).fetch('dQw4w9WgXcQ', Number.POSITIVE_INFINITY)).rejects.toThrow(/AI mode skipped/);
+      expect((fetch as any).mock.calls).toHaveLength(1);
+      expect((fetch as any).mock.calls[0][0]).toBe(URL_NATIVE);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('in-body transcript-unavailable error code (defensive) also triggers the AI path', async () => {
+    try {
+      (fetch as any)
+        .mockResolvedValueOnce(okResponse({ error: 'transcript-unavailable', message: 'no transcript' }))
+        .mockResolvedValueOnce(okResponse({ ...transcriptBody('en'), lang: 'en' }));
+      const result = await new SupadataTranscriptProvider('key', 60, POLL).fetch('dQw4w9WgXcQ', 3000);
+      expect(result.transcript).toBe('Never gonna give you up Never gonna let you down');
+      expect((fetch as any).mock.calls[1][0]).toBe(URL_GENERATE);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('Infinity offsets/durations are filtered by Number.isFinite, valid segments kept', async () => {
+    try {
+      (fetch as any).mockResolvedValue(okResponse({
+        lang: 'en',
+        availableLangs: ['en'],
+        content: [
+          { text: 'bad infinite', offset: Number.POSITIVE_INFINITY, duration: 1000 },
+          { text: 'bad infinite duration', offset: 1000, duration: Number.POSITIVE_INFINITY },
+          { text: 'good one', offset: 1500, duration: 1200 },
+        ],
+      }));
+      const result = await new SupadataTranscriptProvider('key', 60, POLL).fetch('dQw4w9WgXcQ');
+      expect(result.segments).toEqual([{ text: 'good one', start: 1.5, duration: 1.2 }]);
+      expect(result.transcript).toBe('good one');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('polling cannot overrun its 60s job deadline: sleeps and request timeouts are capped to remaining time', async () => {
+    vi.useFakeTimers();
+    try {
+      let call = 0;
+      (fetch as any).mockImplementation(async (_url: string, init?: { signal?: AbortSignal }) => {
+        call += 1;
+        if (call === 1) return okResponse({ jobId: 'job-slow' });
+        // Completed poll cycles consume 10s each (simulated server latency);
+        // the 4th poll hangs until the caller's capped abort fires.
+        if (call <= 4) {
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          return okResponse({ status: 'queued' });
+        }
+        // 4th poll hangs until the caller's capped abort fires, then the
+        // (aborted-but-resolved) poll returns queued again and the loop's
+        // next deadline check ends it.
+        return new Promise<Response>(resolve => {
+          init?.signal?.addEventListener('abort', () => resolve(okResponse({ status: 'queued' })));
+        });
+      });
+      const t0 = Date.now();
+      const attempt = new SupadataTranscriptProvider('key', 60, 5000).fetch('dQw4w9WgXcQ', 3000);
+      // Attach the rejection handler BEFORE running timers so the provider's
+      // deadline rejection is never momentarily unhandled.
+      const settled = attempt.then(value => ({ resolved: value }), e => ({ error: e }));
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+      expect((outcome as { resolved?: unknown }).resolved).toBeUndefined();
+      expect((outcome as { error?: { message: string } }).error?.message).toMatch(/did not complete within the 60s polling deadline/);
+      // Without the remaining-time cap the hang-abort would fire at 30s after
+      // t≈50s → 80s total; with it, the deadline (60s) is respected.
+      expect(Date.now() - t0).toBeLessThanOrEqual(60500);
+      expect(call).toBeGreaterThanOrEqual(5);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('throws when no API key is configured', async () => {
     try {
       await expect(new SupadataTranscriptProvider(undefined, 60, POLL).fetch('dQw4w9WgXcQ')).rejects.toThrow(/not configured/);
@@ -208,6 +302,141 @@ describe('SupadataTranscriptProvider chain registration', () => {
       const result = await extractor.fetch('VALID_ID_12');
       expect(result.transcript).toBe('AI generated text');
       expect(result.confirmedNoCaptions).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+const URL_NATIVE_12 = 'https://api.supadata.ai/v1/transcript?url=https%3A%2F%2Fyoutu.be%2FVALID_ID_12&mode=native';
+
+describe('Supadata cap enforcement on the chain path (review P1, 2026-09-25)', () => {  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Route-equivalent: the extractor is what analysis.ts calls; for over-cap
+  // AND unknown durations the provider's native call happens at most once
+  // and NO mode=generate request is ever sent (chain falls through to the
+  // placeholder instead of starting a metered AI job).
+  it.each([
+    ['over-cap duration', 90 * 60],
+    ['unknown duration', undefined],
+    ['non-finite duration', Number.POSITIVE_INFINITY],
+  ])('%s → mode=generate never requested on the chain', async (_label, duration) => {
+    try {
+      const fetchMock = vi.fn()
+        .mockResolvedValue({ ok: true, status: 206, json: () => Promise.resolve({ error: 'transcript-unavailable' }) } as Response);
+      vi.stubGlobal('fetch', fetchMock);
+      const extractor = new TranscriptExtractor(undefined, undefined, 'supadata', undefined, undefined, undefined, 'sd-key', 60);
+      const result = await extractor.fetch('VALID_ID_12', duration as number | undefined);
+      const urls = fetchMock.mock.calls.map(c => String(c[0]));
+      expect(urls).toHaveLength(1);
+      expect(urls[0]).toBe(URL_NATIVE_12);
+      expect(urls.some(u => u.includes('mode=generate'))).toBe(false);
+      // Chain falls through to the placeholder — no metered AI job.
+      expect(result.transcript).toBe('[Transcript unavailable for this video - content ingestion failed across all available sources]');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('SUPADATA_MAX_AI_MINUTES=0 (explicit disable) survives parsing and reaches the provider', async () => {
+    expect(parseSupadataMaxAiMinutes('0')).toBe(0);
+    const extractor = new TranscriptExtractor(undefined, undefined, 'supadata', undefined, undefined, undefined, 'sd-key', parseSupadataMaxAiMinutes('0'));
+    const built = (extractor as any).buildProviders() as Array<{ name: string; provider: SupadataTranscriptProvider }>;
+    expect((built[0]!.provider as any).maxAiMinutes).toBe(0);
+    // And it disables AI on the chain even for an in-cap duration.
+    const fetchMock = vi.fn()
+      .mockResolvedValue({ ok: true, status: 206, json: () => Promise.resolve({ error: 'transcript-unavailable' }) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await extractor.fetch('VALID_ID_12', 3000);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(fetchMock.mock.calls.map(c => String(c[0]))).toEqual([URL_NATIVE_12]);
+  });
+
+  it('parseSupadataMaxAiMinutes contract: explicit 0 preserved, missing/invalid → default path (undefined)', () => {
+    expect(parseSupadataMaxAiMinutes('30')).toBe(30);
+    expect(parseSupadataMaxAiMinutes('0')).toBe(0);
+    expect(parseSupadataMaxAiMinutes(undefined)).toBeUndefined();
+    expect(parseSupadataMaxAiMinutes('')).toBeUndefined();
+    expect(parseSupadataMaxAiMinutes('   ')).toBeUndefined();
+    expect(parseSupadataMaxAiMinutes('abc')).toBeUndefined();
+    expect(parseSupadataMaxAiMinutes('-5')).toBeUndefined();
+    expect(parseSupadataMaxAiMinutes('Infinity')).toBeUndefined();
+  });
+
+  it('parseVideoDurationSeconds contract: finite positive numbers only', () => {
+    expect(parseVideoDurationSeconds(3000)).toBe(3000);
+    expect(parseVideoDurationSeconds('90.5')).toBe(90.5);
+    expect(parseVideoDurationSeconds(0)).toBeUndefined();
+    expect(parseVideoDurationSeconds(-5)).toBeUndefined();
+    expect(parseVideoDurationSeconds(Number.POSITIVE_INFINITY)).toBeUndefined();
+    expect(parseVideoDurationSeconds(Number.NaN)).toBeUndefined();
+    expect(parseVideoDurationSeconds(undefined)).toBeUndefined();
+    expect(parseVideoDurationSeconds(null)).toBeUndefined();
+    expect(parseVideoDurationSeconds('abc')).toBeUndefined();
+  });
+
+  it('duration flows through the chain to the provider', async () => {
+    const extractor = new TranscriptExtractor(undefined, undefined, 'supadata', undefined, undefined, undefined, 'sd-key', 60);
+    let received: number | undefined;
+    (extractor as any).buildProviders = () => [
+      { name: 'supadata', provider: { fetch: (_vid: string, durationSeconds?: number) => { received = durationSeconds; return Promise.resolve({ videoId: 'VALID_ID_12', transcript: 'ok', language: 'en' }); } } },
+    ];
+    try {
+      await extractor.fetch('VALID_ID_12', 1234);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(received).toBe(1234);
+  });
+});
+
+describe('Chain budget covers every tier worst case (review P2, 2026-09-25)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('earlier tiers using their full enforced deadlines still leave Supadata its 60s window (default 285000ms budget)', async () => {
+    vi.useFakeTimers();
+    const tierDelays: Array<[string, number]> = [['transcriptapi', 30000], ['apify', 130000], ['decodo', 30000], ['native', 35000]];
+    let supadataCalled = false;
+    const extractor = new TranscriptExtractor(undefined, undefined, undefined, undefined, undefined, undefined, 'sd-key', 60);
+    (extractor as any).buildProviders = () => [
+      ...tierDelays.map(([name, delay]) => ({
+        name,
+        provider: { fetch: () => new Promise((_resolve, reject) => setTimeout(() => reject(new Error(`${name} down`)), delay)) },
+      })),
+      {
+        name: 'supadata' as const,
+        provider: { fetch: () => { supadataCalled = true; return Promise.resolve({ videoId: 'VALID_ID_12', transcript: 'late but present', language: 'en' }); } },
+      },
+    ];
+    let attempt: Promise<{ videoId: string; transcript: string; language: string }>;
+    try {
+      attempt = extractor.fetch('VALID_ID_12');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    // Advance past the four earlier tiers' worst cases (225s) into Supadata's window.
+    await vi.advanceTimersByTimeAsync(240000);
+    try {
+      const result = await attempt;
+      expect(supadataCalled).toBe(true);
+      expect(result.transcript).toBe('late but present');
     } finally {
       vi.unstubAllGlobals();
     }
