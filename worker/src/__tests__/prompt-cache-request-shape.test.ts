@@ -103,7 +103,35 @@ describe('prompt-cache request shape (bundle LLM calls)', () => {
     expect(content[1]).toEqual({ type: 'text', text: suffix });
     // Byte-identity contract with the un-split prompt.
     expect(content[0].text + content[1].text).toBe(prefix + suffix);
+    // Billing verification (2026-09-26, PR #348 review): the usage metadata is
+    // actually returned by the response and captured wholesale -- cached_tokens
+    // rides alongside the billed totals from the same usage chunk, so the
+    // cached discount is evidenced by real billed numbers, not asserted blind.
+    expect(result.tokensUsed).toBe(20000);
+    expect(result.costUsd).toBe(0.05);
     expect(result.cachedTokens).toBe(19000);
+  });
+
+  it('treats missing prompt_tokens_details as undefined cached_tokens (no cached discount claimed without provider evidence)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"analysis content delta here"}}]}',
+        // Billing metadata present but NO prompt_tokens_details (e.g. a
+        // provider that does not support cache accounting): cachedTokens must
+        // stay undefined, never silently become 0 (which would misreport a
+        // cache hit as "0 cached tokens billed" instead of "no data").
+        'data: {"choices":[{}],"usage":{"total_tokens":20000,"cost":0.05}}',
+        'data: [DONE]',
+      ])
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cascade = new LLMCascade('test-api-key', undefined, HAIKU_CHAIN, { haiku: 8192, default: 16000 }, 'user1', 240000, 15000, true);
+    const result = await cascade.streamCascade('P' + 'S', () => {}, undefined, undefined, { prefix: 'P', suffix: 'S' });
+
+    expect(result.tokensUsed).toBe(20000);
+    expect(result.costUsd).toBe(0.05);
+    expect(result.cachedTokens).toBeUndefined();
   });
 
   it('sends a plain single-block system message when caching is disabled (registry kill switch)', async () => {

@@ -58,7 +58,8 @@ function chunkIndexFromBody(init?: RequestInit): number | undefined {
   if (!init?.body) return undefined;
   try {
     return JSON.parse(init.body as string).chunkIndex;
-  } catch {
+  } catch (parseErr) {
+    console.debug('[useSSEStream-test] chunkIndexFromBody: non-JSON request body:', parseErr instanceof Error ? parseErr.message : String(parseErr));
     return undefined;
   }
 }
