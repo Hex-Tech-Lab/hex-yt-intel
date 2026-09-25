@@ -1,0 +1,27 @@
+web/hooks/useHistoryOverview.ts
+  s_e86ad5159a96a6::t_d49ccedd18b441 56-60,63,77,80
+web/hooks/__tests__/useHistoryOverview.test.tsx
+  s_e86ad5159a96a6::t_09c6bdcd2b3f54 1-84,86-112,114-154
+  s_e86ad5159a96a6::t_71185fa954f27e 85
+  s_e86ad5159a96a6::t_b756f54dce913b 113
+supabase/migrations/20260925120000_history_overview_function_v14_stalled_status.sql
+  s_e86ad5159a96a6::t_659d4ab77a5a4b 140-144,146
+web/lib/__tests__/history-overview-live-status.test.ts
+  s_e86ad5159a96a6::t_c5826ebfcc065e 100-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6bf5fe4cd425baca8fbb33a87d0bc76754367691",
+  "prompts": {},
+  "sessions": {
+    "s_e86ad5159a96a6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256fa0c4ffe2u6R2uLSReSHVz",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
