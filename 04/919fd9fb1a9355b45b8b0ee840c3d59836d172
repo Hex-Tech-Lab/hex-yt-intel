@@ -1,0 +1,59 @@
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  s_07946c92c82e35::t_cc2029521f9cd7 67-95,97-102,122-127
+  s_07946c92c82e35::t_adbfd2f77f8da2 252
+  s_07946c92c82e35::t_3f8f6a1860398d 185-228
+  s_07946c92c82e35::t_526d6c762fe424 235
+  s_07946c92c82e35::t_1bda271b568a7e 37-51
+  s_07946c92c82e35::t_286554d53e786e 96
+scripts/quality-engine/application/QualityEngine.ts
+  s_07946c92c82e35::t_af6f61394e3e1d 70
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_07946c92c82e35::t_fe9893b27893a4 593-596
+  s_07946c92c82e35::t_e0b835bb52f6c1 12
+  s_07946c92c82e35::t_10d2f31afe57f0 18
+  s_07946c92c82e35::t_f76d97ebbf216e 540-542,545-554
+  s_07946c92c82e35::t_15669f7a8190c1 251-316
+  s_07946c92c82e35::t_b7c6b8748b48b9 561
+  s_07946c92c82e35::t_b7f3afbc473c9e 562
+  s_07946c92c82e35::t_08cce1e774f116 381-409
+  s_07946c92c82e35::t_1bcb2d377aaa2c 582-584,586,589
+  s_07946c92c82e35::t_b2560568541aea 532-539,543-544,555-560,563-581,585,587-588,590-592,597-602
+scripts/quality-engine/rules/sql-migrations.ts
+  s_07946c92c82e35::t_1a614974db7ccc 408-410
+  s_07946c92c82e35::t_5fc545beaf2faa 75-80,83-91
+  s_07946c92c82e35::t_be5687fcf14393 112-177
+  s_07946c92c82e35::t_b75404a5577660 65-73
+  s_07946c92c82e35::t_a8df52df1dfccd 359-361,369
+  s_07946c92c82e35::t_6926e9d1c53f59 395-397
+  s_07946c92c82e35::t_e0bb27a8dd988c 336-341
+  s_07946c92c82e35::t_e6e595786bba82 374,454
+  s_07946c92c82e35::t_1bd18985249b4c 24-33
+  s_07946c92c82e35::t_0a38c3c88880b1 246-273
+  s_07946c92c82e35::t_6183976be1567e 437-442,444-445,456
+  s_07946c92c82e35::t_bd2a7eef2519b1 283-287,289,302
+.memory/AGENT_LEDGER.md
+  s_07946c92c82e35::t_234617781142db 1404
+scripts/verify-quality-engine.ts
+  s_07946c92c82e35::t_2a119758a834a1 231-238
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  s_07946c92c82e35::t_423fa10723bf4b 92,105-143
+  s_07946c92c82e35::t_2aeb5696da99c0 144-145,270-326
+scripts/quality-engine/domain/Rule.ts
+  s_07946c92c82e35::t_342aedbf8421f6 24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "04919fd9fb1a9355b45b8b0ee840c3d59836d172",
+  "prompts": {},
+  "sessions": {
+    "s_07946c92c82e35": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f27c5fad0ffemf1N36xudeyKFj",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
