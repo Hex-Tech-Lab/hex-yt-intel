@@ -50,10 +50,6 @@ function makeJob(extra: Record<string, unknown> = {}) {
   };
 }
 
-function completeFragmentPayload() {
-  return { type: 'complete', model: 'test-model', valid: true, videoId: VIDEO_ID, analysisId: ANALYSIS_ID };
-}
-
 function chunkIndexFromBody(init?: RequestInit): number | undefined {
   if (!init?.body) return undefined;
   try {
@@ -133,14 +129,13 @@ describe('useSSEStream prompt-cache warm stagger', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const { result } = renderHook(() => useSSEStream());
-    let started = false;
     await act(async () => {
-      const p = result.current.startAnalysis(YT_URL, 'UTC');
+      const analysisPromise = result.current.startAnalysis(YT_URL, 'UTC');
       // Give bundle 1 a moment to fetch -- bundle 2 must still be gated.
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(bundle2FetchTime).toHaveLength(0);
       releaseBundle1();
-      await p;
+      await analysisPromise;
     });
 
     await waitFor(() => {
@@ -202,12 +197,12 @@ describe('useSSEStream prompt-cache warm stagger', () => {
 
     const { result } = renderHook(() => useSSEStream());
     await act(async () => {
-      const p = result.current.startAnalysis(YT_URL, 'UTC');
+      const analysisPromise = result.current.startAnalysis(YT_URL, 'UTC');
       // No cache to warm: bundle 2 must not be gated on bundle 1's first byte.
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(bundle2FetchTime.length).toBeGreaterThan(0);
       releaseBundle1();
-      await p;
+      await analysisPromise;
     });
     await waitFor(() => {
       expect(useAnalysisStore.getState().status).toBe('complete');
