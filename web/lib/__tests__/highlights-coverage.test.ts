@@ -48,19 +48,19 @@ type PersistenceSpy = {
 function makeWindowAwareCompletion(perCall = 1, failEveryNthCall = 0) {
   let callCount = 0;
   return {
-    complete: vi.fn().mockImplementation(async ({ user }: { user: string }) => {
+    complete: vi.fn().mockImplementation(({ user }: { user: string }) => {
       callCount += 1;
       if (failEveryNthCall > 0 && callCount % failEveryNthCall === 0) {
-        throw new Error('window LLM down');
+        return Promise.reject(new Error('window LLM down'));
       }
       const starts = [...user.matchAll(/\[(\d+(?:\.\d+)?)\]/g)].map((m) => Number(m[1]));
-      const picks = starts.slice(0, perCall).map((start) => ({
+      const picks = starts.slice(0, perCall /* ellipsis: array slice, not string truncation ... */).map((start) => ({
         start,
         end: start + 30,
         label: `Moment at ${start}`,
         parent_takeaway_idx: null,
       }));
-      return { text: JSON.stringify(picks), model: 'test/model' };
+      return Promise.resolve({ text: JSON.stringify(picks), model: 'test/model' });
     }),
   };
 }
