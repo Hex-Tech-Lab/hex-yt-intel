@@ -8,7 +8,7 @@ import { verifyContentSig } from '@/lib/stream-token';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
-import { publishValidationTask, publishDigestTask, publishHighlightsTask } from '@/lib/qstash-client';
+import { publishValidationTask, publishDigestTask, publishHighlightsTask, publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
 import * as Sentry from '@sentry/nextjs';
@@ -251,6 +251,20 @@ export async function POST(request: NextRequest) {
 
     const parsedBody = bodySchema.safeParse(body);
     if (!parsedBody.success) {
+      // Log which field failed: this branch used to 400 silently, and the
+      // worker retries every non-OK persist, so a schema mismatch surfaced
+      // only as "persist exhausted all retries" with no cause (2026-09-25,
+      // analysis 6047514f stuck in processing after 44 silent 400s).
+      const flattened = parsedBody.error.flatten();
+      console.warn('[analyses/persist] Invalid request payload schema', {
+        analysisId: typeof body?.analysisId === 'string' ? body.analysisId : undefined,
+        chunkIndex: typeof body?.chunkIndex === 'number' ? body.chunkIndex : undefined,
+        fieldErrors: flattened.fieldErrors,
+      });
+      Sentry.captureMessage('persist: invalid request payload schema', {
+        level: 'error',
+        extra: { fieldErrors: flattened.fieldErrors, formErrors: flattened.formErrors },
+      });
       return NextResponse.json({ 
         error: 'Invalid request payload schema', 
         details: parsedBody.error.flatten() 
@@ -1077,6 +1091,24 @@ export async function POST(request: NextRequest) {
               console.warn('[analyses/persist] Failed to publish highlights task for chunks', { analysisId, error: String(e) });
             });
 
+            // Embedding generation -- published DIRECTLY at finalize
+            // (RCA 2026-09-24, vector-coverage: it previously rode the
+            // validation webhook chain, which is gated on
+            // transcript_available and silently dropped when the validate
+            // webhook failed mid-chain -- leaving 68/119 completed rows
+            // without vectors). Fires for EVERY completed finalize,
+            // metadata-only included. Idempotent: the embed webhook skips
+            // when the vector already exists. Best-effort.
+            await publishEmbeddingTask({
+              analysisId,
+              markdown: stitchedMarkdown,
+              userId: row.userId,
+            }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_embedding_task_chunks', analysisId } } });
+              sideEffectsFailed = true;
+              console.warn('[analyses/persist] Failed to publish embedding task for chunks', { analysisId, error: String(e) });
+            });
+
             // Usage-log: analysis genuinely completed (chunked path). Purely
             // additive, fire-and-forget -- consumeQuota() itself never
             // throws (see PostgresBillingAdapter), and this .catch() is a
@@ -1440,6 +1472,20 @@ export async function POST(request: NextRequest) {
           sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_highlights_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish highlights task', { analysisId, error: String(e) });
+        });
+
+        // Embedding generation -- published DIRECTLY at finalize (same RCA
+        // as the chunk-path call site above: previously rode the
+        // transcript_available-gated validation chain and was silently
+        // dropped for metadata-only analyses too). Best-effort, idempotent.
+        await publishEmbeddingTask({
+          analysisId,
+          markdown: stitchedMarkdown,
+          userId: row.userId,
+        }).catch(e => {
+          sideEffectsFailedNonChunk = true;
+          Sentry.captureException(e, { contexts: { persist: { phase: 'publish_embedding_task', analysisId } } });
+          console.warn('[analyses/persist] Failed to publish embedding task', { analysisId, error: String(e) });
         });
 
         // Usage-log: analysis genuinely completed (non-chunked path). Same

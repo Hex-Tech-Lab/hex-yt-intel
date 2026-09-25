@@ -46,6 +46,7 @@ import { resolveAnalysisCascade } from '@/lib/config/cascade';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
@@ -898,6 +899,17 @@ export async function remediateAnalysis(
     // gap was found). The row is no longer a remediation candidate -- nothing
     // to retry.
     return { analysisId: gap.id, stage: RemediationStage.PersistRaced, dimensionsRequested: gap.missingDimensions };
+  }
+
+  // RCA (2026-09-24, vector-coverage): dimension-remediation is one of the
+  // four finalize-to-'completed' paths and previously never published an
+  // embedding job. Publish when this remediation completed the row.
+  // Idempotent (embed webhook skips existing vectors) / best-effort.
+  if (billingStatus === 'completed') {
+    await publishEmbeddingTask({ analysisId: gap.id, markdown: stitchResult.markdown, userId: gap.userId }).catch((err) => {
+      console.error('[dimension-remediation] embed publish failed', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
+      Sentry.captureException(err, { contexts: { remediation: { phase: 'embed_publish', analysisId: gap.id } } });
+    });
   }
 
   return {
