@@ -1,0 +1,25 @@
+scripts/backfill-stance-relations.ts
+  s_0ad06df9e3ce0b::t_109a685d40806c 135
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_0ad06df9e3ce0b::t_6ce27483e8f1f6 34
+web/lib/__tests__/contracts/stance-relations-persistence.contract.test.ts
+  s_0ad06df9e3ce0b::t_0e9a0e693ba1a2 15
+web/lib/adapters/SupabaseAnalysisPayloadAdapter.ts
+  s_0ad06df9e3ce0b::t_b194d714666c7d 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "af3c22e5584dfec4e54e3048fa745a41181c06b8",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
