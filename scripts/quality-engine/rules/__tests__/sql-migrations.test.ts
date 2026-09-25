@@ -9,11 +9,13 @@
  */
 
 import { describe, test, expect } from "vitest";
+import { execFileSync } from "child_process";
 import { Project } from "ts-morph";
 import * as legacyRules from "../index";
 import { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "../sql-migrations";
 import { ConflictMarkerRule } from "../data-lessons-20260924";
 import { QualityEngine } from "../../application/QualityEngine";
+import { listTrackedFiles, isSqlMigration, selectScannableTextFiles } from "../../infra/TrackedFileEnumeration";
 import type { Rule } from "../../domain/Rule";
 
 function checkSql(
@@ -246,6 +248,72 @@ describe("WAVE Q4: SqlSecurityDefinerCallerKeyRule (R4)", () => {
     expect(findings).toHaveLength(0);
   });
 
+  test("a comment faking the allowlist guard does NOT close the surface (comment text stripped before guard match)", () => {
+    const commentGuard = R4_HISTORICAL_PRE_FIX.replace(
+      "  affected integer;",
+      "  affected integer;\n  -- p_key NOT IN ('approved') -- TODO: real guard\n"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, commentGuard);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("a string literal faking the allowlist guard does NOT close the surface (string contents stripped before guard match)", () => {
+    const stringGuard = R4_HISTORICAL_PRE_FIX.replace(
+      "  affected integer;",
+      "  affected integer;\n  raise notice 'p_key not in (approved) check pending';\n"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, stringGuard);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("same-arity different-type overload: a grant/revoke pair on a DIFFERENT-type same-arity overload does not clear this block's exposure", () => {
+    // The text-arity function (this block, p_key text) is FULLY revoked and
+    // granted only to service_role. A SIBLING same-name SAME-arity int
+    // overload grants authenticated. Text-arity matching would see a
+    // grant to authenticated at arity 1 and mark the safe block exposed
+    // (false positive) — and the mirror case would mark an exposed block
+    // safe. Exact-signature matching separates them.
+    const safeBlockOverloadedByInt = R4_HISTORICAL_PRE_FIX.replace(
+      "revoke execute on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, public;\ngrant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;",
+      [
+        "revoke all on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, authenticated, public;",
+        "grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to service_role;",
+        "-- sibling overload: same arity 3, different types",
+        "grant execute on function public.merge_analysis_payload_key(uuid, int, jsonb) to authenticated;",
+      ].join("\n")
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, safeBlockOverloadedByInt);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("same-arity different-type overload (mirror): an exposure on the text overload is NOT cleared by a revoke aimed at the int overload", () => {
+    // This block IS text-arity exposed (granted to authenticated, no full
+    // revoke). The revoke targeting the same-arity int overload must not
+    // be counted for this block.
+    const exposedViaOwnGrant = R4_HISTORICAL_PRE_FIX.replace(
+      "revoke execute on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, public;\ngrant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;",
+      [
+        "-- revoke aims at the int sibling overload (same arity 3), NOT at this text block",
+        "revoke all on function public.merge_analysis_payload_key(uuid, int, jsonb) from anon, authenticated, public;",
+        "grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;",
+      ].join("\n")
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, exposedViaOwnGrant);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("single-param text overload: grant to a same-arity int overload does not clear the text block's missing revoke", () => {
+    const base = R4_NEGATIVE_FULLY_REVOKED.replace(
+      "revoke all on function public.get_prompt_secret(text) from public, anon, authenticated;\ngrant execute on function public.get_prompt_secret(text) to service_role;",
+      [
+        "revoke all on function public.get_prompt_secret(int) from public, anon, authenticated;",
+        "grant execute on function public.get_prompt_secret(int) to service_role;",
+      ].join("\n")
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, base);
+    expect(findings).toHaveLength(1);
+  });
+
   test("is registered in the real Object.values(legacyRules) production set", () => {
     expect(Object.values(legacyRules)).toContain(SqlSecurityDefinerCallerKeyRule);
   });
@@ -308,6 +376,35 @@ describe("WAVE Q4: SqlDropFunctionDefaultArgRule (R13)", () => {
       R13_HISTORICAL_PRE_FIX.replace(/\)\s*;$/, ") RESTRICT;")
     );
     expect(findings).toHaveLength(1);
+  });
+
+  test("fires on a schema-qualified non-public target (extensions.fn)", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX.replace("public.search_analyses_semantic", "extensions.search_analyses_semantic")
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("search_analyses_semantic");
+  });
+
+  test("fires on a quoted-identifier target", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX.replace("public.search_analyses_semantic", 'public."search_analyses_semantic"')
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("search_analyses_semantic");
+  });
+
+  test("fires when a comment sits between DROP FUNCTION tokens", () => {
+    const findings = checkSql(
+      SqlDropFunctionDefaultArgRule,
+      R13_HISTORICAL_PRE_FIX
+        .replace("DROP FUNCTION IF EXISTS", "DROP FUNCTION /* legacy cleanup */ IF EXISTS")
+        .replace("public.search_analyses_semantic", "public.search_analyses_semantic -- the semantic search fn\n")
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].why).toContain("search_analyses_semantic");
   });
 
   test("fires on each target of a multi-target DROP FUNCTION statement", () => {
@@ -430,5 +527,76 @@ describe("WAVE Q4 integration: SQL migrations reach SQL rules through the real Q
     expect(sqlFindings).toHaveLength(1);
     expect(sqlFindings[0]!.severity).toBe("high");
     expect(tsFindings).toHaveLength(0);
+  });
+});
+
+// 2026-09-25 post-merge review finding: "verify what ctx.allFiles contains in
+// diff vs full mode; add pre-wave severity tests for both modes through the
+// real file-discovery path."
+//
+// VERIFIED CONTRACT (real code: scripts/verify-quality-engine.ts + QualityEngine.analyze()):
+//   - diff/working-tree/HEAD mode: fileList comes from `git diff --name-only
+//     --diff-filter=ACM <base>`; codeFiles = TS/TSX + supabase/migrations/*.sql
+//     subset -> ctx.allFiles = ONLY the changed code files. A pre-wave
+//     migration only reaches the scan if it IS in the diff (i.e. edited) —
+//     so through the real engine it must report FULL severity.
+//   - full/watch mode: fileList = all tracked TS/TSX + supabase/migrations/*.sql
+//     + tracked text files (TrackedFileEnumeration.listTrackedFiles()); ctx.allFiles
+//     = every scanned code file, INCLUDING pre-wave migrations. Here "in the
+//     scan" says nothing about being edited — so the whole-repo audit must
+//     downgrade pre-wave rows to informational `low` (the "historical
+//     migrations are informational" intent; before the scanMode fix the
+//     downgrade was dead logic in every real path because a scanned file is
+//     always in allFiles).
+//   The mode reaches rules via the new ctx.scanMode, populated from
+//   EngineConfig.mode; the driver's working-tree/HEAD modes are diff-based
+//   scans and now map to config mode "diff" so their pre-wave edits are NOT
+//   downgraded.
+describe("ctx.allFiles contract: diff vs full mode + pre-wave severity through the real engine path", () => {
+  const PRE_WAVE_SQL = "supabase/migrations/20260701000000_pre_wave_fixture.sql";
+  const OTHER_TS = "web/lib/other.ts";
+
+  function makeEngine(mode: "diff" | "full") {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(PRE_WAVE_SQL, R13_HISTORICAL_PRE_FIX);
+    project.createSourceFile(OTHER_TS, "export const x = 1;\n");
+    const loader = {
+      load: async (p: string) => project.getSourceFile(p)!,
+      loadFromText: async (p: string, t: string) => project.createSourceFile(p, t, { overwrite: true }),
+      getImports: () => [] as string[],
+    };
+    const fs = {
+      exists: (p: string) => !!project.getSourceFile(p),
+      resolve: (p: string) => p,
+    };
+    return new QualityEngine(
+      [SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule] as Rule[],
+      loader as any,
+      undefined,
+      fs as any,
+      { mode, defaultScope: "file", concurrency: 1 }
+    );
+  }
+
+  test.each(["diff", "full"] as const)("pre-wave severity in %s mode through the real QualityEngine", async (mode) => {
+    // In BOTH modes the pre-wave file is fed to the engine the way the real
+    // driver feeds it: in diff mode because `git diff` listed it (edited),
+    // in full mode because tracked enumeration lists everything.
+    const engine = makeEngine(mode);
+    const findings = await engine.analyze([PRE_WAVE_SQL, OTHER_TS]);
+    const preWave = findings.filter((f) => f.file === PRE_WAVE_SQL);
+    expect(preWave).toHaveLength(1);
+    expect(preWave[0]!.severity).toBe(mode === "diff" ? "high" : "low");
+  });
+
+  test("real file discovery: full-mode tracked enumeration includes on-disk pre-wave SQL migrations (real TrackedFileEnumeration)", () => {
+    // vitest runs from web/, so resolve the repo root like the real
+    // TrackedFileEnumeration tests do.
+    const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+    const tracked = listTrackedFiles(repoRoot);
+    expect(tracked).toContain("supabase/migrations/20260723200000_prompt_vault_registry.sql");
+    // and the migration partition routes them to the CODE pass, not the text pass
+    expect(isSqlMigration("supabase/migrations/20260723200000_prompt_vault_registry.sql")).toBe(true);
+    expect(selectScannableTextFiles(["supabase/migrations/20260723200000_prompt_vault_registry.sql"])).toHaveLength(0);
   });
 });

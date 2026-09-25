@@ -21,6 +21,16 @@
  * they are deliberately conservative to keep the false-positive rate at zero
  * on the current repo (the severity-high precondition).
  *
+ * Round 2 (2026-09-25 post-merge review of #340): both rules now scan
+ * comment- and string-stripped SQL text (sanitizeSql) so a guard/keyword
+ * pattern inside a comment or string literal can never satisfy a rule; R4's
+ * ACL posture matching compares EXACT normalized signatures (same-arity
+ * different-type overloads can no longer clear an exposed block); R13's
+ * target parser recognizes schema-qualified non-public (`extensions.fn`) and
+ * quoted-identifier targets; pre-wave severity honors the engine's
+ * ctx.scanMode (informational low only in whole-repo "full" mode — see
+ * severityFor's verified-contract note).
+ *
  * Historical migrations (filename date BEFORE 2026-09-24, the wave date)
  * are reported at `low` severity as informational: they are already applied
  * to the database and must never block CI — EXCEPT when the file itself was
@@ -52,10 +62,33 @@ function migrationDate(filePath: string): string {
  * UNLESS the file was changed in the current scan (ctx.allFiles is the scan's
  * own file list; in diff mode that is exactly the diff). A pre-wave migration
  * that is being modified right now must report full severity.
+ *
+ * VERIFIED ctx.allFiles contract (2026-09-25 review finding, see
+ * scripts/verify-quality-engine.ts + QualityEngine.analyze()): in diff/
+ * working-tree/HEAD mode allFiles is ONLY the changed code files, so this
+ * upgrade is meaningful; in full/watch mode allFiles is every scanned code
+ * file (TrackedFileEnumeration), so a pre-wave migration is trivially "in the
+ * scan" and reports FULL severity there — deliberate: full mode is a
+ * whole-repo audit with no diff to grandfather against, and no real pre-wave
+ * migration currently trips these rules (tested in sql-migrations.test.ts).
  */
-function severityFor(filePath: string, baseSeverity: Finding["severity"], allFiles?: readonly string[]): Finding["severity"] {
+function severityFor(
+  filePath: string,
+  baseSeverity: Finding["severity"],
+  allFiles?: readonly string[],
+  scanMode?: "diff" | "full"
+): Finding["severity"] {
   const date = migrationDate(filePath);
   if (!date || date >= RULE_WAVE_DATE) return baseSeverity;
+  // Full mode (whole-repo audit): presence in allFiles says nothing about
+  // being edited (every scanned file is in allFiles — making the check below
+  // dead logic there), so pre-wave rows are informational low.
+  if (scanMode === "full") return "low";
+  // Diff mode through the real engine: the file only reaches the scan if
+  // `git diff` listed it, so it IS being edited — full severity. (Kept
+  // explicit; the allFiles check below is the direct-invocation fallback for
+  // callers that don't pass a scanMode, e.g. unit tests.)
+  if (scanMode === "diff") return baseSeverity;
   const norm = filePath.replace(/\\/g, "/");
   if (allFiles?.some((f) => f.replace(/\\/g, "/") === norm)) return baseSeverity;
   return "low";
@@ -74,6 +107,72 @@ function matchingParen(text: string, openIdx: number): number {
     }
   }
   return -1;
+}
+
+/**
+ * Single-pass SQL sanitizer (2026-09-25 review gap): strips `--` line
+ * comments and `/* ... *\/` block comments (replaced with a space), and
+ * removes the CONTENTS of `'...'` string literals (the quote characters
+ * themselves are kept so token positions survive). Quoted identifiers
+ * `"..."` keep their contents (they are identifier text, not values).
+ *
+ * Both SQL rules scan the SANITIZED text, so a guard/keyword pattern living
+ * inside a comment or a string literal can never satisfy a rule, and a
+ * comment between tokens can never break token matching.
+ *
+ * Known limitation (documented, accepted — no SQL AST available): the
+ * scanner does not understand dollar-quoted strings ($$..$$, $tag$..$tag$).
+ * A `'` appearing inside a dollar-quoted body without a balanced partner
+ * could desynchronize the scanner. Real migrations on disk keep `$$` bodies
+ * quote-balanced, and both rules' token patterns are identifier-based, so
+ * this has not produced false positives/negatives on the current repo.
+ */
+function sanitizeSql(text: string): string {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (ch === "-" && next === "-") {
+      while (i < text.length && text[i] !== "\n") i++;
+      out += " ";
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const end = text.indexOf("*/", i + 2);
+      i = end === -1 ? text.length : end + 2;
+      out += " ";
+      continue;
+    }
+    if (ch === "'") {
+      // '...' literal with '' escapes: keep the quotes, drop the contents.
+      i++;
+      while (i < text.length) {
+        if (text[i] === "'") {
+          if (text[i + 1] === "'") {
+            i += 2;
+            continue;
+          }
+          break;
+        }
+        i++;
+      }
+      out += "''";
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      // "..." quoted identifier: keep contents (identifier text).
+      const end = text.indexOf('"', i + 1);
+      const stop = end === -1 ? text.length : end + 1;
+      out += text.slice(i, stop);
+      i = stop;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
 }
 
 /** Split on commas that are not inside parens. */
@@ -144,10 +243,34 @@ function extractFunctionBlocks(text: string): FunctionBlock[] {
 }
 
 /** Number of top-level (paren-aware) comma-separated parameters. */
-function paramCount(params: string): number {
-  const trimmed = params.trim();
-  if (trimmed.length === 0) return 0;
-  return splitTopLevelCommas(trimmed).length;
+/**
+ * Normalize one argument for signature comparison (2026-09-25 review gap:
+ * overloads were matched by ARITY only, so a same-arity different-type
+ * overload's grant/revoke was attributed to the wrong block). Drops the
+ * definition-side DEFAULT clause, leading parameter MODE keywords, and a
+ * leading parameter NAME when one is present, lowercases, and collapses
+ * whitespace. Applied IDENTICALLY to both sides (definition params and
+ * GRANT/DROP arg lists), so the comparison is a consistent text-similarity
+ * matcher, not a SQL type parser: `p_key text` -> `text`, and a GRANT-side
+ * `timestamp with time zone` normalizes the same way as the definition-side
+ * `p_date_from timestamp with time zone DEFAULT NULL`. A real type mismatch
+ * (e.g. `int` vs `text`, or `integer` vs `int` spelled differently) compares
+ * unequal — which is the fail-safe direction (the block stays exposed and
+ * the rule reports rather than silently clearing).
+ */
+function normalizeSqlArg(arg: string): string {
+  let a = arg.trim().replace(/\s+/g, " ");
+  a = a.replace(/\s+default\s+.*$/i, "");
+  a = a.replace(/^(?:in|out|inout|variadic)\s+/i, "");
+  const tokens = a.split(" ");
+  if (tokens.length >= 2 && /^[a-z_][\w$]*$/i.test(tokens[0]!)) a = tokens.slice(1).join(" ");
+  return a.toLowerCase();
+}
+
+/** Top-level-comma-aware normalized signature: "uuid,text,jsonb". */
+function normalizeSqlSignature(args: string): string {
+  if (args.trim().length === 0) return "";
+  return splitTopLevelCommas(args).map(normalizeSqlArg).join(",");
 }
 
 interface GrantPosture {
@@ -157,12 +280,13 @@ interface GrantPosture {
 
 /**
  * Collect EXECUTE grant/revoke posture for a function, matching by name AND
- * top-level argument arity (overloads share a name but have different
- * signatures — a grant to the wrong arity must not clear the block's
- * posture; 2026-09-25 review gap). Signatures are matched on argument COUNT
- * (type-level text matching is unreliable in plain SQL text).
+ * EXACT normalized argument signature (overloads share a name and can share
+ * an ARG COUNT but differ in types — a same-arity different-type overload's
+ * grant/revoke must not be attributed to this block; 2026-09-25 review gap:
+ * matching was arity-only). See normalizeSqlArg for the normalization rules
+ * and its fail-safe direction note.
  */
-function grantPostureFor(text: string, functionName: string, argCount: number): GrantPosture {
+function grantPostureFor(text: string, functionName: string, expectedSignature: string): GrantPosture {
   const revokedFrom = new Set<string>();
   const grantedTo = new Set<string>();
   const esc = functionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -175,8 +299,7 @@ function grantPostureFor(text: string, functionName: string, argCount: number): 
     const open = m.index + m[0].length - 1;
     const close = matchingParen(text, open);
     if (close === -1) continue;
-    const sigArgs = paramCount(text.slice(open + 1, close));
-    if (sigArgs !== argCount) continue;
+    if (normalizeSqlSignature(text.slice(open + 1, close)) !== expectedSignature) continue;
     const semi = text.indexOf(";", close);
     if (semi === -1) continue;
     const tail = text.slice(close + 1, semi).replace(/\b(?:cascade|restrict)\b/gi, "");
@@ -210,6 +333,12 @@ function isExposed(posture: GrantPosture): boolean {
  * NOT a generic "the word allowlist appears somewhere" text match — the
  * 2026-09-25 review flagged that shortcut as bypassable by a comment while
  * the parameter stays unguarded.
+ *
+ * The body MUST already be sanitized (sanitizeSql: comments and string-literal
+ * contents removed) before this check — a `-- p_key NOT IN ('approved')`
+ * comment or a `raise notice 'p_key not in (...)'` string must not count as
+ * an executable guard (2026-09-25 review gap: the raw body text satisfied
+ * the regex).
  */
 function hasKeyAllowlistGuard(body: string, keyParam: string): boolean {
   const esc = keyParam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -227,7 +356,9 @@ export const SqlSecurityDefinerCallerKeyRule: Rule = {
     const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!isSqlMigrationFile(filePath)) return findings;
 
-    const text = (ctx.ast as SourceFile).getText();
+    // Sanitized text: comments and string-literal contents removed, so every
+    // pattern below matches executable SQL only (2026-09-25 review gap).
+    const text = sanitizeSql((ctx.ast as SourceFile).getText());
 
     for (const block of extractFunctionBlocks(text)) {
       if (!/\bsecurity\s+definer\b/i.test(block.body)) continue;
@@ -235,12 +366,12 @@ export const SqlSecurityDefinerCallerKeyRule: Rule = {
       if (keyParams.length === 0) continue;
       const unguarded = keyParams.filter((p) => !hasKeyAllowlistGuard(block.body, p));
       if (unguarded.length === 0) continue;
-      const posture = grantPostureFor(text, block.name, paramCount(block.params));
+      const posture = grantPostureFor(text, block.name, normalizeSqlSignature(block.params));
       if (!isExposed(posture)) continue;
 
       findings.push({
         file: filePath,
-        severity: severityFor(filePath, "high", ctx.allFiles),
+        severity: severityFor(filePath, "high", ctx.allFiles, ctx.scanMode),
         title: "SQL: SECURITY DEFINER function exposes a caller-controlled key/column parameter to untrusted callers",
         why: `Function ${block.name} runs with elevated (SECURITY DEFINER) privileges, its EXECUTE grant reaches untrusted callers (${[...posture.grantedTo].join(", ") || "implicit PUBLIC default"}), and it accepts caller-controlled key/column/path-shaped text parameter(s) '${unguarded.join("', '")}' with no allowlist guard. A caller can steer which field/path the definer writes or reads, turning the RPC into an arbitrary-field overwrite (real incident: PR #322's merge_analysis_payload_key accepted any payload key; fixed only after external review).`,
         fix: `Either (a) drop the caller-controlled parameter(s) entirely, (b) hard-allowlist the permitted values inside the function body (e.g. IF ${unguarded[0]} NOT IN ('allowed_key') THEN RAISE EXCEPTION), and/or (c) REVOKE EXECUTE ... FROM anon, authenticated, public and grant only to service_role.`,
@@ -261,6 +392,9 @@ export const SqlSecurityDefinerCallerKeyRule: Rule = {
  * Handles (2026-09-25 review gaps): trailing `CASCADE|RESTRICT` after the
  * closing paren, multiple comma-separated function targets in one DROP
  * statement, and balanced parens (`vector(1536)`) inside signatures.
+ * Round 2 (2026-09-25 post-merge review): schema-qualified non-public
+ * targets (`extensions.fn`), quoted identifiers (`public."fn"`), and
+ * comments between tokens (via sanitizeSql) are all recognized.
  */
 export const SqlDropFunctionDefaultArgRule: Rule = {
   name: "sql-drop-function-default-arg",
@@ -271,7 +405,9 @@ export const SqlDropFunctionDefaultArgRule: Rule = {
     const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!isSqlMigrationFile(filePath)) return findings;
 
-    const text = (ctx.ast as SourceFile).getText();
+    // Sanitized text: comments between tokens can no longer break the
+    // statement/name scan (2026-09-25 review gap).
+    const text = sanitizeSql((ctx.ast as SourceFile).getText());
     const drop = /\bdrop\s+function\s+(?:if\s+exists\s+)?/gi;
     let m: RegExpExecArray | null;
     while ((m = drop.exec(text)) !== null) {
@@ -298,8 +434,15 @@ export const SqlDropFunctionDefaultArgRule: Rule = {
         if (open === -1) continue; // zero-arg drop, e.g. DROP FUNCTION foo;
         const close = matchingParen(t, open);
         if (close === -1) continue;
-        const nameMatch = /^(?:public\.)?([a-z0-9_]+)\s*$/i.exec(t.slice(0, open).trim());
+        // Name part: an optional SCHEMA chain (public.fn, extensions.fn —
+        // 2026-09-25 review gap: only `public.` was recognized), each segment
+        // optionally a quoted identifier, ending in the function name.
+        const nameMatch = /^(?:(?:"[^"]+"|[a-z_][\w$]*)\s*\.\s*)*(?:"([^"]+)"|([a-z_][\w$]*))\s*$/i.exec(
+          t.slice(0, open).trim()
+        );
         if (!nameMatch) continue;
+        const fnName = nameMatch[1] ?? nameMatch[2];
+        if (!fnName) continue;
         const args = t.slice(open + 1, close);
         if (!/\bdefault\b/i.test(args)) continue;
         const defaultArg = splitTopLevelCommas(args)
@@ -308,9 +451,9 @@ export const SqlDropFunctionDefaultArgRule: Rule = {
           .replace(/\s+/g, " ");
         findings.push({
           file: filePath,
-          severity: severityFor(filePath, "high", ctx.allFiles),
+          severity: severityFor(filePath, "high", ctx.allFiles, ctx.scanMode),
           title: "SQL: DROP FUNCTION argument list contains a DEFAULT clause (Postgres syntax error)",
-          why: `DROP FUNCTION takes argument TYPES only, but the argument list for ${nameMatch[1]} contains '${defaultArg}'. A DEFAULT clause in a DROP FUNCTION signature is a Postgres syntax error -- the migration fails and breaks the branch/preview (real incident: PR #328 first head b2f1648d, 2026-09-24).`,
+          why: `DROP FUNCTION takes argument TYPES only, but the argument list for ${fnName} contains '${defaultArg}'. A DEFAULT clause in a DROP FUNCTION signature is a Postgres syntax error -- the migration fails and breaks the branch/preview (real incident: PR #328 first head b2f1648d, 2026-09-24).`,
           fix: `Remove the DEFAULT clause(s) from the DROP FUNCTION argument list -- keep only the argument types (e.g. 'timestamp with time zone', not 'timestamp with time zone DEFAULT NULL').`,
         });
       }

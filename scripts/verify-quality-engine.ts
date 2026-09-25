@@ -228,7 +228,14 @@ async function run() {
     cacheAdapter,
     fsAdapter,
     {
-      mode: mode === "diff" ? "diff" : "full",
+      // working-tree/HEAD modes are diff-based scans (git diff vs HEAD /
+      // HEAD~1), so they map to config mode "diff" — not "full". Config mode
+      // reaches rules as ctx.scanMode and gates the pre-wave-migration
+      // severity downgrade (sql-migrations severityFor): a pre-wave migration
+      // scanned in a diff-based mode IS edited and must keep full severity;
+      // mapping it to "full" would downgrade a real new defect to
+      // informational. (2026-09-25 review finding: ctx.scanMode contract.)
+      mode: mode === "full" || mode === "watch" ? "full" : "diff",
       defaultScope: "file",
       concurrency,
     }
