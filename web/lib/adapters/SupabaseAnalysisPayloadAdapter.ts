@@ -8,7 +8,7 @@ import type { AnalysisPayloadKeyPort, AnalysisPayloadMergeResult } from '@/lib/p
 /**
  * SupabaseAnalysisPayloadAdapter — AnalysisPayloadKeyPort backed by the
  * `merge_analysis_payload_key` RPC (supabase/migrations/
- * 20260924120000_merge_analysis_payload_key_rpc.sql), which merges a single
+ * 20260924231500_merge_analysis_payload_key_rpc.sql), which merges a single
  * top-level key into analyses.analysis_payload via jsonb_set, atomically.
  *
  * Persistence contract (PR #322 round-2 P1-3): a persistence failure is

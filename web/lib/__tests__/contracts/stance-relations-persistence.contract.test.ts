@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const MIGRATION = path.resolve(__dirname, '../../../../supabase/migrations/20260924120000_merge_analysis_payload_key_rpc.sql');
+const MIGRATION = path.resolve(__dirname, '../../../../supabase/migrations/20260924231500_merge_analysis_payload_key_rpc.sql');
 
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', async () => {
   const { RELATIONS_REGISTRY_FALLBACK } = await import('@/lib/utils/relations-settings');

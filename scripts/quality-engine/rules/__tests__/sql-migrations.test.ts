@@ -31,7 +31,7 @@ function checkSql(
 }
 
 // R4 positive fixture — verbatim pre-fix content of
-// supabase/migrations/20260924120000_merge_analysis_payload_key_rpc.sql
+// supabase/migrations/20260924231500_merge_analysis_payload_key_rpc.sql
 // (branch feat/stance-dual-persistence-wordcloud, head afe276a1; the missing
 // key allowlist was the P1 fixed by CC commit c230345c on 2026-09-24).
 const R4_HISTORICAL_PRE_FIX = `

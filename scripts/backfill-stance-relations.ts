@@ -132,7 +132,7 @@ async function setRedisCache(key: string, value: string, ttlSeconds: number): Pr
 
 /**
  * Atomic analysis_payload key-merge via the merge_analysis_payload_key RPC
- * (supabase/migrations/20260924120000_merge_analysis_payload_key_rpc.sql).
+ * (supabase/migrations/20260924231500_merge_analysis_payload_key_rpc.sql).
  * Bounded retry + zero-row verification, mirroring
  * SupabaseAnalysisPayloadAdapter's contract (Settings Registry defaults).
  */
