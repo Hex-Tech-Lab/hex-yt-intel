@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  s_a1ebf7373e31fe::t_18c3f69c502f53 1404
+  s_a1ebf7373e31fe::t_bc4dca82a4255f 1405
+web/lib/__tests__/highlights-coverage.test.ts
+  s_a1ebf7373e31fe::t_6d3aa971a0925e 51,54,57,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "175c94379092b29b246f47ab879ff0cae729d6b6",
+  "prompts": {},
+  "sessions": {
+    "s_a1ebf7373e31fe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f271fdf3affeNwEbu7ryM75nb0",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
