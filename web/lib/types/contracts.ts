@@ -105,7 +105,7 @@ export const CheckoutSchema = z.object({
   // "pro"/"month" for a request that actually meant something else -- see
   // ADR/Cubic P0 finding 2026-08-18: the yearly toggle previously changed
   // display only and never reached checkout at all.
-  plan: z.enum(['founder', 'pro']).describe('Selected pricing tier'),
+  plan: z.enum(['founder', 'light', 'pro', 'max']).describe('Selected pricing tier'),
   interval: z.enum(['once', 'month', 'year']).describe('Selected billing interval'),
 }).refine(
   (data) => {
@@ -113,13 +113,10 @@ export const CheckoutSchema = z.object({
     if (data.plan === 'founder') {
       return data.interval === 'once';
     }
-    // Pro subscription tier must be recurring (month or year)
-    if (data.plan === 'pro') {
-      return data.interval === 'month' || data.interval === 'year';
-    }
-    return false;
+    // Subscription tiers (Light / Pro / Max) must be recurring (month or year)
+    return data.interval === 'month' || data.interval === 'year';
   },
-  { message: 'Invalid plan and interval combination. Founder tier is once only; Pro subscription must be monthly or yearly.' }
+  { message: 'Invalid plan and interval combination. Founder tier is once only; subscription tiers must be monthly or yearly.' }
 ).refine(
   (data) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');

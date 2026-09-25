@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as Sentry from "@sentry/cloudflare";
-import { TranscriptExtractor, parseChainBudgetMs } from "../services/TranscriptExtractor";
+import { TranscriptExtractor, parseChainBudgetMs, parseSupadataMaxAiMinutes, parseVideoDurationSeconds } from "../services/TranscriptExtractor";
 import { MetadataScraper, type VideoComment } from "../services/MetadataScraper";
 import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
@@ -595,6 +595,7 @@ async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
+  durationSeconds?: number,
   channelId?: string,
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
@@ -653,9 +654,8 @@ async function fetchTranscriptIfMissing(
     }
 
     try {
-      const supadataMaxAiMinutes = Number(env.SUPADATA_MAX_AI_MINUTES);
-      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN, parseChainBudgetMs(env.TRANSCRIPT_CHAIN_BUDGET_MS), env.TRANSCRIPTAPI_API_KEY, env.SUPADATA_API_KEY, Number.isFinite(supadataMaxAiMinutes) && supadataMaxAiMinutes > 0 ? supadataMaxAiMinutes : undefined);
-      const result = await extractor.fetch(videoId);
+      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY, env.TRANSCRIPT_PROVIDER_ORDER, env.APIFY_TOKEN, parseChainBudgetMs(env.TRANSCRIPT_CHAIN_BUDGET_MS), env.TRANSCRIPTAPI_API_KEY, env.SUPADATA_API_KEY, parseSupadataMaxAiMinutes(env.SUPADATA_MAX_AI_MINUTES));
+      const result = await extractor.fetch(videoId, durationSeconds);
       // Gate on the explicit flag, not a substring match against the
       // placeholder text -- a new placeholder string was added for the
       // confirmed-no-captions case and a text-only check would silently
@@ -897,6 +897,9 @@ function buildStreamResponse(
         req.transcript,
         req.videoId,
         { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY, APIFY_TOKEN: env.APIFY_TOKEN, TRANSCRIPTAPI_API_KEY: env.TRANSCRIPTAPI_API_KEY, SUPADATA_API_KEY: env.SUPADATA_API_KEY, SUPADATA_MAX_AI_MINUTES: env.SUPADATA_MAX_AI_MINUTES, TRANSCRIPT_PROVIDER_ORDER: env.TRANSCRIPT_PROVIDER_ORDER, TRANSCRIPT_CHAIN_BUDGET_MS: env.TRANSCRIPT_CHAIN_BUDGET_MS },
+        // Video duration in seconds (review P1, 2026-09-25): the Supadata AI
+        // cap is enforced against it and fails closed when unknown.
+        parseVideoDurationSeconds((req.metadata as { duration?: string | number }).duration),
         (req.metadata as { channelId?: string }).channelId,
         cache,
         (() => {

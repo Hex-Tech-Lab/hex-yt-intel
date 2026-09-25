@@ -67,7 +67,16 @@ export default defineConfig({
       // sibling check while vitest never ran it (found 2026-09-15 while
       // pinning the P2B validator contract this route test guards).
       'app/api/analyses/highlights/**/*.test.ts',
-// PR #326's pricing page gained a copy-contract sibling test
+      // STEP 1 tier-vocabulary unification (2026-09-19): authorization-
+      // relevant route/page siblings mandated by qa-intel's
+      // security-fix-without-regression-test rule. Named explicitly (same
+      // rationale as the app/api globs above, NOT a broad app/** glob).
+      // The [id] directory is bracket-ESCAPED -- unescaped, micromatch
+      // reads it as a character class and matches nothing.
+      'app/api/billing/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/export/**/*.test.ts',
+      'app/billing/**/*.test.tsx',
+      // PR #326's pricing page gained a copy-contract sibling test
       // (qa-intel high finding: authorization-relevant file with no
       // sibling regression test). Named explicitly, same rationale as the
       // globs above.

@@ -35,21 +35,48 @@ export function parseChainBudgetMs(raw?: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-// Chain budget derivation (2026-09-25, supadata tier): the Apify tier can
-// block for up to 130000ms (its own abort, > the actor's 120s timeout). The
-// budget must therefore leave at least 30s for the remaining fallback tiers
-// (decodo 30s + native ~25s of internal deadlines) before the placeholder:
-// TranscriptAPI (first tier since 2026-09-25) adds up to 30000ms before Apify,
-// and Supadata (last tier since 2026-09-25) adds up to 60000ms after native
-// (its own 30s initial-request deadline + up to 60s of AI job polling bounded
-// by its internal job deadline; the chain budget is what actually bounds it
-// here, so the reservation must exist or the tier would always be skipped):
-// 30000 (TranscriptAPI) + 130000 (Apify worst case) + 30000 (decodo+native
-// floor) + 60000 (Supadata AI job incl. polling) + 30000 (placeholder floor) ≈ 250000ms;
-// kept at the round 250000 = previous 190000 + 60000 Supadata reservation so
-// supadata always gets ≥60s. Overridable via TRANSCRIPT_CHAIN_BUDGET_MS
-// (worker is DB-free per ADR 005, so env only).
-const DEFAULT_CHAIN_BUDGET_MS = 250000;
+/**
+ * Parses SUPADATA_MAX_AI_MINUTES from env for the Supadata AI-mode cap.
+ * Contract (review P1-2, 2026-09-25): an EXPLICIT "0" disables AI generation
+ * (cap = 0); a missing, non-numeric, non-finite or negative value yields
+ * undefined so the extractor falls back to its default cap (60). Never map
+ * 0 to undefined — the previous inline `> 0 ? x : undefined` route coercion
+ * silently turned an explicit disable into the default cap.
+ */
+export function parseSupadataMaxAiMinutes(raw?: string): number | undefined {
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return parsed;
+}
+
+/**
+ * Parses the video duration forwarded from the route (req.metadata.duration,
+ * seconds) into a finite positive number, or undefined when unknown/invalid.
+ * The Supadata provider treats undefined as fail-closed for AI generation.
+ */
+export function parseVideoDurationSeconds(raw: unknown): number | undefined {
+  const parsed = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+// Chain budget derivation (2026-09-25, corrected per review P2): the default
+// budget must cover the SUM OF EACH TIER'S ENFORCED INTERNAL DEADLINE so the
+// last tier still gets its full window when every earlier tier runs to its
+// worst case. Enforced deadlines, verified in each provider's source:
+// - transcriptapi: 30000ms (AbortSignal.timeout)
+// - apify:         130000ms (its own abort, > the actor's 120s timeout)
+// - decodo:        30000ms (AbortSignal.timeout)
+// - native:        ~35000ms worst case (page-HTML path: 15s + 10s + 10s)
+// - supadata:      60000ms (job deadline = startedAt + 60s, bounding the
+//                  initial request + polling together)
+// Placeholder tier is synchronous (no network) and needs no window.
+// 30000 + 130000 + 30000 + 35000 + 60000 = 285000ms. The previous 250000
+// default was short of the real sum (its comment double-counted a 30s
+// "placeholder floor" that does not exist and used a 30s native figure),
+// which would leave Supadata budget-starved in the worst case. Overridable
+// via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, env only).
+const DEFAULT_CHAIN_BUDGET_MS = 285000;
 
 const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native', 'supadata'] as const;
 type ProviderName = typeof VALID_PROVIDER_NAMES[number];
@@ -124,7 +151,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return providers;
   }
 
-  async fetch(videoId: string): Promise<TranscriptResult> {
+  async fetch(videoId: string, durationSeconds?: number): Promise<TranscriptResult> {
     if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
@@ -160,7 +187,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       try {
         console.info(`[transcript] Trying ${name} for ${videoId}...`);
         attemptStarted = Date.now();
-        const attempt = provider.fetch(videoId);
+        const attempt = provider.fetch(videoId, durationSeconds);
         const budgetAbort = new Promise<never>((_, reject) => {
           budgetTimer = setTimeout(() => reject(new Error(`${name} exceeded remaining chain budget (${remainingMs}ms)`)), remainingMs);
         });

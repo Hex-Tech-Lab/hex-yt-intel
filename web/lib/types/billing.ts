@@ -5,7 +5,34 @@
  * Allows switching providers with a single environment variable change.
  */
 
-export type UserTier = 'free' | 'pro' | 'enterprise';
+/**
+ * Canonical customer-facing tier vocabulary (2026-09-19 unification, STEP 1).
+ * Product truth: Free / Light / Pro / Max. `enterprise` is kept — the DB
+ * allows it and admin-granted accounts may carry it. `admin`/`casual`/`core`
+ * /`power` exist ONLY in retention_policies.tier (DB-only, step 2 scope).
+ */
+export const USER_TIERS = ['free', 'light', 'pro', 'max', 'enterprise'] as const;
+
+export type UserTier = typeof USER_TIERS[number];
+
+/**
+ * Fail-closed tier normalization (PR #325 P1 #3). Runtime code previously
+ * treated any non-`free` string as paid (`tier !== 'free'`) and cast raw DB
+ * values with `as UserTier`, so a legacy/misspelled value ('founder',
+ * 'PRO', '', null) unlocked paid features. Any value not exactly one of
+ * USER_TIERS becomes 'free'. Case-sensitive, no trimming.
+ */
+export function normalizeUserTier(value: unknown): UserTier {
+  return typeof value === 'string' && (USER_TIERS as readonly string[]).includes(value)
+    ? (value as UserTier)
+    : 'free';
+}
+
+/** Paid means exactly light | pro | max | enterprise. Normalized compare
+ * (qa-intel R10, 2026-09-24): never infer paid from a raw !== 'free'. */
+export function isPaidTier(tier: UserTier): boolean {
+  return normalizeUserTier(tier) !== 'free';
+}
 
 export type BillingProviderType = 'paddle' | 'stripe' | 'lemonsqueezy';
 

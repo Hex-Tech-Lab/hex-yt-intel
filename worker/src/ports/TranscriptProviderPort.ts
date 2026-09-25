@@ -26,7 +26,13 @@ export interface TranscriptResult {
 }
 
 export interface TranscriptProviderPort {
-  fetch(videoId: string): Promise<TranscriptResult>;
+  /**
+   * durationSeconds: video duration when known by the caller (route forwards
+   * req.metadata.duration). Providers that enforce a duration-dependent cost
+   * cap (Supadata AI mode) FAIL CLOSED when it is absent/invalid — never
+   * starting an unbounded metered job. Other providers may ignore it.
+   */
+  fetch(videoId: string, durationSeconds?: number): Promise<TranscriptResult>;
 }
 
 /**
