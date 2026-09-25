@@ -1,0 +1,44 @@
+web/lib/__tests__/highlights-coverage.test.ts
+  s_3ff13f537f1fcb::t_f069117ec0a5f3 236
+  s_3ff13f537f1fcb::t_7c83558e9368cb 197,199-201
+.memory/AGENT_LEDGER.md
+  s_11111ef41ba349::t_0350a3748a25e7 1409
+  s_11111ef41ba349::t_f2d4715892e562 1407
+  s_f72aabe7d4fd48::t_c7b0a1e8e6c00b 1406
+  s_f72aabe7d4fd48::t_a21a836df3600d 1408
+  s_3ff13f537f1fcb::t_9c928df901cf6c 1410
+.qa-intel/baseline.json
+  s_3ff13f537f1fcb::t_5769f82c830b13 3,6,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c054e3bb0032e132cfafecdcc9a9364f63411511",
+  "prompts": {},
+  "sessions": {
+    "s_11111ef41ba349": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256ed6b8ffepBRaADntTSoPnR",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_3ff13f537f1fcb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f253ddc15ffe3J27MtM6Cu36Dd",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f72aabe7d4fd48": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256fa387ffeRmXPTxUpE92IWB",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
