@@ -13,6 +13,8 @@ interface YTPlayerInstance {
   destroy(): void;
   getCurrentTime(): number;
   setPlaybackRate(rate: number): void;
+  getVolume?(): number;
+  isMuted?(): boolean;
 }
 
 interface YTPlayerConstructor {
@@ -226,5 +228,24 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
 
   getCurrentTime(): number {
     return this.player?.getCurrentTime?.() ?? 0;
+  }
+
+  getVolume(): number {
+    if (this.destroyed || !this.player?.getVolume) return 100;
+    try {
+      const vol = this.player.getVolume();
+      return typeof vol === 'number' && Number.isFinite(vol) ? Math.max(0, Math.min(100, vol)) : 100;
+    } catch {
+      return 100;
+    }
+  }
+
+  isMuted(): boolean {
+    if (this.destroyed || !this.player?.isMuted) return false;
+    try {
+      return Boolean(this.player.isMuted());
+    } catch {
+      return false;
+    }
   }
 }

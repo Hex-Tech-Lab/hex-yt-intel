@@ -296,9 +296,23 @@ export function VideoPlayerCard() {
   // NotFoundError crash). Both overlay slots are now ALWAYS rendered with a
   // stable DOM node count/order; only CSS visibility toggles, so React never
   // needs to insert/remove nodes around the third-party-mutated container.
+  const getVolumeGain = (): number => {
+    if (!playerRef.current) return 1;
+    if (playerRef.current.isMuted?.()) return 0;
+    const vol = playerRef.current.getVolume?.();
+    if (typeof vol === 'number' && Number.isFinite(vol)) {
+      return Math.max(0, Math.min(100, vol)) / 100;
+    }
+    return 1;
+  };
+
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
-      <HighlightsTransitionOverlay active={isTransitioning} direction={transitionDirection ?? 'forward'} />
+      <HighlightsTransitionOverlay
+        active={isTransitioning}
+        direction={transitionDirection ?? 'forward'}
+        volumeGain={getVolumeGain()}
+      />
       <div className={`absolute inset-0 z-10 flex-col items-center justify-center p-6 text-center text-xs font-mono ${embedRestricted ? 'flex' : 'hidden'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
         <img

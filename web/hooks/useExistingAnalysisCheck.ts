@@ -36,7 +36,7 @@ export function useExistingAnalysisCheck(url: string): boolean {
           if (!res.ok || requestIdRef.current !== requestId) return;
           const data = await res.json();
           if (requestIdRef.current !== requestId) return;
-          setHasExisting(data?.exists === true && data?.status === 'complete');
+          setHasExisting(data?.exists === true);
         } catch {
           if (requestIdRef.current === requestId) setHasExisting(false);
         }

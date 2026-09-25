@@ -9,8 +9,10 @@ export interface DashboardHeaderProps {
   onAnalyze: () => void;
   onReanalyze: () => void;
   onCancel: () => void;
+  onDismissError?: () => void;
   error?: string;
   quota: string;
+  isRepeat?: boolean;
 }
 
 export function DashboardHeader({
@@ -20,8 +22,10 @@ export function DashboardHeader({
   onAnalyze,
   onReanalyze,
   onCancel,
+  onDismissError,
   error,
   quota,
+  isRepeat = false,
 }: DashboardHeaderProps) {
   return (
     <AnalysisHero
@@ -31,8 +35,10 @@ export function DashboardHeader({
       onAnalyze={onAnalyze}
       onReanalyze={onReanalyze}
       onCancel={onCancel}
+      onDismissError={onDismissError}
       error={error}
       quota={quota}
+      isRepeat={isRepeat}
     />
   );
 }
