@@ -122,17 +122,24 @@ const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 
 // nucleusKnowledgeGraph (KnowledgeGraphV2, the live-streaming source) and
 // `graph` (KnowledgeGraph, the Pro-only fetched/merged source) aren't
-// structurally compatible -- KGNodeV2 has no `inPersona` field, which
-// MergedGraphNode requires. Neither WordCloud nor copyPanelContent's
-// word-cloud branch ever reads `.inPersona`, so defaulting it false here is
-// a real, typed adapter rather than an `as any` cast past the mismatch
-// (Codacy ErrorProne review, PR #302).
+// structurally compatible -- KGNodeV2 has no `inPersona` field and, since
+// 2026-09-25, an optional `content` (the prompt's 8.1 node spec never asked
+// for one), both of which MergedGraphNode requires. Neither WordCloud nor
+// copyPanelContent's word-cloud branch ever reads `.inPersona`, and the
+// graph renderer already coalesces absent content (`n.content || ''` in
+// useKnowledgeGraph.ts), so defaulting them here is a real, typed adapter
+// rather than an `as any` cast past the mismatch (Codacy ErrorProne review,
+// PR #302).
 // skipcq: JS-0067
 function toDisplayGraph(
   source: KnowledgeGraph | KnowledgeGraphV2,
 ): KnowledgeGraph {
   return {
-    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+    nodes: source.nodes.map((node) => ({
+      inPersona: false,
+      content: "",
+      ...node,
+    })),
     edges: source.edges,
     rootId: source.rootId,
   };
