@@ -1,0 +1,45 @@
+worker/src/services/providers/SupadataTranscriptProvider.ts
+  s_d1ad11481f68a9::t_763dbd81d9d24e 193
+  s_d1ad11481f68a9::t_efaf581194834f 130-137
+  s_d1ad11481f68a9::t_c560c8de4054a0 189-192
+worker/src/__tests__/SupadataTranscriptProvider.test.ts
+  s_d1ad11481f68a9::t_4f05b7079f5311 305-306
+  s_d1ad11481f68a9::t_02866fe0ee0526 277-278,287-290,292-293,295-297,299-300,308,310-320
+  s_d1ad11481f68a9::t_2e8c69afcdf25e 279-286,298,301-303
+  s_d1ad11481f68a9::t_c9d51b33ee4f8a 291,294,304,307,309
+.github/workflows/deploy-worker.yml
+  s_d1ad11481f68a9::t_3db32707ccc8d2 70-72
+  s_f6e8dbb355da54::t_963b40a9b21697 75-76
+  s_f6e8dbb355da54::t_680c1ae3d6eb72 62-69,73-74,77-81
+.memory/AGENT_LEDGER.md
+  s_f6e8dbb355da54::t_f32e3335afa044 1405
+  s_d1ad11481f68a9::t_65ff4f6684b386 1404
+worker/src/__tests__/TranscriptChainBudget.test.ts
+  s_d1ad11481f68a9::t_5e7527ae78e0d5 1-103
+worker/src/services/TranscriptExtractor.ts
+  s_d1ad11481f68a9::t_40338a87f2c5e0 63,71-77,79-80,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a9871b798adb3272c82ade57a72c4c544157b017",
+  "prompts": {},
+  "sessions": {
+    "s_d1ad11481f68a9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256f1472ffeT4MoDlAFh5fYeW",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f6e8dbb355da54": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256f6af8ffeXp6xWBB6wEGpTG",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
