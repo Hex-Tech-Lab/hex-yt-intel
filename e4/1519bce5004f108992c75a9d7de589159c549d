@@ -1,0 +1,51 @@
+web/app/auth/signin/form.tsx
+  s_d3c44f9baa0974::t_31610bd982c05d 76
+web/lib/__tests__/paddle-e2e-billing.integration.test.ts
+  s_d3c44f9baa0974::t_a79b6c52e9061e 19
+web/hooks/useAutoRestoreAnalysis.ts
+  s_d3c44f9baa0974::t_c7485e9054a568 242
+web/components/dashboard/HighlightsScrubber.tsx
+  s_d3c44f9baa0974::t_eae4058b111204 250-253
+web/hooks/useStreamReattach.ts
+  s_d3c44f9baa0974::t_3e3fd2e85ec318 59
+web/hooks/useSSEStream.ts
+  s_d3c44f9baa0974::t_33c840f6dd98d1 201
+  s_d3c44f9baa0974::t_f44e92c9c0d4ab 171
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_d3c44f9baa0974::t_1dad47180a7b1e 18
+web/lib/__tests__/persist-chunk-monotonic.test.ts
+  s_d3c44f9baa0974::t_e6d429562f7df0 55
+web/components/templates/console/WordCloud.tsx
+  s_d3c44f9baa0974::t_aa03fd1c451446 491
+  s_d3c44f9baa0974::t_47c8a754b63da0 624
+web/lib/hooks/useHighlightsStatus.ts
+  s_d3c44f9baa0974::t_a041a6c93f7778 121-122
+web/lib/types.ts
+  s_d3c44f9baa0974::t_29915c48323fc0 8
+web/store/useAnalysisStore.ts
+  s_d3c44f9baa0974::t_e0b9a1e86e5ef8 43
+  s_d3c44f9baa0974::t_0c743f90bc7310 241,245
+web/components/templates/console/__tests__/video-player-lifecycle.test.tsx
+  s_d3c44f9baa0974::t_9162ee2d714275 2
+  s_d3c44f9baa0974::t_4637471d7fbb31 21
+web/lib/prompts/highlights-extraction.ts
+  s_d3c44f9baa0974::t_65256c1fab8fcf 136
+web/components/templates/console/AnalysisHistory.tsx
+  s_d3c44f9baa0974::t_13dfc28dad0db2 305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e41519bce5004f108992c75a9d7de589159c549d",
+  "prompts": {},
+  "sessions": {
+    "s_d3c44f9baa0974": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f25330710ffeMuzBUToMc1eUXz",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
