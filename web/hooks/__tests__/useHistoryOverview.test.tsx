@@ -82,12 +82,16 @@ describe('useHistoryOverview fetch race (sequence guard)', () => {
     act(() => {
       refetched.resolve(okResponse([item('new', 'complete')]));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     act(() => {
       mount.resolve(okResponse([item('old', 'failed')]));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     // The stale mount response must NOT overwrite the newer refetch data.
     expect(result.current.items).toEqual([item('new', 'complete')]);
@@ -110,12 +114,16 @@ describe('useHistoryOverview fetch race (sequence guard)', () => {
     act(() => {
       refetched.resolve(okResponse([item('new', 'complete')]));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     act(() => {
       mount.reject(new Error('stale failure'));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.error).toBeNull();
     expect(result.current.items).toEqual([item('new', 'complete')]);
@@ -134,7 +142,9 @@ describe('useHistoryOverview fetch race (sequence guard)', () => {
     act(() => {
       mount.resolve(okResponse([item('live', 'processing')]));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(result.current.items).toEqual([item('live', 'processing')]);
 
     // Poll tick fires; the poll request fails after being started.
@@ -145,7 +155,9 @@ describe('useHistoryOverview fetch race (sequence guard)', () => {
     act(() => {
       poll.reject(new Error('transient network error'));
     });
-    await act(async () => {});
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.items).toEqual([item('live', 'processing')]);
     expect(result.current.error).toBeNull();
