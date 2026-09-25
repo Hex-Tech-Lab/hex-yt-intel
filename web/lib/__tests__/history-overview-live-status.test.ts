@@ -97,4 +97,8 @@ describe('migration v14 - stalled status contract', () => {
     expect(sql).toContain('has_chapters boolean');
     expect(sql).toContain("revoke execute on function public.get_user_history_overview(uuid) from anon, authenticated, public;");
   });
+
+  it('grants least-privilege EXECUTE to service_role (the only caller)', () => {
+    expect(sql).toContain('grant execute on function public.get_user_history_overview(uuid) to service_role;');
+  });
 });

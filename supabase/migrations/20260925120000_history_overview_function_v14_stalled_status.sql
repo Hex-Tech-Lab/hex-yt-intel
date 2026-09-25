@@ -137,4 +137,10 @@ as $$
   order by a.last_analyzed_at desc;
 $$;
 
+-- DROP+CREATE resets EXECUTE grants; the only caller is the server-side
+-- service-role client (SupabaseAnalysisAdapter.getUserHistoryOverview ->
+-- getSupabaseServiceClient().rpc(...), never the browser), so grant
+-- least-privilege EXECUTE explicitly rather than relying on default
+-- privileges (same class as the 20260820100539 admin-RPC revoke precedent).
 revoke execute on function public.get_user_history_overview(uuid) from anon, authenticated, public;
+grant execute on function public.get_user_history_overview(uuid) to service_role;

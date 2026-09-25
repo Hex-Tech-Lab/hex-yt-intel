@@ -53,8 +53,14 @@ export function useHistoryOverview() {
     error: null,
   });
   const cancelledRef = useRef(false);
+  // Monotonic request sequence: only the most recently STARTED fetch may
+  // settle state. Mount, silent poll, and manual refetch can all overlap
+  // (a slow silent poll resolving after a fresh manual refetch must not
+  // overwrite the newer response with older data).
+  const seqRef = useRef(0);
 
   const fetchOverview = useCallback(async (opts?: { silent?: boolean }) => {
+    const seq = ++seqRef.current;
     try {
       if (!opts?.silent) {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
@@ -68,10 +74,10 @@ export function useHistoryOverview() {
         throw new Error(errorData.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      if (cancelledRef.current) return;
+      if (cancelledRef.current || seqRef.current !== seq) return;
       setState({ items: data.items || [], isLoading: false, error: null });
     } catch (err) {
-      if (cancelledRef.current) return;
+      if (cancelledRef.current || seqRef.current !== seq) return;
       // A failed background poll is silent on the error surface too: keep the
       // last good items rendered and retry on the next tick, rather than
       // tearing the list down over a transient fetch failure.
