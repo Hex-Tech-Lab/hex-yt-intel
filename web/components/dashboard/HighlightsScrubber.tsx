@@ -1,6 +1,4 @@
 'use client';
-import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Spinner, Tooltip } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
@@ -9,7 +7,9 @@ import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDurati
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
+import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
+import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
 interface Highlight {
   idx: number;
@@ -151,7 +151,13 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
       try {
         let lastJson: HighlightsResponse | null = null;
         for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
-          const res = await fetch(`/api/analyses/highlights?analysisId=${id}`, { signal: controller.signal });
+          // Shared in-flight dedupe (network-storms RCA 2026-09-26): the
+          // status-chip loop (useHighlightsStatus) fires the identical GET
+          // on the same backoff schedule -- collapse them into one real
+          // request per attempt. The local controller still owns
+          // staleness: the aborted check below discards a response that
+          // this cycle's own controller has outlived.
+          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${id}`);
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
           // Real bug (deeper review, PR #298): AbortController.abort() only

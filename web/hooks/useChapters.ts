@@ -87,6 +87,13 @@ export function useChapters(videoId: string | null) {
 
     let cancelled = false;
     let retryCount = 0;
+    // Real network-level cancellation (network-storms RCA 2026-09-26): the
+    // `cancelled` flag alone only stopped the NEXT loop iteration -- the
+    // in-flight request itself kept running after unmount. fetchWithTimeout
+    // composes a caller signal with its own timeout controller (PR #315
+    // P1-7, intentional contract), so unmount/Strict-Mode cleanup now
+    // aborts the actual request too.
+    const controller = new AbortController();
     const fetchWithBackoff = async () => {
       while (retryCount < MAX_RETRIES && !cancelled) {
         let confirmedLoaded = false;
@@ -101,7 +108,7 @@ export function useChapters(videoId: string | null) {
           // uncovered one layer deeper.
           const parsed = await fetchWithTimeout(
             `/api/videos/${encodeURIComponent(videoId)}/chapters`,
-            undefined,
+            { signal: controller.signal },
             async (res: Response) => {
               // PR #315 review round 2 (P1): 4xx responses are permanent
               // (auth/ownership/not-found — retrying can never succeed), so
@@ -173,6 +180,7 @@ export function useChapters(videoId: string | null) {
 
     return () => {
       cancelled = true;
+      controller.abort();
       // Cancelled before ever calling setLoaded/setError (unmount, or React
       // Strict Mode's dev-only mount->cleanup->remount double-invoke): the
       // store entry is stuck at 'loading' with nothing left to settle it,
