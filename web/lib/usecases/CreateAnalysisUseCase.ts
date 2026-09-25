@@ -199,7 +199,13 @@ export class CreateAnalysisUseCase {
     );
     const promptCachingRaw = resolvedCachingRegistry['analysis.promptCaching.enabled'];
     const promptCaching = promptCachingRaw === undefined ? true : String(promptCachingRaw) !== 'false';
-    const cacheWarmTimeoutMs = Number(resolvedCachingRegistry['analysis.llmCascade.cacheWarmTimeoutMs']) || 3000;
+    // Number.isFinite guard (2026-09-26 fix): `Number(value) || 3000`
+    // silently coerced a legitimate registry value of 0 (stagger disabled
+    // via registry) to the 3000 default -- 0 is falsy. A finite check
+    // respects 0 while still falling back when the key is absent
+    // (Number(undefined) === NaN) or non-numeric.
+    const cacheWarmRaw = Number(resolvedCachingRegistry['analysis.llmCascade.cacheWarmTimeoutMs']);
+    const cacheWarmTimeoutMs = Number.isFinite(cacheWarmRaw) ? cacheWarmRaw : 3000;
 
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')

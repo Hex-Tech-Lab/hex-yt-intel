@@ -88,6 +88,8 @@ export class LLMCascade implements LLMCascadePort {
   // a stale client that doesn't forward the flag still benefits (write 1.25x
   // on bundle 1's shared ~19.2k-token prefix, reads 0.1x on bundles 2-5).
   private promptCachingEnabled: boolean;
+  // One-shot: a byte-identity breach is a caller contract bug, not transient.
+  private byteIdentityWarningLogged = false;
 
   constructor(
     apiKey: string,
@@ -308,7 +310,27 @@ export class LLMCascade implements LLMCascadePort {
     // model's cacheable minimum (Haiku 4.5: 4096 tokens; our prefix is
     // ~19.2k, measured 2026-09-25). Non-Anthropic fallback tiers ignore
     // cache_control -- no behavior change there.
-    const systemMessages = cacheSplit && this.promptCachingEnabled
+    // Byte-identity guard (2026-09-26): the 2-block cache split is only
+    // semantically identical to the un-split prompt when
+    // prefix + suffix === systemPrompt byte-for-byte (the
+    // PromptBuilder.buildSegmented contract). If a caller ever passes a
+    // split that fails that identity, sending the two blocks would CHANGE
+    // the system prompt the model sees -- so fail soft: fall back to the
+    // plain single-block message (cache benefit lost, semantics preserved)
+    // and surface the contract breach to Sentry.
+    const splitIsByteIdentical = cacheSplit ? cacheSplit.prefix + cacheSplit.suffix === systemPrompt : false;
+    if (cacheSplit && !splitIsByteIdentical && !this.byteIdentityWarningLogged) {
+      this.byteIdentityWarningLogged = true;
+      Sentry.captureMessage('prompt-cache: cacheSplit fails byte-identity with systemPrompt; falling back to single-block system message', {
+        level: 'warning',
+        extra: {
+          prefixLength: cacheSplit.prefix.length,
+          suffixLength: cacheSplit.suffix.length,
+          systemPromptLength: systemPrompt.length,
+        },
+      });
+    }
+    const systemMessages = cacheSplit && splitIsByteIdentical && this.promptCachingEnabled
       ? [{
           role: 'system',
           content: [

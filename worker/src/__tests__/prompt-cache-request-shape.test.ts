@@ -131,4 +131,49 @@ describe('prompt-cache request shape (bundle LLM calls)', () => {
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.messages[0].content[0].cache_control).toEqual({ type: 'ephemeral' });
   });
+
+  // End-to-end integration assertion (2026-09-26, PR #348 review): the REAL
+  // PromptBuilder segmentation flowing through the REAL LLMCascade request
+  // shape -- the system message must be a 2-block array with cache_control
+  // exactly on the prefix block (never the suffix), and the concatenation of
+  // the two blocks must be byte-for-byte identical to the un-split prompt
+  // (ReasoningEngine's systemPrompt = sharedPrefix + segmentInstruction).
+  it('real PromptBuilder -> LLMCascade request: 2-block system array, cache_control on prefix only, byte-for-byte split', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(cacheSseResponse(19000));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cascade = new LLMCascade('test-api-key', undefined, HAIKU_CHAIN, { haiku: 8192, default: 16000 }, 'user1', 240000, 15000, true);
+    const builder = new PromptBuilder(undefined);
+
+    for (const dims of BUNDLE_DIMENSIONS) {
+      const context = baseContext(dims);
+      const segmented = await builder.buildSegmented({ ...context, dimensions: dims });
+      const full = await builder.build({ ...context, dimensions: dims });
+      const split = { prefix: segmented.sharedPrefix, suffix: segmented.segmentInstruction };
+      await cascade.streamCascade(split.prefix + split.suffix, () => {}, undefined, undefined, split);
+
+      const body = JSON.parse((fetchMock.mock.calls[fetchMock.mock.calls.length - 1] as [string, RequestInit])[1].body as string);
+      const message = body.messages[0];
+      expect(message.role).toBe('system');
+      // Exactly a 2-block array: prefix + suffix, nothing else.
+      expect(Array.isArray(message.content)).toBe(true);
+      expect(message.content).toHaveLength(2);
+      // cache_control sits exactly on the prefix block and nowhere else.
+      expect(message.content[0]).toEqual({ type: 'text', text: segmented.sharedPrefix, cache_control: { type: 'ephemeral' } });
+      expect(message.content[1]).toEqual({ type: 'text', text: segmented.segmentInstruction });
+      expect(message.content[1].cache_control).toBeUndefined();
+      // Byte-for-byte identity with the un-split prompt.
+      expect(message.content[0].text + message.content[1].text).toBe(full);
+      expect(body.messages[0].content[0].text).toBe(segmented.sharedPrefix);
+    }
+
+    // Every bundle's actual request carried the byte-identical prefix.
+    const requestedPrefixes = new Set(
+      (fetchMock.mock.calls as Array<[string, RequestInit]>).map(([, init]) => {
+        const requestBody = JSON.parse(init.body as string);
+        return requestBody.messages[0].content[0].text;
+      })
+    );
+    expect(requestedPrefixes.size).toBe(1);
+  });
 });

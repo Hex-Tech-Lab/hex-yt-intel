@@ -33,12 +33,40 @@ function handleSseLine(line: string, adapter: SynthesisStreamAdapter): void {
 }
 
 /**
- * Reads the worker stream body to completion, feeding every SSE event frame
- * to handleSseLine. A user-intentional abort (AbortError) is quiet; any
- * other read failure propagates to the caller's retry/settle logic. Always
- * releases the reader lock.
+ * True when an SSE event frame carries a signal that the worker's CACHEABLE
+ * LLM request has actually begun: the explicit `stage: 'llm-started'` status
+ * frame, or (fallback for stale workers that predate the event) the first
+ * LLM output delta. Raw early frames like the pre-transcript-fetch
+ * `stage: 'extracting'` status deliberately do NOT qualify -- the prompt-cache
+ * warm stagger must not release before bundle 1's cacheable request starts
+ * (2026-09-26 fix: it previously released on the first raw SSE byte, so an
+ * `extracting` frame could release the gate before the cache write began,
+ * and bundles 2-5 would miss the warm cache).
  */
-async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, onFirstByte?: () => void): Promise<void> {
+function isLlmSignalFrame(frame: string): boolean {
+  for (const line of frame.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) continue;
+    try {
+      const data = JSON.parse(trimmed.slice(5).trim()) as { type?: string; stage?: string };
+      if (data.type === 'status' && data.stage === 'llm-started') return true;
+      if (data.type === 'delta') return true;
+    } catch (parseErr) {
+      console.debug('[useSSEStream] Non-JSON data line -- not an LLM signal:', parseErr instanceof Error ? parseErr.message : String(parseErr));
+    }
+  }
+  return false;
+}
+
+/**
+ * Reads the worker stream body to completion, feeding every SSE event frame
+ * to handleSseLine. Fires onLlmSignal exactly once, when the first
+ * cacheable-LLM-start event frame arrives (see isLlmSignalFrame). A
+ * user-intentional abort (AbortError) is quiet; any other read failure
+ * propagates to the caller's retry/settle logic. Always releases the reader
+ * lock.
+ */
+async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, onLlmSignal?: () => void): Promise<void> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -47,16 +75,24 @@ async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, curre
       const { done, value } = await reader.read();
       if (done) break;
       if (currentSignal.aborted) { await reader.cancel(); break; }
-      if (value && onFirstByte) {
-        onFirstByte();
-        onFirstByte = undefined;
-      }
       buffer += decoder.decode(value, { stream: true });
       const events = buffer.split(/\r?\n\r?\n/);
       buffer = events.pop() || '';
-      for (const e of events) handleSseLine(e, adapter);
+      for (const e of events) {
+        handleSseLine(e, adapter);
+        if (onLlmSignal && isLlmSignalFrame(e)) {
+          onLlmSignal();
+          onLlmSignal = undefined;
+        }
+      }
     }
-    if (buffer.trim()) handleSseLine(buffer, adapter);
+    if (buffer.trim()) {
+      handleSseLine(buffer, adapter);
+      if (onLlmSignal && isLlmSignalFrame(buffer)) {
+        onLlmSignal();
+        onLlmSignal = undefined;
+      }
+    }
   } catch (readErr: any) {
     if (readErr.name === 'AbortError') return;
     throw readErr;
@@ -382,7 +418,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onFirstByte?: () => void) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -434,22 +470,31 @@ export function useSSEStream() {
                   throw new Error(`Worker stream ${i + 1} failed (${res.status}): ${errBody}`);
                 }
 
-                await readSseBody(res, adapter, currentSignal, onFirstByte);
+                await readSseBody(res, adapter, currentSignal, onLlmSignal);
               };
 
               const runStreams = async () => {
                 const completedIndexes = new Set<number>();
                 const failedIndexes = new Set<number>();
 
-                // Prompt-cache warm stagger (2026-09-25): Anthropic only makes
-                // a cache entry readable once the FIRST request's response
-                // begins streaming (their documented concurrent-requests
-                // caveat). Bundle 0 starts immediately and resolves
-                // firstBytePromise on its first streamed byte; bundles 1..n
-                // wait at most cacheWarmTimeoutMs for that signal, then start
-                // regardless -- a bounded wait, never a hard gate. Skipped
-                // entirely when prompt caching is disabled (nothing to warm,
-                // so the wait would be pure latency) or for a single bundle.
+                // Prompt-cache warm stagger (2026-09-25, release-condition
+                // fixed 2026-09-26): Anthropic only makes a cache entry
+                // readable once the FIRST request's response begins
+                // streaming (their documented concurrent-requests caveat).
+                // Bundle 0 starts immediately and resolves llmStartPromise
+                // on the first signal that its CACHEABLE LLM request has
+                // actually begun -- the worker's explicit `stage:
+                // 'llm-started'` status frame, or the first LLM delta for
+                // stale workers without the event. Raw early frames (the
+                // pre-transcript `extracting` status) do NOT release the
+                // gate: they can arrive well before the LLM request starts,
+                // and releasing on them let bundles 2-5 start before the
+                // cache write, missing the warm cache entirely. Bundles
+                // 1..n wait at most cacheWarmTimeoutMs for that signal,
+                // then start regardless -- a bounded wait, never a hard
+                // gate. Skipped entirely when prompt caching is disabled
+                // (nothing to warm, so the wait would be pure latency) or
+                // for a single bundle.
                 // 3000 fallback = measured Haiku 4.5 first-token latency
                 // (2026-06-02 cascade benchmark; see migration derivation).
                 // Explicit opt-in: only stagger when the job actually carries
@@ -459,24 +504,24 @@ export function useSSEStream() {
                 // are never silently held for the warm window.
                 const warmTimeoutMs = typeof job.cacheWarmTimeoutMs === 'number' && job.cacheWarmTimeoutMs >= 0 ? job.cacheWarmTimeoutMs : 3000;
                 const staggerEnabled = job.promptCaching === true && warmTimeoutMs > 0 && TOTAL_STREAMS > 1;
-                let resolveFirstByte: (() => void) | undefined;
-                const firstBytePromise = new Promise<void>((resolve) => { resolveFirstByte = resolve; });
+                let resolveLlmStart: (() => void) | undefined;
+                const llmStartPromise = new Promise<void>((resolve) => { resolveLlmStart = resolve; });
                 const awaitWarmGate = async (i: number) => {
                   if (!staggerEnabled || i === 0) return;
                   let timer: ReturnType<typeof setTimeout> | undefined;
                   try {
                     await Promise.race([
-                      firstBytePromise,
+                      llmStartPromise,
                       new Promise<void>((resolve) => { timer = setTimeout(resolve, warmTimeoutMs); }),
                     ]);
                   } finally {
                     if (timer !== undefined) clearTimeout(timer);
                   }
                 };
-                const onBundle0FirstByte = () => {
-                  if (resolveFirstByte) {
-                    resolveFirstByte();
-                    resolveFirstByte = undefined;
+                const onBundle0LlmStart = () => {
+                  if (resolveLlmStart) {
+                    resolveLlmStart();
+                    resolveLlmStart = undefined;
                   }
                 };
 
@@ -591,7 +636,7 @@ export function useSSEStream() {
                       onError: (error, code) => resolveOnce({ ok: false, error, code }),
                       onComplete: () => resolveOnce({ ok: true }),
                     });
-                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0FirstByte : undefined)
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0LlmStart : undefined)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
                       .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                   });
