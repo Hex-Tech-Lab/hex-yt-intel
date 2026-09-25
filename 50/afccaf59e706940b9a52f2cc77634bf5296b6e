@@ -1,0 +1,16 @@
+docs/research/2026-09-25-business-case-cogs-pricing.md
+  h_60000122af7b55 6,8,16-17,19,22-24,33,39,41-52,54,60-71,74-77,80,87,91
+scripts/research/run-pricing-research.ts
+  h_60000122af7b55 102-114,116-122,128,148-158,164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "50afccaf59e706940b9a52f2cc77634bf5296b6e",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
