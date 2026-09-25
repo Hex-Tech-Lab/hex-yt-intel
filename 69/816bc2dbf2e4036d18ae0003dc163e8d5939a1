@@ -1,0 +1,49 @@
+.memory/AGENT_LEDGER.md
+  s_ff51d4ae703c97::t_2657cb07c83ab7 1404
+web/lib/types/synthesis-nucleus.ts
+  s_ff51d4ae703c97::t_eed8f29c362ae3 158-163
+web/components/containers/DashboardContainer.tsx
+  s_ff51d4ae703c97::t_52d010adefe413 125-132,138-142
+web/lib/prompts/ucis-v5.3.ts
+  s_ff51d4ae703c97::t_a4705681ae0475 541-542
+  s_ff51d4ae703c97::t_98c4ea64e7af88 101-102,104,106
+  s_ff51d4ae703c97::t_65116f242eaebd 434
+  s_ff51d4ae703c97::t_5646ba57dd58e6 1,3-5
+  s_ff51d4ae703c97::t_086718f5971201 168
+  s_ff51d4ae703c97::t_6a1ff2e1202b23 129
+  s_ff51d4ae703c97::t_2055731f84abca 638,641
+  s_ff51d4ae703c97::t_b9a902f1a6d121 218
+  s_ff51d4ae703c97::t_1b8417ed1a09ba 16,18-19
+  s_ff51d4ae703c97::t_6ca0dc37d515c2 484
+  s_ff51d4ae703c97::t_063e7222f48642 301
+  s_ff51d4ae703c97::t_46a55631d458bd 8
+  s_ff51d4ae703c97::t_d53d86034eb7fb 488
+  s_ff51d4ae703c97::t_87baf1328f4fd2 385
+  s_ff51d4ae703c97::t_0f2bbe5a49f9bd 592
+  s_ff51d4ae703c97::t_1d7b82bb8dcdc9 91
+  s_ff51d4ae703c97::t_d5184e851703d9 510
+  s_ff51d4ae703c97::t_5c96d83d8932ec 478,480
+  s_ff51d4ae703c97::t_2ec5c64b91e48d 604
+web/lib/validators/synthesis.ts
+  s_ff51d4ae703c97::t_d46e9054101021 180-228
+  s_ff51d4ae703c97::t_54ec01cb2b8425 84-139
+  s_ff51d4ae703c97::t_a8d67453b551f1 288-292
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  s_ff51d4ae703c97::t_84d13e51210332 1-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "69816bc2dbf2e4036d18ae0003dc163e8d5939a1",
+  "prompts": {},
+  "sessions": {
+    "s_ff51d4ae703c97": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f27c6039dffebiyZX3d8LRInSH",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
