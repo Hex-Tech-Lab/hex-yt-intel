@@ -1,0 +1,42 @@
+web/lib/__tests__/highlights-coverage.test.ts
+  s_a1ebf7373e31fe::t_eda2af38dd4e73 126-134,137-138
+  s_a1ebf7373e31fe::t_15989bcb455b30 1-125,139-199
+  s_a1ebf7373e31fe::t_85a29f2c2e8035 135-136
+web/lib/prompts/highlights-extraction.ts
+  s_a1ebf7373e31fe::t_444a75ee8a630b 41-55,57,59,62,65,68
+  s_a1ebf7373e31fe::t_b19ea475a860c7 174-203
+web/lib/__tests__/extract-highlights-usecase.test.ts
+  s_a1ebf7373e31fe::t_3b34f1e4556db1 41
+  s_a1ebf7373e31fe::t_6b2336ddd4e9ed 140
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_a1ebf7373e31fe::t_1cf6087903a7be 5-6,8,13-17
+  s_a1ebf7373e31fe::t_2dedf7bf09cb1a 270,274
+  s_a1ebf7373e31fe::t_086cb62997d9ef 228-232,235
+  s_a1ebf7373e31fe::t_9e20538ea69c98 179
+  s_a1ebf7373e31fe::t_c999520f5ae4ca 11
+  s_a1ebf7373e31fe::t_b3e12192c6e9c5 162-176,178,180-198,201-211,214-223,225-226
+  s_a1ebf7373e31fe::t_af9fb250d3ad13 199-200
+web/lib/utils/highlights-settings.ts
+  s_a1ebf7373e31fe::t_145da1a652f5df 111-128
+web/lib/prompts/highlights-extraction.test.ts
+  s_a1ebf7373e31fe::t_f2e52b092e12d2 64-69
+  s_a1ebf7373e31fe::t_0aa1294b200e53 2
+docs/research/2026-09-25-jev-highlight-ranker.md
+  s_a1ebf7373e31fe::t_28d1ac7d39c2eb 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c94c52438300e6677327db96b155badd801f5553",
+  "prompts": {},
+  "sessions": {
+    "s_a1ebf7373e31fe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f271fdf3affeNwEbu7ryM75nb0",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
