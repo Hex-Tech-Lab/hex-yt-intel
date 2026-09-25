@@ -38,7 +38,7 @@ function handleSseLine(line: string, adapter: SynthesisStreamAdapter): void {
  * other read failure propagates to the caller's retry/settle logic. Always
  * releases the reader lock.
  */
-async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal): Promise<void> {
+async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, onFirstByte?: () => void): Promise<void> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -47,6 +47,10 @@ async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, curre
       const { done, value } = await reader.read();
       if (done) break;
       if (currentSignal.aborted) { await reader.cancel(); break; }
+      if (value && onFirstByte) {
+        onFirstByte();
+        onFirstByte = undefined;
+      }
       buffer += decoder.decode(value, { stream: true });
       const events = buffer.split(/\r?\n\r?\n/);
       buffer = events.pop() || '';
@@ -378,7 +382,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onFirstByte?: () => void) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -393,6 +397,8 @@ export function useSSEStream() {
                   maxOutputTokens: job.maxOutputTokens,
                   llmCascadeTimeoutMs: job.llmCascadeTimeoutMs,
                   llmCascadeHandshakeTimeoutMs: job.llmCascadeHandshakeTimeoutMs,
+                  promptCaching: job.promptCaching,
+                  cacheWarmTimeoutMs: job.cacheWarmTimeoutMs,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
@@ -428,12 +434,51 @@ export function useSSEStream() {
                   throw new Error(`Worker stream ${i + 1} failed (${res.status}): ${errBody}`);
                 }
 
-                await readSseBody(res, adapter, currentSignal);
+                await readSseBody(res, adapter, currentSignal, onFirstByte);
               };
 
               const runStreams = async () => {
                 const completedIndexes = new Set<number>();
                 const failedIndexes = new Set<number>();
+
+                // Prompt-cache warm stagger (2026-09-25): Anthropic only makes
+                // a cache entry readable once the FIRST request's response
+                // begins streaming (their documented concurrent-requests
+                // caveat). Bundle 0 starts immediately and resolves
+                // firstBytePromise on its first streamed byte; bundles 1..n
+                // wait at most cacheWarmTimeoutMs for that signal, then start
+                // regardless -- a bounded wait, never a hard gate. Skipped
+                // entirely when prompt caching is disabled (nothing to warm,
+                // so the wait would be pure latency) or for a single bundle.
+                // 3000 fallback = measured Haiku 4.5 first-token latency
+                // (2026-06-02 cascade benchmark; see migration derivation).
+                // Explicit opt-in: only stagger when the job actually carries
+                // promptCaching (CreateAnalysisUseCase always forwards the
+                // registry-resolved flag) -- a stale client/job without the
+                // field keeps the old all-parallel dispatch, so its bundles
+                // are never silently held for the warm window.
+                const warmTimeoutMs = typeof job.cacheWarmTimeoutMs === 'number' && job.cacheWarmTimeoutMs >= 0 ? job.cacheWarmTimeoutMs : 3000;
+                const staggerEnabled = job.promptCaching === true && warmTimeoutMs > 0 && TOTAL_STREAMS > 1;
+                let resolveFirstByte: (() => void) | undefined;
+                const firstBytePromise = new Promise<void>((resolve) => { resolveFirstByte = resolve; });
+                const awaitWarmGate = async (i: number) => {
+                  if (!staggerEnabled || i === 0) return;
+                  let timer: ReturnType<typeof setTimeout> | undefined;
+                  try {
+                    await Promise.race([
+                      firstBytePromise,
+                      new Promise<void>((resolve) => { timer = setTimeout(resolve, warmTimeoutMs); }),
+                    ]);
+                  } finally {
+                    if (timer !== undefined) clearTimeout(timer);
+                  }
+                };
+                const onBundle0FirstByte = () => {
+                  if (resolveFirstByte) {
+                    resolveFirstByte();
+                    resolveFirstByte = undefined;
+                  }
+                };
 
                 // skipcq: JS-R1005 -- intentional: single settle-check across both completed/failed indexes; splitting would race hasSettled (DeepSource, PR #321 round-2)
                 const checkSettleState = () => {
@@ -546,13 +591,16 @@ export function useSSEStream() {
                       onError: (error, code) => resolveOnce({ ok: false, error, code }),
                       onComplete: () => resolveOnce({ ok: true }),
                     });
-                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal)
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0FirstByte : undefined)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
                       .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                   });
                 };
 
                 const runBundleWithRetry = async (i: number, dimensions: number[]) => {
+                  // Cache-warm stagger applies to the FIRST attempt only --
+                  // retries must never wait again.
+                  await awaitWarmGate(i);
                   let attemptController = new AbortController();
                   let outcome = await attemptBundle(i, dimensions, attemptController);
                   if (!outcome.ok && !currentSignal.aborted && !hasSettled) {

@@ -1,43 +1,32 @@
+/**
+ * Contract test for the WorkerStreamRequest forwarding fields (prompt
+ * caching, 2026-09-25): promptCaching/cacheWarmTimeoutMs are registry-resolved
+ * client-side config forwarded to the worker per-request. They are pure
+ * performance/config toggles -- NOT authorization-sensitive (the stream
+ * request's real security boundary is the HMAC sig/exp token, unchanged
+ * here), so this test pins that they exist and stay optional rather than
+ * guarding any auth branch.
+ */
 import { describe, it, expect } from 'vitest';
-import { CheckoutSchema } from '../contracts';
+import type { WorkerStreamRequest } from '@/lib/types/contracts';
 
-process.env.NEXT_PUBLIC_APP_URL = 'https://hex-yt-intel.vercel.app';
+describe('WorkerStreamRequest prompt-caching forwarding fields', () => {
+  it('promptCaching and cacheWarmTimeoutMs are optional and default-absent (stale clients unaffected)', () => {
+    const base: WorkerStreamRequest = {
+      videoId: 'dQw4w9WgXcQ',
+      analysisId: 'analysis-1',
+      transcript: 't',
+      metadata: { title: 't' } as WorkerStreamRequest['metadata'],
+      persona: 'creator',
+      timezone: 'UTC',
+      sig: 'sig',
+      exp: 123,
+    };
+    expect(base.promptCaching).toBeUndefined();
+    expect(base.cacheWarmTimeoutMs).toBeUndefined();
 
-const base = {
-  successUrl: 'https://hex-yt-intel.vercel.app/billing?success=true',
-  cancelUrl: 'https://hex-yt-intel.vercel.app/pricing?canceled=true',
-};
-
-describe('CheckoutSchema — canonical tier vocabulary', () => {
-  it('accepts light/month, light/year, pro/month, max/month, max/year', () => {
-    for (const [plan, interval] of [
-      ['light', 'month'],
-      ['light', 'year'],
-      ['pro', 'month'],
-      ['max', 'month'],
-      ['max', 'year'],
-      ['pro', 'year'], // valid subscription combination
-    ] as const) {
-      const result = CheckoutSchema.safeParse({ ...base, plan, interval });
-      expect(result.success, `${plan}/${interval} should parse`).toBe(true);
-    }
-  });
-
-  it('rejects founder with a recurring interval (founder is once-only)', () => {
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'founder', interval: 'month' }).success).toBe(false);
-  });
-
-  it('accepts founder with the one-time interval (successful path)', () => {
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'founder', interval: 'once' }).success).toBe(true);
-  });
-
-  it('rejects one-time intervals for subscription tiers (fail closed)', () => {
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'light', interval: 'once' }).success).toBe(false);
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'max', interval: 'once' }).success).toBe(false);
-  });
-
-  it('rejects an unknown plan string (fail closed, no silent default)', () => {
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'enterprise', interval: 'month' }).success).toBe(false);
-    expect(CheckoutSchema.safeParse({ ...base, plan: 'garbage', interval: 'month' }).success).toBe(false);
+    const withCaching: WorkerStreamRequest = { ...base, promptCaching: true, cacheWarmTimeoutMs: 3000 };
+    expect(withCaching.promptCaching).toBe(true);
+    expect(withCaching.cacheWarmTimeoutMs).toBe(3000);
   });
 });

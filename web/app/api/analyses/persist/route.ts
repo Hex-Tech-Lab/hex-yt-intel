@@ -192,6 +192,12 @@ export async function POST(request: NextRequest) {
       // therefore integrity-sensitive.
       tokensUsed: z.number().int().min(0).optional(),
       costUsd: z.number().min(0).optional(),
+      // Prompt-cache reads (2026-09-25, analysis_chunks.cached_tokens) --
+      // same unsigned accounting-telemetry class as tokensUsed/costUsd.
+      // Deliberately NOT part of the signed canonical: reads can only reduce
+      // cost (the signed costUsd already reflects the discount), and keeping
+      // the canonical untouched preserves stale-worker signature compat.
+      cachedTokens: z.number().int().min(0).optional(),
       // Exact traceability (2026-08-02): OpenRouter's own generation id for
       // this chunk's call. MUST stay in the signed canonical below in
       // lockstep with PersistService.ts's signer (same hazard as
@@ -286,6 +292,7 @@ export async function POST(request: NextRequest) {
         cancelled,
         tokensUsed,
         costUsd,
+        cachedTokens,
         generationId,
         chunkIndex,
         totalChunks,
@@ -571,6 +578,7 @@ export async function POST(request: NextRequest) {
             status: isUnusableChunkPayload ? 'failed' : status,
             tokensUsed,
             costUsd,
+            cachedTokens,
             generationId,
           }),
           2

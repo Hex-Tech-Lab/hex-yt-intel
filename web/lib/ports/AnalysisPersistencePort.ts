@@ -219,6 +219,8 @@ export interface AnalysisPersistencePort {
     // ADR 020 Phase 3: real OpenRouter usage/cost for this chunk's LLM call.
     tokensUsed?: number;
     costUsd?: number;
+    // Prompt-cache reads (2026-09-25): usage.prompt_tokens_details.cached_tokens.
+    cachedTokens?: number;
     // Exact traceability (2026-08-02): OpenRouter's own generation id for
     // this exact chunk's call.
     generationId?: string;
