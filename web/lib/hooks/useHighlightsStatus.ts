@@ -118,8 +118,8 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
     })();
 
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `result` is a
-    // deliberate guard read above, not a dependency (see its comment).
+  // `result` is a deliberate guard read above, not a dependency (see its comment).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisId, status, digestLoading]);
 
   // CodeRabbit finding, PR #294: guard the RETURNED value too, not just the

@@ -247,7 +247,10 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     if (loadedForAnalysisIdRef.current === analysisId && data && data.highlights.length > 0) return;
 
     runFetchCycle(analysisId);
-  }, [digestLoading, analysisId, runFetchCycle]);
+    // `data` is only read as a guard against redundant refetch -- including
+    // it keeps the deps honest but can never re-trigger a fetch cycle on its
+    // own (the wasTrueNowFalse gate above returns early on data-only changes).
+  }, [digestLoading, analysisId, runFetchCycle, data]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;

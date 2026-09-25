@@ -488,7 +488,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       ctx.restore();
     });
-  }, [isWordSelected, size, wordsLayout]);
+  }, [isWordSelected, size]);
 
   // react-best-practices self-review finding (2026-08-02): the entrance
   // animation effect below used to list `drawCanvas` directly in its deps.
@@ -621,7 +621,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       active = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [wordsLayoutKey]);
+  }, [wordsLayoutKey]); // eslint-disable-line react-hooks/exhaustive-deps -- wordsLayout is read inside but deliberately excluded: wordsLayoutKey changes only when the underlying word data changes, so a layout-identity-only change must not restart the entrance animation (react-best-practices self-review, 2026-08-02)
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {

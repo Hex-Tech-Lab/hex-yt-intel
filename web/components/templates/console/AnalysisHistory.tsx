@@ -302,7 +302,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       }
 
       startTransition(() => {
-        initializeAnalysis(data.id, data.title, data.analysis_markdown, data.executiveDigest ?? null);
+        initializeAnalysis(data.id, data.title, data.analysis_markdown, data.executiveDigest ?? null, data.videoId);
         setVideoMetadata({
           videoId: data.videoId,
           title: data.title,

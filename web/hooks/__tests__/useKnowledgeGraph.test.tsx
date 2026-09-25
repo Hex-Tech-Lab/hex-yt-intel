@@ -15,7 +15,7 @@
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { renderHook, cleanup, act } from '@testing-library/react';
-import { useKnowledgeGraph, mapGraphPayload, classifyFailure } from '@/hooks/useKnowledgeGraph';
+import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 describe('useKnowledgeGraph client-side fallback', () => {

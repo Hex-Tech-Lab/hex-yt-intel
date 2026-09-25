@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { render, screen, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoPlayerCard } from '../VideoPlayerCard';
 
@@ -18,7 +18,7 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-const { mockClearSeek, mockSetPlaying, mockSetCurrentPlaybackSeconds, setupVideoStoreMock, mockPlay, mockPause, mockSeekTo, mockDestroy, mockMount, setupPlayerMock } = vi.hoisted(() => {
+const { _mockClearSeek, _mockSetPlaying, _mockSetCurrentPlaybackSeconds, setupVideoStoreMock, _mockPlay, _mockPause, _mockSeekTo, mockDestroy, mockMount, setupPlayerMock } = vi.hoisted(() => {
   const mockClearSeek = vi.fn();
   const mockSetPlaying = vi.fn();
   const mockSetCurrentPlaybackSeconds = vi.fn();
