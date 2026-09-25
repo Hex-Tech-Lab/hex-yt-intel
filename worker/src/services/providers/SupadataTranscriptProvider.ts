@@ -123,12 +123,18 @@ export class SupadataTranscriptProvider implements TranscriptProviderPort {
    * (206 transcript-unavailable) so the caller can consider the AI path.
    */
   private async requestTranscript(videoId: string, mode: 'native' | 'generate'): Promise<TranscriptResult | null> {
-    const startedAt = Date.now();
     const first = await this.callApi(`${BASE_URL}?url=${encodeURIComponent(`https://youtu.be/${videoId}`)}&mode=${mode}`);
     if (first === null) return null;
 
     if ('jobId' in first && first.jobId) {
-      const polled = await this.pollJob(first.jobId, startedAt);
+      // The 60s poll window starts HERE, at jobId receipt — not before the
+      // submit call — so Supadata-side submit latency (how long the initial
+      // POST/GET takes to answer with a jobId) can never eat into the polling
+      // budget (review P2, 2026-09-26). The per-attempt worst case therefore
+      // becomes 30s (initial-call timeout) + 60s (job window) = 90s, and the
+      // tier's overall worst case (native probe + generate attempt) is 180s —
+      // the figure TranscriptExtractor's chain-budget default is derived from.
+      const polled = await this.pollJob(first.jobId);
       return polled === null ? null : this.toResult(videoId, polled);
     }
     return this.toResult(videoId, first as SupadataTranscriptBody);
@@ -180,10 +186,11 @@ export class SupadataTranscriptProvider implements TranscriptProviderPort {
   }
 
   /** Poll a 202/200 jobId until completed/failed or the 60s job deadline.
-   * Each sleep AND each poll request are capped to the remaining time so the
-   * loop can never overrun its own deadline (review P2, 2026-09-25). */
-  private async pollJob(jobId: string, startedAt: number): Promise<SupadataTranscriptBody | null> {
-    const deadline = startedAt + 60000;
+   * The deadline starts at jobId receipt (not before the submit call), and
+   * each sleep AND each poll request are capped to the remaining time so the
+   * loop can never overrun its own deadline (review P2, 2026-09-25/26). */
+  private async pollJob(jobId: string): Promise<SupadataTranscriptBody | null> {
+    const deadline = Date.now() + 60000;
     for (;;) {
       const remainingMs = deadline - Date.now();
       if (remainingMs <= 0) throw new Error(`Supadata job ${jobId} did not complete within the 60s polling deadline`);

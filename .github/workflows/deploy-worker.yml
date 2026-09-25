@@ -59,3 +59,23 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" https://yt-intel.hex-tech-lab.workers.dev/)
           echo "worker GET / → $code"
           test "$code" = "200"
+
+      # Smoke check: the transcript chain's paid/optional providers are bound
+      # as CF secrets. `wrangler secret list` returns NAMES ONLY (no values
+      # exist client-side), so this can never leak credentials into the log.
+      # A missing binding means TranscriptApiProvider/SupadataTranscriptProvider
+      # silently skip their tier (`... not configured`) — chain still answers
+      # via fallbacks, but the deploy should flag the drift loudly.
+      - name: Verify transcript-provider secrets bound
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          sleep 5
+          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list 2>/dev/null \
+            || pnpm exec wrangler secret list 2>/dev/null || true)
+          echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
+            || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker"; exit 1; }
+          echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
+            || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
+          echo "transcript-provider secrets bound: OK"
