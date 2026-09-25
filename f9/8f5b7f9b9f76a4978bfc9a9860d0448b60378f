@@ -1,0 +1,21 @@
+.memory/SESSION_TODO.md
+  s_0ad06df9e3ce0b::t_a1bb20833ddf20 34-79
+docs/history/THOS_2026-09-25_1400_COST_AUDIT_HIGHLIGHTS_LEVERS_PLAN.md
+  s_0ad06df9e3ce0b::t_c90e488952ca5d 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f98f5b7f9b9f76a4978bfc9a9860d0448b60378f",
+  "prompts": {},
+  "sessions": {
+    "s_0ad06df9e3ce0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f9d0083a-2205-4555-9116-3d381dba03db",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
