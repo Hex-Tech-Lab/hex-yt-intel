@@ -1,0 +1,34 @@
+web/lib/__tests__/highlights-coverage.test.ts
+  s_f72aabe7d4fd48::t_2bc440beb54e63 48-49,53-56
+  s_f72aabe7d4fd48::t_e8ca0e06042991 120
+  s_f72aabe7d4fd48::t_e4f0c396c45644 142
+  s_f72aabe7d4fd48::t_5d4bcdbe4ef474 24
+  s_f72aabe7d4fd48::t_c31bbb4fada28d 151,156-180
+  s_f72aabe7d4fd48::t_f598dd489c3049 94-107
+  s_f72aabe7d4fd48::t_5c5e140087ec88 181,191-246
+  s_f72aabe7d4fd48::t_361a63296ec03f 132-135,141,152-155
+  s_f72aabe7d4fd48::t_1888ae5f544181 182
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_f72aabe7d4fd48::t_b92c64c9bbe362 328-350
+  s_f72aabe7d4fd48::t_7f18a7118314f7 91-123,125-144
+  s_f72aabe7d4fd48::t_0516dcf6aa62ef 86-90
+  s_f72aabe7d4fd48::t_fadfff473f8855 228-231,233-266
+  s_f72aabe7d4fd48::t_9ac8bf41b0b34a 124
+  s_f72aabe7d4fd48::t_d2b60a066c5616 273,280
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "78e922298dd5aa1d1e524b768b10b4d12f23ac48",
+  "prompts": {},
+  "sessions": {
+    "s_f72aabe7d4fd48": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256fa387ffeRmXPTxUpE92IWB",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
