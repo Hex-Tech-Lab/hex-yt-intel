@@ -99,35 +99,33 @@ async function braveSearch(query: string): Promise<Result[]> {
 }
 
 async function perplexitySearch(query: string): Promise<Result[]> {
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'perplexity/sonar-reasoning',
-        messages: [{ role: 'user', content: query }],
-      }),
-    });
-    const data = await res.json() as any;
-    return [{
-      title: `Perplexity: ${query}`,
-      url: 'https://openrouter.ai',
-      snippet: data.choices?.[0]?.message?.content || '',
-      source: 'perplexity'
-    }];
-  } finally {
-    // cleanup
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'perplexity/sonar-pro',
+      messages: [{ role: 'user', content: query }],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Perplexity API failed: ${res.status}`);
   }
+  const data = await res.json() as any;
+  return [{
+    title: `Perplexity: ${query}`,
+    url: `https://openrouter.ai?q=${encodeURIComponent(query)}`,
+    snippet: data.choices?.[0]?.message?.content || '',
+    source: 'perplexity'
+  }];
 }
 
 function validateEnv(): void {
   const missing = REQUIRED_ENV_VARS.filter((v) => !process.env[v]);
   if (missing.length > 0) {
-    console.error(`Missing required environment variables: ${missing.join(', ')}`);
-    // process.exit(1); // Allow to continue even if some are missing
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 }
 
@@ -147,27 +145,23 @@ async function main() {
 
   for (const q of queries) {
     console.log(`\n=== Searching: ${q} ===`);
-    try {
-      const [serp, decodo, exa, brave, perplexity] = await Promise.all([
-        serpapiSearch(q).catch((e) => { console.error('serp failed', e.message); return []; }),
-        decodoSearch(q).catch((e) => { console.error('decodo failed', e.message); return []; }),
-        exaSearch(q).catch((e) => { console.error('exa failed', e.message); return []; }),
-        braveSearch(q).catch((e) => { console.error('brave failed', e.message); return []; }),
-        perplexitySearch(`Research the pricing plans, quotas, usage limits, and summary depths (how detailed are the summaries?) for YouTube summarizer AI tools, specifically: Eightify, NoteGPT, Glasp, Summarize.tech, YouLearn, Recall, Tactiq, Merlin, Notta, Descript. Provide specific prices and numbers. Focus on: ${q}`).catch((e) => { console.error('perplexity failed', e.message); return []; }),
-      ]);
-      console.log(`SerpAPI: ${serp.length}, Decodo: ${decodo.length}, Exa: ${exa.length}, Brave: ${brave.length}, Perplexity: ${perplexity.length}`);
-      const resList = [...serp, ...decodo, ...exa, ...brave, ...perplexity];
-      allResults[q] = resList;
-      combined.push(...resList);
-    } catch (e) {
-      console.error('Search failed for', q, e);
-    }
+    const [serp, decodo, exa, brave, perplexity] = await Promise.all([
+      serpapiSearch(q),
+      decodoSearch(q),
+      exaSearch(q),
+      braveSearch(q),
+      perplexitySearch(`Research the pricing plans, quotas, usage limits, and summary depths (how detailed are the summaries?) for YouTube summarizer AI tools, specifically: Eightify, NoteGPT, Glasp, Summarize.tech, YouLearn, Recall, Tactiq, Merlin, Notta, Descript. Provide specific prices and numbers. Focus on: ${q}`),
+    ]);
+    console.log(`SerpAPI: ${serp.length}, Decodo: ${decodo.length}, Exa: ${exa.length}, Brave: ${brave.length}, Perplexity: ${perplexity.length}`);
+    const resList = [...serp, ...decodo, ...exa, ...brave, ...perplexity];
+    allResults[q] = resList;
+    combined.push(...resList);
   }
 
   const unique = Array.from(new Map(combined.map(r => [r.url, r])).values());
   console.log(`\nTotal unique: ${unique.length}`);
 
-  const outPath = path.join(process.cwd(), '.scratch/research/pricing-results.json');
+  const outPath = path.join(process.cwd(), 'docs/research/pricing-results.json');
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify({ queries, allResults, unique }, null, 2));
   console.log(`Wrote benchmark to ${outPath}`);
