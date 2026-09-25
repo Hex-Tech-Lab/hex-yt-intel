@@ -1,0 +1,19 @@
+docs/history/THOS_2026-09-26_HANDOVER_REVIEWS_UX_ROUTING.md
+  s_d90cd16d227282::t_2793165f66a54a 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1c11cf082c5a3766913405a8b624bb21fa19514c",
+  "prompts": {},
+  "sessions": {
+    "s_d90cd16d227282": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1ad9148b-f136-4395-8222-8f2a6b39e17a",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
