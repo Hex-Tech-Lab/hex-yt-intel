@@ -21,7 +21,7 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   },
 }));
 
-import { ExtractHighlightsUseCase } from '@/lib/usecases/ExtractHighlightsUseCase';
+import { ExtractHighlightsUseCase, computeHarvestWindows } from '@/lib/usecases/ExtractHighlightsUseCase';
 import { resolveHighlightOverlaps } from '@/lib/prompts/highlights-extraction';
 
 // 32-minute fixture: one segment every 10s from 0 to 1910 (matches the real
@@ -45,15 +45,15 @@ type PersistenceSpy = {
  * (the parser requires exact segment-start matches). This simulates an
  * unbiased harvest where every window contributes.
  */
-function makeWindowAwareCompletion(perCall = 1, failEveryNthCall = 0) {
-  let callCount = 0;
+function makeWindowAwareCompletion(perCall = 1, failWindowFirstStarts: number[] = []) {
+  const failSet = new Set(failWindowFirstStarts);
   return {
     complete: vi.fn().mockImplementation(({ user }: { user: string }) => {
-      callCount += 1;
-      if (failEveryNthCall > 0 && callCount % failEveryNthCall === 0) {
-        return Promise.reject(new Error('window LLM down'));
-      }
       const starts = [...user.matchAll(/\[(\d+(?:\.\d+)?)\]/g)].map((m) => Number(m[1]));
+      // Content-based deterministic failure: keyed on the window's FIRST
+      // segment start, so the initial call AND any bounded retry both fail
+      // for the same window (call-count-based mocking can't distinguish).
+      if (failSet.has(starts[0] ?? -1)) return Promise.reject(new Error('window LLM down'));
       const picks = starts.slice(0, perCall /* ellipsis: array slice, not string truncation ... */).map((start) => ({
         start,
         end: start + 30,
@@ -91,7 +91,20 @@ describe('full-duration highlights coverage (32-min fixture)', () => {
   });
 
   it('harvested candidates span >=90% of the video duration', async () => {
-    const completion = makeWindowAwareCompletion(3);
+    // Pick from BOTH window edges: proves the tail window actually
+    // contributes a candidate near the video's end (the fixture picks only
+    // 1 segment at the window start and 1 at the window end).
+    const completion = makeWindowAwareCompletion(2);
+    completion.complete.mockImplementation(({ user }: { user: string }) => {
+      const starts = [...user.matchAll(/\[(\d+(?:\.\d+)?)\]/g)].map((m) => Number(m[1]));
+      const picks = [starts[0], starts[starts.length - 1]].filter((start): start is number => start !== undefined).map((start) => ({
+        start,
+        end: start + 30,
+        label: `Moment at ${start}`,
+        parent_takeaway_idx: null,
+      }));
+      return Promise.resolve({ text: JSON.stringify(picks), model: 'test/model' });
+    });
     const { useCase, persistence } = makeDeps(completion);
     await useCase.execute({ ...baseParams });
 
@@ -104,8 +117,7 @@ describe('full-duration highlights coverage (32-min fixture)', () => {
 
   it('saved highlights are strictly non-overlapping and start-ordered', async () => {
     const completion = makeWindowAwareCompletion(3);
-    const { useCase, persistence } = makeDeps(completion);
-    await useCase.execute({ ...baseParams });
+    const { useCase, persistence } = makeDeps(completion);    await useCase.execute({ ...baseParams });
 
     const saved = persistence.saveHighlights.mock.calls[0]![0].highlights as Array<{ start: number; end: number }>;
     for (let i = 1; i < saved.length; i++) {
@@ -117,19 +129,17 @@ describe('full-duration highlights coverage (32-min fixture)', () => {
   });
 
   it('a failed window contributes nothing while other windows still persist', async () => {
-    const completion = makeWindowAwareCompletion(3, 2); // every 2nd call throws
+    // Windows 1, 3, 5 fail deterministically (initial call AND retry).
+    const windows = computeHarvestWindows(DURATION_SECONDS - 10, 300, 40).windows;
+    const failedFirstStarts = [1, 3, 5].map((i) => windows[i]!.start + (10 - (windows[i]!.start % 10)) % 10);
+    const completion = makeWindowAwareCompletion(3, failedFirstStarts);
     const { useCase, persistence } = makeDeps(completion);
     await useCase.execute({ ...baseParams });
 
     const saved = persistence.saveHighlights.mock.calls[0]![0].highlights as Array<{ start: number }>;
     expect(saved.length).toBeGreaterThan(0); // partial coverage survives
-    // Every 2nd window call fails (0-indexed windows 1, 3, 5): their
-    // 300-599 / 900-1199 / 1500-1799 ranges must contribute nothing.
-    const failedRanges = [
-      [300, 600],
-      [900, 1200],
-      [1500, 1800],
-    ];
+    // The failed windows' ranges must contribute nothing.
+    const failedRanges = [1, 3, 5].map((i) => [windows[i]!.start, windows[i]!.end]);
     for (const h of saved) {
       for (const [lo, hi] of failedRanges) {
         const insideFailedRange = h.start >= lo && h.start < hi;
@@ -138,11 +148,99 @@ describe('full-duration highlights coverage (32-min fixture)', () => {
     }
   });
 
+  it('never replaces an existing reel with a partial harvest (PR #349 partial-overwrite RCA)', async () => {
+    // Window 2 fails deterministically (initial call AND retry both fail).
+    const windows = computeHarvestWindows(DURATION_SECONDS - 10, 300, 40).windows;
+    const window2FirstStart = windows[2]!.start + (10 - (windows[2]!.start % 10)) % 10;
+    const completion = makeWindowAwareCompletion(2, [window2FirstStart]);
+    const { useCase, persistence } = makeDeps(completion);
+    // An already-good reel exists for this analysis.
+    persistence.findHighlightsForAnalysis.mockResolvedValue([{ idx: 0, start: 0, end: 30, label: 'existing' }]);
+    await useCase.execute({ ...baseParams, skipIfPresent: false });
+    expect(persistence.saveHighlights).not.toHaveBeenCalled();
+  });
+
+  it('persists a partial harvest when no existing reel exists (partial beats nothing)', async () => {
+    const completion = { complete: vi.fn().mockRejectedValue(new Error('LLM flaky')) };
+    // One window succeeds, the rest fail after retry.
+    let call = 0;
+    const flakyCompletion = {
+      complete: vi.fn().mockImplementation(() => {
+        call += 1;
+        if (call === 1) {
+          return Promise.resolve({ text: JSON.stringify([{ start: 0, end: 30, label: 'm', parent_takeaway_idx: null }]), model: 'test/model' });
+        }
+        return Promise.reject(new Error('LLM flaky'));
+      }),
+    };
+    const { useCase, persistence } = makeDeps(flakyCompletion);
+    await useCase.execute({ ...baseParams, skipIfPresent: false });
+    expect(persistence.saveHighlights).toHaveBeenCalledTimes(1);
+    const saved = persistence.saveHighlights.mock.calls[0]![0].highlights as Array<{ start: number }>;
+    expect(saved.length).toBeGreaterThan(0);
+  });
+
   it('an all-windows-failed harvest persists nothing (no empty REPLACE wipe)', async () => {
     const completion = { complete: vi.fn().mockRejectedValue(new Error('LLM down')) };
     const { useCase, persistence } = makeDeps(completion);
     await useCase.execute({ ...baseParams });
     expect(persistence.saveHighlights).not.toHaveBeenCalled();
+  });
+});
+
+describe('computeHarvestWindows (PR #349: quota overshoot, boundary, tail coverage)', () => {
+  it('distributes the quota EXACTLY across windows with no overshoot (40 over 7 windows = 40, not 42)', () => {
+    // Old shape: ceil(40/7)=6 per window x 7 windows = 42 > 40 (overshoot),
+    // and the final chronological slice had to cut the overshoot.
+    const { windows } = computeHarvestWindows(1930, 300, 40);
+    expect(windows).toHaveLength(7);
+    const quotaSum = windows.reduce((sum, w) => sum + w.quota, 0);
+    expect(quotaSum).toBe(40); // exact budget, no overshoot
+    for (const w of windows) {
+      expect(w.quota).toBeGreaterThanOrEqual(1);
+      expect(w.quota).toBeLessThanOrEqual(6); // never above the ceil share
+    }
+  });
+
+  it('includes a segment starting exactly at a window-count boundary (ceil() skipped it)', () => {
+    // Negative control of the old bug: ceil(2100/300)=7 windows covered
+    // [0,2100), so a last segment at exactly 2100s was skipped.
+    const { windows } = computeHarvestWindows(2100, 300, 40);
+    const lastWindow = windows[windows.length - 1]!;
+    expect(lastWindow.start).toBeLessThanOrEqual(2100);
+    expect(lastWindow.end).toBeGreaterThan(2100); // 2100 segment is inside
+  });
+
+  it('spreads capped windows across the full duration so the tail is covered (>3h20 videos)', () => {
+    // 4h10 video: 50 natural 300s windows but only 40 (maxCount) allowed --
+    // the old fixed-width cap left 12000-15000s uncovered.
+    const lastStart = 15000;
+    const { windows } = computeHarvestWindows(lastStart, 300, 40);
+    expect(windows).toHaveLength(40);
+    expect(windows[0]!.start).toBe(0);
+    expect(windows[windows.length - 1]!.end).toBeGreaterThan(lastStart - 1);
+    // Contiguous coverage: no gaps between consecutive windows.
+    for (let i = 1; i < windows.length; i++) {
+      expect(windows[i]!.start).toBe(windows[i - 1]!.end);
+    }
+  });
+
+  it('covers the full duration with contiguous windows for an uncapped video', () => {
+    const lastStart = 1920;
+    const { windows } = computeHarvestWindows(lastStart, 300, 40);
+    expect(windows[0]!.start).toBe(0);
+    expect(windows[windows.length - 1]!.end).toBeGreaterThan(lastStart);
+    for (let i = 1; i < windows.length; i++) {
+      expect(windows[i]!.start).toBe(windows[i - 1]!.end);
+    }
+    expect(windows.reduce((sum, w) => sum + w.quota, 0)).toBe(40);
+  });
+
+  it('degrades safely on degenerate inputs', () => {
+    expect(computeHarvestWindows(0, 300, 40).windows).toHaveLength(1);
+    expect(computeHarvestWindows(-5, 300, 40).windows).toHaveLength(1);
+    expect(computeHarvestWindows(1930, 0, 40).windows).toHaveLength(40);
+    expect(computeHarvestWindows(1930, 300, NaN).windows).toHaveLength(1);
   });
 });
 
