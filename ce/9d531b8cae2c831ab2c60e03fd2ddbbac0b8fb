@@ -1,0 +1,42 @@
+scripts/quality-engine/rules/sql-migrations.ts
+  s_79cf71c500c610::t_76206a71ee538c 113-136,139-141,143-149,154-163,173-186,190-212,230-254
+  s_e86ad5159a96a6::t_effce59791de51 255
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  s_79cf71c500c610::t_a52cedbe631f75 331-449
+.memory/AGENT_LEDGER.md
+  s_07946c92c82e35::t_1f05d6ddd763c7 1405
+  s_79cf71c500c610::t_688ec1aa77f1a1 1406
+  s_79cf71c500c610::t_6228c76b329fae 1407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ce9d531b8cae2c831ab2c60e03fd2ddbbac0b8fb",
+  "prompts": {},
+  "sessions": {
+    "s_07946c92c82e35": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f27c5fad0ffemf1N36xudeyKFj",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_79cf71c500c610": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256e8ed0ffeG7IpFVA5AV3L1I",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e86ad5159a96a6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256fa0c4ffe2u6R2uLSReSHVz",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
