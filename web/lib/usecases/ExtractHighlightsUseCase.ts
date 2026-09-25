@@ -2,13 +2,19 @@ import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
 import { computeSimHash64 } from '@/lib/utils/simhash';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
-  buildHighlightsExtractionSystemPrompt,
-  buildHighlightsExtractionUserMessage,
+  buildHighlightsWindowedSystemPrompt,
+  buildHighlightsWindowedUserMessage,
   parseHighlightsExtraction,
+  resolveHighlightOverlaps,
   MAX_PROMPT_TAKEAWAYS,
 } from '@/lib/prompts/highlights-extraction';
+import type { ExtractedHighlight } from '@/lib/prompts/highlights-extraction';
 import { buildVerbatimExcerpt } from '@/lib/prompts/highlights-reconciliation';
-import { HIGHLIGHTS_REGISTRY_FALLBACK, calculateEffectiveHighlightBudget, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
+import {
+  HIGHLIGHTS_REGISTRY_FALLBACK,
+  clampHighlightsSetting,
+  HIGHLIGHTS_COVERAGE_WINDOW_SECONDS,
+} from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
 
 /**
@@ -153,47 +159,80 @@ export class ExtractHighlightsUseCase {
 
     const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice ... */);
 
-    const completion = await this.completion.complete({
-      system: buildHighlightsExtractionSystemPrompt(maxCount, maxSegmentDuration),
-      user: buildHighlightsExtractionUserMessage(segments, promptTakeaways),
-      models,
-      maxTokens: maxOutputTokens,
-      analysisId,
-    });
+    // Full-duration coverage (2026-09-25 RCA, analysis 434ef182): the prior
+    // single-pass extraction over the whole transcript let the cascade model
+    // concentrate all picks in the first ~50% of the timeline (exact-prompt
+    // repro: nothing past 1245s of a 1930s video while the hosted-setup guide
+    // sits at ~1500-1900s). The transcript is partitioned into fixed time
+    // windows, each harvested independently with a per-window quota so every
+    // part of the video is sampled regardless of model attention bias.
+    // Window count is bounded by maxCount (never more windows than the
+    // reel's own cap), and the per-window quota is the even share of
+    // maxCount. Cost: ceil(duration / window) cheap-cascade calls instead of
+    // 1 (measured ~$0.011 vs ~$0.007 for the reported 32-min video).
+    const videoDuration = segments[segments.length - 1]?.start ?? 0;
+    const windowCount = Math.max(1, Math.ceil(videoDuration / HIGHLIGHTS_COVERAGE_WINDOW_SECONDS));
+    const cappedWindowCount = Math.min(windowCount, maxCount);
+    const perWindowQuota = Math.max(1, Math.ceil(maxCount / cappedWindowCount));
 
-    const validStarts = new Set(segments.map((segment) => segment.start));
-    const lastSegment = segments[segments.length - 1];
-    const estimatedVideoDuration = lastSegment ? lastSegment.start + 10 : 0;
-    const baseBudgetSeconds = calculateEffectiveHighlightBudget(estimatedVideoDuration, promptTakeaways.length, 15);
-    const effectiveBudgetSeconds = Math.max(baseBudgetSeconds, promptTakeaways.length * minSegmentDuration);
-    const result = parseHighlightsExtraction(
-      completion.text,
-      validStarts,
-      maxCount,
-      minSegmentDuration,
-      maxSegmentDuration,
-      { takeawaysCount: promptTakeaways.length, maxCumulativeDuration: effectiveBudgetSeconds }
+    const windowResults = await Promise.all(
+      Array.from({ length: cappedWindowCount }, (_windowOffset, windowIndex) => {
+        const windowStart = windowIndex * HIGHLIGHTS_COVERAGE_WINDOW_SECONDS;
+        const windowEnd = windowStart + HIGHLIGHTS_COVERAGE_WINDOW_SECONDS;
+        const windowSegments = segments.filter((segment) => segment.start >= windowStart && segment.start < windowEnd);
+        if (windowSegments.length === 0) return Promise.resolve([] as ExtractedHighlight[]);
+        return this.completion
+          .complete({
+            system: buildHighlightsWindowedSystemPrompt(perWindowQuota, maxSegmentDuration),
+            user: buildHighlightsWindowedUserMessage(windowSegments, perWindowQuota, promptTakeaways),
+            models,
+            maxTokens: maxOutputTokens,
+            analysisId,
+          })
+          .then((windowCompletion) => {
+            const windowStarts = new Set(windowSegments.map((segment) => segment.start));
+            const result = parseHighlightsExtraction(
+              windowCompletion.text,
+              windowStarts,
+              perWindowQuota,
+              minSegmentDuration,
+              maxSegmentDuration,
+              { takeawaysCount: promptTakeaways.length }
+            );
+            return result.status === 'ok' ? result.highlights : [];
+          })
+          .catch((windowError) => {
+            // A failed window contributes nothing; remaining windows still
+            // produce a usable (if partial-coverage) reel. Best-effort by
+            // design -- this must never break the caller's primary work.
+            console.warn(`[extract-highlights] Window ${windowStart}-${windowEnd} extraction failed:`, windowError instanceof Error ? windowError.message : String(windowError));
+            return [] as ExtractedHighlight[];
+          });
+      })
     );
 
-    // 'invalid' means the model response was unparseable -- a transient LLM
-    // failure, not a genuine "no highlights" finding. Must NOT touch any
-    // existing highlight set in that case (real data-loss bug caught in
-    // review: a bad response used to silently wipe a prior valid set via an
-    // empty-array save). Only 'ok' (structurally valid, empty or not) is
-    // ever persisted.
-    if (result.status === 'invalid') {
-      console.warn(`[extract-highlights] Model response unparseable for ${analysisId}; leaving any existing set untouched`);
-      return;
+    // Cross-window merge: dedupe by parent takeaway (earliest-in-time wins,
+    // deterministic), then de-overlap intervals and cap at maxCount.
+    const seenTakeaways = new Set<number>();
+    const merged: ExtractedHighlight[] = [];
+    for (const windowHighlights of windowResults.flat()) {
+      if (windowHighlights.takeawayIdx !== null) {
+        if (seenTakeaways.has(windowHighlights.takeawayIdx)) continue;
+        seenTakeaways.add(windowHighlights.takeawayIdx);
+      }
+      merged.push(windowHighlights);
     }
+    const result: ExtractedHighlight[] = merged;
+    const finalHighlights = resolveHighlightOverlaps(result, minSegmentDuration, maxSegmentDuration).slice(0, maxCount);
 
-    // Never persist an empty result. The model returning [] means "nothing
-    // noteworthy this time" -- but `skipIfPresent`'s existence read may have
-    // been skipped (force) OR may have thrown and fallen through (transient
-    // DB error caught above), so we cannot be sure no prior valid set exists.
+    // Never persist an empty result. A fully-empty harvest (every window
+    // thin or every window call failed) means "nothing noteworthy this
+    // time" -- but `skipIfPresent`'s existence read may have been skipped
+    // (force) OR may have thrown and fallen through (transient DB error
+    // caught above), so we cannot be sure no prior valid set exists.
     // saveHighlights is an atomic REPLACE (replace_analysis_highlights RPC),
     // so an empty-array save would silently wipe a previously-extracted,
-    // still-valid set -- the exact data-loss bug class the 'invalid' guard
-    // above protects against, extended here to the empty-but-valid case.
+    // still-valid set -- the exact data-loss bug class caught in review.
     // Skipping the save leaves the table as-is (existing set, or empty for a
     // first run with nothing noteworthy) -- correct in both cases.
     if (this.temporalGraph && segments.length > 0) {
@@ -228,11 +267,11 @@ export class ExtractHighlightsUseCase {
       }
     }
 
-    if (result.highlights.length === 0) return;
+    if (finalHighlights.length === 0) return;
 
     await this.persistence.saveHighlights({
       analysisId,
-      highlights: result.highlights.map((highlight, idx) => ({
+      highlights: finalHighlights.map((highlight, idx) => ({
         idx,
         start: highlight.start,
         end: highlight.end,
