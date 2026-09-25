@@ -110,26 +110,57 @@ function matchingParen(text: string, openIdx: number): number {
 }
 
 /**
- * Single-pass SQL sanitizer (2026-09-25 review gap): strips `--` line
- * comments and `/* ... *\/` block comments (replaced with a space), and
- * removes the CONTENTS of `'...'` string literals (the quote characters
- * themselves are kept so token positions survive). Quoted identifiers
- * `"..."` keep their contents (they are identifier text, not values).
+ * Single-pass SQL sanitizer (2026-09-25 review gap; round 2, 2026-09-26):
+ * strips `--` line comments and `/* ... *\/` block comments (replaced with
+ * a space), and removes the CONTENTS of `'...'` string literals (the quote
+ * characters themselves are kept so token positions survive). Quoted
+ * identifiers `"..."` keep their contents (they are identifier text, not
+ * values).
+ *
+ * Round 2 additions (PR #347 post-merge review):
+ *  - Dollar-quoted strings ($$..$$, $tag$..$tag$): contents blanked, tag
+ *    delimiters kept. A dollar-quote preceded by the word `as` is treated
+ *    as a FUNCTION BODY delimiter: its contents are preserved verbatim so
+ *    hasKeyAllowlistGuard still matches real guards written inside the body
+ *    (the body's own comments/strings keep being stripped by the ongoing
+ *    scan). A same-tag token immediately followed by `;` closes the body
+ *    (the `$$;`/`$tag$;` convention); a same-tag token NOT followed by `;`
+ *    is an inner dollar-quoted string and gets blanked — so a decoy
+ *    `raise notice $$p_key not in (...)$$` inside a `$$`-tagged body can no
+ *    longer fake a guard.
+ *  - E'...' / e'...' escape string constants: `\'` and `\\` backslash
+ *    escapes honored, contents blanked. (Without this, the `\'` inside
+ *    E'can\'t' closed the literal early and desynchronized the whole
+ *    downstream scan.)
+ *  - Block comments nest: `/*` inside `/* ... *\/` increments depth, so a
+ *    fake guard between the outer opener and the LAST closer is stripped.
  *
  * Both SQL rules scan the SANITIZED text, so a guard/keyword pattern living
- * inside a comment or a string literal can never satisfy a rule, and a
- * comment between tokens can never break token matching.
+ * inside a comment or a string literal (single-quoted OR dollar-quoted)
+ * can never satisfy a rule, and a comment between tokens can never break
+ * token matching.
  *
- * Known limitation (documented, accepted — no SQL AST available): the
- * scanner does not understand dollar-quoted strings ($$..$$, $tag$..$tag$).
- * A `'` appearing inside a dollar-quoted body without a balanced partner
- * could desynchronize the scanner. Real migrations on disk keep `$$` bodies
- * quote-balanced, and both rules' token patterns are identifier-based, so
- * this has not produced false positives/negatives on the current repo.
+ * Documented subset (accepted — no SQL AST available): nested bodies with
+ * the SAME tag (`as $$ ... as $$..$$ ... $$..$$;`) — the inner opener is
+ * indistinguishable from a same-tag inner string; the `;`-lookahead
+ * heuristic resolves the common shapes and fails toward BLANKING (a blanked
+ * region can hide a real guard → the rule fires → fail-safe for a security
+ * rule). Unterminated dollar quotes consume to EOF with the same fail-safe
+ * direction.
  */
 function sanitizeSql(text: string): string {
   let out = "";
   let i = 0;
+  /** Stack of open function-body dollar tags (opened after the word `as`). */
+  const bodyStack: string[] = [];
+  /** Last identifier word already written to `out` (for the `as` lookbehind). */
+  const prevWord = (): string => {
+    let j = out.length - 1;
+    while (j >= 0 && /\s/.test(out[j]!)) j--;
+    let k = j;
+    while (k >= 0 && /[A-Za-z_]/.test(out[k]!)) k--;
+    return out.slice(k + 1, j + 1);
+  };
   while (i < text.length) {
     const ch = text[i];
     const next = text[i + 1];
@@ -139,9 +170,44 @@ function sanitizeSql(text: string): string {
       continue;
     }
     if (ch === "/" && next === "*") {
-      const end = text.indexOf("*/", i + 2);
-      i = end === -1 ? text.length : end + 2;
+      // Nested block comments (PR #347 round 2): depth-count `/*` / `*/`.
+      let depth = 1;
+      i += 2;
+      while (i < text.length && depth > 0) {
+        if (text[i] === "/" && text[i + 1] === "*") {
+          depth++;
+          i += 2;
+        } else if (text[i] === "*" && text[i + 1] === "/") {
+          depth--;
+          i += 2;
+        } else {
+          i++;
+        }
+      }
       out += " ";
+      continue;
+    }
+    if ((ch === "e" || ch === "E") && next === "'" && !/[A-Za-z0-9_$]/.test(out.slice(-1))) {
+      // E'...' escape string (PR #347 round 2): `\'` and `\\` do not close
+      // the literal; `''` inside is still an escaped quote. Keep quotes,
+      // drop contents.
+      i += 2;
+      while (i < text.length) {
+        if (text[i] === "\\") {
+          i += 2;
+          continue;
+        }
+        if (text[i] === "'") {
+          if (text[i + 1] === "'") {
+            i += 2;
+            continue;
+          }
+          break;
+        }
+        i++;
+      }
+      out += "E''";
+      i++;
       continue;
     }
     if (ch === "'") {
@@ -160,6 +226,32 @@ function sanitizeSql(text: string): string {
       out += "''";
       i++;
       continue;
+    }
+    if (ch === "$") {
+      const m = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(text.slice(i));
+      if (m) {
+        const tag = m[0];
+        const top = bodyStack[bodyStack.length - 1];
+        if (top === tag && /^\s*;/.test(text.slice(i + tag.length))) {
+          // Body closer ($$; / $tag$;).
+          bodyStack.pop();
+          out += tag;
+          i += tag.length;
+          continue;
+        }
+        if (prevWord().toLowerCase() === "as") {
+          // Function body opener: preserve contents (keep scanning inside).
+          bodyStack.push(tag);
+          out += tag;
+          i += tag.length;
+          continue;
+        }
+        // Dollar-quoted string literal: blank contents, keep delimiters.
+        const closeIdx = text.indexOf(tag, i + tag.length);
+        i = closeIdx === -1 ? text.length : closeIdx + tag.length;
+        out += closeIdx === -1 ? tag : `${tag} ${tag}`;
+        continue;
+      }
     }
     if (ch === '"') {
       // "..." quoted identifier: keep contents (identifier text).

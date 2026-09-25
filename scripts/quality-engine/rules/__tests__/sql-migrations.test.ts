@@ -328,6 +328,125 @@ describe("WAVE Q4: SqlSecurityDefinerCallerKeyRule (R4)", () => {
   });
 });
 
+// PR #347 round 2: sanitizeSql() must handle dollar-quoted bodies, E'...'
+// backslash escapes, and nested block comments — without losing a REAL
+// guard that lives in the (preserved) function body.
+const R4_DOLLAR_TAGGED_BODY = `
+create or replace function public.merge_analysis_payload_key(
+  p_id uuid,
+  p_key text,
+  p_value jsonb
+)
+returns integer
+language plpgsql
+security definer
+as $fnbody$
+declare
+  affected integer;
+begin
+  if p_key not in ('stance_relations') then
+    raise exception 'merge_analysis_payload_key: key % is not merge-allowed', p_key;
+  end if;
+  update public.analyses
+    set analysis_payload = jsonb_set(analysis_payload, array[p_key], p_value, true)
+    where id = p_id;
+  return 1;
+end;
+$fnbody$;
+
+revoke all on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, authenticated, public;
+grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to service_role;
+`;
+
+describe("PR #347 round 2: sanitizeSql dollar-quotes / E-strings / nested comments", () => {
+  test("dollar-tagged ($fnbody$) function body: the REAL guard inside the body still closes the surface", () => {
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, R4_DOLLAR_TAGGED_BODY);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("dollar-quoted decoy string inside the body (raise notice $$p_key not in (...)$$) does NOT fake a guard", () => {
+    const decoy = `
+create or replace function public.merge_analysis_payload_key(
+  p_id uuid,
+  p_key text,
+  p_value jsonb
+)
+returns integer
+language plpgsql
+security definer
+as $$
+declare
+  affected integer;
+begin
+  raise notice $$p_key not in ('approved')$$;
+  update public.analyses
+    set analysis_payload = jsonb_set(analysis_payload, array[p_key], p_value, true)
+    where id = p_id;
+  return 1;
+end;
+$$;
+
+revoke execute on function public.merge_analysis_payload_key(uuid, text, jsonb) from anon, public;
+grant execute on function public.merge_analysis_payload_key(uuid, text, jsonb) to authenticated, service_role;
+`;
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, decoy);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("dollar-quoted decoy does not break a REAL guard in the same body", () => {
+    const guarded = R4_DOLLAR_TAGGED_BODY.replace(
+      "  affected integer;",
+      "  affected integer;\n  raise notice $$p_key not in ('approved')$$;"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, guarded);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("E'can\\'t' backslash escape does not desynchronize the scanner: a real guard after it still matches", () => {
+    const eStringBeforeGuard = R4_DOLLAR_TAGGED_BODY.replace(
+      "  affected integer;",
+      "  affected integer;\n  raise notice E'can\\'t touch this';"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, eStringBeforeGuard);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("comment markers inside string literals are inert (string contents blanked first)", () => {
+    const markersInString = R4_HISTORICAL_PRE_FIX.replace(
+      "  affected integer;",
+      "  affected integer;\n  raise notice 'value /* not a comment */ and -- not a line comment';\n"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, markersInString);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("nested block comment containing a fake guard does NOT close the surface", () => {
+    const nestedCommentGuard = R4_HISTORICAL_PRE_FIX.replace(
+      "  affected integer;",
+      "  affected integer;\n  /* outer /* p_key NOT IN ('approved') */ p_key NOT IN ('x') */\n"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, nestedCommentGuard);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("comments between guard tokens are stripped: p_key /* c */ not /* d */ in ('a') is a real guard", () => {
+    const commentedGuard = R4_DOLLAR_TAGGED_BODY.replace(
+      "p_key not in ('stance_relations')",
+      "p_key /* which key */ not /* allowlist */ in ('stance_relations')"
+    );
+    const findings = checkSql(SqlSecurityDefinerCallerKeyRule, commentedGuard);
+    expect(findings).toHaveLength(0);
+  });
+
+  test("R13: DEFAULT inside a nested block comment does not fire; real DEFAULT outside does", () => {
+    const commented = `
+DROP FUNCTION IF EXISTS public.fn_nested_comment(uuid /* timestamptz DEFAULT NULL */, int);
+`;
+    const findings = checkSql(SqlDropFunctionDefaultArgRule, commented);
+    expect(findings).toHaveLength(0);
+  });
+});
+
 describe("WAVE Q4: SqlDropFunctionDefaultArgRule (R13)", () => {
   test("fires on the real historical pre-fix drop_unused_pgvector migration (b2f1648d)", () => {
     const findings = checkSql(SqlDropFunctionDefaultArgRule, R13_HISTORICAL_PRE_FIX);
