@@ -1,0 +1,65 @@
+web/lib/adapters/stream-status-tracker.ts
+  s_67ea66d71941da::t_adfa00db97a83b 16
+web/hooks/__tests__/useSSEStream-cache-stagger.test.tsx
+  s_e6317fd50e9af7::t_0ebe488c6d16ec 190-192,194-206,208-214,216-235
+  s_e6317fd50e9af7::t_0f5d7d85c9ba66 193
+  s_e6317fd50e9af7::t_b15be44c74fc77 161-163,173,247
+  s_e6317fd50e9af7::t_1996e3fcb1af9b 66-70,74,76
+  s_e6317fd50e9af7::t_d1b0d716e72c08 215
+  s_e6317fd50e9af7::t_95d4cade3f919a 2-11
+  s_e6317fd50e9af7::t_c94a0bbfca4da4 207
+  s_e6317fd50e9af7::t_64d8f1b119631b 114,118,128-130,142-144,155,157
+worker/src/routes/analysis.ts
+  s_67ea66d71941da::t_72f1dfb681702a 999-1007
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_67ea66d71941da::t_13045adc8d420f 202-208
+.memory/AGENT_LEDGER.md
+  s_67ea66d71941da::t_09664cc21af825 1406
+  s_67ea66d71941da::t_35ca0f8b25c61e 1408
+  s_e6317fd50e9af7::t_b8f0b8ee528dd8 1407
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_e6317fd50e9af7::t_3c3059765fd00e 134-151,154-172,175-178
+  s_e6317fd50e9af7::t_7aae23c93bfdd3 173-174
+  s_e6317fd50e9af7::t_62499cc3269744 152-153
+worker/src/services/LLMCascade.ts
+  s_67ea66d71941da::t_9bae308e04b21a 91-92
+  s_67ea66d71941da::t_b667bdcf8c743c 313-323,325-333
+  s_67ea66d71941da::t_f86760c5769f97 324
+web/hooks/useSSEStream.ts
+  s_67ea66d71941da::t_67e2d262b41c5b 36-53,56-60,63-67,69,81-94
+  s_e6317fd50e9af7::t_7dc7c6886aee8e 54-55
+  s_67ea66d71941da::t_a42ebb5e3fbd55 514,522-524
+  s_e6317fd50e9af7::t_f74a2a7c80bfc7 473
+  s_e6317fd50e9af7::t_236a54db717c2a 421
+  s_67ea66d71941da::t_d54d43eac09d3e 507-508
+  s_e6317fd50e9af7::t_7a9b64110e7ef8 521
+  s_67ea66d71941da::t_71b1ddb27c5518 639
+  s_67ea66d71941da::t_b8794a59abafb5 480-497
+  s_67ea66d71941da::t_46445538a0a571 35
+web/lib/validators/synthesis.ts
+  s_67ea66d71941da::t_ea0dd2969bc3b5 275
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "894070ca595226621c4ab8e743d3700b0949dd03",
+  "prompts": {},
+  "sessions": {
+    "s_67ea66d71941da": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256f9f84ffeR7JRWzilQw11iC",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6317fd50e9af7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f256ea663ffeBwN2Kns5augLQZ",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
