@@ -1,0 +1,29 @@
+scripts/research/tsconfig.bakeoff.json
+  s_ae9deb89c5a367::t_02daf5c90ca4a1 1-9,13
+  s_ae9deb89c5a367::t_aab003ecfcc51d 10-12,14-17
+.memory/AGENT_LEDGER.md
+  s_ae9deb89c5a367::t_451754c47f522c 1407
+scripts/research/run-model-bakeoff.ts
+  s_ae9deb89c5a367::t_ef77b274deb4fe 41
+  s_ae9deb89c5a367::t_f89fc4c12e8d38 532,556
+  s_ae9deb89c5a367::t_c555c52489a321 36-40,42-48,51-78
+  s_ae9deb89c5a367::t_504c030879f39a 80-114
+  s_ae9deb89c5a367::t_60a6e3f38e9249 1-35,79,115-531,533-555,557-593
+  s_ae9deb89c5a367::t_ef5c5e98e79180 49-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "68a4d7171637f35263851bd033829ae81e1b8345",
+  "prompts": {},
+  "sessions": {
+    "s_ae9deb89c5a367": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f253dde29ffevkEnJEvYA2e82p",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
