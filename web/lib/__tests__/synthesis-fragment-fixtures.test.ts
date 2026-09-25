@@ -123,11 +123,11 @@ describe("kg fragment accepts real node/edge shapes (2026-09-25 regression)", ()
     expect(MAX_KG_EDGES).toBeGreaterThanOrEqual(20);
     const fragment = {
       type: "kg",
-      nodes: Array.from({ length: 15 }, (_, i) => ({
+      nodes: Array.from({ length: 15 }, (_item, i) => ({
         ...REAL_NODE_SHAPE,
         id: `node_${i}`,
       })),
-      edges: Array.from({ length: 20 }, (_, i) => ({
+      edges: Array.from({ length: 20 }, (_item, i) => ({
         ...REAL_EDGE_SHAPE,
         source: `node_${i % 15}`,
         target: `node_${(i + 1) % 15}`,
