@@ -194,11 +194,11 @@ describe('computeHarvestWindows (PR #349: quota overshoot, boundary, tail covera
     // and the final chronological slice had to cut the overshoot.
     const { windows } = computeHarvestWindows(1930, 300, 40);
     expect(windows).toHaveLength(7);
-    const quotaSum = windows.reduce((sum, w) => sum + w.quota, 0);
+    const quotaSum = windows.reduce((sum, window) => sum + window.quota, 0);
     expect(quotaSum).toBe(40); // exact budget, no overshoot
-    for (const w of windows) {
-      expect(w.quota).toBeGreaterThanOrEqual(1);
-      expect(w.quota).toBeLessThanOrEqual(6); // never above the ceil share
+    for (const window of windows) {
+      expect(window.quota).toBeGreaterThanOrEqual(1);
+      expect(window.quota).toBeLessThanOrEqual(6); // never above the ceil share
     }
   });
 
@@ -233,7 +233,7 @@ describe('computeHarvestWindows (PR #349: quota overshoot, boundary, tail covera
     for (let i = 1; i < windows.length; i++) {
       expect(windows[i]!.start).toBe(windows[i - 1]!.end);
     }
-    expect(windows.reduce((sum, w) => sum + w.quota, 0)).toBe(40);
+    expect(windows.reduce((sum, window) => sum + window.quota, 0)).toBe(40);
   });
 
   it('degrades safely on degenerate inputs', () => {
