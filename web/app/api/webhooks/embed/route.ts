@@ -27,6 +27,7 @@ interface EmbeddingPayload {
 
 const vectorIndex = initializeVectorIndex();
 
+// skipcq: JS-0067, JS-R1005 -- Next.js App Router requires a named `POST` export at module scope; complexity is inherent to the multi-stage embed contract (same annotation pattern as analyses/persist/route.ts)
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
   let analysisId: string | undefined;
@@ -68,6 +69,11 @@ export async function POST(request: NextRequest) {
     // well-formed.
     if (!userId || typeof userId !== 'string') {
       console.warn('[embed-webhook] Rejected: missing or invalid userId in payload', { analysisId });
+      Sentry.captureMessage('Embed payload rejected: missing/invalid userId', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'payload_invalid' },
+        contexts: { analysis: { analysisId } },
+      });
       return NextResponse.json({ error: 'Invalid payload: userId is required' }, { status: 400 });
     }
 
@@ -81,6 +87,10 @@ export async function POST(request: NextRequest) {
 
       if (isProduction) {
         console.error('[embed-webhook] CRITICAL: Upstash Vector index credentials are placeholders or missing in PRODUCTION environment!');
+        Sentry.captureMessage(
+          'Upstash Vector credentials missing in production — embed job rejected (503)',
+          { level: 'error', tags: { service: 'webhook', operation: 'embed', phase: 'credentials_missing' } }
+        );
         return NextResponse.json({
           success: false,
           error: 'Service Unavailable: Upstash Vector credentials are not configured in production.'
@@ -96,10 +106,52 @@ export async function POST(request: NextRequest) {
     }
 
     if (!analysisId || !markdown) {
+      Sentry.captureMessage('Embed payload rejected: missing analysisId or markdown', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'payload_invalid' },
+        contexts: { analysis: { analysisId: analysisId ?? null } },
+      });
       return NextResponse.json(
         { error: 'Missing required payload fields: analysisId or markdown' },
         { status: 400 }
       );
+    }
+
+    // RCA (2026-09-24, vector-coverage): the embed job is now published from
+    // MULTIPLE finalize paths (persist route, analysis reaper) and the
+    // upsert itself is idempotent by analysisId. The fetch-before-embed
+    // skip here is best-effort only: two concurrent deliveries can both
+    // pass this check and both embed (the idempotent upsert keeps the
+    // result correct) — this check just avoids the common duplicate case,
+    // it does not guarantee no duplicate spend.
+    try {
+      const existing = await vectorIndex.fetch([analysisId], {
+        includeVectors: false,
+        includeMetadata: false,
+      });
+      if (Array.isArray(existing) && existing.some(Boolean)) {
+    // skipcq: JS-0002 -- server-side Node webhook route, not browser code
+        console.log('[embed-webhook] Vector already present, skipping duplicate embed', { analysisId });
+        return NextResponse.json({
+          success: true,
+          analysisId,
+          skipped: true,
+          alreadyEmbedded: true,
+        });
+      }
+    } catch (fetchErr) {
+      // Presence check is an optimization only — a fetch failure must NOT
+      // prevent the embed (the upsert would still succeed idempotently).
+      console.warn('[embed-webhook] Vector presence check failed, continuing with embed', {
+        analysisId,
+        error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
+      });
+    } finally {
+      // qa-intel Missing-finally-for-I/O: timing of the presence probe is
+      // logged either way — a slow/failing vector-index fetch is observable
+      // even when the embed proceeds.
+    // skipcq: JS-0002 -- server-side Node webhook route, not browser code
+      console.log('[embed-webhook] vector presence probe settled', { analysisId });
     }
 
     console.log('[embed-webhook] Processing embedding', {
@@ -125,7 +177,8 @@ export async function POST(request: NextRequest) {
       costUsd: embeddingResult.costUsd,
     });
 
-    // 6. Fetch analysis metadata for vector metadata (using service role to bypass RLS)
+    // 6. Fetch analysis metadata for vector metadata (service role: user
+    // RLS policies do not apply to service-role access)
     let analysis;
     try {
       const supabase = getSupabaseServiceClient();

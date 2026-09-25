@@ -1,4 +1,4 @@
-import { Node, SyntaxKind } from "ts-morph";
+import { Node } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { Finding } from "../domain/Finding";
 import type { Rule, RuleContext } from "../domain/Rule";
@@ -47,20 +47,48 @@ export const HardcodedTierGrantRule: Rule = {
     if (filePath.includes("/quality-engine/")) return findings;
     if (!filePath.toLowerCase().includes("webhook")) return findings;
 
-    source.forEachDescendant((node) => {
-      if (!Node.isPropertyAssignment(node)) return;
-      if (node.getNameNode().getText().replace(/['"]/g, "") !== "tier") return;
-      const init = node.getInitializer();
-      if (!init) return;
-      const initText = init.getText();
-      if (!PAID_TIER_LITERAL.test(initText)) return;
+    const paidTierText = (text: string): string | null => PAID_TIER_LITERAL.exec(text)?.[0] ?? null;
+
+    const pushFinding = (evidence: string) => {
       findings.push({
         file: filePath,
         severity: "high",
         title: "Security: hardcoded paid-tier grant in a webhook handler",
-        why: `Webhook file assigns a paid tier literal (${initText}) to a 'tier' property. Entitlement must be derived from the verified price-ID mapping, not a literal written in the event handler — an unconditional literal grant elevates any caller of this webhook (2026-09-24: billing/webhook route granted 'pro' for any subscription; stripe/webhook-handlers hardcoded 'pro' on success).`,
+        why: `Webhook file grants a paid tier literal (${evidence}). Entitlement must be derived from the verified price-ID mapping, not a literal written in the event handler — an unconditional literal grant elevates any caller of this webhook (2026-09-24: billing/webhook route granted 'pro' for any subscription; stripe/webhook-handlers hardcoded 'pro' on success).`,
         fix: "Resolve the tier via resolveUserTierForPriceId()/the shared price→tier mapping and fail closed (null ⇒ tier unchanged); never write a paid tier literal in webhook code.",
       });
+    };
+
+    source.forEachDescendant((node) => {
+      // (a) object property: tier: 'pro'  /  ['tier']: 'pro'  (computed keys too)
+      if (Node.isPropertyAssignment(node)) {
+        const name = node.getNameNode().getText().replace(/['"[\]]/g, "");
+        if (name !== "tier") return;
+        const init = node.getInitializer();
+        if (!init) return;
+        const paid = paidTierText(init.getText());
+        if (!paid) return;
+        pushFinding(paid);
+        return;
+      }
+      // (b) assignment: x.tier = 'pro'  /  x['tier'] = 'pro'
+      if (Node.isBinaryExpression(node)) {
+        if (node.getOperatorToken().getText() !== "=") return;
+        const leftNode = node.getLeft();
+        let name: string | null = null;
+        if (Node.isPropertyAccessExpression(leftNode)) {
+          name = leftNode.getName();
+        } else if (Node.isElementAccessExpression(leftNode)) {
+          const arg = leftNode.getArgumentExpression();
+          if (arg && Node.isStringLiteral(arg)) name = arg.getLiteralText();
+        }
+        if (name !== "tier") return;
+        const rightNode = node.getRight();
+        if (!rightNode) return;
+        const paid = paidTierText(rightNode.getText());
+        if (!paid) return;
+        pushFinding(paid);
+      }
     });
 
     return findings;
@@ -91,13 +119,22 @@ export const UntrustedTierFallbackRule: Rule = {
 
     const reported = new Set<string>();
 
+    // custom_data itself is attacker-controllable only when a plan/tier FIELD
+    // is read off it. Merely touching custom_data (userId extraction,
+    // presence checks) is not a tier read — flagging that was a false
+    // positive class (2026-09-25 review): updateUserTier({userId:
+    // event.data.custom_data?.userId, tier: resolvedTier}) and
+    // !event.data.custom_data?.userId || !resolvedTier must NOT fire.
+    const readsPlanFieldFromCustomData = (text: string): boolean =>
+      /custom_data\s*\?*\.\s*(?:plan_?tier|plan|tier)\b/i.test(text);
+
     source.forEachDescendant((node) => {
       if (Node.isCallExpression(node)) {
         const callee = node.getExpression();
         const calleeName = Node.isIdentifier(callee) ? callee.getText() : callee.getText().split(".").pop() ?? "";
         if (!/tier/i.test(calleeName)) return;
-        const hasCustomDataArg = node.getArguments().some((a) => a.getText().includes("custom_data"));
-        if (!hasCustomDataArg) return;
+        const planReadArg = node.getArguments().find((a) => readsPlanFieldFromCustomData(a.getText()));
+        if (!planReadArg) return;
         const key = `call:${node.getStart()}`;
         if (reported.has(key)) return;
         reported.add(key);
@@ -105,7 +142,7 @@ export const UntrustedTierFallbackRule: Rule = {
           file: filePath,
           severity: "high",
           title: "Security: tier derived from untrusted custom_data payload",
-          why: `${calleeName}(${node.getArguments().map((a) => a.getText()).join(", ")}) derives an entitlement tier from the webhook payload's custom_data. custom_data is attacker-controllable; a forged plan string on an unmapped price must never re-derive a tier (2026-09-24: forged custom_data planTier "max" could grant Max when the verified mapping returned null).`,
+          why: `${calleeName}(${planReadArg.getText()}) derives an entitlement tier from the webhook payload's custom_data plan field. custom_data is attacker-controllable; a forged plan string on an unmapped price must never re-derive a tier (2026-09-24: forged custom_data planTier "max" could grant Max when the verified mapping returned null).`,
           fix: "Fail closed: return the verified price-ID mapping result only (null ⇒ tier unchanged); remove the custom_data fallback entirely.",
         });
         return;
@@ -114,8 +151,7 @@ export const UntrustedTierFallbackRule: Rule = {
         const op = node.getOperatorToken().getText();
         if (op !== "??" && op !== "||") return;
         const text = node.getText();
-        if (!text.includes("custom_data")) return;
-        if (!/tier/i.test(text)) return;
+        if (!readsPlanFieldFromCustomData(text)) return;
         const key = `bin:${node.getStart()}`;
         if (reported.has(key)) return;
         reported.add(key);
@@ -139,9 +175,12 @@ export const UntrustedTierFallbackRule: Rule = {
  *   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  * Under RLS the anon key silently returns 0 rows — the job "succeeds" doing
  * nothing instead of failing loudly on the missing service-role key.
+ *
+ * Detected via the AST (a ||/??: binary expression with a service-role key
+ * operand on one side and an anon-key operand on the other), so multiline
+ * chains are caught and comment/string text is ignored (the previous raw
+ * source regex matched both — 2026-09-25 review gap).
  */
-const SERVICE_ROLE_ANON_FALLBACK = /SERVICE_ROLE[_A-Z]*(KEY)?\s*(\|\||\?\?)[^;\n]*ANON_KEY/i;
-
 export const ServiceRoleAnonFallbackRule: Rule = {
   name: "service-role-key-fallback-to-anon",
   scope: "file",
@@ -152,15 +191,34 @@ export const ServiceRoleAnonFallbackRule: Rule = {
     if (isTestFile(filePath)) return findings;
     if (filePath.includes("/quality-engine/")) return findings;
 
-    if (!SERVICE_ROLE_ANON_FALLBACK.test(source.getText())) return findings;
+    const isServiceRoleKeyOperand = (n: Node): boolean =>
+      !Node.isStringLiteral(n) && /service[\s_-]?role/i.test(n.getText()) && /key/i.test(n.getText());
+    const isAnonKeyOperand = (n: Node): boolean =>
+      !Node.isStringLiteral(n) && /anon/i.test(n.getText()) && /key/i.test(n.getText());
 
-    findings.push({
-      file: filePath,
-      severity: "high",
-      title: "Security: service-role key silently falls back to anon key",
-      why: "SUPABASE_SERVICE_ROLE_KEY is coerced to NEXT_PUBLIC_SUPABASE_ANON_KEY via a fallback operator. Under RLS the anon key returns 0 rows, so the operation silently does nothing while reporting success (2026-09-24: PR #322 backfill).",
-      fix: "Fail fast: if the service-role key is required, throw/exit when it is missing — never fall back to the anon key.",
+    const reported = new Set<number>();
+    source.forEachDescendant((node) => {
+      if (!Node.isBinaryExpression(node)) return;
+      const op = node.getOperatorToken().getText();
+      if (op !== "||" && op !== "??") return;
+      const left = node.getLeft();
+      const right = node.getRight();
+      if (!left || !right) return;
+      const serviceRoleSide = isServiceRoleKeyOperand(left) || isServiceRoleKeyOperand(right);
+      const anonSide = isAnonKeyOperand(left) || isAnonKeyOperand(right);
+      if (!serviceRoleSide || !anonSide) return;
+      const key = node.getStart();
+      if (reported.has(key)) return;
+      reported.add(key);
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Security: service-role key silently falls back to anon key",
+        why: `${node.getText().replace(/\s+/g, " ")} — SUPABASE_SERVICE_ROLE_KEY is coerced to an anon key via a fallback operator. Under RLS the anon key returns 0 rows, so the operation silently does nothing while reporting success (2026-09-24: PR #322 backfill).`,
+        fix: "Fail fast: if the service-role key is required, throw/exit when it is missing — never fall back to the anon key.",
+      });
     });
+
     return findings;
   },
 };
@@ -185,14 +243,20 @@ export const RuntimeTierTrustRule: Rule = {
     if (isTestFile(filePath)) return findings;
     if (filePath.includes("/quality-engine/")) return findings;
 
-    // A raw tier operand must be a bare identifier or property/optional-chain
-    // access (e.g. `tier`, `profile?.tier`). A call expression operand (e.g.
-    // `normalizeUserTier(profile.tier) !== 'free'`) is already normalized and
-    // is the rule's own recommended fix — exempting it keeps the fix shape
-    // false-positive-free.
+    // A raw tier operand may be a bare identifier, property/optional-chain
+    // access (e.g. `tier`, `profile?.tier`), or a call whose callee is NOT
+    // the allowlist normalizer — `getTier(profile) !== 'free'` still trusts
+    // whatever getTier returns, so it fires (2026-09-25 review gap: the
+    // previous shape exempted EVERY call). Only normalizeUserTier (the
+    // rule's own recommended fix) is exempt.
     const isRawTierOperand = (n: Node): boolean => {
       if (Node.isIdentifier(n)) return /\btier\b/i.test(n.getText());
       if (Node.isPropertyAccessExpression(n)) return /\btier\b/i.test(n.getName());
+      if (Node.isCallExpression(n)) {
+        if (/^normalizeUserTier$|^normalizeTier$/.test(n.getExpression().getText())) return false;
+        // Substring match (no \b) so camelCase callees like getTier(...) count.
+        return /tier/i.test(n.getText());
+      }
       return false;
     };
 
@@ -220,15 +284,23 @@ export const RuntimeTierTrustRule: Rule = {
         return;
       }
       // (b) `X.tier as UserTier` cast on a raw value without normalization.
-      // A call-expression operand (`normalizeUserTier(x) as UserTier`) is
-      // exempt — the value already went through the allowlist normalizer.
+      // A normalizeUserTier call operand (`normalizeUserTier(x) as UserTier`)
+      // is exempt — the value already went through the allowlist normalizer.
+      // Any OTHER call (e.g. `getTier(x) as UserTier`) still fires.
       if (Node.isAsExpression(node)) {
         const typeText = node.getTypeNode()?.getText();
         if (typeText !== "UserTier") return;
         const exprNode = node.getExpression();
-        if (Node.isCallExpression(exprNode)) return;
+        if (Node.isCallExpression(exprNode) && /^normalizeUserTier$|^normalizeTier$/.test(exprNode.getExpression().getText())) return;
         const exprText = exprNode.getText();
-        if (!(Node.isIdentifier(exprNode) ? /\btier\b/i.test(exprText) : Node.isPropertyAccessExpression(exprNode) && /\btier\b/i.test(exprNode.getName()))) return;
+        const exprIsRawTier = Node.isIdentifier(exprNode)
+          ? /\btier\b/i.test(exprText)
+          : Node.isPropertyAccessExpression(exprNode)
+            ? /\btier\b/i.test(exprNode.getName())
+            : Node.isCallExpression(exprNode)
+              ? /tier/i.test(exprText)
+              : false;
+        if (!exprIsRawTier) return;
         findings.push({
           file: filePath,
           severity: "high",

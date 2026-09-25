@@ -4,7 +4,7 @@
  *
  * Configurable fallback chain (2026-09-24, Decodo 429 incident): the provider
  * order comes from TRANSCRIPT_PROVIDER_ORDER (comma list, default
- * "apify,decodo,native"). Each provider is tried in order; the placeholder
+ * "transcriptapi,apify,decodo,native,supadata"). Each provider is tried in order; the placeholder
  * tier is always the final fallback and is not part of the order.
  *
  * NOTE: this worker cannot read the Supabase Settings Registry directly (per
@@ -15,12 +15,14 @@
 import { addBreadcrumb, captureException, captureMessage } from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
 import { ApifyTranscriptProvider } from './providers/ApifyTranscriptProvider';
+import { TranscriptApiProvider } from './providers/TranscriptApiProvider';
 import { DecodoTranscriptProvider } from './providers/DecodoTranscriptProvider';
 import { YouTubeNativeTranscriptProvider } from './providers/YouTubeNativeTranscriptProvider';
+import { SupadataTranscriptProvider } from './providers/SupadataTranscriptProvider';
 import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
-const DEFAULT_PROVIDER_ORDER = 'apify,decodo,native';
+const DEFAULT_PROVIDER_ORDER = 'transcriptapi,apify,decodo,native,supadata';
 
 /**
  * Parses TRANSCRIPT_CHAIN_BUDGET_MS from env into a finite budget in ms.
@@ -33,15 +35,23 @@ export function parseChainBudgetMs(raw?: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-// Chain budget derivation (2026-09-25, PR #336 round 2): the Apify tier can
+// Chain budget derivation (2026-09-25, supadata tier): the Apify tier can
 // block for up to 130000ms (its own abort, > the actor's 120s timeout). The
 // budget must therefore leave at least 30s for the remaining fallback tiers
 // (decodo 30s + native ~25s of internal deadlines) before the placeholder:
-// 130000 (Apify worst case) + 30000 (fallback floor) = 160000ms. Overridable
-// via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, so env only).
-const DEFAULT_CHAIN_BUDGET_MS = 160000;
+// TranscriptAPI (first tier since 2026-09-25) adds up to 30000ms before Apify,
+// and Supadata (last tier since 2026-09-25) adds up to 60000ms after native
+// (its own 30s initial-request deadline + up to 60s of AI job polling bounded
+// by its internal job deadline; the chain budget is what actually bounds it
+// here, so the reservation must exist or the tier would always be skipped):
+// 30000 (TranscriptAPI) + 130000 (Apify worst case) + 30000 (decodo+native
+// floor) + 60000 (Supadata AI job incl. polling) + 30000 (placeholder floor) ≈ 250000ms;
+// kept at the round 250000 = previous 190000 + 60000 Supadata reservation so
+// supadata always gets ≥60s. Overridable via TRANSCRIPT_CHAIN_BUDGET_MS
+// (worker is DB-free per ADR 005, so env only).
+const DEFAULT_CHAIN_BUDGET_MS = 250000;
 
-const VALID_PROVIDER_NAMES = ['apify', 'decodo', 'native'] as const;
+const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native', 'supadata'] as const;
 type ProviderName = typeof VALID_PROVIDER_NAMES[number];
 
 export class TranscriptExtractor implements TranscriptProviderPort {
@@ -50,6 +60,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
   private apifyToken?: string;
   private providerOrder: ProviderName[];
   private chainBudgetMs: number;
+  private transcriptApiKey?: string;
+  private supadataApiKey?: string;
+  private supadataMaxAiMinutes: number;
 
   constructor(
     residentialProxyUrl?: string,
@@ -57,11 +70,17 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     providerOrder?: string,
     apifyToken?: string,
     chainBudgetMs?: number,
+    transcriptApiKey?: string,
+    supadataApiKey?: string,
+    supadataMaxAiMinutes?: number,
   ) {
     this.residentialProxyUrl = residentialProxyUrl;
     this.decodoApiKey = decodoApiKey;
     this.apifyToken = apifyToken;
     this.chainBudgetMs = chainBudgetMs ?? DEFAULT_CHAIN_BUDGET_MS;
+    this.transcriptApiKey = transcriptApiKey;
+    this.supadataApiKey = supadataApiKey;
+    this.supadataMaxAiMinutes = supadataMaxAiMinutes ?? 60;
     this.providerOrder = TranscriptExtractor.parseProviderOrder(providerOrder);
   }
 
@@ -97,7 +116,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     const providers: Array<{ name: ProviderName; provider: TranscriptProviderPort }> = [];
     for (const name of this.providerOrder) {
       if (name === 'apify') providers.push({ name, provider: new ApifyTranscriptProvider(this.apifyToken) });
+      else if (name === 'transcriptapi') providers.push({ name, provider: new TranscriptApiProvider(this.transcriptApiKey) });
       else if (name === 'decodo') providers.push({ name, provider: new DecodoTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
+      else if (name === 'supadata') providers.push({ name, provider: new SupadataTranscriptProvider(this.supadataApiKey, this.supadataMaxAiMinutes) });
       else providers.push({ name, provider: new YouTubeNativeTranscriptProvider(this.residentialProxyUrl, this.decodoApiKey) });
     }
     return providers;

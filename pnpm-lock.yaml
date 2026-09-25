@@ -41,6 +41,9 @@ importers:
 
   .:
     devDependencies:
+      '@upstash/vector':
+        specifier: 1.2.3
+        version: 1.2.3
       glob:
         specifier: ^13.0.6
         version: 13.0.6

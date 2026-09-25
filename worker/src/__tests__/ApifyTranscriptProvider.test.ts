@@ -108,9 +108,9 @@ describe('TranscriptExtractor provider order parsing', () => {
   });
 
   it('falls back to the default order for empty or all-invalid lists', () => {
-    expect(TranscriptExtractor.parseProviderOrder()).toEqual(['apify', 'decodo', 'native']);
-    expect(TranscriptExtractor.parseProviderOrder('  ')).toEqual(['apify', 'decodo', 'native']);
-    expect(TranscriptExtractor.parseProviderOrder('bogus,na')).toEqual(['apify', 'decodo', 'native']);
+    expect(TranscriptExtractor.parseProviderOrder()).toEqual(['transcriptapi', 'apify', 'decodo', 'native', 'supadata']);
+    expect(TranscriptExtractor.parseProviderOrder('  ')).toEqual(['transcriptapi', 'apify', 'decodo', 'native', 'supadata']);
+    expect(TranscriptExtractor.parseProviderOrder('bogus,na')).toEqual(['transcriptapi', 'apify', 'decodo', 'native', 'supadata']);
   });
 
   it('chain falls through apify→decodo→native→placeholder and aggregates tier failures', async () => {
