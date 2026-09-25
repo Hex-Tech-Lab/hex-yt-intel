@@ -1,0 +1,88 @@
+worker/src/services/PersistService.ts
+  s_2c3e4336a9cc32::t_d56b8be67fb6f9 33-39
+  s_2c3e4336a9cc32::t_2e953cceeda79b 252
+  s_2c3e4336a9cc32::t_a9a876a1de9eff 287
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_2c3e4336a9cc32::t_a2bbf16592cabe 189-203
+  s_2c3e4336a9cc32::t_ac40c6e42a1107 340-341
+  s_2c3e4336a9cc32::t_4033f1d9a831fd 73-74
+worker/src/services/LLMCascade.ts
+  s_2c3e4336a9cc32::t_7a0d5a124f5e45 475
+  s_2c3e4336a9cc32::t_dfed77971f534e 364
+  s_2c3e4336a9cc32::t_e7bee5d4052562 172-173,184
+  s_2c3e4336a9cc32::t_99272a35a319b8 429-437
+  s_2c3e4336a9cc32::t_e6d4ce189c6c67 84-90
+  s_2c3e4336a9cc32::t_c2e4217ac04379 99-100,103
+  s_2c3e4336a9cc32::t_fe6ee972dc539d 143
+  s_2c3e4336a9cc32::t_f8236c9c6546a8 222
+  s_2c3e4336a9cc32::t_f347bbc53e30d3 266-268
+  s_2c3e4336a9cc32::t_de7d6f6dd11145 123-124,132
+  s_2c3e4336a9cc32::t_b696d51255d127 302-319
+  s_2c3e4336a9cc32::t_be04f088d57362 285
+web/app/api/analyses/persist/route.ts
+  s_2c3e4336a9cc32::t_1dfff436383d48 295
+  s_2c3e4336a9cc32::t_b380b011ab8d77 581
+  s_2c3e4336a9cc32::t_9d937a293b6954 195-200
+worker/src/ports/LLMCascadePort.ts
+  s_2c3e4336a9cc32::t_3354241f88d25f 20-28,36-37
+worker/src/ports/PromptBuilderPort.ts
+  s_2c3e4336a9cc32::t_c91ccd14b82556 12-19
+worker/src/ports/ReasoningEnginePort.ts
+  s_2c3e4336a9cc32::t_1f8dff724d3dae 84-85
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_2c3e4336a9cc32::t_dc1204c2be5659 1-34,36-134
+  s_2c3e4336a9cc32::t_040b6b3325a223 35
+web/lib/ports/AnalysisPersistencePort.ts
+  s_2c3e4336a9cc32::t_417ddbce0a3029 222-223
+worker/src/services/PromptBuilder.ts
+  s_2c3e4336a9cc32::t_2eefe232b10f5c 119-121,131-132,135
+  s_2c3e4336a9cc32::t_494220d38102b6 30-48
+  s_2c3e4336a9cc32::t_f4bf6183d7b704 82
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_2c3e4336a9cc32::t_562c4de90bec37 452,465
+worker/src/routes/analysis.ts
+  s_2c3e4336a9cc32::t_ed58b25c78230e 815
+  s_2c3e4336a9cc32::t_5f47ac57883ba2 112-116
+  s_2c3e4336a9cc32::t_e712a61a9afc0f 794
+  s_2c3e4336a9cc32::t_a96f655cb7a66d 1050
+  s_2c3e4336a9cc32::t_f97ba4497778f4 1241
+web/hooks/useSSEStream.ts
+  s_2c3e4336a9cc32::t_9153cb4e3b8797 601-603
+  s_2c3e4336a9cc32::t_c8a1666716a018 437
+  s_2c3e4336a9cc32::t_afe3020d7e7956 455-459,461
+  s_2c3e4336a9cc32::t_f1df826a795204 41,50-53
+  s_2c3e4336a9cc32::t_b5248123033c90 594
+  s_2c3e4336a9cc32::t_9b1a2f5ffdf0e1 400-401
+  s_2c3e4336a9cc32::t_98436a361871bd 385
+  s_2c3e4336a9cc32::t_9cc901825d95b8 444-454,460,462-482
+worker/src/services/ReasoningEngine.ts
+  s_2c3e4336a9cc32::t_d1d1526e2da769 73-86,89
+  s_2c3e4336a9cc32::t_e0f047eed43f42 117
+  s_2c3e4336a9cc32::t_5fff0952ed136c 99-100
+web/lib/types/contracts.ts
+  s_2c3e4336a9cc32::t_c4ba5e9577b16a 269-276
+supabase/migrations/20260925120000_prompt_caching_settings_and_cached_tokens.sql
+  s_2c3e4336a9cc32::t_825ed937dc4e4f 1-47
+web/hooks/__tests__/useSSEStream-cache-stagger.test.tsx
+  s_2c3e4336a9cc32::t_4b68aeb18ef8f4 186-187,195
+  s_2c3e4336a9cc32::t_1301d2aa64f963 1-155,160-185,188-194,196-208,210-216
+  s_2c3e4336a9cc32::t_b116d5e2bc3521 156-159,209
+web/lib/types/__tests__/contracts.test.ts
+  s_2c3e4336a9cc32::t_4d0a3c712567a0 1-9,11,13-26,28-30,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5eabb3121ccddd0371a321932e641974431e3962",
+  "prompts": {},
+  "sessions": {
+    "s_2c3e4336a9cc32": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f271fdf3fffexPXgmx5HtWNeCO",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
