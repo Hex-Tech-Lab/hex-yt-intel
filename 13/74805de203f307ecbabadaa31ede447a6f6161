@@ -1,0 +1,26 @@
+docs/private/ADR_028_TEMPORAL_KG_SQLGRAPH_SIMHASH_SSOT_HIGHLIGHTS_2026-08-25.md
+  h_60000122af7b55 1-405
+docs/private/ADR_030_BROADCAST_STINGER_TRANSITION_2026-08-27.md
+  h_60000122af7b55 1-22
+docs/private/ADR_032_PASSTHROUGH_WORKER_AND_MONOLITH_SPLIT_2026-09-24.md
+  h_60000122af7b55 1-79
+docs/private/ADR_033_BUNDLE_PROMPT_CACHING_2026-09-26.md
+  h_60000122af7b55 1-16
+docs/private/ADR_034_JEV_VERIFIED_DIMENSION_CASCADE_2026-09-26.md
+  h_60000122af7b55 1-13
+docs/private/ADR_035_TIERED_COMPUTE_DEPTH_2026-09-26.md
+  h_60000122af7b55 1-13
+docs/private/ADR_036_JEV_HIGHLIGHT_RANKER_2026-09-26.md
+  h_60000122af7b55 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1374805de203f307ecbabadaa31ede447a6f6161",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
