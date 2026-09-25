@@ -1,0 +1,102 @@
+web/app/api/analyses/[id]/export/__tests__/route.test.ts
+  h_60000122af7b55 1-18
+web/app/api/analyses/[id]/export/route.ts
+  h_60000122af7b55 11
+web/app/api/billing/checkout/__tests__/route.test.ts
+  h_60000122af7b55 1-126
+web/app/api/billing/checkout/route.ts
+  h_60000122af7b55 50-55,83
+web/app/api/billing/webhook/__tests__/route.test.ts
+  h_60000122af7b55 1-180
+web/app/api/billing/webhook/route.ts
+  h_60000122af7b55 2-3,6,8-17,21-22,25-26,28-32
+web/app/api/usage/summary/route.ts
+  h_60000122af7b55 7,16-20,22,55
+web/app/billing/__tests__/page.test.tsx
+  h_60000122af7b55 1-76
+web/app/billing/page.tsx
+  h_60000122af7b55 12-15,64-68,74
+web/components/billing/billing-dashboard-client.tsx
+  h_60000122af7b55 11-12,17,28-32,98,106,114-130
+web/lib/__tests__/contracts/export-pdf.contract.test.ts
+  h_60000122af7b55 16,125-134,157,164
+web/lib/__tests__/normalize-user-tier.test.ts
+  h_60000122af7b55 1-33
+web/lib/__tests__/tier-vocabulary-exhaustive.ts
+  h_60000122af7b55 1-17
+web/lib/__tests__/tier-vocabulary.test.ts
+  h_60000122af7b55 1-269
+web/lib/adapters/PaddleBillingAdapter.ts
+  h_60000122af7b55 9-10,12,122-145,147-152,197-236,280,282-284,363,366-376,386-388,394-396,400-412
+web/lib/adapters/PostgresBillingAdapter.ts
+  h_60000122af7b55 1,4-5,9-15,17,19,21,51-56,88
+web/lib/adapters/SettingsModelAdapter.ts
+  h_60000122af7b55 87-96
+web/lib/adapters/SupabaseAuthAdapter.ts
+  h_60000122af7b55 2,25
+web/lib/adapters/SupabaseBillingAdapter.ts
+  h_60000122af7b55 4-5,12,18
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  h_60000122af7b55 20,388
+web/lib/adapters/SupabaseSettingsAdapter.ts
+  h_60000122af7b55 87,92-101,113-115
+web/lib/adapters/__tests__/paddle-billing-adapter.test.ts
+  h_60000122af7b55 8-10,21,28-37,87-90,102-104,108-110,113,125-127,132-135,137,139-141,147
+web/lib/adapters/__tests__/paddle-checkout.test.ts
+  h_60000122af7b55 72
+web/lib/adapters/__tests__/postgres-billing.test.ts
+  h_60000122af7b55 1-53
+web/lib/adapters/__tests__/supabase-auth-adapter.test.ts
+  h_60000122af7b55 1-65
+web/lib/config/pricing.ts
+  h_60000122af7b55 3-4,8-13,236-327
+web/lib/config/report-tiers.ts
+  h_60000122af7b55 1-11
+web/lib/constants/rate-limits.ts
+  h_60000122af7b55 1-15,21-25,31-35,41,43
+web/lib/monitoring/sentry-utils.ts
+  h_60000122af7b55 4-5,171
+web/lib/ports/BillingPersistencePort.ts
+  h_60000122af7b55 2,15
+web/lib/ports/BillingPort.ts
+  h_60000122af7b55 1-6,13
+web/lib/services/billing-data.ts
+  h_60000122af7b55 4-6,16,57-61,66
+web/lib/stripe.ts
+  h_60000122af7b55 39-50,64-75
+web/lib/types/__tests__/contracts.test.ts
+  h_60000122af7b55 1-43
+web/lib/types/billing.ts
+  h_60000122af7b55 8-35
+web/lib/types/contracts.ts
+  h_60000122af7b55 108,116-117,119
+web/lib/types/workflow.ts
+  h_60000122af7b55 10
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  h_60000122af7b55 26-28,30,146,149,151,525-526,528
+web/lib/usecases/ProcessPaddleWebhookUseCase.ts
+  h_60000122af7b55 1-2,4-21,30,35-37,40-63,70,73-87,90-98
+web/vitest.config.ts
+  h_60000122af7b55 70-79
+worker/src/__tests__/SupadataTranscriptProvider.test.ts
+  h_60000122af7b55 3,176-269,310-444
+worker/src/ports/TranscriptProviderPort.ts
+  h_60000122af7b55 29-35
+worker/src/routes/analysis.ts
+  h_60000122af7b55 3,598,657-658,900-902
+worker/src/services/TranscriptExtractor.ts
+  h_60000122af7b55 38-79,154,190
+worker/src/services/providers/SupadataTranscriptProvider.ts
+  h_60000122af7b55 16-22,28-32,34-40,94-97,99,109-117,143,148-152,157-161,163,167,171,177,182-184,188-192,194,219-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d1f8df7e04b9a2df8f4fe4ec23b56980be54e317",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
