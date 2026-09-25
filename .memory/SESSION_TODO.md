@@ -31,4 +31,49 @@
 
 ## Needs the user
 - Founder prices ($49/$99 vs $79/$149) after the COGS decision
-- [ ] Rotate (user): Apify token + TranscriptAPI key (sk_…, 2026-09-25) too
+- [ ] Rotate (user): Apify token + TranscriptAPI key (sk_…, 2026-09-25) too, Supadata key (sd_…, pasted 2026-09-25)
+
+## 2026-09-25 round 1 — in flight (dispatched 01:xx, 45-min OC / 90-min AGY timeouts)
+- OC GLM low: #336 round 2 (P0: conflict, native timeout, chain budget, CI) · TranscriptAPI backup adapter (new PR, stacked on #336) · #334 round 2 · #335 round 2 · Q1/Q4 rule-gap follow-up (new PR) · #327 round 3 retry
+- AGY Gemini 3.1 Pro High: business case (COGS rebuild + 6-engine competitor research incl. Perplexity) → docs PR
+- [x] TranscriptAPI key tested live: 200 OK, 0.4–0.6 s (Apify 7–39 s)
+- [x] #337 handover contradictions reconciled (pushed)
+- [ ] CC: verify each result, merge queue #336 → #334 → #335 → #331 → #325 → #327 → #337
+- Key rotation: deferred to pre-production (user, 2026-09-25)
+- Decisions 2026-09-25: OC providers CoreWeave→Together→Relace with fallbacks (already on main) · transcript order `apify,transcriptapi,decodo,native` (set after both PRs land; Decodo gets paid later) · Paddle: CC picks canonical route and configures it; blocked on an API key with notification-settings read/write permission (both current keys return empty data)
+
+## 2026-09-25 round 2 — CLEAR THE DECK
+- [x] #337 #331 #336 MERGED · #336 auto-deployed; live transcripts OK (dQw4 5.9 s, LTNVA 9.6 s, f6We53 17.5 s)
+- [x] Original pr-review-workflow skill (V2, 10 KB) restored from ~/.gemini/antigravity-cli/skills → ~/.claude/skills (+ repo addenda)
+- [x] TranscriptAPI first: order transcriptapi,apify,decodo,native; chain budget 190 s; CF secret TRANSCRIPTAPI_API_KEY set (#338)
+- [x] Merge queue: #338 #323 #335 #340 merged; #339 merged BY MISTAKE (rejected round-1 business case, $0.015 COGS wrong) → AGY round 2 on same branch → open replacement PR · #334 re-queued
+- [~] OC: #327 round 3 · #325 round 5 · #322 CI fixes
+- [~] AGY round 2 business case — round 1 REJECTED (assumed $0.015 COGS). MEASURED: $0.153 mean / $0.160 p50 / $0.187 p90 per analysis (41 analyses)
+- [x] OpenRouter account went negative (−$0.16) → user topped up
+- [x] OpenRouter keys: OC + web/.env.local = dev key (KiloCode, …a4b); prod = …d99; same account pool — no change needed
+- [ ] Native provider misreports "no captions" when YouTube blocks datacenter IPs (follow-up)
+- [ ] Whisper last-resort provider candidate (Supadata generate mode / ADR 029) — not built
+- [ ] DeepSource minor debt in transcript providers (complexity/docs) from #336 waiver
+- [ ] Paddle: needs API key with notification-settings permission (user, tomorrow)
+- [ ] Supadata AI-fallback provider as last tier (after #338 merges); 100 free credits/mo, AI transcription 2 credits/min
+- [ ] #322: rename migration 20260924120000_merge_analysis_payload_key_rpc.sql to a timestamp after 20260924143739 (out-of-order; not applied in prod) — after OC round finishes
+
+## 2026-09-25 round 3 — DECK CLEARED (0 open PRs)
+- [x] Merged: #337 #331 #336 #338 #323 #335 #340 #334 #339(mistake, round 2 pending) #327 #341 #342 #343 #344 #325 #322
+- [x] Prod migrations applied: 20260924231500_merge_analysis_payload_key_rpc, 20260925090000_seed_relations_registry_keys
+- [x] TranscriptAPI live first tier (0.3–0.5 s); Supadata last tier with fail-closed AI cap
+- [x] Vercel Git preview deploys disabled (vercel.json) — 100/day free cap
+- [ ] User: re-run f6We53TnkbU → if stuck, Sentry "persist: invalid request payload schema" names the field
+- [ ] persona/kg fragment validation failures (client Synthesis/Adapter drop) + "Validation dropped payload at stitch-analysis-chunks" ×16 → investigate
+- [ ] AGY business case round 2 → replacement PR
+
+## 2026-09-25 round 4
+- [~] OC persona-kg: fragment contract fix + remove persona steering from ucis prompt (persona = indicator only, per Council/PR #232 + user 2026-09-25)
+- [~] OC live-status: why reaper hasn't swept 6047514f (zero chunks) + live History card status (realtime/hooks), "stalled" state
+- [~] OC qa-rules-r3: #340 post-merge rule gaps (R4 comment/overload, R13, R2, R1, allFiles)
+- [ ] Business case round 3 after AGY round 2: fix arithmetic (secondary $0.05 cost, $9/$15 vs $5/$9), research script fail-open + deprecated sonar-reasoning, dedupe, sources; DELETE patch_script.cjs/.js + rewrite.py from main
+
+## 2026-09-25 round 5 — HANDOVER: see docs/history/THOS_2026-09-25_1400_COST_AUDIT_HIGHLIGHTS_LEVERS_PLAN.md §0 and §5
+- [ ] Land #345 #349 #346 #347 #348 (AGY Sonnet 4.6 reviews first) → live-verify prompt-cache savings
+- [ ] ADRs 033 prompt caching, 034 Jev cascade, 035 tiered compute, 036 Jev highlight ranker; ADR 030 swoosh addendum
+- [ ] AGY: business case round 3, swoosh stinger, persistent error banner + Re-analyze label
