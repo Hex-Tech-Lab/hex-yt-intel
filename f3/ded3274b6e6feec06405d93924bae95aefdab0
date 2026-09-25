@@ -1,0 +1,14 @@
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  h_60000122af7b55 126,130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f3ded3274b6e6feec06405d93924bae95aefdab0",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
