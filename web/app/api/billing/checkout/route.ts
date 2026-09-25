@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = user.id;
-    const userEmail = user.email!;
+    if (!user.email) {
+      // Forbidden non-null assertion removed (DeepSource JS-C1003, MAJOR):
+      // a user without an email can't create a Paddle checkout anyway.
+      return NextResponse.json({ error: 'User email is required for checkout' }, { status: 400 });
+    }
+    const userEmail = user.email;
 
     // 1. Validate request
     const body = await request.json();
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
     if (provider.type === 'paddle') {
       // Use PaddleBillingAdapter directly to ensure { userId, planTier, email } customData is attached
       const adapter = new PaddleBillingAdapter();
-      const planTier = validation.data.plan as 'founder' | 'pro';
+      const planTier = validation.data.plan as 'founder' | 'light' | 'pro' | 'max';
       const result = await adapter.createCheckoutSession(userId, userEmail, planTier, validation.data.interval);
       sessionUrl = result.checkoutUrl;
     } else {

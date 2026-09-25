@@ -36,11 +36,35 @@ export const STRIPE_PRICING = {
       historyRetention: 30,
     },
   },
+  light: {
+    tier: 'light',
+    price: 500, // $5.00 — PRICING_REGISTRY_FALLBACK.light.amountCents
+    analysesPerMonth: null, // unlimited — matches MONTHLY_QUOTAS.light
+    features: {
+      analyses: true,
+      search: true,
+      export: false, // light is digest-only (product decision 2026-09-24)
+      apiAccess: false,
+      historyRetention: 90,
+    },
+  },
   pro: {
     tier: 'pro',
     price: 900, // $9.00 in cents
     priceId: process.env.STRIPE_PRICE_ID_PRO || '',
     analysesPerMonth: null, // unlimited
+    features: {
+      analyses: true,
+      search: true,
+      export: true,
+      apiAccess: true,
+      historyRetention: 365,
+    },
+  },
+  max: {
+    tier: 'max',
+    price: null, // contact us — PRICING_REGISTRY_FALLBACK.max.amountCents
+    analysesPerMonth: null, // unlimited — matches MONTHLY_QUOTAS.max
     features: {
       analyses: true,
       search: true,

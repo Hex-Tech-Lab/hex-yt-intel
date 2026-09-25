@@ -5,6 +5,9 @@ import { ProcessPaddleWebhookUseCase } from '../../usecases/ProcessPaddleWebhook
 
 // Mock Supabase
 const mockUpsert = vi.fn();
+const mockUpdate = vi.fn(() => ({
+  eq: vi.fn().mockResolvedValue({ error: null, count: 1 })
+}));
 const mockSelect = vi.fn(() => ({
   eq: vi.fn(() => ({
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
@@ -15,13 +18,23 @@ vi.mock('@/lib/supabase', () => ({
     from: vi.fn(() => ({
       upsert: mockUpsert,
       select: mockSelect,
+      update: mockUpdate,
     }))
   }))
 }));
 
 // Mock Sentry
 vi.mock('@sentry/nextjs', () => ({
-  captureException: vi.fn()
+  captureException: vi.fn(),
+  captureMessage: vi.fn()
+}));
+
+// Mock the settings registry so resolveUserTierForPriceId() reads the
+// static fallback (no live Supabase call in unit tests).
+vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
+  SupabaseSettingsAdapter: {
+    getRegistrySettings: vi.fn().mockResolvedValue({}),
+  },
 }));
 
 function generateValidSignature(rawBody: string, secret: string) {
@@ -71,7 +84,10 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
         customer_id: 'ctm_123',
         status: 'active',
         custom_data: { user_id: 'user_123' },
-        items: [{ price: { custom_data: { plan_tier: 'pro' } } }]
+        // Tier comes from the shared price-ID mapping (fail-closed on
+        // unrecognised prices since 2026-09-24 round 2 — custom_data plan
+        // strings no longer re-derive tiers); Pro yearly fallback price.
+        items: [{ price: { id: 'pri_01m0azm06tqsbxxbm8nyqs2whq', custom_data: { plan_tier: 'pro' } } }]
       }
     });
 
@@ -83,15 +99,18 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
     expect(result.status).toBe(200);
     expect(mockUpsert).toHaveBeenCalledTimes(1);
 
-    // Call it again (replay)
-    mockUpsert.mockResolvedValueOnce({ error: null });
+    // Call it again (replay). Since PR #325 round 4, the per-event-id
+    // idempotency lock dedupes BEFORE any adapter call: the replay returns
+    // 200 without re-processing, and the upsert is NOT called a second time.
     const replayResult = await useCase.execute(rawBody, validSignature, secret);
     
     expect(replayResult.success).toBe(true);
-    expect(mockUpsert).toHaveBeenCalledTimes(2); // Upsert handles idempotency
+    expect(replayResult.status).toBe(200);
+    expect(replayResult.message).toBe('Duplicate event ignored');
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
   });
 
-  it('Test 3: Valid subscription.created event correctly updates user tier to founder', async () => {
+  it('Test 3: Valid subscription.created event maps a founder plan string to pro in users.tier and clamps the subscriptions column', async () => {
     mockUpsert.mockResolvedValueOnce({ error: null });
 
     const rawBody = JSON.stringify({
@@ -103,21 +122,29 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
         customer_id: 'ctm_456',
         status: 'active',
         custom_data: { user_id: 'user_456' },
-        items: [{ price: { custom_data: { plan_tier: 'founder' } } }]
+        // Founder fallback price — maps to pro via the shared price-ID
+        // mapping (founder pricing is a price, not a tier).
+        items: [{ price: { id: 'pri_01m0bjt2sv9qkr4jyq1kpfjgmt', custom_data: { plan_tier: 'founder' } } }]
       }
     });
 
     const validSignature = generateValidSignature(rawBody, secret);
-    
+
+    const { SupabaseBillingAdapter } = await import('../SupabaseBillingAdapter');
+    const updateUserTier = vi.spyOn(SupabaseBillingAdapter, 'updateUserTier').mockResolvedValue();
+
     const result = await useCase.execute(rawBody, validSignature, secret);
-    
+
     expect(result.success).toBe(true);
+    // Founder pricing is a price, not a tier: pro feature set.
+    expect(updateUserTier).toHaveBeenCalledWith({ userId: 'user_456', tier: 'pro' });
+    // user_subscriptions.plan_tier is DB-CHECK-constrained to ('free','founder','pro')
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         user_id: 'user_456',
         paddle_customer_id: 'ctm_456',
         paddle_subscription_id: 'sub_456',
-        plan_tier: 'founder',
+        plan_tier: 'pro',
         status: 'active'
       }),
       { onConflict: 'paddle_subscription_id' }

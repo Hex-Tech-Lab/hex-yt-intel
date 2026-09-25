@@ -84,9 +84,20 @@ export class SupabaseSettingsAdapter
         if (defErr || valErr) throw defErr || valErr;
 
         const overrides = new Map((vals ?? []).map((v) => [v.setting_key, v.value]));
+        const defined = new Set((defs ?? []).map((d) => d.key));
         for (const def of defs ?? []) {
           const resolved = overrides.has(def.key) ? overrides.get(def.key) : def.default_value;
           SupabaseSettingsAdapter.registryCache.set(def.key, { value: resolved, expiresAt: now + SupabaseSettingsAdapter.REGISTRY_CACHE_TTL_MS });
+        }
+        // Negative-cache keys that have no definition AND no override (Cubic
+        // review, 2026-09-24): without this, a key that was never seeded
+        // (e.g. chat.turnLimit.light/max pre-migration) stays uncached and
+        // re-triggers both Supabase queries on EVERY call. Cached null makes
+        // the read below keep the caller's fallback, same as absence.
+        for (const key of uncached) {
+          if (!defined.has(key) && !overrides.has(key)) {
+            SupabaseSettingsAdapter.registryCache.set(key, { value: null, expiresAt: now + SupabaseSettingsAdapter.REGISTRY_CACHE_TTL_MS });
+          }
         }
       } catch (error) {
         console.warn('[SupabaseSettingsAdapter] getRegistrySettings failed, using fallback defaults:', error instanceof Error ? error.message : String(error));
@@ -99,7 +110,9 @@ export class SupabaseSettingsAdapter
     const result = { ...fallback };
     for (const key of keys) {
       const cached = SupabaseSettingsAdapter.registryCache.get(key);
-      if (cached) (result as Record<string, unknown>)[key] = cached.value;
+      // Negative-cached nulls (key not defined anywhere) must NOT overwrite
+      // the caller's fallback -- null means "nothing in the registry".
+      if (cached && cached.value !== null && cached.value !== undefined) (result as Record<string, unknown>)[key] = cached.value;
     }
     return result;
   }

@@ -8,11 +8,13 @@ import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
 import { showToast } from '@/lib/dashboard/export';
 import { fmtCentsToUsd } from '@/lib/utils/format';
+import { isPaidTier, normalizeUserTier } from '@/lib/types/billing';
+import type { UserTier } from '@/lib/types/billing';
 
 interface BillingDashboardProps {
   initialData: {
     user: any;
-    tier: 'free' | 'pro' | 'enterprise';
+    tier: UserTier;
     analysesUsed: number;
     analysesLimit: number | null;
     usageStats: Record<string, number>;
@@ -23,9 +25,11 @@ interface BillingDashboardProps {
 export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
-  const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
-  
-  const isPro = initialData.tier === 'pro' || initialData.tier === 'enterprise';
+  // No Free fallback: every UserTier now has a STRIPE_PRICING entry
+  // (CodeRabbit review, 2026-09-24).
+  const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING];
+
+  const isPro = isPaidTier(normalizeUserTier(initialData.tier));
   const statusColor = isPro ? "var(--ok)" : "var(--accent)";
   const status = isPro ? "active" : "free";
   
@@ -91,7 +95,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
               Current Plan
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
-              {initialData.tier === 'free' ? 'Free Plan' : 'Pro Plan'}
+              {initialData.tier === 'free' ? 'Free Plan' : `${initialData.tier.charAt(0).toUpperCase()}${initialData.tier.slice(1)} Plan`}
             </p>
           </div>
           <div>
@@ -99,7 +103,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
               Monthly Cost
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
-              {tierConfig.price === 0 ? '$0' : fmtCentsToUsd(tierConfig.price)}
+              {tierConfig.price === 0 ? '$0' : tierConfig.price === null ? 'Contact us' : fmtCentsToUsd(tierConfig.price)}
             </p>
           </div>
         </div>
@@ -107,14 +111,23 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         {!isPro ? (
            <CheckoutButton isLoading={isLoading} setIsLoading={setIsLoading} plan="pro" interval="month" />
         ) : (
-          <Button
-            type="button"
-            label="Manage in Billing Portal"
-            variant="secondary"
-            size="md"
-            width="100%"
-            onClick={handleManageBilling}
-          />
+          <>
+            {/* Gated to the pre-widening paid tiers (Cubic review, 2026-09-24):
+                /api/billing/portal has no route implementation yet (pre-existing
+                gap for pro/enterprise too) and Paddle has no portal API wired
+                up, so light/max must not hit a dead button. Un-gate once the
+                portal route exists. */}
+            {(initialData.tier === 'pro' || initialData.tier === 'enterprise') ? (
+              <Button
+                type="button"
+                label="Manage in Billing Portal"
+                variant="secondary"
+                size="md"
+                width="100%"
+                onClick={handleManageBilling}
+              />
+            ) : null}
+          </>
         )}
       </div>
 

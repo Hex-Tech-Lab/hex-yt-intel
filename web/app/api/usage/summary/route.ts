@@ -4,6 +4,7 @@ export const maxDuration = 30;
 
 import { NextResponse } from 'next/server';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
+import { normalizeUserTier } from '@/lib/types/billing';
 import type { UserTier } from '@/lib/types/billing';
 
 // Must match PostgresBillingAdapter's MONTHLY_QUOTAS -- duplicated here rather
@@ -12,7 +13,13 @@ import type { UserTier } from '@/lib/types/billing';
 // rule), this should read the same registry key instead of restating it.
 const ANALYSIS_MONTHLY_QUOTA: Record<UserTier, number | null> = {
   free: 3,
+  // Light/Max: paid tiers, no enforced monthly analysis quota yet. Real
+  // per-tier volume limits are a NEEDS USER DECISION (step 2 / pricing
+  // data); null = unlimited is the current de facto behaviour for any
+  // non-free tier (matches the SQL quota functions).
+  light: null,
   pro: null,
+  max: null,
   enterprise: null,
 };
 
@@ -45,7 +52,7 @@ export async function GET() {
       persistence.getUserProfile(identity.userId),
     ]);
 
-    const tier = (profile?.tier as UserTier) || 'free';
+    const tier = normalizeUserTier(profile?.tier);
     const analysesThisMonth = monthlyAnalyses.filter((a) => a.billingStatus === 'completed').length;
     const analysisQuota = ANALYSIS_MONTHLY_QUOTA[tier];
 

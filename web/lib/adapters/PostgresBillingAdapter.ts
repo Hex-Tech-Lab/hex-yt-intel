@@ -1,15 +1,24 @@
-import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
-import type { UserTier } from '@/lib/types/billing';
+import { isPaidTier, normalizeUserTier } from '@/lib/types/billing';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 import { SupabaseSettingsAdapter } from './SupabaseSettingsAdapter';
+import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
+import type { UserTier } from '@/lib/types/billing';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
-const MONTHLY_QUOTAS = {
+// Paid tiers (light/pro/max/enterprise) are not quota-gated here today;
+// real per-tier volume limits are a NEEDS USER DECISION (no empirical data
+// yet). Typed Record<UserTier, ...> so widening UserTier forces a
+// deliberate entry instead of a silent `|| 3` free fallback.
+// Exported as the shared analysesLimit source for the billing page/service
+// (CodeRabbit review, 2026-09-24) so every display reads one quota map.
+export const MONTHLY_QUOTAS: Record<UserTier, number | null> = {
   free: 3,
+  light: null,
   pro: null,
+  max: null,
   enterprise: null,
-} as const;
+};
 
 // ADR 020 Phase 2: fallbacks only -- the registry (setting_definitions) is
 // the live source of truth, same pattern as dimension-remediation.ts's
@@ -39,7 +48,12 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
       return { allowed: true };
     }
 
-    if (tier === 'pro' || tier === 'enterprise') {
+    // Paid tiers are not quota-gated (matches the SQL quota functions'
+    // anything-but-free-is-unlimited behaviour; volume differentiation is
+    // a NEEDS USER DECISION). normalizeUserTier first: the typed param can
+    // still carry a legacy/misspelled DB string at runtime (upstream casts),
+    // which must fail closed to the free quota instead of bypassing it.
+    if (isPaidTier(normalizeUserTier(tier))) {
       return { allowed: true };
     }
 
@@ -71,7 +85,7 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
         return false;
       }).length;
 
-      const limit = MONTHLY_QUOTAS[tier as 'free'] || 3;
+      const limit = MONTHLY_QUOTAS[tier] ?? 3;
       const allowed = activeCount < limit;
 
       if (!allowed) {

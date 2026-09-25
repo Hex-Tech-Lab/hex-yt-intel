@@ -1,19 +1,21 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
+import type { UserTier } from '@/lib/types/billing';
+
 /**
  * Manage user subscriptions and analysis billing status in Supabase.
  * Uses service-role client for authorized updates.
  */
 export class SupabaseBillingAdapter {
   /**
-   * Update a user's subscription tier (pro/free).
+   * Update a user's subscription tier (canonical UserTier vocabulary).
    * @param params User ID and new tier
    * @throws Error if user not found or update fails
    */
   static async updateUserTier(params: {
     userId: string;
-    tier: 'pro' | 'free';
+    tier: UserTier;
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
