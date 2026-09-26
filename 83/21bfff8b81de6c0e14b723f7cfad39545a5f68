@@ -1,0 +1,18 @@
+worker/src/services/LLMCascade.ts
+  h_60000122af7b55 7-9,126,345-349,361,378,430-432,434,523,527
+worker/src/services/TranscriptExtractor.ts
+  h_60000122af7b55 16,24,197-198,201,205,267-272,276,282-283,285
+worker/src/worker.ts
+  h_60000122af7b55 1-2,5,17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8321bfff8b81de6c0e14b723f7cfad39545a5f68",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
