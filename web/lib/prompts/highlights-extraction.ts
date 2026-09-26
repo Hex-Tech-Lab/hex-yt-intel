@@ -146,7 +146,7 @@ export function parseHighlightsExtraction(
     // to natural 15-60s boundaries.
     if (end <= finalStart) continue;
     const duration = end - finalStart;
-    let clampedEnd = duration < minSegmentDurationSeconds
+    const clampedEnd = duration < minSegmentDurationSeconds
       ? finalStart + minSegmentDurationSeconds
       : duration > maxSegmentDurationSeconds
         ? finalStart + maxSegmentDurationSeconds

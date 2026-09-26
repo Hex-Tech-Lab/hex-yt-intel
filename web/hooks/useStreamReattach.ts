@@ -56,7 +56,7 @@ export function useStreamReattach(analysisId: string | null, status: AnalysisSta
 
           startTransition(() => {
             if (data.analysisMarkdown) {
-              initializeAnalysis(data.id, data.title, data.analysisMarkdown);
+              initializeAnalysis(data.id, data.title, data.analysisMarkdown, undefined, data.videoId);
 
               const parsed = parseToUCISDimensions(data.analysisMarkdown);
               initSynthesis({

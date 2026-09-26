@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase', () => ({
     from: (table: string) => {
       if (table === 'user_subscriptions') {
         return {
-          select: vi.fn().mockImplementation((cols: string) => ({
+          select: vi.fn().mockImplementation((_cols: string) => ({
             eq: vi.fn().mockImplementation((col: string, val: string) => ({
               maybeSingle: vi.fn().mockImplementation(() => {
                 const row = mockDb.get(val);

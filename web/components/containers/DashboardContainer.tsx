@@ -199,13 +199,22 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [pendingNav, clearPendingNav]);
   const setUserRole = useAnalysisStore((s) => s.setUserRole);
   const status = useAnalysisStore((s) => s.status);
+  const setStatus = useAnalysisStore((s) => s.setStatus);
   const analysisHistory = useAnalysisStore((s) => s.analysisHistory);
   const analysis = useAnalysisStore((s) => s.analysis);
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const error = useAnalysisStore((s) => s.error);
+  const setError = useAnalysisStore((s) => s.setError);
   const terminalLines = useAnalysisStore((s) => s.terminalLines);
   const TOTAL_DIMENSIONS = useTotalDimensions();
   const { dimensionConfigs } = useSynthesisConfig();
+
+  const handleDismissError = useCallback(() => {
+    setError(null);
+    if (status === "error") {
+      setStatus("idle");
+    }
+  }, [setError, setStatus, status]);
 
   const showLog = status !== "idle" && terminalLines.length > 0;
 
@@ -1044,25 +1053,42 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           <div key={activeNav}>
             {activeNav === "console" ? (
               <div className="flex flex-col gap-1.5 pb-2">
-                <AnalysisHero
-                  url={mounted ? url : ""}
-                  status={
-                    status === "analyzing" || status === "downloading"
-                      ? "streaming"
-                      : status === "complete"
-                        ? "done"
-                        : status === "error"
-                          ? "error"
-                          : "idle"
-                  }
-                  onUrlChange={setUrl}
-                  onAnalyze={handleAnalyze}
-                  onReanalyze={handleReanalyze}
-                  onCancel={stopAnalysis}
-                  error={error?.message}
-                  quota={quotaLabel}
-                  isRepeat={status === "complete" || hasExistingAnalysis}
-                />
+                {(() => {
+                  const currentInputVideoId = url ? extractVideoId(url) : null;
+                  const isCurrentVideoLoaded = Boolean(
+                    currentInputVideoId &&
+                    status === "complete" &&
+                    (nucleusAnalysis?.videoId === currentInputVideoId || analysis?.videoId === currentInputVideoId)
+                  );
+                  const existsInHistory = Boolean(
+                    currentInputVideoId &&
+                    analysisHistory.some((item) => item.videoId === currentInputVideoId && item.status === "completed")
+                  );
+                  const isRepeat = isCurrentVideoLoaded || existsInHistory || hasExistingAnalysis;
+
+                  return (
+                    <AnalysisHero
+                      url={mounted ? url : ""}
+                      status={
+                        status === "analyzing" || status === "downloading"
+                          ? "streaming"
+                          : status === "complete"
+                            ? "done"
+                            : status === "error"
+                              ? "error"
+                              : "idle"
+                      }
+                      onUrlChange={setUrl}
+                      onAnalyze={handleAnalyze}
+                      onReanalyze={handleReanalyze}
+                      onCancel={stopAnalysis}
+                      onDismissError={handleDismissError}
+                      error={error?.message}
+                      quota={quotaLabel}
+                      isRepeat={isRepeat}
+                    />
+                  );
+                })()}
 
                 {effectiveViewMode === "simple" ? (
                   <SimpleDashboardView

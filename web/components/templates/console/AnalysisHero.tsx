@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ViewTransition } from 'react';
+import { useState, useEffect, ViewTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@astryxdesign/core/Button';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
@@ -14,17 +14,32 @@ export interface AnalysisHeroProps {
   onAnalyze: () => void;
   onReanalyze: () => void;
   onCancel?: () => void;
+  onDismissError?: () => void;
   error?: string;
   quota?: string;
   /** True when this video already has a completed prior analysis (current view is 'done', or a pre-flight check on the typed URL found one) -- drives the single Analyze/Re-analyze button'label and which handler it calls. */
   isRepeat?: boolean;
 }
 
-export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, onCancel, error, quota, isRepeat = false }: AnalysisHeroProps) {
+const TransitionWrapper = (ViewTransition as any) || (({ children }: { children: React.ReactNode }) => children);
+
+export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, onCancel, onDismissError, error, quota, isRepeat = false }: AnalysisHeroProps) {
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
   const [copied, setCopied] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setIsDismissed(false);
+    }
+  }, [error]);
+
+  const handleDismissError = () => {
+    setIsDismissed(true);
+    onDismissError?.();
+  };
 
   const handleCopy = async () => {
     if (!url) return;
@@ -39,7 +54,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
   };
 
   return (
-    <ViewTransition enter="fade-in" exit="fade-out" default="none">
+    <TransitionWrapper enter="fade-in" exit="fade-out" default="none">
       <section className="relative transition-all duration-300 ease-out" aria-label="YouTube analysis hero">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
@@ -156,10 +171,28 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
           </CornerFrame>
         </div>
 
-        <div className={`mt-1 flex items-center text-xs ${status === "error" && error ? "min-h-5" : ""}`}>
-          <span id="hero-error" role="alert" aria-live="assertive" className="font-mono text-[var(--err)] font-medium">{status === "error" ? error : ""}</span>
-        </div>
+        {status === "error" && error && !isDismissed ? (
+          <div
+            className="mt-2.5 p-2.5 sm:p-3 rounded-lg border border-red-500/30 bg-red-950/20 backdrop-blur-sm flex items-center justify-between gap-3 text-xs sm:text-sm text-red-200 shadow-sm transition-all"
+            data-testid="hero-error-banner"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Icon icon="solar:danger-triangle-bold" size={18} className="text-red-400 shrink-0" />
+              <span id="hero-error" role="alert" aria-live="assertive" className="font-mono text-red-300 font-medium break-words">
+                {error}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissError}
+              aria-label="Dismiss error"
+              className="text-red-400 hover:text-red-200 hover:bg-red-500/20 p-1 rounded-md transition-colors shrink-0 cursor-pointer"
+            >
+              <Icon icon="solar:close-circle-linear" size={16} />
+            </button>
+          </div>
+        ) : null}
       </section>
-    </ViewTransition>
+    </TransitionWrapper>
   );
 }

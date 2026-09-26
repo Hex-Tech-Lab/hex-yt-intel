@@ -23,4 +23,8 @@ export interface VideoPlayerPort {
    *  callers must guard with `?.` (highlights-reel speed control,
    *  2026-08-20). */
   setPlaybackRate?(rate: number): void;
+  /** Volume level query (0-100). Optional -- callers guard with `?.` (ADR 030). */
+  getVolume?(): number;
+  /** Mute status query. Optional -- callers guard with `?.` (ADR 030). */
+  isMuted?(): boolean;
 }

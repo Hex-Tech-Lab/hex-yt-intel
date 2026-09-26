@@ -286,7 +286,7 @@ export function useSSEStream() {
               // 3. Cache hit — render immediately.
               if (job.status === 'done' && job.markdown) {
                 store.logOk(`Cache hit detected. Restoring historical synthesis instantly.`);
-                initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
+                initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown, undefined, videoId);
                 initSynthesis(job);
                 setStatus('complete');
                 setIsLoading(false);
@@ -316,7 +316,7 @@ export function useSSEStream() {
 
               store.logInfo(`Connecting to Cloudflare edge worker for unified intelligence synthesis...`);
               activeAnalysisIdRef.current = job.analysisId || job.id;
-              initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
+              initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', undefined, undefined, videoId);
               // The description is real ingestion-time data (already fetched
               // by the bouncer before this stream even starts, see
               // WorkerIngestionAdapter.buildJobMetadata) -- wiring it in here
