@@ -999,11 +999,8 @@ function buildStreamResponse(
         // Explicit LLM-start signal (2026-09-26): the client's prompt-cache
         // warm stagger must release only when the CACHEABLE LLM request
         // actually begins -- never on the earlier "extracting" frame, which
-        // fires before the transcript fetch and holds no cache write. Sent
-        // immediately before the cascade call so bundles 2-5 start right as
-        // bundle 1's request (and therefore the Anthropic cache write)
-        // begins. Client: useSSEStream awaitWarmGate.
-        send({ type: "status", stage: "llm-started", videoId: req.videoId });
+        // fires before the transcript fetch and holds no cache write.
+        // Client: useSSEStream awaitWarmGate releases safely on the first delta token.
 
         const result = await engine.executeAndStream(
           {
