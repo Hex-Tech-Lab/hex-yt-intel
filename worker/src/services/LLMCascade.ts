@@ -4,9 +4,10 @@
  */
 
 import * as Sentry from '@sentry/cloudflare';
+
+import { translateModelId } from './model-id-translator';
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
 import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEnginePort';
-import { translateModelId } from './model-id-translator';
 
 // 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
 // benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
@@ -394,7 +395,11 @@ export class LLMCascade implements LLMCascadePort {
 
       if (!response.ok || !response.body) {
         clearTimeout(totalTimer);
-        const errBody = await response.text().catch(() => '');
+        const errBody = await response.text().catch((fetchError) => {
+          console.error('[LLMCascade] Error reading response body', fetchError);
+          return '';
+        });
+        const truncatedBody = errBody.slice(0, 500);
         const errorMsg = `${response.status}: ${errBody.slice(0, 160)}`;
         // Non-2xx OpenRouter response was previously silently swallowed into
         // this return value with no telemetry anywhere -- if this rejected
@@ -407,7 +412,7 @@ export class LLMCascade implements LLMCascadePort {
         console.error('[LLMCascade.callLLMStream]', { model, requestModel, errorMsg });
         Sentry.captureMessage('LLMCascade.callLLMStream: OpenRouter non-2xx response', {
           level: 'error',
-          contexts: { llmCascade: { model, requestModel, status: response.status, errBody: errBody.slice(0, 500) } },
+          contexts: { llmCascade: { model, requestModel, status: response.status, errBody: truncatedBody } },
         });
         return { started: false, text: '', error: errorMsg };
       }
@@ -485,9 +490,9 @@ export class LLMCascade implements LLMCascadePort {
 
               onDelta(delta);
             }
-          } catch (e) {
-            if (e instanceof Error && e.message.startsWith('ERR_MODEL_REFUSAL')) {
-              throw e;
+          } catch (err) {
+            if (err instanceof Error && err.message.startsWith('ERR_MODEL_REFUSAL')) {
+              throw err;
             }
             // ignore keep-alive / partial frames
           }
@@ -577,12 +582,16 @@ export class LLMCascade implements LLMCascadePort {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        const errorMsg = `${response.status}: ${error.slice(0, 200)}`;
+        const errBody = await response.text().catch((fetchError) => {
+          console.error('[LLMCascade] Error reading response body', fetchError);
+          return '';
+        });
+        const truncatedBody = errBody.slice(0, 500);
+        const errorMsg = `${response.status}: ${errBody.slice(0, 200)}`;
         console.error('[LLMCascade.callLLM]', { model: requestModel, errorMsg });
         Sentry.captureMessage('LLMCascade.callLLM: OpenRouter non-2xx response', {
           level: 'error',
-          contexts: { llmCascade: { model: requestModel, status: response.status, errBody: error.slice(0, 500) } },
+          contexts: { llmCascade: { model: requestModel, status: response.status, errBody: truncatedBody } },
         });
         return { success: false, error: errorMsg };
       }
