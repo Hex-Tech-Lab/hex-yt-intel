@@ -1,0 +1,28 @@
+.memory/SESSION_TODO.md
+  h_60000122af7b55 34-79
+docs/history/THOS_2026-09-25_1400_COST_AUDIT_HIGHLIGHTS_LEVERS_PLAN.md
+  h_60000122af7b55 1-108
+supabase/migrations/20260925120000_history_overview_function_v14_stalled_status.sql
+  h_60000122af7b55 1-146
+web/components/templates/console/AnalysisHistory.tsx
+  h_60000122af7b55 38-40,578,700-704
+web/hooks/__tests__/useHistoryOverview.test.tsx
+  h_60000122af7b55 1-166
+web/hooks/useHistoryOverview.ts
+  h_60000122af7b55 10-29,40-47,56-60,62-63,65-67,77,80-84,101-110
+web/lib/__tests__/history-overview-live-status.test.ts
+  h_60000122af7b55 1-104
+web/lib/ports/AnalysisPersistencePort.ts
+  h_60000122af7b55 57-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "59aa8a32620fd85391d64147758aadf11ee3b74c",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
