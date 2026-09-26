@@ -76,10 +76,10 @@ export function parseVideoDurationSeconds(raw: unknown): number | undefined {
 //                  2 × 90s = 180s (the earlier 60000ms figure counted only
 //                  one attempt and anchored the window pre-submit).
 // Placeholder tier is synchronous (no network) and needs no window.
-// 30000 + 130000 + 30000 + 35000 + 180000 = 405000ms. The previous 285000
-// default starved the second Supadata attempt in the worst case. Overridable
-// via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, env only).
-const DEFAULT_CHAIN_BUDGET_MS = 405000;
+// 30000 + 130000 + 30000 + 35000 + 180000 = 405000ms. We add 30000ms of explicit
+// completion headroom so a final attempt that takes its full 180s window isn't
+// raced by the overall chain budget abort. 405000 + 30000 = 435000ms.
+const DEFAULT_CHAIN_BUDGET_MS = 435000;
 
 const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native', 'supadata'] as const;
 type ProviderName = typeof VALID_PROVIDER_NAMES[number];
