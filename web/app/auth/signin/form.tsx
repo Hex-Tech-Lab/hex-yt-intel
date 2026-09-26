@@ -73,7 +73,7 @@ export default function SignInForm({ showTestAuth = false }: { showTestAuth?: bo
     } finally {
       setLoading(false);
     }
-  }, [supabase, testEmail, testPassword, nextTarget]);
+  }, [supabase, testEmail, testPassword, nextTarget, router]);
 
   return (
     <div style={{

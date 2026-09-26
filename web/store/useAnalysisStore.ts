@@ -40,7 +40,7 @@ export interface AnalysisState extends UseAnalysisStreamState {
   logOk: (message: string) => void;
   logError: (message: string) => void;
   clearTerminal: () => void;
-  initializeAnalysis: (id: string, title: string, initialMarkdown?: string, executiveDigest?: Record<string, unknown> | null) => void;
+  initializeAnalysis: (id: string, title: string, initialMarkdown?: string, executiveDigest?: Record<string, unknown> | null, videoId?: string) => void;
   setExecutiveDigest: (analysisId: string, executiveDigest: Record<string, unknown>) => void;
 }
 
@@ -238,10 +238,11 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   logOk: (message) => set((state) => appendLogLine(state, 'ok', message)),
   logError: (message) => set((state) => appendLogLine(state, 'error', message)),
 
-  initializeAnalysis: (id, title, initialMarkdown = '', executiveDigest = null) =>
+  initializeAnalysis: (id, title, initialMarkdown = '', executiveDigest = null, videoId) =>
     set(() => ({
       analysis: {
         id,
+        videoId,
         title,
         analysis_markdown: initialMarkdown,
         executiveDigest,

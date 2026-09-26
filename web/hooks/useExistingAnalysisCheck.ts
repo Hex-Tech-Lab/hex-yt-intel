@@ -23,10 +23,10 @@ export function useExistingAnalysisCheck(url: string): boolean {
 
   useEffect(() => {
     const videoId = url ? extractVideoId(url) : '';
-    if (!videoId) {
-      setHasExisting(false);
-      return;
-    }
+    // Instantly clear so previous URL's result doesn't leak while pending
+    setHasExisting(false);
+
+    if (!videoId) return;
 
     const requestId = ++requestIdRef.current;
     const timer = setTimeout(() => {

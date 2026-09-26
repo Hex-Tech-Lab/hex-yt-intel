@@ -239,7 +239,7 @@ export function useAutoRestoreAnalysis(url: string) {
           const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (restoreData.likeCount || 0);
 
           startTransition(() => {
-            initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
+            initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown, undefined, restoreData.videoId);
             const currentMeta = useAnalysisStore.getState().videoMetadata;
             if (currentMeta?.videoId !== restoreData.videoId || !currentMeta?.duration) {
               setVideoMetadata({

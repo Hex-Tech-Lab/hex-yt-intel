@@ -5,6 +5,7 @@
 
 export interface AnalysisResult {
   id: string;
+  videoId?: string;
   title: string;
   analysis_markdown: string;
   /** Dimension 0 executive digest (zero-dimensional analyses may have only this) */

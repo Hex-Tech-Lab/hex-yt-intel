@@ -81,32 +81,62 @@ export const UCISPayloadSchema = z
  * document headers like "Apex Intelligence" or "Semantic Foundation".
  * Dimension 0 is the Executive Digest (ADR 010), dimensions 1-11 are main analysis.
  */
-export const KGNodeSchema = z
-  .object({
-    id: z.string().min(1).max(100),
-    dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
-    label: z.string().min(1).max(200),
-    content: z.string().min(10),
-    weight: z.number().min(0.1).max(10.0),
-    polarity: z.number().min(-1).max(1),
-    keyTerms: z.array(z.string()).max(10),
-    entityType: z.enum([
-      "person",
-      "concept",
-      "framework",
-      "tool",
-      "organization",
-      "study",
-      "trend",
-      "metric",
-      "Person",
-      "Organization",
-      "Location",
-      "Event",
-      "Object",
-    ]),
-  })
-  .strict();
+/**
+ * Normalize the KG node `type`/`entityType` key duality.
+ * RCA (2026-09-25, live production, video 4mTLpuQpB80): the prompt's
+ * Dimension 8.1 instructs the model to emit a `type` key while the JSON
+ * envelope example says `entityType` -- the model emits BOTH keys. The
+ * former strict() schema rejected every node carrying `type`
+ * (unrecognized_keys), dropping the whole kg fragment client-side and every
+ * node at the stitch boundary (Sentry "Validation dropped payload at
+ * stitch-analysis-chunks (node)").
+ */
+const normalizeNodeEntityKey = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = { ...(val as Record<string, unknown>) };
+  if ("type" in out) {
+    if (!("entityType" in out) || out.entityType === undefined) {
+      out.entityType = out.type;
+    }
+    delete out.type;
+  }
+  return out;
+};
+
+export const KGNodeSchema = z.preprocess(
+  normalizeNodeEntityKey,
+  z
+    .object({
+      id: z.string().min(1).max(100),
+      dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
+      label: z.string().min(1).max(200),
+      // Optional: the prompt's authoritative node spec (Dimension 8.1) asks
+      // only for label/type/weight -- it never asks for `content` (that
+      // field exists only in the envelope example), so real model output
+      // omits it. Every consumer already tolerates absence (`n.content || ''`
+      // in useKnowledgeGraph.ts).
+      content: z.string().optional(),
+      weight: z.number().min(0.1).max(10.0),
+      polarity: z.number().min(-1).max(1),
+      keyTerms: z.array(z.string()).max(10),
+      entityType: z.enum([
+        "person",
+        "concept",
+        "framework",
+        "tool",
+        "organization",
+        "study",
+        "trend",
+        "metric",
+        "Person",
+        "Organization",
+        "Location",
+        "Event",
+        "Object",
+      ]),
+    })
+    .strict(),
+);
 
 /**
  * Knowledge Graph Edge — relationship between nodes.
@@ -147,31 +177,55 @@ export function normalizePersonaId(val: unknown): string {
   return 'creator';
 }
 
-export const PersonaConfigSchema = z
-  .object({
-    primary: z.object({
-      id: TolerantPersonaId,
-      label: z.string(),
-      weight: z.number().min(0).max(1),
-    }),
-    secondary: z
-      .object({
-        id: TolerantPersonaId,
-        label: z.string(),
-        weight: z.number().min(0).max(1),
-      })
-      .optional(),
-    tertiary: z
-      .object({
-        id: TolerantPersonaId,
-        label: z.string(),
-        weight: z.number().min(0).max(1),
-      })
-      .optional(),
-    cognitiveLenses: z.array(z.string()).min(1).max(8),
-    selectionRationale: z.string().min(10).max(500),
-  })
-  .strict();
+const PersonaSlotSchema = z.object({
+  id: TolerantPersonaId,
+  label: z.string(),
+  weight: z.number().min(0).max(1),
+});
+
+/**
+ * Canonicalize the model's Tier-2 persona slot key variants into tier2A/tier2B.
+ * RCA (2026-09-25, live production, video 4mTLpuQpB80): the prompt's markdown
+ * persona header template instructs "Tier-2 Persona A/B" and the model
+ * legitimately carries those two extra slots into its JSON persona config --
+ * observed live spellings across persisted rows: tier2A, tier2a, tier2_a,
+ * tier2B, tier2_b. The former strict() schema rejected every persona config
+ * containing them (unrecognized_keys), dropping the fragment client-side and
+ * forcing the server-side strip-retry loop on every stitched payload.
+ */
+const PERSONA_TIER2_VARIANTS: Array<{ variants: string[]; canonical: "tier2A" | "tier2B" }> = [
+  { variants: ["tier2a", "tier2_a"], canonical: "tier2A" },
+  { variants: ["tier2b", "tier2_b"], canonical: "tier2B" },
+];
+
+const normalizePersonaTier2Keys = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = { ...(val as Record<string, unknown>) };
+  for (const { variants, canonical } of PERSONA_TIER2_VARIANTS) {
+    for (const variant of variants) {
+      if (variant in out) {
+        if (!(canonical in out)) out[canonical] = out[variant];
+        delete out[variant];
+      }
+    }
+  }
+  return out;
+};
+
+export const PersonaConfigSchema = z.preprocess(
+  normalizePersonaTier2Keys,
+  z
+    .object({
+      primary: PersonaSlotSchema,
+      secondary: PersonaSlotSchema.optional(),
+      tertiary: PersonaSlotSchema.optional(),
+      tier2A: PersonaSlotSchema.optional(),
+      tier2B: PersonaSlotSchema.optional(),
+      cognitiveLenses: z.array(z.string()).min(1).max(8),
+      selectionRationale: z.string().min(10).max(500),
+    })
+    .strict(),
+);
 
 /**
  * Single dimension in the JSON payload (v2.0).
@@ -231,7 +285,11 @@ export const MonetizationVerdictSchema = z
  * Knowledge Graph structure within the v2.0 payload.
  */
 export const MAX_KG_NODES = 24;
-export const MAX_KG_EDGES = 18;
+// Derived from production data (2026-09-25): across 88 completed analyses the
+// observed per-bundle/stitched edge count is p50=15, p90=20, max=20 -- the
+// previous 18 cap rejected 31/88 rows' real output (the model is under no
+// edge-count cap in the prompt). 20 observed max + ~20% margin = 24.
+export const MAX_KG_EDGES = 24;
 
 export const KnowledgeGraphSchema = z
   .object({
@@ -272,7 +330,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("status"),
-      stage: z.enum(["extracting", "starting", "model", "fallback"]),
+      stage: z.enum(["extracting", "starting", "llm-started", "model", "fallback"]),
       videoId: z.string().optional(),
       model: z.string().optional(),
       from: z.string().optional(),

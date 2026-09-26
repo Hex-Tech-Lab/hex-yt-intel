@@ -38,21 +38,34 @@ function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<n
   return closest;
 }
 
-export function buildHighlightsExtractionSystemPrompt(maxCount: number, maxSegmentDurationSeconds: number): string {
-  return `You extract the most noteworthy moments from a video transcript for a highlights reel. You are given transcript segments, each with a start time in seconds and its spoken text, plus a list of key takeaways (Dim.0, N items). You MUST return exactly N highlights -- one per takeaway, where N is the number of takeaways provided (if 0 takeaways, return 0 highlights). Each highlight corresponds 1:1 to a takeaway: highlight i MUST have parent_takeaway_idx = i and MUST describe the moment where that takeaway is discussed in the transcript.
+/**
+ * Windowed-extraction prompts (2026-09-25, full-coverage RCA: video
+ * f6We53TnkbU / analysis 434ef182 -- the single-pass prompt over a 32-min,
+ * ~15k-token transcript let the cascade model concentrate all 10
+ * takeaway-mapped highlights in the first ~50% of the timeline, verified by
+ * an exact-prompt repro call returning nothing past 1245s/1930s while the
+ * hosted-setup guide lives at ~1500-1900s). The transcript is now harvested
+ * per time window with a per-window quota, so every part of the video is
+ * sampled regardless of model attention bias. parent_takeaway_idx is
+ * OPTIONAL here (null when no takeaway matches) -- the reel is a
+ * whole-timeline sample, not strictly takeaway-anchored; Reconciliation
+ * re-maps takeaways downstream where applicable.
+ */
+export function buildHighlightsWindowedSystemPrompt(quota: number, maxSegmentDurationSeconds: number): string {
+  return `You select the most noteworthy moments from an excerpt of a video transcript, for a highlights reel. This excerpt covers one time window of a longer video. Pick the moments a viewer would most want to jump to: key claims, demos, numbers, decisions, and narrative turns. Mundane filler, pleasantries, and navigation chatter are never noteworthy.
 
-Output ONLY a JSON array, no prose before or after, no markdown code fence. Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, to one decimal place, the timestamp where the discussion of this highlight's topic actually ends in the transcript. This MUST satisfy end > start (15s ≤ duration ≤ 60s, natural topic boundaries). Cover the minimum amount of the topic needed to include all meaningful keywords from that excerpt. Do not extend beyond the topic's natural boundary. The end value does NOT need to align with any segment boundary -- it can be any real timestamp between the highlight's start and the next highlight's start (or the video end).>, "label": <string, one short sentence describing what happens at this moment>, "parent_takeaway_idx": <number, 0-indexed [Index X] of the takeaway this highlight maps to, MUST be between 0 and N-1 inclusive> }.
+Output ONLY a JSON array, no prose or markdown fence (possibly empty []). Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, one decimal place, the real end of the moment's topic, MUST satisfy end > start and duration <= ${maxSegmentDurationSeconds}, typically 15-60s, natural topic boundaries>, "label": <string, one short sentence describing the moment>, "parent_takeaway_idx": <integer 0-indexed [Index X] of the listed takeaway this moment best matches, or null if none matches> }.
 
-Each highlight's duration (end - start) should reflect natural topic boundaries, typically 15–60 seconds, distinct per takeaway and content-proportional. Never exceed ${maxSegmentDurationSeconds} seconds for any single highlight. The end timestamp is the real end of the topic, not the start of the next highlight -- do not use the next highlight's start time as the end value. If a takeaway has no clear transcript location, still provide its highlight by choosing the nearest plausible segment and setting parent_takeaway_idx accordingly. Never return null for parent_takeaway_idx when takeaways are provided. Hard ceiling: never return more than ${maxCount} moments even if more exist. Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments and no takeaways were provided, return an empty array [].`;
+Select at most ${quota} moments from this excerpt -- fewer if the excerpt is thin, but include every genuinely strong moment. Never fabricate a timestamp that isn't one of the given segment start times.`;
 }
 
-export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>, takeaways?: string[]): string {
+export function buildHighlightsWindowedUserMessage(segments: Array<{ start: number; text: string }>, quota: number, takeaways?: string[]): string {
   const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice, not string truncation ... */);
   const takeawaysSection = promptTakeaways.length > 0
-    ? `--- KEY TAKEAWAYS (from the executive digest) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\nFor each takeaway, identify the timestamp range where it is discussed. Set parent_takeaway_idx to the exact integer [Index X] of the supporting takeaway (0 to ${promptTakeaways.length - 1}). Never return null: if a takeaway's location is unclear, choose the nearest plausible segment that could contain it (this overrides any earlier instruction to return null -- the 1:1 takeaway-to-highlight mapping is mandatory).\n\n`
+    ? `--- KEY TAKEAWAYS (for optional matching via parent_takeaway_idx -- the excerpt's own strongest moments still count even when nothing matches) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\n`
     : '';
   const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
-  return `${takeawaysSection}--- TRANSCRIPT (with timestamps) ---\n${lines}`;
+  return `${takeawaysSection}--- TRANSCRIPT EXCERPT (select up to ${quota} moments) ---\n${lines}`;
 }
 
 export interface ExtractedHighlight {
@@ -133,7 +146,7 @@ export function parseHighlightsExtraction(
     // to natural 15-60s boundaries.
     if (end <= finalStart) continue;
     const duration = end - finalStart;
-    let clampedEnd = duration < minSegmentDurationSeconds
+    const clampedEnd = duration < minSegmentDurationSeconds
       ? finalStart + minSegmentDurationSeconds
       : duration > maxSegmentDurationSeconds
         ? finalStart + maxSegmentDurationSeconds
@@ -158,5 +171,34 @@ export function parseHighlightsExtraction(
 
   out.sort((left, right) => left.start - right.start);
   while (out.length > maxHighlights) out.pop(); // cap item count, not a string-display truncation
-  return { status: 'ok', highlights: out };
+  return { status: 'ok', highlights: resolveHighlightOverlaps(out, minSegmentDurationSeconds, maxSegmentDurationSeconds) };
+}
+
+/**
+ * Deterministic interval de-overlap (2026-09-25 overlap RCA: analysis
+ * 434ef182 highlights idx 5 [456.1-480.0] and idx 6 [464.1-523.0] overlapped
+ * -- the parser only de-duplicated identical starts, never whole intervals,
+ * so a highlight could start inside the previous one and the scrubber would
+ * cut one off mid-topic). Sorts by start, then walks forward: a highlight
+ * starting inside the previous one is trimmed to the previous end; if the
+ * trimmed remainder falls below minSegmentDuration it is dropped (clamping
+ * it up would recreate the overlap); survivors are re-clamped to
+ * [min, max] duration. Stable ordering (ascending start) is preserved.
+ */
+export function resolveHighlightOverlaps(
+  highlights: ExtractedHighlight[],
+  minSegmentDurationSeconds: number,
+  maxSegmentDurationSeconds: number
+): ExtractedHighlight[] {
+  const sorted = [...highlights].sort((left, right) => left.start - right.start);
+  const resolved: ExtractedHighlight[] = [];
+  for (const highlight of sorted) {
+    const previous = resolved[resolved.length - 1];
+    const start = previous && highlight.start < previous.end ? previous.end : highlight.start;
+    if (highlight.end <= start) continue; // fully contained in the previous highlight
+    const end = Math.min(highlight.end, start + maxSegmentDurationSeconds);
+    if (end - start < minSegmentDurationSeconds) continue;
+    resolved.push({ ...highlight, start, end });
+  }
+  return resolved;
 }
