@@ -1,0 +1,21 @@
+web/lib/utils/dedupe-fetch.ts
+  s_60372075d15109::t_167ca7cc1bb70a 76-80
+web/lib/types.ts
+  s_60372075d15109::t_1e76a15d1d1f4f 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ac6e2f324c027f6a6a890d2add8824c9c43fb19e",
+  "prompts": {},
+  "sessions": {
+    "s_60372075d15109": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f22c66d4bffeXPfLBaQVr5BHan",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
