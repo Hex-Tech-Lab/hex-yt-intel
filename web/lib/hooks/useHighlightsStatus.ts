@@ -71,7 +71,7 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
           // request per attempt. The local controller still owns
           // staleness: every await below re-checks `controller.signal.aborted`
           // before committing state.
-          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`);
+          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`, { signal: controller.signal });
           if (!res.ok) throw new Error(`highlights status fetch failed: ${res.status}`);
           const json = await res.json();
           if (!json || !Array.isArray(json.highlights)) {

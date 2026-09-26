@@ -31,24 +31,55 @@ interface InFlightEntry {
 
 const inFlight = new Map<string, InFlightEntry>();
 
-export function dedupedFetch(url: string): Promise<Response> {
+export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Promise<Response> {
   let entry = inFlight.get(url);
   if (!entry) {
     const controller = new AbortController();
-    const promise = fetch(url, { signal: controller.signal });
+    const promise = (async () => {
+      try {
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        if (inFlight.get(url) === entry) inFlight.delete(url);
+      }
+    })();
+    
     entry = { promise, controller, consumers: 0 };
     inFlight.set(url, entry);
-    const settle = () => {
-      if (inFlight.get(url) === entry) inFlight.delete(url);
-    };
-    promise.then(settle, settle);
   }
+
   entry.consumers += 1;
-  return entry.promise.finally(() => {
-    entry.consumers -= 1;
-    // Last consumer detached while the request is still in flight: nobody
-    // is left waiting, so cancel the underlying network request. After the
-    // promise has settled this is a harmless no-op.
-    if (entry.consumers === 0) entry.controller.abort();
+  const currentEntry = entry;
+
+  return new Promise<Response>((resolve, reject) => {
+    let detached = false;
+
+    const detach = () => {
+      if (detached) return;
+      detached = true;
+      currentEntry.consumers -= 1;
+      if (currentEntry.consumers === 0) currentEntry.controller.abort();
+    };
+
+    if (init?.signal) {
+      if (init.signal.aborted) {
+        detach();
+        return reject(new DOMException("Aborted", "AbortError"));
+      }
+      init.signal.addEventListener("abort", () => {
+        detach();
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    }
+
+    currentEntry.promise
+      .then(res => {
+        if (!detached) resolve(res.clone());
+      })
+      .catch(err => {
+        if (!detached) reject(err);
+      })
+      .finally(() => {
+        detach();
+      });
   });
 }

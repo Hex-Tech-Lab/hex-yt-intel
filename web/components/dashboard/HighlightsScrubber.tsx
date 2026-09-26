@@ -157,7 +157,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
           // request per attempt. The local controller still owns
           // staleness: the aborted check below discards a response that
           // this cycle's own controller has outlived.
-          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${id}`);
+          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${id}`, { signal: controller.signal });
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
           // Real bug (deeper review, PR #298): AbortController.abort() only
