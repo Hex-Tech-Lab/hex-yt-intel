@@ -155,7 +155,12 @@ export interface KGNodeV2 {
   id: string;
   dimension: number;
   label: string;
-  content: string;
+  /**
+   * Optional (2026-09-25): the prompt's authoritative node spec (Dimension
+   * 8.1) never asks for `content`, so real model output omits it. Every
+   * consumer already tolerates absence (`n.content || ''`).
+   */
+  content?: string;
   weight: number;
   polarity: number;
   keyTerms: string[];

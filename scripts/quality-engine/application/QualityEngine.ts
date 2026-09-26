@@ -67,6 +67,7 @@ export class QualityEngine {
                 ast,
                 graph: scope === "file" ? undefined : graph,
                 allFiles: existing,
+                scanMode: this.config.mode,
               });
 
               findings.push(...ruleFindings);
