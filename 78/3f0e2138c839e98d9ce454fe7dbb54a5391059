@@ -1,0 +1,16 @@
+worker/src/__tests__/TranscriptChainBudget.test.ts
+  h_60000122af7b55 33-36,48-49,52,62-63,72
+worker/src/services/TranscriptExtractor.ts
+  h_60000122af7b55 79-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "783f0e2138c839e98d9ce454fe7dbb54a5391059",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
