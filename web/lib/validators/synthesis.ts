@@ -330,7 +330,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("status"),
-      stage: z.enum(["extracting", "starting", "model", "fallback"]),
+      stage: z.enum(["extracting", "starting", "llm-started", "model", "fallback"]),
       videoId: z.string().optional(),
       model: z.string().optional(),
       from: z.string().optional(),

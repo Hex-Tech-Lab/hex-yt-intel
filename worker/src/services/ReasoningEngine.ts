@@ -70,10 +70,23 @@ export class ReasoningEngine implements ReasoningEnginePort {
     handlers: StreamHandlers,
     signal?: AbortSignal
   ): Promise<StreamResult> {
-    const systemPrompt = context.systemPrompt || await this.promptBuilder.build(context);
+    // Prompt caching (2026-09-25): when the builder can segment the prompt,
+    // pass the cache split to the cascade so an Anthropic cache_control
+    // breakpoint lands on the shared prefix. A caller-supplied systemPrompt
+    // (legacy /analyze-llm path) can't be split safely, so it stays a single
+    // uncached message -- no semantic change either way.
+    let systemPrompt: string;
+    let cacheSplit: { prefix: string; suffix: string } | undefined;
+    if (context.systemPrompt) {
+      systemPrompt = context.systemPrompt;
+    } else {
+      const segmented = await this.promptBuilder.buildSegmented(context);
+      systemPrompt = segmented.sharedPrefix + segmented.segmentInstruction;
+      cacheSplit = { prefix: segmented.sharedPrefix, suffix: segmented.segmentInstruction };
+    }
     const bracketBuffer = new BracketBuffer();
 
-    const { started, finalText, modelUsed, finishReason, tokensUsed, costUsd, generationId } = await this.cascade.streamCascade(
+    const { started, finalText, modelUsed, finishReason, tokensUsed, costUsd, generationId, cachedTokens } = await this.cascade.streamCascade(
       systemPrompt,
       (delta) => {
         // Raw delta for terminal/processing log
@@ -83,7 +96,8 @@ export class ReasoningEngine implements ReasoningEnginePort {
         fragments.forEach((frag) => handlers.onFragment(frag));
       },
       handlers.onStatus,
-      signal
+      signal,
+      cacheSplit
     );
 
     // Flush any remaining buffered JSON on stream end
@@ -100,6 +114,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
       produced: started,
       tokensUsed,
       costUsd,
+      cachedTokens,
       generationId,
     };
   }

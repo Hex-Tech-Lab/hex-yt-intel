@@ -70,6 +70,8 @@ export interface UseCaseSuccess {
   maxOutputTokens: { haiku: number; default: number };
   llmCascadeTimeoutMs: number;
   llmCascadeHandshakeTimeoutMs: number;
+  promptCaching?: boolean;
+  cacheWarmTimeoutMs?: number;
   commentsConfig: CommentsFetchConfig;
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
@@ -183,6 +185,27 @@ export class CreateAnalysisUseCase {
     );
     const llmCascadeTimeoutMs = Number(resolvedTimeoutRegistry['analysis.llmCascade.timeoutMs']) || 240000;
     const llmCascadeHandshakeTimeoutMs = Number(resolvedTimeoutRegistry['analysis.llmCascade.handshakeTimeoutMs']) || 15000;
+
+    // Registry-resolved (2026-09-25, prompt caching for the 5 bundle calls):
+    // promptCaching gates Anthropic cache_control breakpoints on the shared
+    // prefix (kill switch); cacheWarmTimeoutMs bounds how long bundles 2-5
+    // wait for bundle 1's first streamed byte (Anthropic only makes the cache
+    // entry readable once the first response begins). The 3000 default is
+    // derived from the measured ~3s Haiku 4.5 first-token latency in the
+    // 2026-06-02 cascade benchmark -- see the migration's derivation comment.
+    const resolvedCachingRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.promptCaching.enabled', 'analysis.llmCascade.cacheWarmTimeoutMs'],
+      { 'analysis.promptCaching.enabled': true, 'analysis.llmCascade.cacheWarmTimeoutMs': 3000 }
+    );
+    const promptCachingRaw = resolvedCachingRegistry['analysis.promptCaching.enabled'];
+    const promptCaching = promptCachingRaw === undefined ? true : String(promptCachingRaw) !== 'false';
+    // Number.isFinite guard (2026-09-26 fix): `Number(value) || 3000`
+    // silently coerced a legitimate registry value of 0 (stagger disabled
+    // via registry) to the 3000 default -- 0 is falsy. A finite check
+    // respects 0 while still falling back when the key is absent
+    // (Number(undefined) === NaN) or non-numeric.
+    const cacheWarmRaw = Number(resolvedCachingRegistry['analysis.llmCascade.cacheWarmTimeoutMs']);
+    const cacheWarmTimeoutMs = Number.isFinite(cacheWarmRaw) ? cacheWarmRaw : 3000;
 
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
@@ -320,6 +343,8 @@ export class CreateAnalysisUseCase {
         maxOutputTokens,
         llmCascadeTimeoutMs,
         llmCascadeHandshakeTimeoutMs,
+        promptCaching,
+        cacheWarmTimeoutMs,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,

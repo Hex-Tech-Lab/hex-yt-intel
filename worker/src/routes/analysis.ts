@@ -109,6 +109,11 @@ interface StreamRequest {
   llmCascadeTimeoutMs?: number;
   // Registry-resolved (2026-08-07, analysis.llmCascade.handshakeTimeoutMs).
   llmCascadeHandshakeTimeoutMs?: number;
+  // Registry-resolved (2026-09-25, analysis.promptCaching.enabled) -- Anthropic
+  // prompt caching via OpenRouter explicit cache_control breakpoints on the
+  // bundles' shared prompt prefix. Kill switch; stale clients (undefined)
+  // default to enabled.
+  promptCaching?: boolean;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -786,6 +791,7 @@ function buildStreamResponse(
   // come from -- see result.tokensUsed/costUsd below.
   let tokensUsed: number | undefined;
   let costUsd: number | undefined;
+  let cachedTokens: number | undefined;
   let generationId: string | undefined;
   // ADR 020 Phase 2: set true when cancelController (declared below, inside
   // the stream's start() handler) actually fires. Declared here, at the
@@ -806,6 +812,7 @@ function buildStreamResponse(
         finishReason,
         tokensUsed,
         costUsd,
+        cachedTokens,
         generationId,
         cancelled: wasCancelled,
         activeSecret: signingKey,
@@ -989,6 +996,12 @@ function buildStreamResponse(
       try {
         send({ type: "status", stage: "starting", videoId: req.videoId });
 
+        // Explicit LLM-start signal (2026-09-26): the client's prompt-cache
+        // warm stagger must release only when the CACHEABLE LLM request
+        // actually begins -- never on the earlier "extracting" frame, which
+        // fires before the transcript fetch and holds no cache write.
+        // Client: useSSEStream awaitWarmGate releases safely on the first delta token.
+
         const result = await engine.executeAndStream(
           {
             // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
@@ -1040,6 +1053,7 @@ function buildStreamResponse(
         finishReason = result.finishReason;
         tokensUsed = result.tokensUsed;
         costUsd = result.costUsd;
+        cachedTokens = result.cachedTokens;
         generationId = result.generationId;
 
         if (!result.produced && !result.finalText) {
@@ -1230,7 +1244,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       waitUntil: (p) => c.executionCtx.waitUntil(p),
     });
 
-    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs), new ValidationService(), cache);
+    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching), new ValidationService(), cache);
 
     const persistController = new AbortController();
     const httpConnSignal = c.req.raw['signal'];

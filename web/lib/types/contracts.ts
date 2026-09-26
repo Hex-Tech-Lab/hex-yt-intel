@@ -266,6 +266,14 @@ export interface WorkerStreamRequest {
   // Registry-resolved (2026-08-07, analysis.llmCascade.handshakeTimeoutMs) --
   // sibling of llmCascadeTimeoutMs, per-model connection-handshake budget.
   llmCascadeHandshakeTimeoutMs?: number;
+  // Registry-resolved (2026-09-25, analysis.promptCaching.enabled) --
+  // Anthropic prompt caching via OpenRouter cache_control on the bundles'
+  // shared prefix. Kill switch; worker defaults to enabled when absent.
+  promptCaching?: boolean;
+  // Registry-resolved (2026-09-25, analysis.llmCascade.cacheWarmTimeoutMs) --
+  // client-side bounded wait before bundles 2-5 start (cache-warm stagger),
+  // consumed in useSSEStream, never forwarded to the worker.
+  cacheWarmTimeoutMs?: number;
   sig: string;
   exp: number;
   appUrl?: string;
