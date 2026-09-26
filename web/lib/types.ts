@@ -10,6 +10,8 @@ export interface AnalysisResult {
   analysis_markdown: string;
   /** Dimension 0 executive digest (zero-dimensional analyses may have only this) */
   executiveDigest?: Record<string, unknown> | null;
+  /** Status of the analysis, e.g. 'completed', 'failed', etc. */
+  status?: string;
 }
 
 export interface AnalysisMetadata {

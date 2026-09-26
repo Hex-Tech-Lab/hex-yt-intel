@@ -73,7 +73,11 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
 
     currentEntry.promise
       .then(res => {
-        if (!detached) resolve(res.clone());
+        // Real Response objects must be cloned: the original body is shared with
+        // other in-flight consumers. Plain-object mocks (test doubles, some SSR
+        // shims) have no clone() and are single-consumer by construction, so
+        // pass them through unchanged (PR #354 CI incident, 2026-09-26).
+        if (!detached) resolve(typeof res.clone === 'function' ? res.clone() : res);
       })
       .catch(err => {
         if (!detached) reject(err);
