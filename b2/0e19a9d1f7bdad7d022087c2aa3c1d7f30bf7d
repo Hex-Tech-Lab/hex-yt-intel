@@ -1,0 +1,22 @@
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 125-132,138-142
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  h_60000122af7b55 1-152
+web/lib/prompts/ucis-v5.3.ts
+  h_60000122af7b55 1,3-5,8,16,18-19,91,101-102,104,106,129,168,218,301,385,434,478,480,484,488,510,541-542,592,604,638,641
+web/lib/types/synthesis-nucleus.ts
+  h_60000122af7b55 158-163
+web/lib/validators/synthesis.ts
+  h_60000122af7b55 84-139,180-228,288-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b20e19a9d1f7bdad7d022087c2aa3c1d7f30bf7d",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
