@@ -60,7 +60,7 @@ export function parseVideoDurationSeconds(raw: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-// Chain budget derivation (2026-09-25, corrected per review P2): the default
+// Chain budget derivation (2026-09-26, recomputed per review P2): the default
 // budget must cover the SUM OF EACH TIER'S ENFORCED INTERNAL DEADLINE so the
 // last tier still gets its full window when every earlier tier runs to its
 // worst case. Enforced deadlines, verified in each provider's source:
@@ -68,15 +68,18 @@ export function parseVideoDurationSeconds(raw: unknown): number | undefined {
 // - apify:         130000ms (its own abort, > the actor's 120s timeout)
 // - decodo:        30000ms (AbortSignal.timeout)
 // - native:        ~35000ms worst case (page-HTML path: 15s + 10s + 10s)
-// - supadata:      60000ms (job deadline = startedAt + 60s, bounding the
-//                  initial request + polling together)
+// - supadata:      180000ms worst case — the tier makes TWO attempts (the
+//                  mode=native probe, then mode=generate when native reports
+//                  no captions), and since 2026-09-26 each attempt's 60s job
+//                  window starts at jobId receipt, so one attempt is bounded
+//                  by 30s initial-call timeout + 60s job window = 90s, and
+//                  2 × 90s = 180s (the earlier 60000ms figure counted only
+//                  one attempt and anchored the window pre-submit).
 // Placeholder tier is synchronous (no network) and needs no window.
-// 30000 + 130000 + 30000 + 35000 + 60000 = 285000ms. The previous 250000
-// default was short of the real sum (its comment double-counted a 30s
-// "placeholder floor" that does not exist and used a 30s native figure),
-// which would leave Supadata budget-starved in the worst case. Overridable
-// via TRANSCRIPT_CHAIN_BUDGET_MS (worker is DB-free per ADR 005, env only).
-const DEFAULT_CHAIN_BUDGET_MS = 285000;
+// 30000 + 130000 + 30000 + 35000 + 180000 = 405000ms. We add 30000ms of explicit
+// completion headroom so a final attempt that takes its full 180s window isn't
+// raced by the overall chain budget abort. 405000 + 30000 = 435000ms.
+const DEFAULT_CHAIN_BUDGET_MS = 435000;
 
 const VALID_PROVIDER_NAMES = ['transcriptapi', 'apify', 'decodo', 'native', 'supadata'] as const;
 type ProviderName = typeof VALID_PROVIDER_NAMES[number];

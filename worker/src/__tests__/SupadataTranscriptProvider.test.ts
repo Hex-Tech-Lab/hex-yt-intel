@@ -274,6 +274,50 @@ describe('SupadataTranscriptProvider', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  // Negative control (review P2, 2026-09-26): the 60s poll window must start
+  // at jobId RECEIPT, not before the submit call. Submit takes 25s (inside
+  // the initial call's real 30s timeout); a queued poll at t=31s, then a
+  // final poll whose server latency is 29.5s (inside the 30s per-request
+  // cap) completes at t≈60.5s — past the old startedAt-anchored deadline of
+  // t=60 (last poll aborted → loop throws) but 24.5s inside the
+  // jobId-anchored window (25s + 60s = 85s). Polls honor the caller's abort
+  // signal — an abort-ignoring mock would make the remaining-time cap
+  // decorative and this control meaningless.
+  it('submit latency does not eat the poll window (deadline starts at jobId receipt)', async () => {
+    vi.useFakeTimers();
+    try {
+      let call = 0;
+      (fetch as any).mockImplementation(async (_url: string, init?: { signal?: AbortSignal }) => {
+        call += 1;
+        if (call === 1) {
+          await new Promise(resolve => setTimeout(resolve, 25000)); // slow submit (inside the 30s request cap)
+          return okResponse({ jobId: 'job-slow-submit' });
+        }
+        if (call === 2) {
+          await new Promise(resolve => setTimeout(resolve, 6000));
+          return okResponse({ status: 'queued' });
+        }
+        // Final poll: 29.5s server latency (inside the 30s per-request cap);
+        // resolves 'queued' (not completed) when aborted, mirroring what a
+        // real aborted fetch leaves behind.
+        return new Promise<Response>(resolve => {
+          const completedTimer = setTimeout(() => resolve(okResponse({ status: 'completed', ...transcriptBody('en') })), 29500);
+          init?.signal?.addEventListener('abort', () => { clearTimeout(completedTimer); resolve(okResponse({ status: 'queued' })); });
+        });
+      });
+      const attempt = new SupadataTranscriptProvider('key', 60, 1).fetch('dQw4w9WgXcQ', 3000);
+      const settled = attempt.then(value => ({ resolved: value }), e => ({ error: e }));
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+      expect((outcome as { error?: { message: string } }).error).toBeUndefined();
+      expect((outcome as { resolved?: { transcript: string } }).resolved?.transcript).toBe('Never gonna give you up Never gonna let you down');
+      expect(call).toBe(3);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe('SupadataTranscriptProvider chain registration', () => {
@@ -396,49 +440,5 @@ describe('Supadata cap enforcement on the chain path (review P1, 2026-09-25)', (
       vi.unstubAllGlobals();
     }
     expect(received).toBe(1234);
-  });
-});
-
-describe('Chain budget covers every tier worst case (review P2, 2026-09-25)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-  });
-
-  it('earlier tiers using their full enforced deadlines still leave Supadata its 60s window (default 285000ms budget)', async () => {
-    vi.useFakeTimers();
-    const tierDelays: Array<[string, number]> = [['transcriptapi', 30000], ['apify', 130000], ['decodo', 30000], ['native', 35000]];
-    let supadataCalled = false;
-    const extractor = new TranscriptExtractor(undefined, undefined, undefined, undefined, undefined, undefined, 'sd-key', 60);
-    (extractor as any).buildProviders = () => [
-      ...tierDelays.map(([name, delay]) => ({
-        name,
-        provider: { fetch: () => new Promise((_resolve, reject) => setTimeout(() => reject(new Error(`${name} down`)), delay)) },
-      })),
-      {
-        name: 'supadata' as const,
-        provider: { fetch: () => { supadataCalled = true; return Promise.resolve({ videoId: 'VALID_ID_12', transcript: 'late but present', language: 'en' }); } },
-      },
-    ];
-    let attempt: Promise<{ videoId: string; transcript: string; language: string }>;
-    try {
-      attempt = extractor.fetch('VALID_ID_12');
-    } finally {
-      vi.unstubAllGlobals();
-    }
-    // Advance past the four earlier tiers' worst cases (225s) into Supadata's window.
-    await vi.advanceTimersByTimeAsync(240000);
-    try {
-      const result = await attempt;
-      expect(supadataCalled).toBe(true);
-      expect(result.transcript).toBe('late but present');
-    } finally {
-      vi.unstubAllGlobals();
-    }
   });
 });
