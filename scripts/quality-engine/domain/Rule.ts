@@ -21,6 +21,12 @@ export interface RuleContext {
   // SecurityFixWithoutTestRule checks this to flag an authorization change
   // with no corresponding test file touched in the same diff.
   allFiles?: string[];
+  // The engine's scan mode (EngineConfig.mode): "diff"-like scans only
+  // include changed files, "full" scans every tracked file. Lets a rule
+  // distinguish "in the scan" (= edited, in diff mode) from "merely present
+  // in a whole-repo audit" — e.g. sql-migrations severityFor downgrades
+  // historical pre-wave migrations to informational low ONLY in full mode.
+  scanMode?: "diff" | "full";
 }
 
 export interface Rule {
