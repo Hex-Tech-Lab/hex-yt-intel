@@ -21,7 +21,7 @@
                 "together",
                 "relace"
               ],
-              "allow_fallbacks": true
+              "allow_fallbacks": false
             }
           }
         }
