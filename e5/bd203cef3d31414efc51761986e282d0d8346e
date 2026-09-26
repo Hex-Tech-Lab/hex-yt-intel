@@ -1,0 +1,74 @@
+scripts/quality-engine/application/QualityEngine.ts
+  h_60000122af7b55 70
+scripts/quality-engine/domain/Rule.ts
+  h_60000122af7b55 24-29
+scripts/quality-engine/rules/__tests__/security-lessons-20260924.test.ts
+  h_60000122af7b55 92,105-145,270-326
+scripts/quality-engine/rules/__tests__/sql-migrations.test.ts
+  h_60000122af7b55 12,18,251-316,331-449,500-528,651-721
+scripts/quality-engine/rules/security-lessons-20260924.ts
+  h_60000122af7b55 37-51,67-102,122-127,185-228,235,252
+scripts/quality-engine/rules/sql-migrations.ts
+  h_60000122af7b55 24-33,65-73,75-80,83-91,112-269,338-365,375-379,381,394,428-433,451-453,461,466,487-489,500-502,529-534,536-537,546,548
+scripts/verify-quality-engine.ts
+  h_60000122af7b55 231-238
+supabase/migrations/20260925120000_prompt_caching_settings_and_cached_tokens.sql
+  h_60000122af7b55 1-47
+web/app/api/analyses/persist/route.ts
+  h_60000122af7b55 195-200,295,581
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 125-132,138-142
+web/hooks/__tests__/useSSEStream-cache-stagger.test.tsx
+  h_60000122af7b55 1-269
+web/hooks/useSSEStream.ts
+  h_60000122af7b55 35-60,63-67,69,81-94,421,436-437,473,480-527,639,646-648
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  h_60000122af7b55 1-152
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  h_60000122af7b55 452,455-460,471
+web/lib/adapters/stream-status-tracker.ts
+  h_60000122af7b55 16
+web/lib/ports/AnalysisPersistencePort.ts
+  h_60000122af7b55 222-223
+web/lib/prompts/ucis-v5.3.ts
+  h_60000122af7b55 1,3-5,8,16,18-19,91,101-102,104,106,129,168,218,301,385,434,478,480,484,488,510,541-542,592,604,638,641
+web/lib/types/__tests__/contracts.test.ts
+  h_60000122af7b55 1-9,11,13-26,28-30,32
+web/lib/types/contracts.ts
+  h_60000122af7b55 269-276
+web/lib/types/synthesis-nucleus.ts
+  h_60000122af7b55 158-163
+web/lib/usecases/CreateAnalysisUseCase.ts
+  h_60000122af7b55 73-74,189-209,346-347
+web/lib/validators/synthesis.ts
+  h_60000122af7b55 84-139,180-228,288-292,333
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  h_60000122af7b55 1-207
+worker/src/ports/LLMCascadePort.ts
+  h_60000122af7b55 20-28,36-37
+worker/src/ports/PromptBuilderPort.ts
+  h_60000122af7b55 12-19
+worker/src/ports/ReasoningEnginePort.ts
+  h_60000122af7b55 84-85
+worker/src/routes/analysis.ts
+  h_60000122af7b55 112-116,794,815,999-1004,1056,1247
+worker/src/services/LLMCascade.ts
+  h_60000122af7b55 84-92,101-102,105,125-126,134,145,174-175,186,224,268-270,287,304-341,386,451-459,497
+worker/src/services/PersistService.ts
+  h_60000122af7b55 33-39,252,287
+worker/src/services/PromptBuilder.ts
+  h_60000122af7b55 30-48,82,119-121,131-132,135
+worker/src/services/ReasoningEngine.ts
+  h_60000122af7b55 73-86,89,99-100,117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e5bd203cef3d31414efc51761986e282d0d8346e",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
