@@ -1,0 +1,18 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  h_60000122af7b55 160
+web/lib/hooks/useHighlightsStatus.ts
+  h_60000122af7b55 74
+web/lib/utils/dedupe-fetch.ts
+  h_60000122af7b55 34,38-45,49,51-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "44c9471bdd48df24b2cdd832741c96ee4c6419b4",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
