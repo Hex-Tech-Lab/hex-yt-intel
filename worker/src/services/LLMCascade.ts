@@ -81,6 +81,15 @@ export class LLMCascade implements LLMCascadePort {
   // worker. Undefined for background/system-triggered analyses with no
   // human caller (e.g. reaper retries) -- OpenRouter's field is optional.
   private userId?: string;
+  // Prompt caching (2026-09-25): Anthropic prompt caching via OpenRouter
+  // explicit cache_control breakpoints. Registry-resolved web-side
+  // (analysis.promptCaching.enabled) and forwarded per-request -- the worker
+  // has no DB access (ADR 005). Default true: the registry default is on, and
+  // a stale client that doesn't forward the flag still benefits (write 1.25x
+  // on bundle 1's shared ~19.2k-token prefix, reads 0.1x on bundles 2-5).
+  private promptCachingEnabled: boolean;
+  // One-shot: a byte-identity breach is a caller contract bug, not transient.
+  private byteIdentityWarningLogged = false;
 
   constructor(
     apiKey: string,
@@ -89,9 +98,11 @@ export class LLMCascade implements LLMCascadePort {
     maxOutputTokens?: { haiku: number; default: number },
     userId?: string,
     llmTimeoutMs?: number,
-    llmHandshakeTimeoutMs?: number
+    llmHandshakeTimeoutMs?: number,
+    promptCachingEnabled?: boolean
   ) {
     this.apiKey = apiKey;
+    this.promptCachingEnabled = promptCachingEnabled !== false;
     this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs && llmHandshakeTimeoutMs > 0 ? llmHandshakeTimeoutMs : LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK;
     this.maxTokens = maxOutputTokens ?? LLM_MAX_TOKENS_FALLBACK;
     this.userId = userId;
@@ -111,7 +122,8 @@ export class LLMCascade implements LLMCascadePort {
     systemPrompt: string,
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    cacheSplit?: { prefix: string; suffix: string }
   ): Promise<{
     started: boolean;
     finalText: string;
@@ -119,6 +131,7 @@ export class LLMCascade implements LLMCascadePort {
     finishReason?: string;
     tokensUsed?: number;
     costUsd?: number;
+    cachedTokens?: number;
     generationId?: string;
   }> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -129,6 +142,7 @@ export class LLMCascade implements LLMCascadePort {
     let finishReason: string | undefined = undefined;
     let tokensUsed: number | undefined;
     let costUsd: number | undefined;
+    let cachedTokens: number | undefined;
     let generationId: string | undefined;
 
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
@@ -157,7 +171,8 @@ export class LLMCascade implements LLMCascadePort {
         },
         this.llmTimeoutMs,
         signal,
-        providerOrder as string[] | undefined
+        providerOrder as string[] | undefined,
+        cacheSplit
       );
 
       if (result.started && finalText && !result.error) {
@@ -168,6 +183,7 @@ export class LLMCascade implements LLMCascadePort {
         finishReason = result.finishReason;
         tokensUsed = result.tokensUsed;
         costUsd = result.costUsd;
+        cachedTokens = result.cachedTokens;
         generationId = result.generationId;
         break;
       }
@@ -205,7 +221,7 @@ export class LLMCascade implements LLMCascadePort {
       previousModel = name;
     }
 
-    return { started: produced, finalText, modelUsed, finishReason, tokensUsed, costUsd, generationId };
+    return { started: produced, finalText, modelUsed, finishReason, tokensUsed, costUsd, cachedTokens, generationId };
   }
 
   /**
@@ -249,8 +265,9 @@ export class LLMCascade implements LLMCascadePort {
     onDelta: (text: string) => void,
     timeoutMs: number,
     signal?: AbortSignal,
-    providerOrder?: string[]
-  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; generationId?: string }> {
+    providerOrder?: string[],
+    cacheSplit?: { prefix: string; suffix: string }
+  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; cachedTokens?: number; generationId?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
       // skipcq: JS-0827
@@ -267,6 +284,7 @@ export class LLMCascade implements LLMCascadePort {
     let finishReason: string | undefined;
     let tokensUsed: number | undefined;
     let costUsd: number | undefined;
+    let cachedTokens: number | undefined;
     let generationId: string | undefined;
     let loggedProviderAttribution = false;
 
@@ -283,6 +301,44 @@ export class LLMCascade implements LLMCascadePort {
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
     const requestMaxTokens = isHaiku45 ? this.maxTokens.haiku : this.maxTokens.default;
+    // Prompt caching (2026-09-25): explicit Anthropic cache_control breakpoint
+    // on the shared prefix block, per OpenRouter's documented per-block
+    // pattern (works across all Anthropic-compatible providers incl.
+    // Vertex/Bedrock). prefix + suffix === systemPrompt byte-for-byte
+    // (PromptBuilder.buildSegmented contract), so message semantics are
+    // unchanged -- same text, split into two blocks. Prefix must clear the
+    // model's cacheable minimum (Haiku 4.5: 4096 tokens; our prefix is
+    // ~19.2k, measured 2026-09-25). Non-Anthropic fallback tiers ignore
+    // cache_control -- no behavior change there.
+    // Byte-identity guard (2026-09-26): the 2-block cache split is only
+    // semantically identical to the un-split prompt when
+    // prefix + suffix === systemPrompt byte-for-byte (the
+    // PromptBuilder.buildSegmented contract). If a caller ever passes a
+    // split that fails that identity, sending the two blocks would CHANGE
+    // the system prompt the model sees -- so fail soft: fall back to the
+    // plain single-block message (cache benefit lost, semantics preserved)
+    // and surface the contract breach to Sentry.
+    const splitIsByteIdentical = cacheSplit ? cacheSplit.prefix + cacheSplit.suffix === systemPrompt : false;
+    if (cacheSplit && !splitIsByteIdentical && !this.byteIdentityWarningLogged) {
+      this.byteIdentityWarningLogged = true;
+      Sentry.captureMessage('prompt-cache: cacheSplit fails byte-identity with systemPrompt; falling back to single-block system message', {
+        level: 'warning',
+        extra: {
+          prefixLength: cacheSplit.prefix.length,
+          suffixLength: cacheSplit.suffix.length,
+          systemPromptLength: systemPrompt.length,
+        },
+      });
+    }
+    const systemMessages = cacheSplit && splitIsByteIdentical && this.promptCachingEnabled
+      ? [{
+          role: 'system',
+          content: [
+            { type: 'text', text: cacheSplit.prefix, cache_control: { type: 'ephemeral' } },
+            { type: 'text', text: cacheSplit.suffix },
+          ],
+        }]
+      : [{ role: 'system', content: systemPrompt }];
     // RCA (2026-07-23): this used to unconditionally override `providerOrder`
     // with a hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] for
     // ANY claude-haiku-4.5 tier, silently discarding the "Alternate Route"
@@ -327,9 +383,7 @@ export class LLMCascade implements LLMCascadePort {
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
           // echo the prompt header instead of analyzing.
-          messages: [
-            { role: 'system', content: systemPrompt },
-          ],
+          messages: systemMessages,
           ...(requestProvider ? { provider: requestProvider } : {}),
           ...(this.userId ? { user: this.userId } : {}),
         }),
@@ -394,6 +448,15 @@ export class LLMCascade implements LLMCascadePort {
             if (json.usage) {
               if (typeof json.usage.total_tokens === 'number') tokensUsed = json.usage.total_tokens;
               if (typeof json.usage.cost === 'number') costUsd = json.usage.cost;
+              // Prompt-caching accounting (2026-09-25): cache reads (and the
+              // cache_write_tokens write marker) live under
+              // prompt_tokens_details -- see OpenRouter's usage-accounting
+              // docs. Persisted to analysis_chunks.cached_tokens so the
+              // savings are measurable per analysis; a missing/zero value
+              // simply means "not cached" and must never fail the stream.
+              if (json.usage.prompt_tokens_details && typeof json.usage.prompt_tokens_details.cached_tokens === 'number') {
+                cachedTokens = json.usage.prompt_tokens_details.cached_tokens;
+              }
             }
             // Exact traceability: OpenRouter's own generation id, present on
             // every streamed chunk -- lets a future admin/billing dispute be
@@ -431,7 +494,7 @@ export class LLMCascade implements LLMCascadePort {
         }
       }
       clearTimeout(totalTimer);
-      return { started, text, finishReason, tokensUsed, costUsd, generationId };
+      return { started, text, finishReason, tokensUsed, costUsd, cachedTokens, generationId };
     } catch (error) {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);

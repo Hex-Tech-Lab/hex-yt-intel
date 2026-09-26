@@ -89,7 +89,7 @@ describe("HardcodedTierGrantRule (R1)", () => {
     expect(findings).toHaveLength(0);
   });
 
-  test("webhook-path counterpart: the same pricing-table shape inside a webhook file DOES fire", () => {
+  test("negative control: static PRICING_TABLE inside a webhook file is a declarative price mapping, NOT a grant (2026-09-25 review: flipped from positive)", () => {
     const findings = check(
       HardcodedTierGrantRule,
       "web/app/api/billing/webhook/route.ts",
@@ -99,6 +99,47 @@ describe("HardcodedTierGrantRule (R1)", () => {
           tier: 'pro',
           price: 900,
         },
+      };
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("negative control: nested static table with multiple entries in a webhook file does NOT fire", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const PRICE_TIER_MAP: Record<string, { tier: string }> = {
+        pri_pro: { tier: 'pro' },
+        pri_max: { tier: 'max' },
+      };
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("still fires when the table object is passed to a runtime write (call argument, not a declaration)", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      await supabase
+        .from('users')
+        .update({ tier: 'pro', updated_at: new Date().toISOString() });
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("still fires when a declared object carries a DYNAMIC tier value (ternary — the PR #325 tangent shape)", () => {
+    const findings = check(
+      HardcodedTierGrantRule,
+      "web/lib/stripe/webhook-handlers.ts",
+      `
+      const updateData: Record<string, any> = {
+        tier: status === 'success' ? 'pro' : 'free',
+        stripe_subscription_id: subscription.id,
       };
       `,
     );
@@ -225,6 +266,63 @@ describe("UntrustedTierFallbackRule (R2)", () => {
       `,
     );
     expect(findings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("positive: fires on COMPUTED element access custom_data?.[\"planTier\"] (2026-09-25 review gap)", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const tier = mapPlanStringToUserTier(event.data.custom_data?.["planTier"]);
+      `,
+    );
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.title).toContain("custom_data");
+  });
+
+  test("positive: fires on non-optional computed access custom_data[\"plan_tier\"]", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const tier = mapPlanStringToUserTier(event.data.custom_data["plan_tier"]);
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("positive: fires on computed access in a ?? fallback chain", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const tier = resolveUserTierForPriceId(priceId) ?? mapPlanStringToUserTier(event.data.custom_data?.["planTier"]);
+      `,
+    );
+    expect(findings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("negative control: the pattern as a STRING LITERAL argument does NOT fire (2026-09-25 review gap: string contents triggered it)", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const debugHint = mapTierLabel("custom_data?.planTier read from payload");
+      `,
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  test("negative control: the pattern inside a plain string variable does NOT fire", () => {
+    const findings = check(
+      UntrustedTierFallbackRule,
+      "web/app/api/billing/webhook/route.ts",
+      `
+      const hint = 'custom_data.planTier';
+      const tier = mapPlanStringToUserTier(hint);
+      `,
+    );
+    expect(findings).toHaveLength(0);
   });
 });
 

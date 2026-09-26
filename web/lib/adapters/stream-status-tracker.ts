@@ -13,7 +13,7 @@ export class StreamStatusTracker {
   public handleStatus(
     fragment: {
       type: 'status';
-      stage: 'extracting' | 'starting' | 'model' | 'fallback';
+      stage: 'extracting' | 'starting' | 'llm-started' | 'model' | 'fallback';
       videoId?: string;
       model?: string;
       from?: string;

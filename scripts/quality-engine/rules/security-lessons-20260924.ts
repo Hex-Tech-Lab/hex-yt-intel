@@ -34,6 +34,21 @@ const PAID_TIER_LITERAL = /['"](pro|founder|light|max)['"]/;
  * Pattern: an object property named `tier` whose initializer text contains a
  * paid-tier literal. Downgrade writes (`tier: 'free'` on cancel) are NOT
  * flagged — a literal free-downgrade is the correct fixed shape.
+ *
+ * Static price→tier TABLES are NOT grants (2026-09-25 review: the historical
+ * shape `export const PRICING_TABLE = { pro: { tier: 'pro' } }` inside a
+ * webhook file is declarative configuration — the verified-mapping fix
+ * itself — and must NOT fire). Only real tier WRITES fire:
+ *   - the object literal sits in a DYNAMIC context (call argument like
+ *     `update({ tier: 'pro', ... })`, assignment RHS, return, etc.), or
+ *   - the tier property's own initializer is DYNAMIC (ternary like
+ *     `tier: status === 'success' ? 'pro' : 'free'` — the PR #325 tangent —
+ *     or any call/conditional expression).
+ * A plain string literal inside a pure variable declaration (a table) is
+ * silent. Accepted limitation: a const object holding a plain-literal tier
+ * that is LATER passed to a write is not tracked (no flow analysis) — the
+ * observed historical bugs were all call-argument or dynamic-initializer
+ * shapes.
  */
 export const HardcodedTierGrantRule: Rule = {
   name: "hardcoded-tier-grant-in-webhook",
@@ -48,6 +63,42 @@ export const HardcodedTierGrantRule: Rule = {
     if (!filePath.toLowerCase().includes("webhook")) return findings;
 
     const paidTierText = (text: string): string | null => PAID_TIER_LITERAL.exec(text)?.[0] ?? null;
+
+    /**
+     * A plain string literal (the only case where "static table" vs "write"
+     * is ambiguous — anything dynamic already fires on its own).
+     */
+    const isPlainStringLiteral = (n: Node): boolean =>
+      Node.isStringLiteral(n) || Node.isNoSubstitutionTemplateLiteral(n);
+
+    /**
+     * Walk up from an ObjectLiteral: pure structural ancestors
+     * (ObjectLiteral / PropertyAssignment / ArrayLiteral) keep the chain
+     * "declarative"; reaching a VariableDeclaration initializer means the
+     * whole value is a declared table → static. Any dynamic ancestor
+     * (CallExpression argument, NewExpression, BinaryExpression, Return,
+     * Conditional, template/spread, ...) means the literal participates in a
+     * runtime expression → dynamic.
+     */
+    const objectLiteralIsInDynamicContext = (obj: Node): boolean => {
+      let cur: Node | undefined = obj;
+      while (cur) {
+        const parent = cur.getParent();
+        if (!parent) return true; // conservative: unknown top-level position
+        if (Node.isObjectLiteralExpression(parent) || Node.isArrayLiteralExpression(parent)) {
+          cur = parent;
+          continue;
+        }
+        if (Node.isPropertyAssignment(parent)) {
+          cur = parent;
+          continue;
+        }
+        if (Node.isVariableDeclaration(parent)) return parent.getInitializer() !== cur;
+        // Dynamic contexts (and anything unmodeled): conservative true.
+        return true;
+      }
+      return true;
+    };
 
     const pushFinding = (evidence: string) => {
       findings.push({
@@ -68,6 +119,12 @@ export const HardcodedTierGrantRule: Rule = {
         if (!init) return;
         const paid = paidTierText(init.getText());
         if (!paid) return;
+        // Static table exemption: plain string literal inside a pure
+        // variable declaration (the declarative price→tier mapping shape).
+        if (isPlainStringLiteral(init)) {
+          const obj = node.getParent();
+          if (obj && Node.isObjectLiteralExpression(obj) && !objectLiteralIsInDynamicContext(obj)) return;
+        }
         pushFinding(paid);
         return;
       }
@@ -125,15 +182,57 @@ export const UntrustedTierFallbackRule: Rule = {
     // positive class (2026-09-25 review): updateUserTier({userId:
     // event.data.custom_data?.userId, tier: resolvedTier}) and
     // !event.data.custom_data?.userId || !resolvedTier must NOT fire.
-    const readsPlanFieldFromCustomData = (text: string): boolean =>
-      /custom_data\s*\?*\.\s*(?:plan_?tier|plan|tier)\b/i.test(text);
+    //
+    // 2026-09-25 review round 2: detection is AST-based, not text-regex —
+    //   * computed element access `custom_data?.["planTier"]` and
+    //     `custom_data["plan_tier"]` (previously missed by the regex), and
+    //   * string-literal CONTENTS (`mapTier("custom_data?.planTier")`)
+    //     can no longer trigger a match, because a StringLiteral node
+    //     contains no property/element-access descendants.
+    const PLAN_FIELD = /^(plan_?tier|plan|tier)$/i;
+    const isCustomDataLink = (n: Node): boolean => {
+      if (Node.isIdentifier(n)) return /custom_?data/i.test(n.getText());
+      if (Node.isPropertyAccessExpression(n)) return /custom_?data/i.test(n.getName());
+      if (Node.isElementAccessExpression(n)) {
+        const arg = n.getArgumentExpression();
+        if (arg && Node.isStringLiteral(arg) && /custom_?data/i.test(arg.getLiteralText())) return true;
+        return /custom_?data/i.test(n.getExpression().getText());
+      }
+      return false;
+    };
+    /** Follow the member-access chain down from `expr` looking for a custom_data link. */
+    const chainContainsCustomData = (expr: Node): boolean => {
+      let cur: Node | undefined = expr;
+      while (cur) {
+        if (isCustomDataLink(cur)) return true;
+        if (Node.isPropertyAccessExpression(cur) || Node.isElementAccessExpression(cur)) cur = cur.getExpression();
+        else if (Node.isCallExpression(cur)) cur = cur.getExpression();
+        else if (Node.isNonNullExpression(cur)) cur = cur.getExpression();
+        else return false;
+      }
+      return false;
+    };
+    /** obj.plan_tier / obj?.planTier / obj?.["planTier"] / obj["plan_tier"] where the chain reaches custom_data. */
+    const isPlanFieldAccessOnCustomData = (n: Node): boolean => {
+      if (Node.isPropertyAccessExpression(n)) {
+        return PLAN_FIELD.test(n.getName()) && chainContainsCustomData(n.getExpression());
+      }
+      if (Node.isElementAccessExpression(n)) {
+        const arg = n.getArgumentExpression();
+        if (!arg || !Node.isStringLiteral(arg) || !PLAN_FIELD.test(arg.getLiteralText())) return false;
+        return chainContainsCustomData(n.getExpression());
+      }
+      return false;
+    };
+    const readsPlanFieldFromCustomData = (node: Node): boolean =>
+      isPlanFieldAccessOnCustomData(node) || node.getDescendants().some(isPlanFieldAccessOnCustomData);
 
     source.forEachDescendant((node) => {
       if (Node.isCallExpression(node)) {
         const callee = node.getExpression();
         const calleeName = Node.isIdentifier(callee) ? callee.getText() : callee.getText().split(".").pop() ?? "";
         if (!/tier/i.test(calleeName)) return;
-        const planReadArg = node.getArguments().find((a) => readsPlanFieldFromCustomData(a.getText()));
+        const planReadArg = node.getArguments().find((a) => readsPlanFieldFromCustomData(a));
         if (!planReadArg) return;
         const key = `call:${node.getStart()}`;
         if (reported.has(key)) return;
@@ -150,8 +249,7 @@ export const UntrustedTierFallbackRule: Rule = {
       if (Node.isBinaryExpression(node)) {
         const op = node.getOperatorToken().getText();
         if (op !== "??" && op !== "||") return;
-        const text = node.getText();
-        if (!readsPlanFieldFromCustomData(text)) return;
+        if (!readsPlanFieldFromCustomData(node)) return;
         const key = `bin:${node.getStart()}`;
         if (reported.has(key)) return;
         reported.add(key);
