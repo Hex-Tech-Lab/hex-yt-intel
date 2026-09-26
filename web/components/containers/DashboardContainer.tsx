@@ -1040,17 +1040,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 {(() => {
                   const currentInputVideoId = url ? extractVideoId(url) : null;
                   const isCurrentVideoLoaded = Boolean(
-                    currentInputVideoId && (
-                      nucleusAnalysis?.videoId === currentInputVideoId ||
-                      analysis?.videoId === currentInputVideoId ||
-                      videoMetadata?.videoId === currentInputVideoId
-                    )
+                    currentInputVideoId &&
+                    status === "complete" &&
+                    (nucleusAnalysis?.videoId === currentInputVideoId || analysis?.videoId === currentInputVideoId)
                   );
                   const existsInHistory = Boolean(
                     currentInputVideoId &&
-                    analysisHistory.some((item) => item.videoId === currentInputVideoId)
+                    analysisHistory.some((item) => item.videoId === currentInputVideoId && item.status === "completed")
                   );
-                  const isRepeat = isCurrentVideoLoaded || existsInHistory || hasExistingAnalysis || status === "complete";
+                  const isRepeat = isCurrentVideoLoaded || existsInHistory || hasExistingAnalysis;
 
                   return (
                     <AnalysisHero

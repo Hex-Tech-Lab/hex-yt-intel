@@ -23,10 +23,10 @@ export function useExistingAnalysisCheck(url: string): boolean {
 
   useEffect(() => {
     const videoId = url ? extractVideoId(url) : '';
-    if (!videoId) {
-      setHasExisting(false);
-      return;
-    }
+    // Instantly clear so previous URL's result doesn't leak while pending
+    setHasExisting(false);
+
+    if (!videoId) return;
 
     const requestId = ++requestIdRef.current;
     const timer = setTimeout(() => {
@@ -36,7 +36,7 @@ export function useExistingAnalysisCheck(url: string): boolean {
           if (!res.ok || requestIdRef.current !== requestId) return;
           const data = await res.json();
           if (requestIdRef.current !== requestId) return;
-          setHasExisting(data?.exists === true);
+          setHasExisting(data?.exists === true && data?.status === 'complete');
         } catch {
           if (requestIdRef.current === requestId) setHasExisting(false);
         }
