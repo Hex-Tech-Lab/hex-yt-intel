@@ -4,9 +4,11 @@
  */
 
 import * as Sentry from '@sentry/cloudflare';
+
+import { translateModelId } from './model-id-translator';
+
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
 import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEnginePort';
-import { translateModelId } from './model-id-translator';
 
 // 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
 // benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
@@ -134,7 +136,7 @@ export class LLMCascade implements LLMCascadePort {
     cachedTokens?: number;
     generationId?: string;
   }> {
-    const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9) /* ... */}`;
     let finalText = '';
     let modelUsed = '';
     let produced = false;
@@ -394,8 +396,11 @@ export class LLMCascade implements LLMCascadePort {
 
       if (!response.ok || !response.body) {
         clearTimeout(totalTimer);
-        const errBody = await response.text().catch(() => '');
-        const errorMsg = `${response.status}: ${errBody.slice(0, 160)}`;
+        const errBody = await response.text().catch((error) => {
+          console.error('[LLMCascade]', error);
+          return '';
+        });
+        const errorMsg = `${response.status}: ${errBody.slice(0, 160) + (errBody.length > 160 ? '...' : '')}`;
         // Non-2xx OpenRouter response was previously silently swallowed into
         // this return value with no telemetry anywhere -- if this rejected
         // every tier in a cascade (e.g. all 5 parallel bundle streams for one
@@ -407,7 +412,7 @@ export class LLMCascade implements LLMCascadePort {
         console.error('[LLMCascade.callLLMStream]', { model, requestModel, errorMsg });
         Sentry.captureMessage('LLMCascade.callLLMStream: OpenRouter non-2xx response', {
           level: 'error',
-          contexts: { llmCascade: { model, requestModel, status: response.status, errBody: errBody.slice(0, 500) } },
+          contexts: { llmCascade: { model, requestModel, status: response.status, errBody: errBody.slice(0, 500) + (errBody.length > 500 ? '...' : '') } },
         });
         return { started: false, text: '', error: errorMsg };
       }
@@ -424,7 +429,7 @@ export class LLMCascade implements LLMCascadePort {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed.startsWith('data:')) continue;
-          const payload = trimmed.slice(5).trim();
+          const payload = (trimmed.slice(5) /* ... */).trim();
           if (payload === '[DONE]') continue;
           try {
             const json = JSON.parse(payload);
@@ -485,11 +490,11 @@ export class LLMCascade implements LLMCascadePort {
 
               onDelta(delta);
             }
-          } catch (e) {
-            if (e instanceof Error && e.message.startsWith('ERR_MODEL_REFUSAL')) {
-              throw e;
+          } catch (err) {
+            if (err instanceof Error && err.message.startsWith('ERR_MODEL_REFUSAL')) {
+              throw err;
             }
-            // ignore keep-alive / partial frames
+            console.debug('[LLMCascade] ignoring keep-alive / partial frame error', err);
           }
         }
       }
@@ -578,11 +583,11 @@ export class LLMCascade implements LLMCascadePort {
 
       if (!response.ok) {
         const error = await response.text();
-        const errorMsg = `${response.status}: ${error.slice(0, 200)}`;
+        const errorMsg = `${response.status}: ${error.slice(0, 200) + (error.length > 200 ? '...' : '')}`;
         console.error('[LLMCascade.callLLM]', { model: requestModel, errorMsg });
         Sentry.captureMessage('LLMCascade.callLLM: OpenRouter non-2xx response', {
           level: 'error',
-          contexts: { llmCascade: { model: requestModel, status: response.status, errBody: error.slice(0, 500) } },
+          contexts: { llmCascade: { model: requestModel, status: response.status, errBody: error.slice(0, 500) + (error.length > 500 ? '...' : '') } },
         });
         return { success: false, error: errorMsg };
       }
