@@ -1,0 +1,14 @@
+worker/src/routes/analysis.ts
+  h_60000122af7b55 1002-1003
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f99332599596b8a24c4b1ee4dcf79ac8fb87c2b5",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
