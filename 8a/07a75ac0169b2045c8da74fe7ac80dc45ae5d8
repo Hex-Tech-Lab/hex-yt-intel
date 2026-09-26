@@ -1,0 +1,16 @@
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 1043-1045,1049,1051
+web/hooks/useExistingAnalysisCheck.ts
+  h_60000122af7b55 26-29,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8a07a75ac0169b2045c8da74fe7ac80dc45ae5d8",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
