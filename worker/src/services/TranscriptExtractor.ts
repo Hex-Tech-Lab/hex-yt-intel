@@ -13,7 +13,6 @@
  */
 
 import { addBreadcrumb, captureException, captureMessage } from '@sentry/cloudflare';
-
 import { fetchWithProxy } from './http-utils';
 import { ApifyTranscriptProvider } from './providers/ApifyTranscriptProvider';
 import { TranscriptApiProvider } from './providers/TranscriptApiProvider';
@@ -21,7 +20,6 @@ import { DecodoTranscriptProvider } from './providers/DecodoTranscriptProvider';
 import { YouTubeNativeTranscriptProvider } from './providers/YouTubeNativeTranscriptProvider';
 import { SupadataTranscriptProvider } from './providers/SupadataTranscriptProvider';
 import { NoCaptionsConfirmedError } from '../ports/TranscriptProviderPort';
-
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
 const DEFAULT_PROVIDER_ORDER = 'transcriptapi,apify,decodo,native,supadata';
@@ -197,15 +195,15 @@ export class TranscriptExtractor implements TranscriptProviderPort {
           budgetTimer = setTimeout(() => reject(new Error(`${name} exceeded remaining chain budget (${remainingMs}ms)`)), remainingMs);
         });
         return await Promise.race([attempt, budgetAbort]);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         console.warn(`[transcript] ${name} failed for ${videoId}: ${msg}`);
         if (name === 'native') {
-          confirmedNoCaptions = error instanceof NoCaptionsConfirmedError;
+          confirmedNoCaptions = e instanceof NoCaptionsConfirmedError;
           // The native provider reports its own sub-tier failures to Sentry
           // with fine-grained tags (transcript-standard-api / transcript-page-html).
         } else {
-          captureException(error, { tags: { operation: `transcript-${name}`, videoId } });
+          captureException(e, { tags: { operation: `transcript-${name}`, videoId } });
         }
         tierFailures.push({ tier: name, reason: msg });
       } finally {
@@ -267,25 +265,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
         // tonight (see that RCA). A non-2xx from Decodo (rate limit,
         // account issue, target-site block) was indistinguishable from
         // "this channel genuinely has no metadata."
-        const bodyText = await response.text().catch((error) => {
-          console.error('[TranscriptExtractor]', error);
-          return '';
-        });
-        const truncatedBody = bodyText.slice(0, 300) + (bodyText.length > 300 ? '...' : '');
-        console.warn(`[transcript] Channel metadata fetch non-ok for ${channelId}: ${response.status} ${response.statusText}`, truncatedBody);
+        const bodyText = await response.text().catch(() => '');
+        console.warn(`[transcript] Channel metadata fetch non-ok for ${channelId}: ${response.status} ${response.statusText}`, bodyText.slice(0, 300));
         captureMessage(`Channel metadata fetch non-ok: ${channelId}`, {
           level: 'warning',
           tags: { operation: 'transcript-channel-metadata', status: String(response.status) },
-          extra: { channelId, status: response.status, body: truncatedBody },
+          extra: { channelId, status: response.status, body: bodyText.slice(0, 300) },
         });
         return null;
       }
       const data = await response.json() as { results?: Array<{ content?: unknown }> };
       return data.results?.[0]?.content as Record<string, unknown> ?? null;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       console.warn(`[transcript] Channel metadata fetch failed for ${channelId}: ${msg}`);
-      captureException(error, { tags: { operation: 'transcript-channel-metadata', channelId } });
+      captureException(e, { tags: { operation: 'transcript-channel-metadata', channelId } });
       return null;
     } finally { controller.abort(); }
   }

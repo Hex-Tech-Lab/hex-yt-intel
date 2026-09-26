@@ -1,8 +1,6 @@
-import { sentry } from "@sentry/hono/cloudflare";
-
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
+import { sentry } from "@sentry/hono/cloudflare";
 import { optionalAuthMiddleware } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { resolveCorsOrigin } from "./middleware/cors";
@@ -14,7 +12,6 @@ import chat from "./routes/chat";
 import comments from "./routes/comments";
 import channelMetaRoutes from "./routes/channel-meta";
 import { handleCommentsTier3Message } from "./queue-consumers/comments-tier3";
-
 import type { CommentsTier3QueueMessage } from "./routes/comments";
 
 type Env = {
