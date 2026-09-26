@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHighlightsExtraction, buildHighlightsExtractionSystemPrompt } from './highlights-extraction';
+import { parseHighlightsExtraction, buildHighlightsWindowedSystemPrompt } from './highlights-extraction';
 
 /**
  * Regression coverage for the 2026-08-20 uncap fix (live user report --
@@ -61,10 +61,11 @@ describe('parseHighlightsExtraction', () => {
   });
 });
 
-describe('buildHighlightsExtractionSystemPrompt', () => {
-  it('embeds the given maxCount as the hard ceiling, not a fixed target', () => {
-    const prompt = buildHighlightsExtractionSystemPrompt(40);
-    expect(prompt).toContain('40');
-    expect(prompt).not.toMatch(/between \d+ and \d+ moments/);
+describe('buildHighlightsWindowedSystemPrompt', () => {
+  it('embeds the per-window quota as a ceiling and the duration cap', () => {
+    const prompt = buildHighlightsWindowedSystemPrompt(6, 60);
+    expect(prompt).toContain('at most 6 moments');
+    expect(prompt).toContain('duration <= 60');
+    expect(prompt).toContain('or null if none matches'); // takeawayIdx optional, whole-timeline sampling
   });
 });

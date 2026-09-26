@@ -65,7 +65,7 @@ export async function generateEmbedding(text: string, userId?: string): Promise<
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
           'HTTP-Referer': 'https://getvintel.com',
-          'X-Title': 'hex-yt-intel / vector-embeddings',
+          'X-Title': 'vIntel - Vector Embeddings',
         },
         body: JSON.stringify({
           model: EMBEDDING_MODEL,

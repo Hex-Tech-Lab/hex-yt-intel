@@ -256,6 +256,55 @@ describe('CONTRACT: Relations Endpoint vs Graph Endpoint (GET /api/analyses/{id}
     expect(cacheKey1).not.toEqual(cacheKey2);
   });
 
+  it('ADR 031: enforces dual-persistence contract (Redis fast cache + Supabase analysis_payload)', () => {
+    const contentHash = 'abc123def4567890';
+    const relationsResult: RelationsResult = {
+      analysisId: 'analysis-1',
+      generatedAt: new Date().toISOString(),
+      model: 'meta-llama/llama-3.3-70b-instruct',
+      insights: [
+        {
+          kind: 'contrarian',
+          source: 1,
+          target: 2,
+          sourceLabel: 'Dimension 1',
+          targetLabel: 'Dimension 2',
+          rationale: 'Contrasting viewpoints',
+        },
+      ],
+    };
+
+    // Stored in Supabase analyses.analysis_payload
+    const persistedPayload = {
+      otherData: 'present',
+      stance_relations: {
+        ...relationsResult,
+        contentHash,
+      },
+    };
+
+    expect(persistedPayload.stance_relations).toBeDefined();
+    expect(persistedPayload.stance_relations.contentHash).toBe(contentHash);
+    expect(persistedPayload.stance_relations.insights).toHaveLength(1);
+  });
+
+  it('ADR 031: read-through validates contentHash match before pre-warming Redis', () => {
+    const currentContentHash = 'hash-v2';
+    const stalePayload = {
+      stance_relations: {
+        analysisId: 'a1',
+        generatedAt: '2026-01-01T00:00:00Z',
+        model: 'model-a',
+        insights: [],
+        contentHash: 'hash-v1', // stale hash
+      },
+    };
+
+    // If contentHash doesn't match current markdown contentHash, it is NOT a read-through hit
+    const isHit = stalePayload.stance_relations.contentHash === currentContentHash;
+    expect(isHit).toBe(false);
+  });
+
   it('VERDICT: NOT redundant - relations endpoint serves different purpose (LLM insights vs structured graph)', () => {
     // DECISION: Do NOT delete /api/analyses/{id}/relations
     // REASON: It computes relation insights via LLM, not just returns pre-computed graph

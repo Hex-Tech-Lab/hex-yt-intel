@@ -30,6 +30,13 @@ export interface PersistOptions {
   // sensitive field like `cancelled` was (see canonical/signBoundContent below).
   tokensUsed?: number;
   costUsd?: number;
+  // Prompt-cache reads (usage.prompt_tokens_details.cached_tokens, 2026-09-25)
+  // -- same unsigned accounting-telemetry class as tokensUsed/costUsd. Left
+  // out of the signed canonical deliberately: it is derived billing telemetry
+  // (reads can only ever REDUCE cost, which the signed costUsd already
+  // reflects), and keeping the canonical untouched avoids the stale-worker
+  // signature-mismatch hazard that signing it would create during rollout.
+  cachedTokens?: number;
   // Exact traceability (2026-08-02 directive): OpenRouter's own
   // generation id, so a cost/billing question can be resolved against
   // OpenRouter's own record, not a timestamp-based guess.
@@ -242,6 +249,7 @@ export class PersistService {
     cancelled?: boolean;
     tokensUsed?: number;
     costUsd?: number;
+    cachedTokens?: number;
     generationId?: string;
     activeSecret: string;
     appUrl: string;
@@ -276,6 +284,7 @@ export class PersistService {
             cancelled: params.cancelled,
             tokensUsed: params.tokensUsed,
             costUsd: params.costUsd,
+            cachedTokens: params.cachedTokens,
             generationId: params.generationId,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,

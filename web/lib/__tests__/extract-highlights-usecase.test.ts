@@ -38,7 +38,7 @@ const SEGMENTS = [
 
 const VALID_HIGHLIGHTS_JSON = JSON.stringify([
   { start: 10, end: 20, label: 'First claim moment' },
-  { start: 20, end: 30, label: 'The reveal' },
+  { start: 30, end: 40, label: 'The reveal' },
 ]);
 
 type PersistenceSpy = {
@@ -137,7 +137,7 @@ describe('ExtractHighlightsUseCase', () => {
       analysisId: 'an-1',
       highlights: [
         { idx: 0, start: 10, end: 25, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim Reveal' },
-        { idx: 1, start: 20, end: 35, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Reveal Outro' },
+        { idx: 1, start: 30, end: 45, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Outro' },
       ],
     });
   });

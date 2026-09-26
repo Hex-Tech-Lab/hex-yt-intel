@@ -82,7 +82,7 @@ const OpenRouterChatCompletionRequestSchema = z.object({
   stream: z.boolean().optional(),
   temperature: z.number().min(0).max(2).optional(),
   max_tokens: z.number().int().positive().optional(),
-  reasoning: z.object({ effort: z.enum(['low', 'medium', 'high']) }).optional(),
+  reasoning: z.object({ effort: z.enum(['none', 'minimal', 'low', 'medium', 'high']) }).optional(),
   provider: OpenRouterProviderSchema.optional(),
   user: z.string().optional(),
 });
@@ -129,9 +129,9 @@ describe('CONTRACT: OpenRouter chat-completions request shape (Tech Debt Ledger 
     const body = {
       model: 'anthropic/claude-haiku-4.5',
       temperature: 0.3,
-      max_tokens: 700,
+      max_tokens: 1500,
       stream: true,
-      reasoning: { effort: 'low' },
+      reasoning: { effort: 'minimal' },
       messages: [{ role: 'user', content: 'stance prompt' }],
       provider: { sort: 'latency', allow_fallbacks: false },
       user: 'user-123',

@@ -1,4 +1,5 @@
 import type { BillingStatus } from '@/lib/types/validation-report';
+import type { UserTier } from '@/lib/types/billing';
 
 export interface UserProfile {
   email: string | null;
@@ -11,7 +12,7 @@ export interface UserProfile {
 export interface BillingPersistencePort {
   updateUserTier(params: {
     userId: string;
-    tier: 'pro' | 'free';
+    tier: UserTier;
   }): Promise<void>;
 
   updateBillingStatus(params: {

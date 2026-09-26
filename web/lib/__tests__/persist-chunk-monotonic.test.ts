@@ -52,7 +52,7 @@ function createMockClient() {
         return chainable;
       }),
       // Make it thenable so `await` works on the chain
-      then: vi.fn((resolve: (value: any) => void, reject?: (error: any) => void) => {
+      then: vi.fn((resolve: (value: any) => void, _reject?: (error: any) => void) => {
         const result = nextResult;
         calls.push({ method, data, filters: [...filters], options, result });
         Promise.resolve().then(() => resolve(nextResult));

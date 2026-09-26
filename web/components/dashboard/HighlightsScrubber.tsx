@@ -253,7 +253,10 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     if (loadedForAnalysisIdRef.current === analysisId && data && data.highlights.length > 0) return;
 
     runFetchCycle(analysisId);
-  }, [digestLoading, analysisId, runFetchCycle]);
+    // `data` is only read as a guard against redundant refetch -- including
+    // it keeps the deps honest but can never re-trigger a fetch cycle on its
+    // own (the wasTrueNowFalse gate above returns early on data-only changes).
+  }, [digestLoading, analysisId, runFetchCycle, data]);
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
@@ -362,64 +365,107 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
         </div>
       </div>
 
+      {/* Top area: Summary of current highlight, max 2 lines, strictly FIXED height so layout never resizes */}
       {(() => {
         const activeSegment = playingIdx !== null ? segments[playingIdx] : null;
-        return activeSegment ? (
+        return (
           <div
-            className="mt-2.5 px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800/80 text-xs sm:text-sm text-slate-200 leading-relaxed transition-opacity duration-200"
-            data-testid="verbatim-caption"
+            className="mt-2.5 px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800/80 h-14 flex items-center justify-between gap-2 overflow-hidden transition-all duration-200"
+            data-testid="highlight-summary-container"
           >
-            <span className="font-mono text-emerald-400 font-semibold mr-2">
-              [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
-            </span>
-            <span className="text-slate-300 italic">{activeSegment.verbatimExcerpt?.trim() || activeSegment.label || 'No transcript excerpt available.'}</span>
-            {/* UI-truthfulness fix (2026-09-07, live user report): when the
-                verbatim excerpt is missing (legacy rows pre-2026-08-25, or a
-                window that matched no transcript segments), this line silently
-                showed the LLM-synthesized label with zero visual distinction.
-                A paraphrase must never pass itself off as verbatim transcript.
-                Trimmed before the truthiness check -- a whitespace-only
-                verbatimExcerpt (external review finding) was treated as a
-                real excerpt, hiding the badge while rendering a blank/
-                whitespace caption instead of the label fallback. */}
-            {!activeSegment.verbatimExcerpt?.trim() && activeSegment.label ? (
-              <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
-                <span className="ml-1.5 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">summarized</span>
-              </Tooltip>
-            ) : null}
+            {activeSegment ? (
+              <div className="flex-1 min-w-0" data-testid="highlight-summary">
+                <div className="text-xs sm:text-sm text-slate-200 font-medium leading-snug line-clamp-2">
+                  <span className="font-mono text-emerald-400 font-semibold mr-2 shrink-0">
+                    [{formatTimestamp(activeSegment.start)} - {formatTimestamp(activeSegment.end)}]
+                  </span>
+                  <span>{activeSegment.label}</span>
+                  {!activeSegment.verbatimExcerpt?.trim() && activeSegment.label ? (
+                    <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
+                      <span className="ml-1.5 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">
+                        summarized
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 flex items-center justify-between text-xs text-[var(--ink-muted)]">
+                <span>Select any moment or click Play highlights to start</span>
+                <span className="font-mono text-[10px] text-[var(--ink-muted)] shrink-0">
+                  {data.highlights.length} keypoints
+                </span>
+              </div>
+            )}
           </div>
-        ) : null;
+        );
       })()}
 
-      {/* Footer row: live transcript ticker (left, grows/truncates) +
+      {/* Embedded CSS for right-to-left transcript ticker */}
+      <style>{`
+        @keyframes tickerRTL {
+          0% {
+            transform: translateX(100%);
+          }
+          100% {
+            transform: translateX(-100%);
+          }
+        }
+      `}</style>
+
+
+      {/* Footer row: live transcript ticker (left, scrolls RTL, fixed-size container) +
           Speed cycle-pill + relocated moment stepper (right). */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug flex items-center gap-1" aria-live="polite">
+      <div className="flex items-center justify-between gap-2 mt-2">
+        <div
+          className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
+          data-testid="verbatim-caption"
+          aria-live="polite"
+        >
           {activeHighlight && playingIdx !== null ? (
-            <>
-              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1 shrink-0">
+            <div className="flex items-center gap-2 w-full min-w-0 overflow-hidden">
+              <span className="font-mono text-[10px] text-emerald-400 font-semibold shrink-0 select-none bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/50">
                 {playingIdx + 1}/{data.highlights.length}
               </span>
-              {/* Label text gets its own min-w-0/truncate child so long
-                  fallback labels clip on their own line instead of pushing
-                  the badge below out of the flex box entirely (external
-                  review finding) -- the badge is a shrink-0 sibling, never
-                  inside the truncated span. */}
-              <span className="truncate min-w-0">{revealedText || activeHighlight.label}</span>
-              {/* Same UI-truthfulness fix as the banner above: the hook's
-                  usingVerbatim flag is exactly "the revealed text comes from
-                  the verbatim excerpt" -- false here means the LLM label
-                  paraphrase is on screen and must be marked as such. */}
+              {(() => {
+                const fullText = activeHighlight.verbatimExcerpt?.trim() || activeHighlight.label || '';
+                const words = fullText.split(/\s+/).filter(Boolean);
+                const revealedWords = revealedText ? revealedText.replace(/\.\.\.$/, '').split(/\s+/).filter(Boolean) : [];
+                const revealedCount = Math.max(1, Math.min(words.length, revealedWords.length));
+                const spokenPart = words.slice(0, revealedCount).join(' ');
+                const remainingPart = words.slice(revealedCount).join(' ');
+                return (
+                  <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
+                    <div
+                      key={playingIdx}
+                      className="whitespace-nowrap font-mono text-xs text-slate-200 inline-block"
+                      style={{
+                        animation: `tickerRTL ${Math.max(6, activeDuration)}s linear infinite`,
+                        animationPlayState: isPaused ? 'paused' : 'running',
+                      }}
+                    >
+                      <span className="text-slate-100 font-semibold">{spokenPart}</span>
+                      {remainingPart ? <span className="text-slate-400/80">{` ${remainingPart}`}</span> : null}
+                    </div>
+                  </div>
+                );
+              })()}
               {!usingVerbatim && activeHighlight.label ? (
                 <Tooltip content="No verbatim transcript excerpt is stored for this moment — showing the AI-generated summary instead">
-                  <span className="shrink-0 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-[var(--ink-muted)] border border-dashed border-[var(--line)] px-1">summarized</span>
+                  <span className="shrink-0 inline-flex items-center align-middle text-[9px] font-mono font-semibold uppercase tracking-wide text-slate-400 border border-dashed border-slate-600 px-1">
+                    summarized
+                  </span>
                 </Tooltip>
               ) : null}
-            </>
+            </div>
           ) : nextHighlight ? (
-            <span className="italic text-[var(--ink-muted)]">Up next: {previewWords(nextHighlight.label)}</span>
+            <span className="italic text-[var(--ink-muted)] text-xs truncate">
+              Up next: {previewWords(nextHighlight.label)}
+            </span>
           ) : (
-            <span className="text-[var(--ink-muted)]">{data.highlights.length} keypoints ready to play</span>
+            <span className="text-[var(--ink-muted)] text-xs">
+              {data.highlights.length} keypoints ready to play
+            </span>
           )}
         </div>
 

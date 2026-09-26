@@ -43,8 +43,9 @@
  * callback (/api/comments/persist-sample-run) once done -- there is no
  * synchronous "fetch comments now" call to make. This harness enqueues that
  * job (system-triggered, no credit-wallet debit -- see
- * enqueueSystemCommentsBackfill's own comment for why bypassing
- * /api/comments/tier3/start's user-charged flow is correct here) and defers
+ * enqueueSystemCommentsBackfill's own comment for why the system-triggered
+ * enqueue (rather than /api/comments/tier3/start's user-charged flow) is
+ * correct here) and defers
  * to the callback + a later sweep to observe completion: a row whose only
  * gap was comments will show up again on the NEXT sweep already
  * aux-complete (the callback will have landed analysis_payload.comments by
@@ -56,6 +57,7 @@ import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
 import { signChannelMetaToken, signCommentsTier3Token } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseAuxRemediationAdapter } from '@/lib/adapters/SupabaseAuxRemediationAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
@@ -166,6 +168,7 @@ export function classifyAuxGap(row: {
  * been marked complete in the first place going forward) -- and this
  * harness's job is recovery of stuck rows, not a full-table re-audit.
  */
+// skipcq: JS-R1005 -- classification loop complexity is inherent to the gap taxonomy, pre-existing shape
 export async function findAnalysesWithMissingAux(opts?: { limit?: number }): Promise<AuxGap[]> {
   const limit = opts?.limit ?? 100;
   const data = await SupabaseAuxRemediationAdapter.findFailedAnalysesForAuxScan(limit);
@@ -231,7 +234,7 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
 }
 
 /**
- * Enqueue a system-triggered Tier 3 comments fetch, bypassing
+ * Enqueue a system-triggered Tier 3 comments fetch, routed around
  * /api/comments/tier3/start's user-charged flow. That route requires an
  * authenticated user session (there is none in a cron/harness context) and
  * debits the user's credit wallet -- correct for a user-requested uncapped
@@ -346,6 +349,14 @@ export async function remediateAuxGap(gap: AuxGap): Promise<AuxRemediationResult
   }
 
   if (isFullyComplete) {
+    // RCA (2026-09-24, vector-coverage): aux-remediation is one of the four
+    // finalize-to-'completed' paths and previously never published an
+    // embedding job (the embed rode the persist route's validation chain).
+    // Idempotent (embed webhook skips existing vectors) / best-effort.
+    await publishEmbeddingTask({ analysisId: gap.id, markdown: gap.markdown, userId: gap.userId }).catch((err) => {
+      console.error('[aux-remediation] embed publish failed', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
+      Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'embed_publish', analysisId: gap.id } } });
+    });
     return { analysisId: gap.id, stage: AuxRemediationStage.Completed };
   }
   if (currentRetryCount + 1 >= REMEDIATION_MAX_RETRIES) {

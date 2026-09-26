@@ -185,11 +185,11 @@ export default function WaitlistPage() {
             <p className="eyebrow">{'// visual research for creators'}</p>
             <h1>Watch <span className="strike">60&nbsp;min</span> in 4.</h1>
             <p className="sub">
-              <strong>v-intel</strong> compresses competitor research videos into a visual pass you can actually see —
-              hooks, cuts, on-screen text, the exact frame a claim was made in. Not a text summary. The video, fast.
+              <strong>v-intel</strong> gives you a structured breakdown of a competitor research video —
+              a highlights scrubber that jumps the real player to each key moment, with every claim linked to its timestamp.
             </p>
 
-            <div className="scrubber" role="img" aria-label="Timeline showing a 60 minute video compressed to keyframes covering the final 4 minutes of viewing time">
+            <div className="scrubber" role="img" aria-label="Timeline showing a 60 minute video distilled to key moments covering the final 4 minutes of viewing time">
               <div className="scrubber-label">
                 <span>00:00</span>
                 <span>SOURCE VIDEO — 60:00</span>
@@ -220,8 +220,8 @@ export default function WaitlistPage() {
             <p className="kicker">The problem</p>
             <h2>Every summarizer converts your source video into text. That&apos;s exactly the wrong transformation.</h2>
             <p className="lead">
-              When you&apos;re researching a competitor&apos;s video, you need the hook edit, the cut rhythm, the thumbnail-worthy
-              frame — not a bulleted recap that throws all of it away.
+              When you&apos;re researching a competitor&apos;s video, you need to land on the exact moment a claim
+              was made — not a bulleted recap with no way back to the source.
             </p>
 
             <div className="compare">
@@ -229,19 +229,19 @@ export default function WaitlistPage() {
                 <p className="tag">Text summarizer</p>
                 <h3>Reads like notes</h3>
                 <div className="text-lines"><div className="ln" /><div className="ln" /><div className="ln" /></div>
-                <p>Words only. The edit, the framing, the b-roll — gone.</p>
+                <p>Words only — no way to jump back to the moment in the video.</p>
               </div>
               <div className="compare-card good">
                 <p className="tag">v-intel</p>
-                <h3>Looks like the video</h3>
+                <h3>Jumps to the moment</h3>
                 <div className="frame-strip"><div className="f" /><div className="f" /><div className="f" /><div className="f" /></div>
-                <p>The actual cuts, in order, compressed — you see what they did, not what an AI thinks they said.</p>
+                <p>Timestamped key moments in the real video — you jump straight to what matters, not what an AI thinks they said.</p>
               </div>
             </div>
           </section>
 
           <section className="block">
-            <p className="kicker">Claim → frame verification</p>
+            <p className="kicker">Claim → timestamp verification</p>
             <h2>Never say something on camera you didn&apos;t actually see said.</h2>
             <p className="lead">Every claim is one click from the exact moment it came from. Twelve seconds, not a six-minute re-scrub.</p>
 
@@ -254,7 +254,7 @@ export default function WaitlistPage() {
             <p className="kicker">What ships first</p>
             <h2>Built for the research block, not a demo reel.</h2>
             <ul className="features">
-              <li><span className="num">01</span><h4>Visual auto-scrubber</h4><p>Keypoint-to-keypoint on the real footage. 60 minutes, a few minutes to watch.</p></li>
+              <li><span className="num">01</span><h4>Highlights scrubber</h4><p>Jump key moment to key moment in the real video. 60 minutes, a few minutes to watch.</p></li>
               <li><span className="num">02</span><h4>Grounded chat</h4><p>Ask it anything about the video — every answer cites the exact timestamp it came from.</p></li>
               <li><span className="num">03</span><h4>Research library</h4><p>Every video you&apos;ve analyzed, searchable, so last month&apos;s research pays off again today.</p></li>
             </ul>

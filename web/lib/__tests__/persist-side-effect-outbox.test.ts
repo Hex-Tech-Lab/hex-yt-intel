@@ -55,6 +55,7 @@ vi.mock('@/lib/qstash-client', () => ({
   publishValidationTask: vi.fn().mockResolvedValue(null),
   publishDigestTask: vi.fn().mockResolvedValue(null),
   publishHighlightsTask: vi.fn().mockResolvedValue(null),
+  publishEmbeddingTask: vi.fn().mockResolvedValue(null),
 }));
 
 const cacheMocks = vi.hoisted(() => ({ setAnalysisCache: vi.fn(), generateCacheKey: vi.fn().mockReturnValue('cache-key') }));

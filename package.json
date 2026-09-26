@@ -11,6 +11,7 @@
     "qa-intel:baseline": "tsx scripts/verify-quality-engine.ts --mode full --baseline"
   },
   "devDependencies": {
+    "@upstash/vector": "1.2.3",
     "glob": "^13.0.6",
     "supabase": "^2.109.1",
     "tailwindcss": "4.3.0",

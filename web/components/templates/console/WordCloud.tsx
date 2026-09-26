@@ -8,6 +8,7 @@ interface WordCloudProps {
   graph: KnowledgeGraph;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  isAnalyzing?: boolean;
 }
 
 interface PlacedWord {
@@ -30,7 +31,7 @@ interface PlacedWord {
 }
 
 /** Canvas-based word cloud visualization of knowledge graph entities with collision-free layout. */
-export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
+export function WordCloud({ graph, selectedId, onSelect, isAnalyzing }: WordCloudProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 320, h: 220 });
@@ -488,7 +489,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       ctx.restore();
     });
-  }, [isWordSelected, size, wordsLayout]);
+  }, [isWordSelected, size]);
 
   // react-best-practices self-review finding (2026-08-02): the entrance
   // animation effect below used to list `drawCanvas` directly in its deps.
@@ -542,10 +543,9 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // Staggered pop-in reveal animation & empty pulse loop
   useEffect(() => {
     if (wordsLayout.length === 0) {
-      // Bounded, not indefinite: an analysis that completes with genuinely
-      // zero entities would otherwise pulse "Synthesizing..." forever and
-      // burn an rAF loop forever, since this component has no isAnalyzing/
-      // status prop to distinguish "still working" from "permanently empty".
+      // While actively analyzing (streaming/downloading/parsing), keep the pulse
+      // loop going indefinitely to engage the user during the 1-2m analysis.
+      // Only timeout to "No cloud structure yet" if analysis has ended or is not analyzing.
       let active = true;
       const startedAt = Date.now();
       const EMPTY_PULSE_TIMEOUT_MS = 8000;
@@ -558,7 +558,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       let lastFrameAt = 0;
       const loop = (now: number) => {
         if (!active) return;
-        if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
+        if (!isAnalyzing && Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
           emptyTimedOutRef.current = true;
           setIsEmptyTimedOut(true);
           drawCanvasRef.current();
@@ -621,7 +621,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       active = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [wordsLayoutKey]);
+  }, [wordsLayoutKey, isAnalyzing]); // eslint-disable-line react-hooks/exhaustive-deps -- wordsLayout is read inside but deliberately excluded: wordsLayoutKey changes only when the underlying word data changes, so a layout-identity-only change must not restart the entrance animation (react-best-practices self-review, 2026-08-02)
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {

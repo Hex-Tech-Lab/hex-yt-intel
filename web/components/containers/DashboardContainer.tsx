@@ -122,17 +122,24 @@ const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 
 // nucleusKnowledgeGraph (KnowledgeGraphV2, the live-streaming source) and
 // `graph` (KnowledgeGraph, the Pro-only fetched/merged source) aren't
-// structurally compatible -- KGNodeV2 has no `inPersona` field, which
-// MergedGraphNode requires. Neither WordCloud nor copyPanelContent's
-// word-cloud branch ever reads `.inPersona`, so defaulting it false here is
-// a real, typed adapter rather than an `as any` cast past the mismatch
-// (Codacy ErrorProne review, PR #302).
+// structurally compatible -- KGNodeV2 has no `inPersona` field and, since
+// 2026-09-25, an optional `content` (the prompt's 8.1 node spec never asked
+// for one), both of which MergedGraphNode requires. Neither WordCloud nor
+// copyPanelContent's word-cloud branch ever reads `.inPersona`, and the
+// graph renderer already coalesces absent content (`n.content || ''` in
+// useKnowledgeGraph.ts), so defaulting them here is a real, typed adapter
+// rather than an `as any` cast past the mismatch (Codacy ErrorProne review,
+// PR #302).
 // skipcq: JS-0067
 function toDisplayGraph(
   source: KnowledgeGraph | KnowledgeGraphV2,
 ): KnowledgeGraph {
   return {
-    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+    nodes: source.nodes.map((node) => ({
+      inPersona: false,
+      content: "",
+      ...node,
+    })),
     edges: source.edges,
     rootId: source.rootId,
   };
@@ -192,13 +199,22 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [pendingNav, clearPendingNav]);
   const setUserRole = useAnalysisStore((s) => s.setUserRole);
   const status = useAnalysisStore((s) => s.status);
+  const setStatus = useAnalysisStore((s) => s.setStatus);
   const analysisHistory = useAnalysisStore((s) => s.analysisHistory);
   const analysis = useAnalysisStore((s) => s.analysis);
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const error = useAnalysisStore((s) => s.error);
+  const setError = useAnalysisStore((s) => s.setError);
   const terminalLines = useAnalysisStore((s) => s.terminalLines);
   const TOTAL_DIMENSIONS = useTotalDimensions();
   const { dimensionConfigs } = useSynthesisConfig();
+
+  const handleDismissError = useCallback(() => {
+    setError(null);
+    if (status === "error") {
+      setStatus("idle");
+    }
+  }, [setError, setStatus, status]);
 
   const showLog = status !== "idle" && terminalLines.length > 0;
 
@@ -541,7 +557,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) => void;
     }[] = [];
 
-    if (displayGraph.nodes.length > 0) {
+    const isAnalyzing =
+      isLiveStreaming ||
+      status === "analyzing" ||
+      status === "downloading" ||
+      status === "parsing";
+
+    if (displayGraph.nodes.length > 0 || isAnalyzing) {
       items.push({
         id: "word-cloud",
         title: "Word Cloud",
@@ -551,6 +573,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             graph={displayGraph}
             selectedId={selectedNodeId}
             onSelect={handleSelectNode}
+            isAnalyzing={isAnalyzing}
           />
         ),
         onAction: (action) => {
@@ -632,6 +655,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     handlePanelExport,
     handleExpandPanel,
     handleSelectNode,
+    isLiveStreaming,
+    status,
   ]);
   // rightPanelItems can transition between populated and empty at runtime in
   // BOTH modes now (WordCloud appears/disappears with displayGraph; Pro's
@@ -1028,25 +1053,42 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           <div key={activeNav}>
             {activeNav === "console" ? (
               <div className="flex flex-col gap-1.5 pb-2">
-                <AnalysisHero
-                  url={mounted ? url : ""}
-                  status={
-                    status === "analyzing" || status === "downloading"
-                      ? "streaming"
-                      : status === "complete"
-                        ? "done"
-                        : status === "error"
-                          ? "error"
-                          : "idle"
-                  }
-                  onUrlChange={setUrl}
-                  onAnalyze={handleAnalyze}
-                  onReanalyze={handleReanalyze}
-                  onCancel={stopAnalysis}
-                  error={error?.message}
-                  quota={quotaLabel}
-                  isRepeat={status === "complete" || hasExistingAnalysis}
-                />
+                {(() => {
+                  const currentInputVideoId = url ? extractVideoId(url) : null;
+                  const isCurrentVideoLoaded = Boolean(
+                    currentInputVideoId &&
+                    status === "complete" &&
+                    (nucleusAnalysis?.videoId === currentInputVideoId || analysis?.videoId === currentInputVideoId)
+                  );
+                  const existsInHistory = Boolean(
+                    currentInputVideoId &&
+                    analysisHistory.some((item) => item.videoId === currentInputVideoId && item.status === "completed")
+                  );
+                  const isRepeat = isCurrentVideoLoaded || existsInHistory || hasExistingAnalysis;
+
+                  return (
+                    <AnalysisHero
+                      url={mounted ? url : ""}
+                      status={
+                        status === "analyzing" || status === "downloading"
+                          ? "streaming"
+                          : status === "complete"
+                            ? "done"
+                            : status === "error"
+                              ? "error"
+                              : "idle"
+                      }
+                      onUrlChange={setUrl}
+                      onAnalyze={handleAnalyze}
+                      onReanalyze={handleReanalyze}
+                      onCancel={stopAnalysis}
+                      onDismissError={handleDismissError}
+                      error={error?.message}
+                      quota={quotaLabel}
+                      isRepeat={isRepeat}
+                    />
+                  );
+                })()}
 
                 {effectiveViewMode === "simple" ? (
                   <SimpleDashboardView

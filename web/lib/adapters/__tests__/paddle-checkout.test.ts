@@ -69,7 +69,7 @@ describe('PaddleBillingAdapter & Checkout Flow', () => {
 
     await expect(
       adapter.createCheckoutSession('user-123', 'user@example.com', 'free' as any)
-    ).rejects.toThrow('Cannot create checkout session for free tier');
+    ).rejects.toThrow('Checkout is not available for the free tier');
   });
 
   it('Test 3: Valid founder tier creates checkout URL with verified passthrough userId', async () => {
