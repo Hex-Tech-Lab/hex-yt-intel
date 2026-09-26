@@ -1,13 +1,16 @@
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 
+import type { UserTier } from '@/lib/types/billing';
+
 /**
  * Settings-Registry-based multi-provider price-ID structure (2026-08-18).
  *
- * Real MoR shortlist for hex-yt-intel: Paddle (primary; sandbox-only today --
- * the account is not yet KYC-verified, not a caution/hold-back decision, just
- * what's actually available to transact against right now), Dodo Payments
- * (confirmed fallback, no API integration built yet), Creem (third option,
- * weaker trust signal but real, no API integration built yet).
+ * Real MoR shortlist for hex-yt-intel (updated 2026-09-24): Paddle
+ * (primary — KYC still pending, the account is not yet verified to
+ * transact), then the fallback cascade Lemon Squeezy → Payhip →
+ * FastSpring (no API integrations built yet for any of them). Dodo
+ * Payments is OUT: it refused Egypt-resident founders (confirmed by their
+ * support, 2026-09-14). Creem was not pursued.
  *
  * Shape: tier -> interval -> provider -> real price ID, or null if that
  * combo has no real price ID yet. Mirrors the cascade registry pattern
@@ -229,4 +232,96 @@ export async function resolveRegionRouting(): Promise<RegionRoutingRegistry> {
 export async function resolveProviderForRegion(regionOrCountryCode: string): Promise<PriceProviderId> {
   const routing = await resolveRegionRouting();
   return routing[regionOrCountryCode.toUpperCase()] ?? routing.default;
+}
+
+/**
+ * Single shared price-ID -> UserTier mapping (STEP 1 tier-vocabulary
+ * unification, 2026-09-19). THE one source every webhook path must use to
+ * decide which tier a purchase grants -- no webhook may hardcode 'pro' or
+ * re-derive a tier from custom_data plan strings.
+ *
+ * Resolution walks the SAME registry `resolvePriceIds()` reads (live
+ * `billing.priceIds` setting, falling back to PRICE_IDS_FALLBACK) plus the
+ * PADDLE_PRO_PRICE_ID env override for pro/monthly, so a price ID added via
+ * a registry edit is honoured here with no code change.
+ *
+ * Founder price IDs (`founder`, `founder_tier_a`, `founder_tier_b`) map to
+ * 'pro' per the founder pricing spec ("founder pricing is a price, not a
+ * tier -- same pro feature set, discounted price"). NEEDS USER DECISION if
+ * founders should surface as a distinct tier in users.tier instead.
+ *
+ * Returns null for an UNRECOGNISED price ID -- callers MUST fail closed
+ * (never change the user's tier), never default to 'pro' (the old
+ * grant-'pro'-for-anything behaviour this function replaces).
+ */
+export async function resolveUserTierForPriceId(priceId: string | null | undefined): Promise<UserTier | null> {
+  if (!priceId) return null;
+
+  // Every env override createCheckoutSession can charge must be recognised
+  // here, or a paid checkout resolves to null at the webhook and fails
+  // closed (Cubic/CodeRabbit finding, 2026-09-24: PADDLE_PRO_ANNUAL_PRICE_ID
+  // and PADDLE_FOUNDER_PRICE_ID were chargeable at checkout but rejected
+  // here, so yearly/founder buyers stayed on their previous tier while
+  // Paddle retried the event). Mirrors resolvePriceId()'s env precedence.
+  const envOverrides: Array<[string | undefined, UserTier]> = [
+    [process.env.PADDLE_PRO_PRICE_ID, 'pro'],
+    [process.env.PADDLE_PRO_ANNUAL_PRICE_ID, 'pro'],
+    [process.env.PADDLE_FOUNDER_PRICE_ID, 'pro'],
+  ];
+  for (const [envId, tier] of envOverrides) {
+    if (envId && priceId === envId) return tier;
+  }
+
+  const registry = await resolvePriceIds();
+  const tiers: PriceTier[] = ['light', 'pro', 'max', 'founder', 'founder_tier_a', 'founder_tier_b'];
+  for (const tier of tiers) {
+    const intervals = registry[tier];
+    if (!intervals) continue;
+    for (const intervalMap of Object.values(intervals)) {
+      if (!intervalMap) continue;
+      for (const id of Object.values(intervalMap)) {
+        if (id && id === priceId) {
+          switch (tier) {
+            case 'light':
+              return 'light';
+            case 'pro':
+              return 'pro';
+            case 'max':
+              return 'max';
+            case 'founder':
+            case 'founder_tier_a':
+            case 'founder_tier_b':
+              return 'pro';
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Map a plan-tier STRING (checkout `plan`, Paddle `custom_data.planTier`,
+ * price `custom_data.plan_tier`) onto the canonical UserTier vocabulary.
+ * Returns null for anything unrecognised -- callers fail closed.
+ * Founder plan strings map to 'pro' (same rationale as
+ * resolveUserTierForPriceId; NEEDS USER DECISION, tracked in the report).
+ */
+export function mapPlanStringToUserTier(plan: string | null | undefined): UserTier | null {
+  switch (plan) {
+    case 'free':
+      return 'free';
+    case 'light':
+      return 'light';
+    case 'pro':
+      return 'pro';
+    case 'max':
+      return 'max';
+    case 'founder':
+    case 'founder_tier_a':
+    case 'founder_tier_b':
+      return 'pro';
+    default:
+      return null;
+  }
 }

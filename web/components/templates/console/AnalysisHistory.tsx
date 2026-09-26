@@ -35,6 +35,9 @@ const STATUS_STYLE: Record<HistoryOverviewItem['status'], { label: string; cls: 
   complete: { label: 'Complete', cls: 'bg-[var(--ok)]/10 text-[var(--ok)]' },
   partial: { label: 'Partial', cls: 'bg-[var(--accent)]/12 text-[var(--accent-ink)]' },
   processing: { label: 'Processing', cls: 'bg-[var(--accent)]/10 text-[var(--accent)]' },
+  // Background recovery (reaper sweep / remediation requeue) is still pending
+  // on this row — distinct from both active processing and a settled failure.
+  stalled: { label: 'Stalled', cls: 'bg-[var(--warn)]/10 text-[var(--warn)]' },
   failed: { label: 'Failed', cls: 'bg-[var(--ink-muted)]/10 text-[var(--ink-muted)]' },
 };
 
@@ -572,6 +575,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           <option value="complete">Complete</option>
           <option value="partial">Partial</option>
           <option value="processing">Processing</option>
+          <option value="stalled">Stalled</option>
           <option value="failed">Failed</option>
         </select>
       </div>
@@ -692,6 +696,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
                           <Tooltip content="Partial analysis: incomplete data from timeout">
+                            <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                          </Tooltip>
+                        )}
+                        {item.status === 'stalled' && (
+                          <Tooltip content="Background recovery (reaper/remediation) is still working on this run — click to open it and retry the missing dimensions">
                             <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
                           </Tooltip>
                         )}

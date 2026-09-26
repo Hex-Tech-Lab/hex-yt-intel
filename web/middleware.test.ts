@@ -37,4 +37,32 @@ describe('middleware public-route allowlist', () => {
     const body = await res.json();
     expect(body).toEqual({ error: 'Unauthorized' });
   });
+
+  // Live-caught 2026-09-23 (CF Worker logs: "Chapter persist returned non-2xx"
+  // on every analyze stream, video 4mTLpuQpB80): the worker's cookie-less S2S
+  // POST to /api/videos/[videoId]/chapters 401'd at this middleware gate
+  // ({"error":"Unauthorized"}) because the fail-closed allowlist never listed
+  // the route -- the route's own HMAC gate (verifyContentSig, purpose
+  // 'chapters') never ran. Same bug class as /api/waitlist (2026-08-14) and
+  // /api/test-auth (2026-08-20). Shipped broken 2026-08-06 (PR #206).
+  it('exempts the worker S2S POST to /api/videos/[videoId]/chapters from the session gate', async () => {
+    const req = new NextRequest('https://getvintel.com/api/videos/4mTLpuQpB80/chapters', { method: 'POST' });
+    const res = await middleware(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-next')).toBe('1');
+  });
+
+  it('does NOT exempt a non-videoId child path that merely ends in /chapters', async () => {
+    // Traversal-ish shape: the segment-boundary regex must not let
+    // /api/videos/../../x/chapters or multi-segment ids through.
+    const req = new NextRequest('https://getvintel.com/api/videos/a/b/chapters', { method: 'POST' });
+    const res = await middleware(req);
+    expect(res.status).toBe(401);
+  });
+
+  it('does NOT exempt the sibling GET on /api/videos/[videoId]/chapters (browser-session read)', async () => {
+    const req = new NextRequest('https://getvintel.com/api/videos/4mTLpuQpB80/chapters', { method: 'GET' });
+    const res = await middleware(req);
+    expect(res.status).toBe(401);
+  });
 });

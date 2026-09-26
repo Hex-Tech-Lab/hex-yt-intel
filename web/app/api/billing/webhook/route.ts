@@ -1,61 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SupabasePersistenceAdapter } from '@/lib/adapters';
-import { paddle } from '@/lib/paddle';
+import { ProcessPaddleWebhookUseCase } from '@/lib/usecases/ProcessPaddleWebhookUseCase';
+import { PaddleBillingAdapter } from '@/lib/adapters/PaddleBillingAdapter';
 
 /**
- * PADDLE WEBHOOK HANDLER
+ * LEGACY PADDLE WEBHOOK URL — THIN DELEGATE (PR #325 round 4)
  * ---------------------
- * Handles subscription lifecycle events.
+ * It is UNKNOWN which webhook URL is actually registered in the Paddle
+ * dashboard, so this legacy URL is RETAINED but no longer carries its own
+ * handler logic: it runs the exact same signature verification +
+ * ProcessPaddleWebhookUseCase path (including the per-event-id Redis
+ * idempotency lock) as the canonical /api/webhooks/paddle route — one
+ * implementation, two URLs.
+ *
+ * ACTION REQUIRED: confirm the registered webhook URL in the Paddle
+ * dashboard. Once confirmed, remove whichever of the two routes is NOT
+ * registered there.
  */
-
 export async function POST(request: NextRequest) {
-  const body = await request.text();
-  const signature = request.headers.get('paddle-signature') || '';
-
   try {
-    let event;
+    const rawBody = await request.text();
+    const signatureHeader = request.headers.get('paddle-signature');
     const secret = process.env.PADDLE_WEBHOOK_SECRET;
 
-    if (!secret && process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
-      if (process.env.DEV_ALLOW_UNVERIFIED_WEBHOOKS !== 'true') {
-        throw new Error('PADDLE_WEBHOOK_SECRET is missing. Set DEV_ALLOW_UNVERIFIED_WEBHOOKS=true to bypass verification in development.');
-      }
-      console.warn('[Paddle Webhook] WARNING: Using unverified webhook payload fallback in development mode.');
-      event = JSON.parse(body);
-    } else {
-      if (!secret) {
-        throw new Error('PADDLE_WEBHOOK_SECRET is required');
-      }
-      event = await paddle.webhooks.unmarshal(body, secret, signature);
-    }
+    const adapter = new PaddleBillingAdapter();
+    const useCase = new ProcessPaddleWebhookUseCase(adapter);
 
-    const persistenceAdapter = new SupabasePersistenceAdapter();
-
-    switch (event.event_type) {
-      case 'subscription.created':
-      case 'subscription.updated': {
-        const userId = event.data.custom_data?.userId;
-        if (userId) {
-          await persistenceAdapter.updateUserTier({ userId, tier: 'pro' });
-        }
-        break;
-      }
-      
-      case 'subscription.canceled': {
-        const cancelUserId = event.data.custom_data?.userId;
-        if (cancelUserId) {
-          await persistenceAdapter.updateUserTier({ userId: cancelUserId, tier: 'free' });
-        }
-        break;
-      }
-
-      default:
-        break;
-    }
-
-    return NextResponse.json({ processed: true });
-  } catch (error) {
-    console.error('[Paddle Webhook] Error:', error);
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 400 });
+    const result = await useCase.execute(rawBody, signatureHeader, secret);
+    return NextResponse.json({ message: result.message }, { status: result.status });
+  } catch (routeError: unknown) {
+    console.error('[/api/billing/webhook] Error:', routeError);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

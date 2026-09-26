@@ -54,8 +54,8 @@ export interface HistoryOverviewItem {
   presentDimensions: number[];
   /** UCIS dimension numbers absent from the latest attempt — offer to re-analyze these. */
   missingDimensions: number[];
-  /** Honest rollup: complete (validated) | partial (usable) | processing | failed. Reflects the latest attempt's outcome, not the best-ever attempt. */
-  status: 'complete' | 'partial' | 'processing' | 'failed';
+  /** Honest rollup: complete (validated) | partial (usable) | processing (in flight, <15 min) | stalled (background recovery pending — reaper/requeue) | failed. Reflects the latest attempt's outcome, not the best-ever attempt. Added by overview-function v14. */
+  status: 'complete' | 'partial' | 'processing' | 'stalled' | 'failed';
   /** Aux-element status row (Wave A4, mirrored from the console screen) for the latest analysis attempt. */
   hasDigest: boolean;
   hasDescription: boolean;
@@ -219,6 +219,8 @@ export interface AnalysisPersistencePort {
     // ADR 020 Phase 3: real OpenRouter usage/cost for this chunk's LLM call.
     tokensUsed?: number;
     costUsd?: number;
+    // Prompt-cache reads (2026-09-25): usage.prompt_tokens_details.cached_tokens.
+    cachedTokens?: number;
     // Exact traceability (2026-08-02): OpenRouter's own generation id for
     // this exact chunk's call.
     generationId?: string;

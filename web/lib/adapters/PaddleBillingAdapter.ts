@@ -6,8 +6,10 @@ import { z } from 'zod';
 import { BillingPort } from '@/lib/ports/BillingPort';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { paddle } from '@/lib/paddle';
+import { resolvePriceId, resolveUserTierForPriceId } from '@/lib/config/pricing';
+import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
-import type { PlanTier, WebhookPayload } from '@/lib/types/billing';
+import type { PlanTier, UserTier, WebhookPayload } from '@/lib/types/billing';
 
 export const WebhookCustomDataSchema = z.preprocess(
   (val) => {
@@ -117,12 +119,37 @@ export class PaddleBillingAdapter implements BillingPort {
         return { success: false, error: 'Missing user_id in custom_data' };
       }
 
-      // Authoritative plan tier from subscription custom data (or fallback to item price custom data)
-      let planTier = data.custom_data?.planTier;
-      if (!planTier && data.items && data.items.length > 0) {
-        planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
+      // Tier from the shared price-ID -> UserTier mapping (single source,
+      // 2026-09-19; custom_data fallback removed 2026-09-24 round 2 — an
+      // unrecognised price must never re-derive a tier from custom_data
+      // plan strings: forged/unmapped price carrying planTier "max" would
+      // otherwise grant Max). Fails CLOSED — null ⇒ tier unchanged.
+      // Only statuses that are actually being billed grant a paid tier
+      // (CodeRabbit review, 2026-09-24): `paused`/`past_due` generate no
+      // billing while a subscription is paused, so they must not keep paid
+      // quotas alive. No explicit past_due grace policy exists yet -- if
+      // one is implemented, add 'past_due' here and document it.
+      const ENTITLED_STATUSES: ReadonlySet<string> = new Set(['active', 'trialing']);
+      const isCanceled = !ENTITLED_STATUSES.has(data.status);
+      const priceId: string | null | undefined = data.items?.[0]?.price?.id;
+      let effectiveUserTier: UserTier;
+      if (isCanceled) {
+        effectiveUserTier = 'free';
+      } else {
+        const resolvedTier: UserTier | null = await resolveUserTierForPriceId(priceId);
+        if (!resolvedTier) {
+          console.error('[PaddleBillingAdapter] Unrecognised price ID, failing closed (tier unchanged)', { priceId: priceId ?? null });
+          Sentry.captureMessage('PaddleBillingAdapter: unrecognised price ID, tier unchanged', { level: 'error', extra: { priceId: priceId ?? null, event_type: payload?.event_type } });
+          return { success: false, error: 'Unrecognised price ID, tier not changed' };
+        }
+        effectiveUserTier = resolvedTier;
       }
-      if (!planTier) planTier = 'free';
+      // user_subscriptions.plan_tier is DB-CHECK-constrained to
+      // ('free','founder','pro') -- light/max cannot be stored until that
+      // constraint is migrated (STEP 2's scope). De facto entitlements treat
+      // every paid tier as pro today, so clamp ONLY this column;
+      // users.tier carries the true tier below.
+      const planTier: PlanTier = effectiveUserTier === 'free' ? 'free' : 'pro';
 
       const cancelAtPeriodEnd = data.scheduled_change?.action === 'cancel' || false;
       const eventOccurredAt = payload.occurred_at || new Date().toISOString();
@@ -165,6 +192,46 @@ export class PaddleBillingAdapter implements BillingPort {
       if (error) {
         Sentry.captureException(new Error(error.message), { tags: { operation: 'paddle-upsert' } });
         return { success: false, error: error.message };
+      }
+
+      // users.tier is the canonical tier store (quota gate, rate limits,
+      // usage summary all read it). Write the TRUE mapped tier, not the
+      // DB-CHECK-clamped subscriptions value.
+      // Downgrade protection (Cubic review, 2026-09-24): only drop the user
+      // to free when no OTHER active/trialing subscription remains --
+      // a user with two subscriptions canceling one must not lose their
+      // paid tier from the still-active one.
+      let tierToWrite: UserTier | null = effectiveUserTier;
+      if (effectiveUserTier === 'free') {
+        try {
+          const { data: otherActive, error: otherActiveError } = await supabase
+            .from('user_subscriptions')
+            .select('paddle_subscription_id')
+            .eq('user_id', userId)
+            .neq('paddle_subscription_id', data.id)
+            .in('status', ['active', 'trialing']);
+          if (otherActiveError) {
+            console.error('[PaddleBillingAdapter] Database error checking other active subscriptions:', otherActiveError);
+            Sentry.captureException(new Error(otherActiveError.message), { tags: { operation: 'paddle-check-other-active' } });
+            return { success: false, error: otherActiveError.message };
+          }
+          if ((otherActive ?? []).length > 0) {
+            tierToWrite = null; // leave users.tier untouched
+          }
+        } catch (otherSubError: unknown) {
+          const otherSubMsg = otherSubError instanceof Error ? otherSubError.message : String(otherSubError);
+          Sentry.captureException(otherSubError instanceof Error ? otherSubError : new Error(otherSubMsg), { tags: { operation: 'paddle-check-other-active' } });
+          return { success: false, error: otherSubMsg };
+        }
+      }
+      if (tierToWrite !== null) {
+        try {
+          await SupabaseBillingAdapter.updateUserTier({ userId, tier: tierToWrite });
+        } catch (tierUpdateError: unknown) {
+          const tierErrorMsg = tierUpdateError instanceof Error ? tierUpdateError.message : String(tierUpdateError);
+          Sentry.captureException(tierUpdateError instanceof Error ? tierUpdateError : new Error(tierErrorMsg), { tags: { operation: 'paddle-update-user-tier' } });
+          return { success: false, error: `Failed to update users.tier: ${tierErrorMsg}` };
+        }
       }
 
       return { success: true };
@@ -210,9 +277,11 @@ export class PaddleBillingAdapter implements BillingPort {
       }
 
       // Read authoritatively from transaction custom data
-      let planTier = data.custom_data?.planTier;
+      let planTier: string | undefined = data.custom_data?.planTier;
       if (!planTier && data.items && data.items.length > 0) {
-        planTier = data.items[0]?.price?.custom_data?.plan_tier || 'free';
+        // Fail closed (qa-intel R4, 2026-09-24): no `|| 'free'` fallback —
+        // an undefined plan tier simply never reaches the founder gate.
+        planTier = data.items[0]?.price?.custom_data?.plan_tier;
       }
       
       // Strictly require founder tier for lifetime access provisioning.
@@ -291,14 +360,20 @@ export class PaddleBillingAdapter implements BillingPort {
   async createCheckoutSession(
     userId: string,
     email: string,
-    planTier: PlanTier,
+    planTier: 'light' | 'pro' | 'max' | 'founder',
     interval: 'once' | 'month' | 'year' = 'month'
   ): Promise<{ checkoutUrl: string }> {
-    if (planTier === 'free') {
-      throw new Error('Cannot create checkout session for free tier');
-    }
-    if (planTier !== 'founder' && planTier !== 'pro') {
-      throw new Error(`Invalid plan tier: ${String(planTier)}`);
+    // Runtime guard (the type narrows callers, but the port boundary accepts
+    // broader plan strings -- fail closed on anything unrecognised).
+    const VALID_CHECKOUT_PLANS: ReadonlySet<string> = new Set(['light', 'pro', 'max', 'founder']);
+    if (!VALID_CHECKOUT_PLANS.has(planTier)) {
+      // 'free' is a VALID UserTier, just not purchasable -- say so instead
+      // of reporting it as invalid (Cubic review, 2026-09-24).
+      // planTier is typed to PaidPlanTier here (never 'free' at compile
+      // time), but the port boundary accepts broader strings at runtime --
+      // distinguish "valid UserTier, not purchasable" from "junk".
+      const planStr = String(planTier);
+      throw new Error(planStr === 'free' ? 'Checkout is not available for the free tier' : `Invalid plan tier: ${planStr}`);
     }
 
     let priceId = '';
@@ -309,12 +384,31 @@ export class PaddleBillingAdapter implements BillingPort {
         priceId = process.env.PADDLE_PRO_PRICE_ID || '';
       }
       if (!priceId) {
+        priceId = (await resolvePriceId('pro', interval, 'paddle')) || '';
+      }
+      if (!priceId) {
         throw new Error('Paddle Pro price ID is not configured (PADDLE_PRO_PRICE_ID missing)');
       }
     } else if (planTier === 'founder') {
       priceId = process.env.PADDLE_FOUNDER_PRICE_ID || '';
       if (!priceId) {
+        priceId = (await resolvePriceId('founder', 'once', 'paddle')) || '';
+      }
+      if (!priceId) {
         throw new Error('Paddle Founder price ID is not configured (PADDLE_FOUNDER_PRICE_ID missing)');
+      }
+    } else {
+      // Light / Max resolve from the billing.priceIds registry (fail closed
+      // on a missing combo -- never substitute another tier's price).
+      // 'once' is never mapped to 'month' (CodeRabbit review, 2026-09-24):
+      // a caller bypassing CheckoutSchema that requested light/once must
+      // fail closed, not silently become a recurring monthly subscription.
+      if (interval === 'once') {
+        throw new Error(`Paddle ${planTier} does not support a one-time interval`);
+      }
+      priceId = (await resolvePriceId(planTier, interval, 'paddle')) || '';
+      if (!priceId) {
+        throw new Error(`Paddle ${planTier} price ID is not configured for interval ${interval}`);
       }
     }
 

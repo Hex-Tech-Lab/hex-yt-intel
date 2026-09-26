@@ -49,6 +49,14 @@ export class QualityEngine {
             // specifically opt in to auditing the quality-engine's own files.
             if (isSelfFile && !rule.allowSelfAnalysis) continue;
 
+            // Language gate (Wave Q4, 2026-09-24): rules apply to the file
+            // families they declare. Omitted languages defaults to ["ts"] —
+            // preserves the pre-SQL behavior of every existing rule and keeps
+            // text heuristics from false-firing on SQL migrations.
+            const fileLanguage = file.endsWith(".sql") ? "sql" : "ts";
+            const ruleLanguages = rule.languages ?? (["ts"] as const);
+            if (!ruleLanguages.includes(fileLanguage)) continue;
+
             try {
               const scope = rule.scope ?? this.config.defaultScope ?? "file";
 
@@ -59,6 +67,7 @@ export class QualityEngine {
                 ast,
                 graph: scope === "file" ? undefined : graph,
                 allFiles: existing,
+                scanMode: this.config.mode,
               });
 
               findings.push(...ruleFindings);

@@ -9,6 +9,10 @@ import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supab
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 import { Footer } from '@/components/Footer';
 
+import { normalizeUserTier } from '@/lib/types/billing';
+import { MONTHLY_QUOTAS } from '@/lib/adapters/PostgresBillingAdapter';
+import type { UserTier } from '@/lib/types/billing';
+
 async function getBillingData(userId: string) {
   const supabase = getSupabaseServiceClient();
 
@@ -57,14 +61,17 @@ async function getBillingData(userId: string) {
     }
   }
 
-  const tier = userData.tier as 'free' | 'pro' | 'enterprise';
-  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
+  const tier: UserTier = normalizeUserTier(userData.tier);
+  // No Free fallback: every UserTier now has a STRIPE_PRICING entry
+  // (CodeRabbit review, 2026-09-24) -- analysesLimit reads the shared
+  // MONTHLY_QUOTAS map so display and the quota gate can't drift.
+  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING];
 
   return {
     user: userData,
     tier,
     analysesUsed: userData.analyses_used || 0,
-    analysesLimit: tierConfig.analysesPerMonth,
+    analysesLimit: tierConfig.analysesPerMonth ?? MONTHLY_QUOTAS[tier],
     usageStats,
     invoices,
   };

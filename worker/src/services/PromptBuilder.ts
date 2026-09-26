@@ -27,6 +27,25 @@ export class PromptBuilder implements PromptBuilderPort {
   constructor(private readonly promptConfig?: PromptConfigPort) {}
 
   async build(context: EngineContext): Promise<string> {
+    const { sharedPrefix, segmentInstruction } = await this.buildSegmented(context);
+    return sharedPrefix + segmentInstruction;
+  }
+
+  /**
+   * Split the prompt into its cacheable shared prefix and the
+   * bundle-specific segment instruction (prompt caching, 2026-09-25).
+   * Contract: `sharedPrefix + segmentInstruction === build(context)`
+   * byte-for-byte, and `sharedPrefix` is byte-identical across every
+   * bundle of the same video (basePrompt depends only on
+   * metadata/transcript/persona/timezone/duration -- never on
+   * `context.dimensions` -- because skipAllDimensionsInstruction strips
+   * the only dimension-dependent base-prompt section). That identity is
+   * what makes the Anthropic `cache_control` breakpoint on sharedPrefix
+   * hit across the 5 bundle calls. segmentInstruction carries the
+   * `\n\n---\n` separator so concatenation stays byte-identical with the
+   * pre-split build() output.
+   */
+  async buildSegmented(context: EngineContext): Promise<{ sharedPrefix: string; segmentInstruction: string }> {
     const validPersona = isValidPersona(context.persona) ? (context.persona as PersonaId) : 'creator';
 
     const promptOverride = (await this.promptConfig?.resolvePromptTemplate()) ?? UCIS_V5_3_SYSTEM;
@@ -60,7 +79,7 @@ export class PromptBuilder implements PromptBuilderPort {
           received: context.dimensions,
           filtered: dims
         });
-        return basePrompt;
+        return { sharedPrefix: basePrompt, segmentInstruction: '' };
       }
       const allExtraFields = new Set<string>();
       const extraInstrParts: string[] = [];
@@ -97,7 +116,9 @@ export class PromptBuilder implements PromptBuilderPort {
 
       const fallbackInstructions = `If insufficient data exists for any dimension, invoke the Insufficient Data Protocol (section 0.6) and provide a brief explanation in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`;
 
-      return `${basePrompt}
+      return {
+        sharedPrefix: basePrompt,
+        segmentInstruction: `
 
 ---
 CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (${label}):
@@ -107,9 +128,10 @@ ${dimLabels}
 Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}
 Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
 ${fallbackInstructions}
-Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
+Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`,
+      };
     }
 
-    return basePrompt;
+    return { sharedPrefix: basePrompt, segmentInstruction: '' };
   }
 }

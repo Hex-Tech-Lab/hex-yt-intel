@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Switch, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
@@ -22,6 +22,24 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   const [openStates, setOpenStates] = useState<Record<string, boolean>>(
     Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
+
+  useEffect(() => {
+    setOpenStates((prev) => {
+      let changed = false;
+      const next: Record<string, boolean> = {};
+      // Add defaults for newly appearing items...
+      for (const item of items) {
+        next[item.id] = prev[item.id] ?? (item.defaultOpen || false);
+        if (item.id in prev) changed = changed || next[item.id] !== prev[item.id];
+        else changed = true;
+      }
+      // ...and prune entries whose items left, so removed ids don't leak.
+      for (const key of Object.keys(prev)) {
+        if (!(key in next)) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
 
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
   const entityTimeSeekEnabled = useVideoStore((s) => s.entityTimeSeekEnabled);

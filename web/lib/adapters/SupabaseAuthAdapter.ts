@@ -1,4 +1,5 @@
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { normalizeUserTier } from '@/lib/types/billing';
 import type { AuthPort, AuthIdentity } from '@/lib/ports';
 
 /**
@@ -21,7 +22,7 @@ export class SupabaseAuthAdapter implements AuthPort {
       .eq('id', user.id)
       .maybeSingle();
 
-    const tier = error || !data ? 'free' : (data.tier as any) || 'free';
+    const tier = error || !data ? 'free' : normalizeUserTier(data.tier);
     return { userId: user.id, email: user.email, tier };
   }
 }

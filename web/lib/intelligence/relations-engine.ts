@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { jsonrepair } from 'jsonrepair';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { resolveStanceCascade } from '@/lib/config/cascade';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
@@ -87,14 +88,14 @@ async function* callStanceModelStream(
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://getvintel.com',
-        'X-Title': 'hex-yt-intel / stance-relations',
+        'X-Title': 'vIntel - Stance Relations Engine',
       },
       body: JSON.stringify({
         model: translateModelId(model),
         temperature: 0.3,
-        max_tokens: 700,
+        max_tokens: 1500,
         stream: true,
-        reasoning: { effort: 'low' },
+        reasoning: { effort: 'minimal' },
         messages: [{ role: 'user', content: prompt }],
         provider: {
           sort: 'latency',
@@ -186,7 +187,7 @@ export async function* computeStanceRelationsStream(
   apiKey: string,
   handshakeSignal?: AbortSignal,
   userId?: string
-): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
+): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string } | { type: 'exhausted' }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
   if (usable.length < 2 || !apiKey) return;
 
@@ -228,17 +229,38 @@ export async function* computeStanceRelationsStream(
     }
 
     const json = extractJson(fullText);
-    if (!json) {
+    let parsed: unknown = null;
+    if (json) {
+      try {
+        parsed = JSON.parse(json);
+      } catch (_parseErr) {
+        // Bracket-aware repair (PR #322 round-2 P2): the old recovery blindly
+        // appended ']}' after the last '}', which could accept a truncated
+        // prefix as valid and persist it permanently. jsonrepair only closes
+        // genuinely unbalanced structure; the result is still fully
+        // schema-validated below, so a repair that produced garbage falls
+        // through to the next cascade model instead of persisting garbage.
+        try {
+          parsed = JSON.parse(jsonrepair(json));
+          console.warn(`[relations/engine] Model ${item.model} recovered via jsonrepair trailing-structure repair`);
+        } catch (repairErr) {
+          console.warn(`[relations/engine] Model ${item.model} jsonrepair failed, trying next cascade model:`, repairErr instanceof Error ? repairErr.message : String(repairErr));
+        }
+      }
+    } else {
       console.warn(`[relations/engine] Model ${item.model} returned no valid JSON; trying next cascade model`);
       continue;
     }
 
+    if (!parsed) {
+      continue;
+    }
+
     try {
-      const parsed = JSON.parse(json);
       const result = LLMResponseSchema.safeParse(parsed);
       if (!result.success) {
         console.warn(`[relations/engine] Schema validation dropped entity`, result.error.issues);
-        Sentry.captureMessage(`Validation dropped payload at ${'relations-engine'}`, {
+        Sentry.captureMessage('Validation dropped payload at relations-engine', {
           level: "warning",
           extra: {
             boundary: 'relations-engine',
@@ -246,7 +268,6 @@ export async function* computeStanceRelationsStream(
             issuePaths: result.error.issues.map((i: any) => `${i.path.join(".")}: ${i.code}`),
           },
         });
-        // Only import Sentry if it's not imported already, but let's just use console for now, wait, we need Sentry.
       }
       if (result.success) {
         const insights = result.data.insights
@@ -272,11 +293,22 @@ export async function* computeStanceRelationsStream(
         console.warn(`[relations/engine] Model ${item.model} JSON schema validation failed:`, result.error.format());
       }
     } catch (parseErr) {
+      // Defensive: safeParse shouldn't throw, but a throw here is a real
+      // compute failure for this model — capture (not console-only) so the
+      // failure class is alertable, matching this function's other branches.
+      Sentry.captureException(parseErr, { tags: { operation: 'relations-engine', phase: 'parse' } });
       console.warn(`[relations/engine] Model ${item.model} JSON parse failed:`, parseErr);
       continue;
     }
   }
 
+  // Terminal marker for callers: distinguishes "cascade genuinely completed
+  // with zero insights" (a valid, persistable result) from "every cascade
+  // model failed/exhausted" (Cubic P1, PR #322 — persisting the latter as an
+  // empty-but-valid result permanently cached an error as if it were an
+  // answer, forcing re-payment only after the Redis TTL expired). The success
+  // path above returns early, so reaching here always means exhaustion.
+  yield { type: 'exhausted' };
   console.warn('[relations/engine] All cascade models exhausted without valid stance relations output');
 }
 

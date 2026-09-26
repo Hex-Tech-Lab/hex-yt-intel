@@ -29,6 +29,12 @@ type Env = {
   ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
   DECODO_API_KEY?: string;
+  APIFY_TOKEN?: string;
+  TRANSCRIPTAPI_API_KEY?: string;
+  SUPADATA_API_KEY?: string;
+  SUPADATA_MAX_AI_MINUTES?: string;
+  TRANSCRIPT_PROVIDER_ORDER?: string;
+  TRANSCRIPT_CHAIN_BUDGET_MS?: string;
   COMMENTS_TIER3_QUEUE: Queue<CommentsTier3QueueMessage>;
 };
 

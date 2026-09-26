@@ -1,6 +1,9 @@
 import { getBillingProvider } from '@lib/billing-factory';
 import { stripe, STRIPE_PRICING } from '@lib/stripe';
 import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
+import { normalizeUserTier } from '@lib/types/billing';
+import { MONTHLY_QUOTAS } from '@lib/adapters/PostgresBillingAdapter';
+import type { UserTier } from '@lib/types/billing';
 
 /**
  * BILLING DATA CONSOLIDATION LAW (2026-06-08)
@@ -10,7 +13,7 @@ import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAda
  */
 
 export interface UnifiedBillingData {
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: UserTier;
   analysesUsed: number;
   analysesLimit: number | null;
   usageStats: Record<string, number>;
@@ -51,13 +54,16 @@ const usageLogCount = await persistence.getUsageLogsCountSince({ userId, since }
     invoices = []; 
   }
 
-  const tier = (userData.tier || 'free') as 'free' | 'pro';
-  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
+  const tier = normalizeUserTier(userData.tier);
+  // No Free fallback: every UserTier now has a STRIPE_PRICING entry
+  // (CodeRabbit review, 2026-09-24) -- analysesLimit reads the shared
+  // MONTHLY_QUOTAS map so display and the quota gate can't drift.
+  const tierConfig = STRIPE_PRICING[tier as keyof typeof STRIPE_PRICING];
 
   return {
     tier,
     analysesUsed: userData.analysesUsed || 0,
-    analysesLimit: tierConfig.analysesPerMonth,
+    analysesLimit: tierConfig.analysesPerMonth ?? MONTHLY_QUOTAS[tier],
     usageStats,
     invoices
   };

@@ -122,17 +122,24 @@ const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 
 // nucleusKnowledgeGraph (KnowledgeGraphV2, the live-streaming source) and
 // `graph` (KnowledgeGraph, the Pro-only fetched/merged source) aren't
-// structurally compatible -- KGNodeV2 has no `inPersona` field, which
-// MergedGraphNode requires. Neither WordCloud nor copyPanelContent's
-// word-cloud branch ever reads `.inPersona`, so defaulting it false here is
-// a real, typed adapter rather than an `as any` cast past the mismatch
-// (Codacy ErrorProne review, PR #302).
+// structurally compatible -- KGNodeV2 has no `inPersona` field and, since
+// 2026-09-25, an optional `content` (the prompt's 8.1 node spec never asked
+// for one), both of which MergedGraphNode requires. Neither WordCloud nor
+// copyPanelContent's word-cloud branch ever reads `.inPersona`, and the
+// graph renderer already coalesces absent content (`n.content || ''` in
+// useKnowledgeGraph.ts), so defaulting them here is a real, typed adapter
+// rather than an `as any` cast past the mismatch (Codacy ErrorProne review,
+// PR #302).
 // skipcq: JS-0067
 function toDisplayGraph(
   source: KnowledgeGraph | KnowledgeGraphV2,
 ): KnowledgeGraph {
   return {
-    nodes: source.nodes.map((node) => ({ inPersona: false, ...node })),
+    nodes: source.nodes.map((node) => ({
+      inPersona: false,
+      content: "",
+      ...node,
+    })),
     edges: source.edges,
     rootId: source.rootId,
   };
@@ -550,7 +557,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) => void;
     }[] = [];
 
-    if (displayGraph.nodes.length > 0) {
+    const isAnalyzing =
+      isLiveStreaming ||
+      status === "analyzing" ||
+      status === "downloading" ||
+      status === "parsing";
+
+    if (displayGraph.nodes.length > 0 || isAnalyzing) {
       items.push({
         id: "word-cloud",
         title: "Word Cloud",
@@ -560,6 +573,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             graph={displayGraph}
             selectedId={selectedNodeId}
             onSelect={handleSelectNode}
+            isAnalyzing={isAnalyzing}
           />
         ),
         onAction: (action) => {
@@ -641,6 +655,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     handlePanelExport,
     handleExpandPanel,
     handleSelectNode,
+    isLiveStreaming,
+    status,
   ]);
   // rightPanelItems can transition between populated and empty at runtime in
   // BOTH modes now (WordCloud appears/disappears with displayGraph; Pro's

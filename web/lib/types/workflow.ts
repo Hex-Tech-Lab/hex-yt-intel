@@ -7,7 +7,7 @@ export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;
 export const PathAInputSchema = z.object({
   url: z.string().url().optional(),
   userId: z.string().min(1),
-  tier: z.enum(['free', 'pro', 'enterprise']),
+  tier: z.enum(['free', 'light', 'pro', 'max', 'enterprise']),
   email: z.string().email().optional(),
   timezone: z.string(),
   persona: z.enum(VALID_PERSONAS).optional(),

@@ -17,6 +17,7 @@ import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 import type { KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
+import type { UserTier } from '@/lib/types/billing';
 
 import { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
 import { SupabaseChatAdapter } from './SupabaseChatAdapter';
@@ -384,7 +385,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }
 
   // --- Billing Adapter Delegation ---
-  updateUserTier(params: { userId: string; tier: 'pro' | 'free' }): Promise<void> {
+  updateUserTier(params: { userId: string; tier: UserTier }): Promise<void> {
     return SupabaseBillingAdapter.updateUserTier(params);
   }
 
@@ -448,8 +449,15 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     status: 'completed' | 'failed' | 'interrupted';
     tokensUsed?: number;
     costUsd?: number;
+    cachedTokens?: number;
     generationId?: string;
   }): Promise<void> {
+    // Rollout ordering (CodeRabbit PR #348, 2026-09-26): this method writes
+    // `cached_tokens` on EVERY chunk persist, so migration
+    // supabase/migrations/20260925120000_prompt_caching_settings_and_cached_tokens.sql
+    // (which adds the column) MUST be applied BEFORE deploying this web
+    // build -- not merely "web before worker". Without the column the write
+    // fails outright; there is no graceful degradation for a missing column.
     try {
       const service = getSupabaseServiceClient();
       const rowData = {
@@ -460,6 +468,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         status: params.status,
         tokens_used: params.tokensUsed ?? 0,
         cost_usd: params.costUsd ?? 0,
+        cached_tokens: params.cachedTokens ?? 0,
         openrouter_generation_id: params.generationId ?? null,
         updated_at: new Date().toISOString(),
       };

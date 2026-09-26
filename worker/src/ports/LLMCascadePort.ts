@@ -17,7 +17,15 @@ export interface LLMCascadePort {
     systemPrompt: string,
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    /**
+     * Prompt-cache split (2026-09-25): when set AND caching is enabled, the
+     * request's system message becomes two content blocks -- `prefix` marked
+     * with Anthropic `cache_control: { type: 'ephemeral' }` (identical across
+     * all bundles of one video), `suffix` (bundle-specific instructions) left
+     * uncached after the breakpoint. Contract: prefix + suffix === systemPrompt.
+     */
+    cacheSplit?: { prefix: string; suffix: string }
   ): Promise<{
     started: boolean;
     finalText: string;
@@ -25,6 +33,8 @@ export interface LLMCascadePort {
     finishReason?: string;
     tokensUsed?: number;
     costUsd?: number;
+    /** OpenRouter usage.prompt_tokens_details.cached_tokens (prompt cache reads). */
+    cachedTokens?: number;
     generationId?: string;
   }>;
 

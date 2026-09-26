@@ -8,9 +8,7 @@ import PDFDocument from 'pdfkit';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { filterHallucinationContent } from '@/lib/utils/hallucination-filter';
-
-/** Tiers permitted to export the FULL report (TOC + all 11 dimensions). */
-const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
+import { FULL_REPORT_TIERS } from '@/lib/config/report-tiers';
 
 /** Sanitize filename to prevent header injection and ensure system compatibility. */
 function sanitizeFilename(name: string): string {
