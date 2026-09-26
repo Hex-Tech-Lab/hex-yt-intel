@@ -10,11 +10,13 @@
             "reasoning_effort": "low",
             "provider": {
               "order": [
+                "morph",
                 "coreweave",
                 "together",
                 "relace"
               ],
               "only": [
+                "morph",
                 "coreweave",
                 "together",
                 "relace"
