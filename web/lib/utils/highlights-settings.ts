@@ -108,6 +108,24 @@ export function clampHighlightsSetting(value: unknown, fallback: number, min: nu
 export const HIGHLIGHTS_SPEED_MIN = 0.5;
 export const HIGHLIGHTS_SPEED_MAX = 3;
 
+/** Time-window width (seconds) for full-duration highlights harvesting
+ *  (2026-09-25, full-coverage RCA -- analysis 434ef182, video f6We53TnkbU,
+ *  32 min). Derivation, per the no-unbacked-constants rule: the single-pass
+ *  extraction over a 32-min / ~15k-token transcript measurably concentrated
+ *  all 10 highlights in the first 50-62% of the timeline (repro'd twice with
+ *  the exact production prompt). 300s windows put each harvest call's
+ *  excerpt at ~500 segments-ish scale down to ~1.5k tokens (the reported
+ *  video: 300s of dense speech ≈ 2-3k tokens), far inside the region where
+ *  the same cascade model demonstrably attends to the WHOLE excerpt, and
+ *  yields ceil(duration/300) windows (7 for the reported 32-min video, 1 for
+ *  any video ≤ 5 min -- i.e. identical cost to the old single pass for short
+ *  videos). Cost of the change measured on the reported video: ~$0.011
+ *  across 7 window calls vs ~$0.007 for one full-transcript pass (gpt-oss
+ *  cascade, 2026-09-25). Not a Settings Registry key: it shapes how the
+ *  prompt is PARTITIONED, not a user-facing tunable, and the existing
+ *  registry has no partition-level key to hang it on. */
+export const HIGHLIGHTS_COVERAGE_WINDOW_SECONDS = 300;
+
 /** Shared by HighlightsScrubber.tsx and PublicHighlightsReel.tsx -- was
  *  duplicated verbatim in both (/simplify review, 2026-08-20). */
 export function fmtHighlightsDuration(seconds: number): string {
