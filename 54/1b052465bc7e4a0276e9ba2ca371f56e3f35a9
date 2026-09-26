@@ -1,0 +1,14 @@
+scripts/bakeoff-l2-evaluator.ts
+  h_60000122af7b55 1-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "541b052465bc7e4a0276e9ba2ca371f56e3f35a9",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
