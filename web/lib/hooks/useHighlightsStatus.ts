@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getHighlightsRetryDelayMs, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
+import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
 export interface HighlightsStatusResult {
   /** true = highlights present, false = confirmed zero after bounded retry, null = not yet known (loading/error/no analysis/malformed response) */
@@ -64,9 +65,13 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
       try {
         for (let attempt = 0; attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; attempt++) {
           attemptsMade = attempt + 1;
-          const res = await fetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`, {
-            signal: controller.signal,
-          });
+          // Shared in-flight dedupe (network-storms RCA 2026-09-26): the
+          // scrubber loop and this status-chip loop fire the identical GET
+          // on the same backoff schedule -- collapse them into one real
+          // request per attempt. The local controller still owns
+          // staleness: every await below re-checks `controller.signal.aborted`
+          // before committing state.
+          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${encodeURIComponent(requestAnalysisId)}`, { signal: controller.signal });
           if (!res.ok) throw new Error(`highlights status fetch failed: ${res.status}`);
           const json = await res.json();
           if (!json || !Array.isArray(json.highlights)) {
