@@ -89,6 +89,10 @@ overrides:
   # Dependabot #116/#121 (2026-09-27): qs 6.16.0 (bracket-key comma bypass +
   # isBuffer DoS).
   "qs": "^6.16.0"
+  # Dependabot #119/#120 (2026-09-27): browserslist 4.29.1 (prototype write & unbounded memory OOM).
+  "browserslist": "^4.29.1"
+  # Dependabot #131 (2026-09-27): baseline-browser-mapping 2.11.26 (process termination DoS).
+  "baseline-browser-mapping": "^2.11.26"
 
 allowBuilds:
   '@astryxdesign/core': true
