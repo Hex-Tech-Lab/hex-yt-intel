@@ -1,0 +1,45 @@
+worker/src/services/PromptBuilder.ts
+  s_358672d53d4d2d::t_6d6a2235c9b108 71
+web/lib/prompts/factory.ts
+  s_358672d53d4d2d::t_6ee6518c83d990 10-16
+  s_358672d53d4d2d::t_983064d343d8c2 84-95,122,146
+  s_358672d53d4d2d::t_03698e9b1ad5c0 70
+  s_358672d53d4d2d::t_8a686a6606171d 9
+supabase/migrations/20260927120000_transcript_budget_registry_key.sql
+  s_358672d53d4d2d::t_4572d637cee9a9 1-25
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_358672d53d4d2d::t_f216f652c87d23 102-110
+web/hooks/useSSEStream.ts
+  s_358672d53d4d2d::t_f65bb3abaf12ea 299-310,312
+  s_358672d53d4d2d::t_9a0afcda50b589 449
+web/lib/types/contracts.ts
+  s_358672d53d4d2d::t_9a0afcda50b589 277-278
+worker/src/routes/analysis.ts
+  s_358672d53d4d2d::t_9245b4086ac55b 1002-1009,1012-1014,1017-1021
+  s_358672d53d4d2d::t_135a9a54736dfd 117-121,1073
+  s_358672d53d4d2d::t_8095c1986b5f36 1010-1011,1015-1016
+worker/src/ports/ReasoningEnginePort.ts
+  s_358672d53d4d2d::t_03698e9b1ad5c0 52-58
+web/components/templates/console/VideoPlayerCard.tsx
+  s_358672d53d4d2d::t_10727c2d654755 18-38
+  s_358672d53d4d2d::t_0af2598113a4fc 338,359,372
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_358672d53d4d2d::t_9a0afcda50b589 176-187,362
+  s_358672d53d4d2d::t_81d96cda4c9cac 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cc7759e7f050d3ed79e5997fdcc2c722e16699ff",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
