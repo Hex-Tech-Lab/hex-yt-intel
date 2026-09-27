@@ -1,0 +1,1171 @@
+{
+  "promptVersion": "UCIS v5.4 (c4125116, 2026-09-25) — unmodified",
+  "trendsByDim": {
+    "0": {
+      "dimName": "Dim 0: Executive Digest",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 80,
+          "medStyle": 79,
+          "p25Info": 80,
+          "p75Info": 80,
+          "p25Style": 79,
+          "p75Style": 79,
+          "meanInfo": 80,
+          "meanStyle": 79,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 88,
+          "medStyle": 83,
+          "p25Info": 88,
+          "p75Info": 88,
+          "p25Style": 83,
+          "p75Style": 83,
+          "meanInfo": 88,
+          "meanStyle": 83,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 81,
+          "medStyle": 70,
+          "p25Info": 81,
+          "p75Info": 81,
+          "p25Style": 70,
+          "p75Style": 70,
+          "meanInfo": 81,
+          "meanStyle": 70,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 81,
+          "medStyle": 70,
+          "p25Info": 81,
+          "p75Info": 81,
+          "p25Style": 70,
+          "p75Style": 70,
+          "meanInfo": 81,
+          "meanStyle": 70,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 68,
+          "medStyle": 67,
+          "p25Info": 68,
+          "p75Info": 68,
+          "p25Style": 67,
+          "p75Style": 67,
+          "meanInfo": 68,
+          "meanStyle": 67,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "1": {
+      "dimName": "Dim 1: Apex Intelligence",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 84,
+          "medStyle": 84,
+          "p25Info": 84,
+          "p75Info": 84,
+          "p25Style": 84,
+          "p75Style": 84,
+          "meanInfo": 84,
+          "meanStyle": 84,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 86,
+          "medStyle": 86,
+          "p25Info": 86,
+          "p75Info": 86,
+          "p25Style": 86,
+          "p75Style": 86,
+          "meanInfo": 86,
+          "meanStyle": 86,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 83,
+          "medStyle": 69,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 69,
+          "p75Style": 69,
+          "meanInfo": 83,
+          "meanStyle": 69,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 83,
+          "medStyle": 73,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 73,
+          "p75Style": 73,
+          "meanInfo": 83,
+          "meanStyle": 73,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 75,
+          "medStyle": 66,
+          "p25Info": 75,
+          "p75Info": 75,
+          "p25Style": 66,
+          "p75Style": 66,
+          "meanInfo": 75,
+          "meanStyle": 66,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "2": {
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 75,
+          "medStyle": 77,
+          "p25Info": 75,
+          "p75Info": 75,
+          "p25Style": 77,
+          "p75Style": 77,
+          "meanInfo": 75,
+          "meanStyle": 77,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 83,
+          "medStyle": 80,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 80,
+          "p75Style": 80,
+          "meanInfo": 83,
+          "meanStyle": 80,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 78,
+          "medStyle": 77,
+          "p25Info": 78,
+          "p75Info": 78,
+          "p25Style": 77,
+          "p75Style": 77,
+          "meanInfo": 78,
+          "meanStyle": 77,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 75,
+          "medStyle": 71,
+          "p25Info": 75,
+          "p75Info": 75,
+          "p25Style": 71,
+          "p75Style": 71,
+          "meanInfo": 75,
+          "meanStyle": 71,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 74,
+          "medStyle": 66,
+          "p25Info": 74,
+          "p75Info": 74,
+          "p25Style": 66,
+          "p75Style": 66,
+          "meanInfo": 74,
+          "meanStyle": 66,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "3": {
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 86,
+          "medStyle": 89,
+          "p25Info": 86,
+          "p75Info": 86,
+          "p25Style": 89,
+          "p75Style": 89,
+          "meanInfo": 86,
+          "meanStyle": 89,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 90,
+          "medStyle": 87,
+          "p25Info": 90,
+          "p75Info": 90,
+          "p25Style": 87,
+          "p75Style": 87,
+          "meanInfo": 90,
+          "meanStyle": 87,
+          "pass": true,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 80,
+          "medStyle": 75,
+          "p25Info": 80,
+          "p75Info": 80,
+          "p25Style": 75,
+          "p75Style": 75,
+          "meanInfo": 80,
+          "meanStyle": 75,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 86,
+          "medStyle": 81,
+          "p25Info": 86,
+          "p75Info": 86,
+          "p25Style": 81,
+          "p75Style": 81,
+          "meanInfo": 86,
+          "meanStyle": 81,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 60,
+          "medStyle": 58,
+          "p25Info": 60,
+          "p75Info": 60,
+          "p25Style": 58,
+          "p75Style": 58,
+          "meanInfo": 60,
+          "meanStyle": 58,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "4": {
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 72,
+          "medStyle": 77,
+          "p25Info": 72,
+          "p75Info": 72,
+          "p25Style": 77,
+          "p75Style": 77,
+          "meanInfo": 72,
+          "meanStyle": 77,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 83,
+          "medStyle": 82,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 82,
+          "p75Style": 82,
+          "meanInfo": 83,
+          "meanStyle": 82,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 73,
+          "medStyle": 72,
+          "p25Info": 73,
+          "p75Info": 73,
+          "p25Style": 72,
+          "p75Style": 72,
+          "meanInfo": 73,
+          "meanStyle": 72,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 68,
+          "medStyle": 69,
+          "p25Info": 68,
+          "p75Info": 68,
+          "p25Style": 69,
+          "p75Style": 69,
+          "meanInfo": 68,
+          "meanStyle": 69,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 38,
+          "medStyle": 52,
+          "p25Info": 38,
+          "p75Info": 38,
+          "p25Style": 52,
+          "p75Style": 52,
+          "meanInfo": 38,
+          "meanStyle": 52,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "5": {
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 81,
+          "medStyle": 79,
+          "p25Info": 81,
+          "p75Info": 81,
+          "p25Style": 79,
+          "p75Style": 79,
+          "meanInfo": 81,
+          "meanStyle": 79,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 90,
+          "medStyle": 81,
+          "p25Info": 90,
+          "p75Info": 90,
+          "p25Style": 81,
+          "p75Style": 81,
+          "meanInfo": 90,
+          "meanStyle": 81,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 84,
+          "medStyle": 76,
+          "p25Info": 84,
+          "p75Info": 84,
+          "p25Style": 76,
+          "p75Style": 76,
+          "meanInfo": 84,
+          "meanStyle": 76,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 82,
+          "medStyle": 74,
+          "p25Info": 82,
+          "p75Info": 82,
+          "p25Style": 74,
+          "p75Style": 74,
+          "meanInfo": 82,
+          "meanStyle": 74,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 74,
+          "medStyle": 70,
+          "p25Info": 74,
+          "p75Info": 74,
+          "p25Style": 70,
+          "p75Style": 70,
+          "meanInfo": 74,
+          "meanStyle": 70,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "6": {
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 86,
+          "medStyle": 88,
+          "p25Info": 86,
+          "p75Info": 86,
+          "p25Style": 88,
+          "p75Style": 88,
+          "meanInfo": 86,
+          "meanStyle": 88,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 90,
+          "medStyle": 91,
+          "p25Info": 90,
+          "p75Info": 90,
+          "p25Style": 91,
+          "p75Style": 91,
+          "meanInfo": 90,
+          "meanStyle": 91,
+          "pass": true,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 86,
+          "medStyle": 81,
+          "p25Info": 86,
+          "p75Info": 86,
+          "p25Style": 81,
+          "p75Style": 81,
+          "meanInfo": 86,
+          "meanStyle": 81,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 82,
+          "medStyle": 79,
+          "p25Info": 82,
+          "p75Info": 82,
+          "p25Style": 79,
+          "p75Style": 79,
+          "meanInfo": 82,
+          "meanStyle": 79,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 80,
+          "medStyle": 77,
+          "p25Info": 80,
+          "p75Info": 80,
+          "p25Style": 77,
+          "p75Style": 77,
+          "meanInfo": 80,
+          "meanStyle": 77,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "7": {
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 70,
+          "medStyle": 59,
+          "p25Info": 70,
+          "p75Info": 70,
+          "p25Style": 59,
+          "p75Style": 59,
+          "meanInfo": 70,
+          "meanStyle": 59,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 77,
+          "medStyle": 65,
+          "p25Info": 77,
+          "p75Info": 77,
+          "p25Style": 65,
+          "p75Style": 65,
+          "meanInfo": 77,
+          "meanStyle": 65,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 75,
+          "medStyle": 55,
+          "p25Info": 75,
+          "p75Info": 75,
+          "p25Style": 55,
+          "p75Style": 55,
+          "meanInfo": 75,
+          "meanStyle": 55,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 72,
+          "medStyle": 48,
+          "p25Info": 72,
+          "p75Info": 72,
+          "p25Style": 48,
+          "p75Style": 48,
+          "meanInfo": 72,
+          "meanStyle": 48,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 65,
+          "medStyle": 45,
+          "p25Info": 65,
+          "p75Info": 65,
+          "p25Style": 45,
+          "p75Style": 45,
+          "meanInfo": 65,
+          "meanStyle": 45,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "8": {
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 85,
+          "medStyle": 87,
+          "p25Info": 85,
+          "p75Info": 85,
+          "p25Style": 87,
+          "p75Style": 87,
+          "meanInfo": 85,
+          "meanStyle": 87,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 89,
+          "medStyle": 85,
+          "p25Info": 89,
+          "p75Info": 89,
+          "p25Style": 85,
+          "p75Style": 85,
+          "meanInfo": 89,
+          "meanStyle": 85,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 84,
+          "medStyle": 76,
+          "p25Info": 84,
+          "p75Info": 84,
+          "p25Style": 76,
+          "p75Style": 76,
+          "meanInfo": 84,
+          "meanStyle": 76,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 83,
+          "medStyle": 74,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 74,
+          "p75Style": 74,
+          "meanInfo": 83,
+          "meanStyle": 74,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 75,
+          "medStyle": 72,
+          "p25Info": 75,
+          "p75Info": 75,
+          "p25Style": 72,
+          "p75Style": 72,
+          "meanInfo": 75,
+          "meanStyle": 72,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "9": {
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 82,
+          "medStyle": 80,
+          "p25Info": 82,
+          "p75Info": 82,
+          "p25Style": 80,
+          "p75Style": 80,
+          "meanInfo": 82,
+          "meanStyle": 80,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 88,
+          "medStyle": 84,
+          "p25Info": 88,
+          "p75Info": 88,
+          "p25Style": 84,
+          "p75Style": 84,
+          "meanInfo": 88,
+          "meanStyle": 84,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 82,
+          "medStyle": 75,
+          "p25Info": 82,
+          "p75Info": 82,
+          "p25Style": 75,
+          "p75Style": 75,
+          "meanInfo": 82,
+          "meanStyle": 75,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 81,
+          "medStyle": 65,
+          "p25Info": 81,
+          "p75Info": 81,
+          "p25Style": 65,
+          "p75Style": 65,
+          "meanInfo": 81,
+          "meanStyle": 65,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 76,
+          "medStyle": 58,
+          "p25Info": 76,
+          "p75Info": 76,
+          "p25Style": 58,
+          "p75Style": 58,
+          "meanInfo": 76,
+          "meanStyle": 58,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "10": {
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 74,
+          "medStyle": 82,
+          "p25Info": 74,
+          "p75Info": 74,
+          "p25Style": 82,
+          "p75Style": 82,
+          "meanInfo": 74,
+          "meanStyle": 82,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 83,
+          "medStyle": 81,
+          "p25Info": 83,
+          "p75Info": 83,
+          "p25Style": 81,
+          "p75Style": 81,
+          "meanInfo": 83,
+          "meanStyle": 81,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 63,
+          "medStyle": 74,
+          "p25Info": 63,
+          "p75Info": 63,
+          "p25Style": 74,
+          "p75Style": 74,
+          "meanInfo": 63,
+          "meanStyle": 74,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 72,
+          "medStyle": 74,
+          "p25Info": 72,
+          "p75Info": 72,
+          "p25Style": 74,
+          "p75Style": 74,
+          "meanInfo": 72,
+          "meanStyle": 74,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 58,
+          "medStyle": 47,
+          "p25Info": 58,
+          "p75Info": 58,
+          "p25Style": 47,
+          "p75Style": 47,
+          "meanInfo": 58,
+          "meanStyle": 47,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    },
+    "11": {
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "byModel": {
+        "GPT-OSS-120B": {
+          "medInfo": 68,
+          "medStyle": 68,
+          "p25Info": 68,
+          "p75Info": 68,
+          "p25Style": 68,
+          "p75Style": 68,
+          "meanInfo": 68,
+          "meanStyle": 68,
+          "pass": false,
+          "n": 1
+        },
+        "GLM-5.3-Flash": {
+          "medInfo": 70,
+          "medStyle": 67,
+          "p25Info": 70,
+          "p75Info": 70,
+          "p25Style": 67,
+          "p75Style": 67,
+          "meanInfo": 70,
+          "meanStyle": 67,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna": {
+          "medInfo": 78,
+          "medStyle": 50,
+          "p25Info": 78,
+          "p75Info": 78,
+          "p25Style": 50,
+          "p75Style": 50,
+          "meanInfo": 78,
+          "meanStyle": 50,
+          "pass": false,
+          "n": 1
+        },
+        "GPT-6-Luna-Pro": {
+          "medInfo": 78,
+          "medStyle": 39,
+          "p25Info": 78,
+          "p75Info": 78,
+          "p25Style": 39,
+          "p75Style": 39,
+          "meanInfo": 78,
+          "meanStyle": 39,
+          "pass": false,
+          "n": 1
+        },
+        "Llama-3.3-70B": {
+          "medInfo": 57,
+          "medStyle": 50,
+          "p25Info": 57,
+          "p75Info": 57,
+          "p25Style": 50,
+          "p75Style": 50,
+          "meanInfo": 57,
+          "meanStyle": 50,
+          "pass": false,
+          "n": 1
+        }
+      },
+      "videoCount": 1
+    }
+  },
+  "allResults": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 0: Executive Digest",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 80,
+          "style": 79,
+          "reasoning": "Jev parity=7.24 style=7.15 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 88,
+          "style": 83,
+          "reasoning": "Jev parity=7.94 style=7.49 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 81,
+          "style": 70,
+          "reasoning": "Jev parity=7.25 style=6.27 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 81,
+          "style": 70,
+          "reasoning": "Jev parity=7.29 style=6.3 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 68,
+          "style": 67,
+          "reasoning": "Jev parity=6.12 style=6 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 1: Apex Intelligence",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 84,
+          "style": 84,
+          "reasoning": "Jev parity=7.56 style=7.55 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 86,
+          "style": 86,
+          "reasoning": "Jev parity=7.72 style=7.78 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 83,
+          "style": 69,
+          "reasoning": "Jev parity=7.47 style=6.22 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 83,
+          "style": 73,
+          "reasoning": "Jev parity=7.5 style=6.61 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 75,
+          "style": 66,
+          "reasoning": "Jev parity=6.75 style=5.9 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 75,
+          "style": 77,
+          "reasoning": "Jev parity=6.76 style=6.97 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 83,
+          "style": 80,
+          "reasoning": "Jev parity=7.46 style=7.21 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 78,
+          "style": 77,
+          "reasoning": "Jev parity=7.06 style=6.91 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 75,
+          "style": 71,
+          "reasoning": "Jev parity=6.75 style=6.41 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 74,
+          "style": 66,
+          "reasoning": "Jev parity=6.64 style=5.91 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 86,
+          "style": 89,
+          "reasoning": "Jev parity=7.78 style=8.02 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 90,
+          "style": 87,
+          "reasoning": "Jev parity=8.07 style=7.87 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 80,
+          "style": 75,
+          "reasoning": "Jev parity=7.23 style=6.71 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 86,
+          "style": 81,
+          "reasoning": "Jev parity=7.78 style=7.28 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 60,
+          "style": 58,
+          "reasoning": "Jev parity=5.43 style=5.23 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 72,
+          "style": 77,
+          "reasoning": "Jev parity=6.45 style=6.97 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 83,
+          "style": 82,
+          "reasoning": "Jev parity=7.47 style=7.37 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 73,
+          "style": 72,
+          "reasoning": "Jev parity=6.53 style=6.52 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 68,
+          "style": 69,
+          "reasoning": "Jev parity=6.09 style=6.19 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 38,
+          "style": 52,
+          "reasoning": "Jev parity=3.43 style=4.66 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 81,
+          "style": 79,
+          "reasoning": "Jev parity=7.29 style=7.09 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 90,
+          "style": 81,
+          "reasoning": "Jev parity=8.07 style=7.28 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 84,
+          "style": 76,
+          "reasoning": "Jev parity=7.59 style=6.85 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 82,
+          "style": 74,
+          "reasoning": "Jev parity=7.35 style=6.64 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 74,
+          "style": 70,
+          "reasoning": "Jev parity=6.67 style=6.26 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 86,
+          "style": 88,
+          "reasoning": "Jev parity=7.72 style=7.94 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 90,
+          "style": 91,
+          "reasoning": "Jev parity=8.14 style=8.19 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 86,
+          "style": 81,
+          "reasoning": "Jev parity=7.7 style=7.29 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 82,
+          "style": 79,
+          "reasoning": "Jev parity=7.42 style=7.1 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 80,
+          "style": 77,
+          "reasoning": "Jev parity=7.16 style=6.89 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 70,
+          "style": 59,
+          "reasoning": "Jev parity=6.3 style=5.28 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 77,
+          "style": 65,
+          "reasoning": "Jev parity=6.92 style=5.87 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 75,
+          "style": 55,
+          "reasoning": "Jev parity=6.77 style=4.97 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 72,
+          "style": 48,
+          "reasoning": "Jev parity=6.48 style=4.28 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 65,
+          "style": 45,
+          "reasoning": "Jev parity=5.89 style=4.09 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 85,
+          "style": 87,
+          "reasoning": "Jev parity=7.67 style=7.79 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 89,
+          "style": 85,
+          "reasoning": "Jev parity=7.99 style=7.66 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 84,
+          "style": 76,
+          "reasoning": "Jev parity=7.55 style=6.85 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 83,
+          "style": 74,
+          "reasoning": "Jev parity=7.49 style=6.66 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 75,
+          "style": 72,
+          "reasoning": "Jev parity=6.77 style=6.45 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 82,
+          "style": 80,
+          "reasoning": "Jev parity=7.42 style=7.16 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 88,
+          "style": 84,
+          "reasoning": "Jev parity=7.95 style=7.55 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 82,
+          "style": 75,
+          "reasoning": "Jev parity=7.38 style=6.76 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 81,
+          "style": 65,
+          "reasoning": "Jev parity=7.27 style=5.83 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 76,
+          "style": 58,
+          "reasoning": "Jev parity=6.88 style=5.25 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 74,
+          "style": 82,
+          "reasoning": "Jev parity=6.63 style=7.34 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 83,
+          "style": 81,
+          "reasoning": "Jev parity=7.45 style=7.25 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 63,
+          "style": 74,
+          "reasoning": "Jev parity=5.7 style=6.68 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 72,
+          "style": 74,
+          "reasoning": "Jev parity=6.46 style=6.66 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 58,
+          "style": 47,
+          "reasoning": "Jev parity=5.26 style=4.23 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "grades": {
+        "GPT-OSS-120B": {
+          "info": 68,
+          "style": 68,
+          "reasoning": "Jev parity=6.15 style=6.09 (0-9)"
+        },
+        "GLM-5.3-Flash": {
+          "info": 70,
+          "style": 67,
+          "reasoning": "Jev parity=6.28 style=6.06 (0-9)"
+        },
+        "GPT-6-Luna": {
+          "info": 78,
+          "style": 50,
+          "reasoning": "Jev parity=7.05 style=4.53 (0-9)"
+        },
+        "GPT-6-Luna-Pro": {
+          "info": 78,
+          "style": 39,
+          "reasoning": "Jev parity=6.98 style=3.55 (0-9)"
+        },
+        "Llama-3.3-70B": {
+          "info": 57,
+          "style": 50,
+          "reasoning": "Jev parity=5.14 style=4.46 (0-9)"
+        }
+      }
+    }
+  ]
+}

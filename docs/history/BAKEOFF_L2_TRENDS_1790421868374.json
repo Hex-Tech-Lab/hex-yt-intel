@@ -1,0 +1,342 @@
+{
+  "trendsByDim": {
+    "0": {
+      "dimName": "Dim 0: Executive Digest",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 74,
+        "avgStyle": 80,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 78,
+        "avgStyle": 85,
+        "pass": false
+      }
+    },
+    "1": {
+      "dimName": "Dim 1: Apex Intelligence",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 68,
+        "avgStyle": 80,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 72,
+        "avgStyle": 78,
+        "pass": false
+      }
+    },
+    "2": {
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 62,
+        "avgStyle": 80,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 72,
+        "avgStyle": 74,
+        "pass": false
+      }
+    },
+    "3": {
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 76,
+        "avgStyle": 79,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 82,
+        "avgStyle": 89,
+        "pass": false
+      }
+    },
+    "4": {
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 68,
+        "avgStyle": 78,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 74,
+        "avgStyle": 69,
+        "pass": false
+      }
+    },
+    "5": {
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 77,
+        "avgStyle": 84,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 79,
+        "avgStyle": 82,
+        "pass": false
+      }
+    },
+    "6": {
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 73,
+        "avgStyle": 79,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 85,
+        "avgStyle": 87,
+        "pass": false
+      }
+    },
+    "7": {
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 2,
+        "avgStyle": 6,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 63,
+        "avgStyle": 73,
+        "pass": false
+      }
+    },
+    "8": {
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 76,
+        "avgStyle": 80,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 74,
+        "avgStyle": 79,
+        "pass": false
+      }
+    },
+    "9": {
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 41,
+        "avgStyle": 83,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 46,
+        "avgStyle": 84,
+        "pass": false
+      }
+    },
+    "10": {
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 60,
+        "avgStyle": 77,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 72,
+        "avgStyle": 76,
+        "pass": false
+      }
+    },
+    "11": {
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 41,
+        "avgStyle": 77,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 41,
+        "avgStyle": 62,
+        "pass": false
+      }
+    }
+  },
+  "allResults": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 0: Executive Digest",
+      "gradeA": {
+        "info": 74,
+        "style": 80,
+        "reasoning": "Jev score parity=6.69 style=7.18 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 78,
+        "style": 85,
+        "reasoning": "Jev score parity=7.02 style=7.61 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 1: Apex Intelligence",
+      "gradeA": {
+        "info": 68,
+        "style": 80,
+        "reasoning": "Jev score parity=6.16 style=7.16 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 72,
+        "style": 78,
+        "reasoning": "Jev score parity=6.52 style=7.02 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "gradeA": {
+        "info": 62,
+        "style": 80,
+        "reasoning": "Jev score parity=5.6 style=7.19 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 72,
+        "style": 74,
+        "reasoning": "Jev score parity=6.51 style=6.66 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "gradeA": {
+        "info": 76,
+        "style": 79,
+        "reasoning": "Jev score parity=6.82 style=7.1 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 82,
+        "style": 89,
+        "reasoning": "Jev score parity=7.36 style=8.03 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "gradeA": {
+        "info": 68,
+        "style": 78,
+        "reasoning": "Jev score parity=6.11 style=7.04 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 74,
+        "style": 69,
+        "reasoning": "Jev score parity=6.66 style=6.21 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "gradeA": {
+        "info": 77,
+        "style": 84,
+        "reasoning": "Jev score parity=6.97 style=7.55 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 79,
+        "style": 82,
+        "reasoning": "Jev score parity=7.14 style=7.4 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "gradeA": {
+        "info": 73,
+        "style": 79,
+        "reasoning": "Jev score parity=6.53 style=7.07 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 85,
+        "style": 87,
+        "reasoning": "Jev score parity=7.62 style=7.83 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "gradeA": {
+        "info": 2,
+        "style": 6,
+        "reasoning": "Jev score parity=0.2 style=0.53 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 63,
+        "style": 73,
+        "reasoning": "Jev score parity=5.71 style=6.57 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "gradeA": {
+        "info": 76,
+        "style": 80,
+        "reasoning": "Jev score parity=6.88 style=7.17 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 74,
+        "style": 79,
+        "reasoning": "Jev score parity=6.64 style=7.08 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "gradeA": {
+        "info": 41,
+        "style": 83,
+        "reasoning": "Jev score parity=3.66 style=7.49 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 46,
+        "style": 84,
+        "reasoning": "Jev score parity=4.14 style=7.59 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "gradeA": {
+        "info": 60,
+        "style": 77,
+        "reasoning": "Jev score parity=5.36 style=6.95 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 72,
+        "style": 76,
+        "reasoning": "Jev score parity=6.51 style=6.8 (0-9 scale)"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "gradeA": {
+        "info": 41,
+        "style": 77,
+        "reasoning": "Jev score parity=3.67 style=6.95 (0-9 scale)"
+      },
+      "gradeB": {
+        "info": 41,
+        "style": 62,
+        "reasoning": "Jev score parity=3.68 style=5.56 (0-9 scale)"
+      }
+    }
+  ]
+}
