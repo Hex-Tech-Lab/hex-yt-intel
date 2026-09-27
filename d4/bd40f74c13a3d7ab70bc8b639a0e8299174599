@@ -1,0 +1,18 @@
+.qa-intel/baseline.json
+  h_60000122af7b55 631-798,800
+web/lib/__tests__/analysis-reaper.test.ts
+  h_60000122af7b55 18,79
+web/lib/chat/outbox.ts
+  h_60000122af7b55 28-29,68-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d4bd40f74c13a3d7ab70bc8b639a0e8299174599",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
