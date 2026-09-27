@@ -1,0 +1,38 @@
+web/components/templates/console/ChatDock.tsx
+  s_1b450b36f31bac::t_7f5e70b4c7a877 30
+  s_1b450b36f31bac::t_20ac0a5ae0d67a 212
+  s_1b450b36f31bac::t_476ea0e5e01631 221
+.memory/AGENT_LEDGER.md
+  s_1b450b36f31bac::t_9d198665cd7009 1432
+web/store/useInputStore.ts
+  s_1b450b36f31bac::t_11e2825c48da58 31
+  s_1b450b36f31bac::t_2647f88d28f7eb 4
+web/lib/utils/safe-storage.ts
+  s_1b450b36f31bac::t_9a86ae30fa697f 1-129
+web/lib/chat/outbox.ts
+  s_1b450b36f31bac::t_bd95673a691215 8-9,13
+  s_1b450b36f31bac::t_77e268790da63e 26
+  s_1b450b36f31bac::t_3406f20b415ba3 35
+  s_1b450b36f31bac::t_a0578f2226b777 14
+web/store/useChatStore.ts
+  s_1b450b36f31bac::t_a46329a4214b69 548
+  s_1b450b36f31bac::t_ea3b25c8ec83ee 696
+  s_1b450b36f31bac::t_945403418c7252 23
+  s_1b450b36f31bac::t_a849b06a620ec9 534
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "303645b3fdea2caf0724a35939a2056bdfedf58a",
+  "prompts": {},
+  "sessions": {
+    "s_1b450b36f31bac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1b700e88ffek5721gTUNWBZ27",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
