@@ -1,0 +1,30 @@
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_59be4c807d142d::t_bae3c359f3a0da 97,102-108,142
+  s_59be4c807d142d::t_1e5c5560c7b06a 156-159,293-327
+  s_59be4c807d142d::t_5dc27576869932 100-101
+  s_59be4c807d142d::t_354167d67ff2b4 292
+  s_59be4c807d142d::t_5fd7f697be4ce0 328
+.memory/AGENT_LEDGER.md
+  s_59be4c807d142d::t_cebcf07c20c062 1436
+web/lib/utils/highlights-settings.ts
+  s_59be4c807d142d::t_c4c77599b69bb7 80,84-93
+  s_59be4c807d142d::t_5443240f73ff06 94-95
+web/components/dashboard/HighlightsScrubber.tsx
+  s_59be4c807d142d::t_a5d5b450b76d3a 307-321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d472d08c73b39d77b0f09cdbca41f8cf663ab8e8",
+  "prompts": {},
+  "sessions": {
+    "s_59be4c807d142d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1b689b00ffeRKEv3Qn46Scu5r",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
