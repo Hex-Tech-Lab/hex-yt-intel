@@ -296,7 +296,14 @@ export class PersistService {
           }),
         });
         if (persistRes.ok) return true;
-        console.warn(`[persist] ${params.status} persist returned ${persistRes.status}, retrying...`);
+        // RCA 2026-09-27: the route's 400 carries the exact Zod fieldErrors
+        // in its body ("Invalid request payload schema", {details}) but only
+        // the status was logged, so every schema mismatch surfaced as a
+        // bare "returned 400, retrying..." loop with no cause. Read the
+        // body (bounded) and log it so the CF console shows the actual
+        // failing field on the first occurrence.
+        const errBody = await persistRes.text().catch(() => '');
+        console.warn(`[persist] ${params.status} persist returned ${persistRes.status}, retrying... body: ${errBody.slice(0, 500)}`);
       } catch (e) {
         console.error(`[persist] ${params.status} persist attempt ${tryIndex + 1}/${maxRetries + 1} failed`, e);
       }

@@ -191,7 +191,11 @@ export async function POST(request: NextRequest) {
       // telemetry, unlike `cancelled` which decides billing_status and is
       // therefore integrity-sensitive.
       tokensUsed: z.number().int().min(0).optional(),
-      costUsd: z.number().min(0).optional(),
+      // No min(0): OpenRouter usage costs can be NEGATIVE (credit discounts,
+      // e.g. "-$0.00591" rows in the activity ledger) — rejecting a signed
+      // persist for a legitimate negative cost 400s the whole write. The
+      // cost ledger records reality; billing_status is signed separately.
+      costUsd: z.number().optional(),
       // Prompt-cache reads (2026-09-25, analysis_chunks.cached_tokens) --
       // same unsigned accounting-telemetry class as tokensUsed/costUsd.
       // Deliberately NOT part of the signed canonical: reads can only reduce
