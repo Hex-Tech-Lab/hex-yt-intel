@@ -1,0 +1,26 @@
+worker/src/services/PromptBuilder.ts
+  s_358672d53d4d2d::t_7f3144f4cea945 2
+  s_358672d53d4d2d::t_b9e994c47d0a55 51
+web/lib/services/settings.ts
+  s_358672d53d4d2d::t_b9e994c47d0a55 7,81,105
+web/lib/prompts/factory.ts
+  s_358672d53d4d2d::t_b9e994c47d0a55 4,13,83
+worker/src/__tests__/prompt-builder-grounding.test.ts
+  s_358672d53d4d2d::t_3ab13f0d0640c6 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0a15e6b20b06b689e8efd2ac6554df4eeca77917",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
