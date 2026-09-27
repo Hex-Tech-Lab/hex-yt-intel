@@ -324,6 +324,14 @@ jobs:
       # Node-20-runtime warnings. The CLI reads VERCEL_ORG_ID/VERCEL_PROJECT_ID
       # from env to target the project non-interactively.
       - name: Deploy to Vercel
+        # RCA 2026-09-27: running the CLI from the repo ROOT uploaded the
+        # root directory (no Next app) — prod served a static file listing
+        # and the deployment recorded Framework=Other (production override
+        # from the stray drpd53fka artifact). The project's real app lives
+        # in web/ (project settings rootDirectory=web). Deploying from the
+        # web directory makes the CLI deployment root match the git-
+        # integration behavior the project was originally configured for.
+        working-directory: web
         run: pnpm dlx vercel deploy --prod --token="$VERCEL_TOKEN" --yes
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
