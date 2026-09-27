@@ -71,7 +71,10 @@ export function buildSettlePatch(
 ): { outcome: ReapOutcome; patch: SettlePatch } {
   const { outcome, dimensionCount } = decideReapOutcome(analysisMarkdown);
   const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
-  const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
+  // If dimensionCount > 0 but < TOTAL_DIMENSIONS, mark status as 'partial'
+  // (unbilled, billing_status: 'failed') so the dimension-remediation cron
+  // can sweep and recover the missing dimensions.
+  const reportStatus = outcome === 'failed' ? (dimensionCount > 0 ? 'partial' : 'failed') : isComplete ? 'complete' : 'partial';
 
   // ONLY chargeable at 100% (matches buildDimensionStatus/decideChunkSalvagePolicy).
   // `outcome` alone used to gate this at MIN_SALVAGEABLE_DIMENSIONS (8/11).
@@ -88,7 +91,14 @@ export function buildSettlePatch(
     patch: {
       billing_status: billingStatus,
       validation_passed: isComplete,
-      validation_report: { ...baseReport, status: reportStatus, reaped: true, reaped_at: nowIso, reaped_dimensions: dimensionCount },
+      validation_report: {
+        ...baseReport,
+        status: reportStatus,
+        validation_status: reportStatus,
+        reaped: true,
+        reaped_at: nowIso,
+        reaped_dimensions: dimensionCount,
+      },
       updated_at: nowIso,
     },
   };

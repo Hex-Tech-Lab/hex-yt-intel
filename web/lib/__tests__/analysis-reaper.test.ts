@@ -84,6 +84,21 @@ describe('buildSettlePatch', () => {
     expect(patch.validation_report.status).toBe('partial');
   });
 
+  it('marks a below-salvage-threshold partial (1..7 dimensions) with status="partial" so dimension-remediation can recover it', () => {
+    // RCA: A row stuck with 1..7 dimensions (below MIN_SALVAGEABLE_DIMENSIONS = 8)
+    // was previously settled with validation_report.status = 'failed'.
+    // Because dimension-remediation sweeps for billing_status='failed' AND
+    // validation_report->>status='partial', those rows were silently dropped forever.
+    const md = markdownWithDimensions(4);
+    const { outcome, patch } = buildSettlePatch(md, null, nowIso);
+    expect(outcome).toBe('failed');
+    expect(patch.billing_status).toBe('failed');
+    expect(patch.validation_passed).toBe(false);
+    expect(patch.validation_report.status).toBe('partial');
+    expect(patch.validation_report.validation_status).toBe('partial');
+    expect(patch.validation_report.reaped_dimensions).toBe(4);
+  });
+
   it('ignores a non-plain-object (array) prior report instead of spreading it', () => {
     const { patch } = buildSettlePatch(null, ['unexpected'], nowIso);
     expect(patch.validation_report).toMatchObject({ status: 'failed', reaped: true });
