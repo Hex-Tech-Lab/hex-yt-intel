@@ -1,0 +1,18 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  h_60000122af7b55 2-11,18,20,23
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  h_60000122af7b55 1-109
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 15-20,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0a69813dc1a7a90b474c0bac1df42a953f66ee7e",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
