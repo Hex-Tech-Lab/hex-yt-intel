@@ -23,12 +23,13 @@ export type { MonetizationVerdict } from './monetization';
 
 // =============================================================================
 // Internal imports for types still defined in this file
-// =============================================================================
-import type { PersonaId, PersonaProjection, PersonaConfigV2 } from './persona';
 import { PERSONA_DIMENSIONS } from './persona';
+
+import type { PersonaId, PersonaProjection, PersonaConfigV2 } from './persona';
 import type { UCISDimension } from './dimension';
 import type { ClassificationData } from './classification';
 import type { MonetizationVerdict } from './monetization';
+import type { RelationsResult } from './knowledge-graph';
 
 /**
  * The `analysis_payload` JSON column's shape, as consumed by
@@ -47,6 +48,8 @@ export interface RestoreAnalysisPayload {
   knowledgeGraph?: KnowledgeGraphV2;
   classification?: ClassificationData;
   monetizationVerdict?: MonetizationVerdict;
+  stance_relations?: (RelationsResult & { contentHash?: string }) | null;
+  dimensions?: UCISDimension[];
 }
 
 // =============================================================================
@@ -205,6 +208,7 @@ export interface UCISPayloadV2 {
   videoMetadata?: Record<string, unknown> | null;
   channelMeta?: Record<string, unknown> | null;
   comments?: Array<Record<string, unknown>> | null;
+  stance_relations?: (RelationsResult & { contentHash?: string }) | null;
 }
 
 /**

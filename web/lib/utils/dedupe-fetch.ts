@@ -40,6 +40,10 @@ interface InFlightEntry {
 const inFlight = new Map<string, InFlightEntry>();
 
 export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Promise<Response> {
+  if (init?.signal?.aborted) {
+    return Promise.reject(new DOMException("Aborted", "AbortError"));
+  }
+
   let entry = inFlight.get(url);
   // Never inherit a settled (dead) entry — start fresh instead.
   if (entry?.settled) {
@@ -74,19 +78,25 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
       if (currentEntry.consumers === 0) currentEntry.controller.abort();
     };
 
+    let onAbort: (() => void) | undefined;
     if (init?.signal) {
       if (init.signal.aborted) {
         detach();
         return reject(new DOMException("Aborted", "AbortError"));
       }
-      init.signal.addEventListener("abort", () => {
+      onAbort = () => {
         detach();
         reject(new DOMException("Aborted", "AbortError"));
-      });
+      };
+      init.signal.addEventListener("abort", onAbort, { once: true });
     }
 
     currentEntry.promise
       .then(res => {
+        if (init?.signal && onAbort) {
+          init.signal.removeEventListener("abort", onAbort);
+          onAbort = undefined;
+        }
         // Real Response objects must be cloned: the original body is shared with
         // other in-flight consumers. Plain-object mocks (test doubles, some SSR
         // shims) have no clone() and are single-consumer by construction, so
@@ -94,6 +104,10 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
         if (!detached) resolve(typeof res.clone === 'function' ? res.clone() : res);
       })
       .catch(err => {
+        if (init?.signal && onAbort) {
+          init.signal.removeEventListener("abort", onAbort);
+          onAbort = undefined;
+        }
         if (!detached) reject(err);
       })
       .finally(() => {

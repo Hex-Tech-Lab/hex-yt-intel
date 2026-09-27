@@ -1,0 +1,468 @@
+{
+  "trendsByDim": {
+    "1": {
+      "dimName": "Dim 1: Apex Intelligence",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      }
+    },
+    "2": {
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "3": {
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "4": {
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 47.5,
+        "avgStyle": 44,
+        "pass": false
+      }
+    },
+    "5": {
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 47.5,
+        "avgStyle": 44,
+        "pass": false
+      }
+    },
+    "6": {
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 47.5,
+        "avgStyle": 44,
+        "pass": false
+      }
+    },
+    "7": {
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "8": {
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "9": {
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "10": {
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "11": {
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "videoCount": 2,
+      "modelA": {
+        "avgInfo": 95,
+        "avgStyle": 88,
+        "pass": true
+      },
+      "modelB": {
+        "avgInfo": 47.5,
+        "avgStyle": 44,
+        "pass": false
+      }
+    }
+  },
+  "allResults": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 1: Apex Intelligence",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and data points from the baseline, including demographic statistics and inheritance profiles, while maintaining a similar analytical tone and structured presentation."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures key data points like inheritance statistics and factor breakdowns, and maintains a similar analytical tone, but lacks some detailed formatting and specific action-oriented recommendations present in the baseline."
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and arguments, including subscriber count and engagement strategies, while maintaining a similar analytical tone and structured format."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and data points from the baseline, including the three factors and inheritance statistics, while maintaining an analytical tone and structured format with bullet points and quantitative anchors."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures key elements such as speaker identity, audience dynamics, and statistical anchors, while maintaining a dense analytical tone with structured sections similar to the baseline."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and arguments from the baseline, including inheritance statistics and factor-specific success rates, while maintaining a similar analytical tone and structure with detailed tables and bullet points."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and data points from the baseline, including inheritance statistics and the three-factor framework, while maintaining a similar analytical tone and structure with tables and bullet points."
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger accurately captures all key data points and arguments from the baseline, including inheritance breakdowns, factor impacts, and retirement savings distributions, while maintaining a similar analytical tone and depth."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key elements such as early savings, contribution scaling, and compounding effects, while maintaining a similar analytical tone and structure, though with slight variations in formatting and depth."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key concepts and data points from the baseline, including detailed semantic relations and entity types, while maintaining a similar analytical tone and structured formatting."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key points from the baseline, including the focus on retirement savings and behavioral economics, while maintaining a similar analytical tone and structure with detailed tables and bullet points."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key points from the baseline, including statistical claims and credibility factors, while maintaining a similar analytical tone and depth, but lacks the structured table format of the baseline."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key monetization strategies and audience insights from the baseline, while maintaining a similar analytical tone and structured format, though with slightly less depth in specific financial metrics."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 1: Apex Intelligence",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and data points from the baseline, including Jev's cost and speed advantages, but presents them with a slightly different focus and structure, maintaining a consistent analytical tone."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities from the baseline, including Jev's performance metrics and use cases, while maintaining a similar analytical tone and depth, despite slight differences in formatting."
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities, including metrics, channel authority, and audience sentiment, while matching the analytical tone and depth of the baseline, despite slight formatting differences."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities from the baseline, including Jev's architecture, decision taxonomy, and performance metrics, while maintaining a similar analytical tone and structured format."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and arguments from the baseline, such as the use of authority and metrics, while maintaining a similar analytical tone and structured format, though it slightly deviates in depth by omitting specific biases and conflicts of interest."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key elements such as tone, persuasion strategy, and bias detection, while maintaining a similar analytical style and structure."
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key insights from the baseline, including Jev's architectural constraints, speed-cost advantages, and context window limitations, while maintaining a similar analytical tone and structured format."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and data points from the baseline, including speed, cost, and limitations, while maintaining a dense analytical tone and structured format with comparative tables."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key data points and maintains a similar analytical tone and formatting, but lacks some depth in scenario analysis."
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key systems and workflows from the baseline, maintaining analytical tone and structure, but lacks specific step-by-step details and exact success metrics."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities from the baseline, including Jev's features, metrics, and use cases, while maintaining a similar analytical tone and structured format."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and arguments, though it reorganizes them; it maintains an analytical tone and uses structured formatting, but diverges in depth and bullet use."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: "
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities from the baseline, including credibility factors and risk disclosures, while maintaining a dense, analytical tone and structured format similar to the baseline."
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Challenger failed: Error: The operation was aborted due to timeout"
+      }
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "gradeA": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key facts and entities from the baseline, including monetization strategies and potential revenue models, while maintaining a similar analytical tone and depth."
+      },
+      "gradeB": {
+        "info": 95,
+        "style": 88,
+        "reasoning": "The challenger captures all key monetization strategies and CTAs from the baseline, with a similar analytical tone and structured presentation, though it lacks some detailed numerical estimates and specific entity mentions."
+      }
+    }
+  ]
+}

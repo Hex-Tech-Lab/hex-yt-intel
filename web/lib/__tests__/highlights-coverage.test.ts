@@ -27,7 +27,7 @@ import { resolveHighlightOverlaps } from '@/lib/prompts/highlights-extraction';
 // 32-minute fixture: one segment every 10s from 0 to 1910 (matches the real
 // f6We53TnkbU transcript density: 1006 segments over 1930s).
 const DURATION_SECONDS = 1920;
-const SEGMENTS = Array.from({ length: DURATION_SECONDS / 10 }, (_unused, i) => ({
+const _SEGMENTS = Array.from({ length: DURATION_SECONDS / 10 }, (_unused, i) => ({
   start: i * 10,
   text: `Segment ${i} of the 32-minute fixture`,
 }));
@@ -161,7 +161,6 @@ describe('full-duration highlights coverage (32-min fixture)', () => {
   });
 
   it('persists a partial harvest when no existing reel exists (partial beats nothing)', async () => {
-    const completion = { complete: vi.fn().mockRejectedValue(new Error('LLM flaky')) };
     // One window succeeds, the rest fail after retry.
     let call = 0;
     const flakyCompletion = {

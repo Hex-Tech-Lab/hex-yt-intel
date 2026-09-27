@@ -1,23 +1,26 @@
-import { normalizeTranscriptSegments } from '@/lib/utils/transcript-normalizer';
-import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
-import { getSupabaseServiceClient } from '@/lib/supabase';
-import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
-import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import * as Sentry from '@sentry/nextjs';
+
+import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
+import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
+import { getSupabaseServiceClient } from '@/lib/supabase';
+import { isPersistedValidationReport } from '@/lib/types/validation-report';
+import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
+import { mapHistoryOverviewRow } from '@/lib/utils/history-overview';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { normalizeTranscriptSegments } from '@/lib/utils/transcript-normalizer';
+
 import type {
   CachedAnalysis,
   AnalysisStub,
   ValidationReportInput,
   HistoryOverviewItem,
 } from '@/lib/ports';
-import type { AnalysisJobMetadata } from '@/lib/types/contracts';
-import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
-import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
-import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
-import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
-import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import type { AnalysisJobMetadata } from '@/lib/types/contracts';
+import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
+import type { RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 
 const MAX_GROUNDING_PAYLOAD_BYTES = 100_000;
 
@@ -108,6 +111,7 @@ export class SupabaseAnalysisAdapter {
       // analyze creates a new row; the reaper already terminalized the old
       // one). Partial rows (real persisted dimensions) still restore.
       .neq('billing_status', 'failed')
+      .neq('billing_status', 'cancelled')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -122,6 +126,12 @@ export class SupabaseAnalysisAdapter {
         if (d && typeof d.number === 'number') acc[d.number] = d;
         return acc;
       }, {});
+
+      // A cache hit is a CONTENT contract: rows containing only aux structures
+      // (e.g. reaped/cancelled rows holding only stance_relations or metadata)
+      // must not qualify as a valid analysis cache hit.
+      const hasContent = Object.keys(dimensions).length > 0 || (typeof existing.analysis_markdown === 'string' && existing.analysis_markdown.trim().length > 100);
+      if (!hasContent) return null;
 
       const res = {
         id: existing.id,

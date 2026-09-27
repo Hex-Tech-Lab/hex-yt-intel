@@ -7,7 +7,7 @@
 // fully controlled. These tests are the negative control for the sequence
 // guard — against the pre-guard hook (no seqRef check) the out-of-order
 // tests fail because the stale response clobbers the newer one.
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useHistoryOverview, HISTORY_LIVE_POLL_MS } from '@/hooks/useHistoryOverview';
 import type { HistoryOverviewItem } from '@/lib/ports';

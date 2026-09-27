@@ -1,0 +1,314 @@
+{
+  "trendsByDim": {
+    "1": {
+      "dimName": "Dim 1: Apex Intelligence",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "2": {
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "3": {
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "4": {
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "5": {
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "6": {
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "7": {
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "8": {
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "9": {
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "10": {
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    },
+    "11": {
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "videoCount": 1,
+      "modelA": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      },
+      "modelB": {
+        "avgInfo": 0,
+        "avgStyle": 0,
+        "pass": false
+      }
+    }
+  },
+  "allResults": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 1: Apex Intelligence",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "gradeA": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      },
+      "gradeB": {
+        "info": 0,
+        "style": 0,
+        "reasoning": "Judge parse failed"
+      }
+    }
+  ]
+}

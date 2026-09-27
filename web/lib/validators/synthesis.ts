@@ -317,8 +317,8 @@ export const MonetizationVerdictSchema = z
 export const MAX_KG_NODES = 24;
 // Derived from production data (2026-09-25): across 88 completed analyses the
 // observed per-bundle/stitched edge count is p50=15, p90=20, max=20 -- the
-// previous 18 cap rejected 31/88 rows' real output (the model is under no
-// edge-count cap in the prompt). 20 observed max + ~20% margin = 24.
+// Production telemetry (p90/max = 20 edges + 20% margin = 24 edges; PR #346).
+// Normalization preprocessor below clamps edges to MAX_KG_EDGES so excess edges never reject.
 export const MAX_KG_EDGES = 24;
 
 /**

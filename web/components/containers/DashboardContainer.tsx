@@ -1062,7 +1062,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   );
                   const existsInHistory = Boolean(
                     currentInputVideoId &&
-                    analysisHistory.some((item) => item.videoId === currentInputVideoId && item.status === "completed")
+                    analysisHistory.some(
+                      (item) =>
+                        item.videoId === currentInputVideoId &&
+                        (item.status === "complete" || item.status === "completed" || item.status === "partial")
+                    )
                   );
                   const isRepeat = isCurrentVideoLoaded || existsInHistory || hasExistingAnalysis;
 

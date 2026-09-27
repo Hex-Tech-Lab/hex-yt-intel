@@ -26,6 +26,7 @@ export interface RawHistoryOverviewRow {
   has_comments: boolean | null;
   has_chapters: boolean | null;
   client_platform: ClientPlatform | null;
+  failure_reason: string | null;
 }
 
 /**
@@ -50,7 +51,7 @@ export function computeMissingDimensions(present: readonly number[]): number[] {
  * to numbers here so consumers never have to.
  */
 export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOverviewItem {
-  const presentDimensions = (row.present_dimensions ?? []).slice().sort((a, b) => a - b);
+  const presentDimensions = (row.present_dimensions ?? []).slice().sort((dimA, dimB) => dimA - dimB);
   const rawTitle = row.title?.trim() || '';
   // Non-descriptive title detection: bare dates in "Month D, YYYY", "YYYY-MM-DD",
   // or short "M/D/YY" / "D/M/YY" forms, plus empty/whitespace. A real date-only
@@ -93,6 +94,7 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     presentDimensions,
     missingDimensions: computeMissingDimensions(presentDimensions),
     status: row.status,
+    failureReason: row.failure_reason ?? null,
     hasDigest: !!row.has_digest,
     hasDescription: !!row.has_description,
     hasChannelMeta: !!row.has_channel_meta,

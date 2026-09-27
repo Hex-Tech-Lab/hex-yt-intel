@@ -23,6 +23,7 @@ export interface UCISDimension {
     wordCount?: number;
     keyTerms?: string[];
     confidence?: number;
+    insufficientData?: boolean;
   };
 }
 
