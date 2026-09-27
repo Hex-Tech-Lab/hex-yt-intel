@@ -23,9 +23,9 @@ export type { MonetizationVerdict } from './monetization';
 
 // =============================================================================
 // Internal imports for types still defined in this file
-// =============================================================================
-import type { PersonaId, PersonaProjection, PersonaConfigV2 } from './persona';
 import { PERSONA_DIMENSIONS } from './persona';
+
+import type { PersonaId, PersonaProjection, PersonaConfigV2 } from './persona';
 import type { UCISDimension } from './dimension';
 import type { ClassificationData } from './classification';
 import type { MonetizationVerdict } from './monetization';
