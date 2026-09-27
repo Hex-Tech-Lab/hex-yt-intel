@@ -126,6 +126,14 @@ export const HIGHLIGHTS_SPEED_MAX = 3;
  *  registry has no partition-level key to hang it on. */
 export const HIGHLIGHTS_COVERAGE_WINDOW_SECONDS = 300;
 
+/**
+ * Concurrency ceiling for windowed highlights extraction (Wave 3).
+ * Sized at 3 to prevent slamming upstream LLM provider rate limits
+ * (OpenRouter 429s) when long videos yield 10-20 partition windows,
+ * while maintaining low total latency via pipeline parallelism.
+ */
+export const HIGHLIGHTS_MAX_CONCURRENT_WINDOWS = 3;
+
 /** Shared by HighlightsScrubber.tsx and PublicHighlightsReel.tsx -- was
  *  duplicated verbatim in both (/simplify review, 2026-08-20). */
 export function fmtHighlightsDuration(seconds: number): string {

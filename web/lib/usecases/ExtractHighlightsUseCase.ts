@@ -14,6 +14,7 @@ import {
   HIGHLIGHTS_REGISTRY_FALLBACK,
   clampHighlightsSetting,
   HIGHLIGHTS_COVERAGE_WINDOW_SECONDS,
+  HIGHLIGHTS_MAX_CONCURRENT_WINDOWS,
 } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
 
@@ -142,6 +143,31 @@ export function computeHarvestWindows(lastSegmentStart: number, windowSeconds: n
   };
 }
 
+/**
+ * Concurrency-bounded execution helper. Preserves item order in the returned array.
+ */
+async function runWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let currentIndex = 0;
+
+  async function worker() {
+    while (currentIndex < items.length) {
+      const idx = currentIndex++;
+      results[idx] = await fn(items[idx]!, idx);
+    }
+  }
+
+  const poolSize = Math.max(1, Math.min(limit, items.length));
+  const workers = Array.from({ length: poolSize }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 export class ExtractHighlightsUseCase {
   constructor(
     private persistence: HighlightsPersistencePort,
@@ -261,9 +287,17 @@ export class ExtractHighlightsUseCase {
     // One bounded retry per failed window: a transient LLM/parse failure on
     // a single window must not permanently shrink the reel for the full
     // duration that window covers (PR #349 RCA).
-    const initialOutcomes = await Promise.all(harvest.windows.map((_window, index) => harvestWindow(index)));
-    const windowOutcomes = await Promise.all(
-      initialOutcomes.map((outcome, index) => (outcome.status === 'failed' ? harvestWindow(index) : Promise.resolve(outcome)))
+    // Concurrency throttled to HIGHLIGHTS_MAX_CONCURRENT_WINDOWS (Wave 3)
+    // to protect upstream LLM rate limits on long videos.
+    const initialOutcomes = await runWithConcurrency(
+      harvest.windows,
+      HIGHLIGHTS_MAX_CONCURRENT_WINDOWS,
+      (_window, index) => harvestWindow(index)
+    );
+    const windowOutcomes = await runWithConcurrency(
+      initialOutcomes,
+      HIGHLIGHTS_MAX_CONCURRENT_WINDOWS,
+      (outcome, index) => (outcome.status === 'failed' ? harvestWindow(index) : Promise.resolve(outcome))
     );
 
     // Cross-window merge: dedupe by parent takeaway (earliest-in-time wins,
