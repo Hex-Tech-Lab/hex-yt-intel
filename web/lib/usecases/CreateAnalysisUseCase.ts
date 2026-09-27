@@ -61,6 +61,8 @@ export interface UseCaseSuccess {
   status: 'processing';
   title: string;
   persona: PersonaId;
+  /** Registry-resolved prompt transcript char budget (2026-09-27). */
+  transcriptBudgetChars: number;
   metadata: AnalysisJobMetadata;
   transcript: string;
   segments?: TranscriptSegment[];
@@ -170,6 +172,18 @@ export class CreateAnalysisUseCase {
     const resolvedMaxTokensRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
       ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'],
       { 'analysis.maxOutputTokens.haiku': 8192, 'analysis.maxOutputTokens.default': 16000 }
+    );
+    // Transcript prompt budget (2026-09-27): replaces getUCISPrompt's hardcoded
+    // 48000-char slice. Forwarded to the worker per-request (no DB access there,
+    // ADR 005) and surfaced in the stream log when truncation actually occurs,
+    // so a truncated-input analysis can never read as an unqualified success.
+    const resolvedBudgetRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.transcriptBudgetChars'],
+      { 'analysis.transcriptBudgetChars': 48000 }
+    );
+    const transcriptBudgetChars = Math.max(
+      1000,
+      Number(resolvedBudgetRegistry['analysis.transcriptBudgetChars']) || 48000
     );
     const maxOutputTokens = {
       haiku: Number(resolvedMaxTokensRegistry['analysis.maxOutputTokens.haiku']) || 8192,
@@ -345,6 +359,7 @@ export class CreateAnalysisUseCase {
         llmCascadeHandshakeTimeoutMs,
         promptCaching,
         cacheWarmTimeoutMs,
+        transcriptBudgetChars,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,

@@ -274,6 +274,8 @@ export interface WorkerStreamRequest {
   // client-side bounded wait before bundles 2-5 start (cache-warm stagger),
   // consumed in useSSEStream, never forwarded to the worker.
   cacheWarmTimeoutMs?: number;
+  /** Registry-resolved prompt transcript char budget (analysis.transcriptBudgetChars). */
+  transcriptBudgetChars?: number;
   sig: string;
   exp: number;
   appUrl?: string;

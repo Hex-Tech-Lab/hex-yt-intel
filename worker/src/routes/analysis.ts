@@ -114,6 +114,11 @@ interface StreamRequest {
   // bundles' shared prompt prefix. Kill switch; stale clients (undefined)
   // default to enabled.
   promptCaching?: boolean;
+  // Registry-resolved (2026-09-27, analysis.transcriptBudgetChars) -- prompt
+  // transcript char budget. The worker has no DB access (ADR 005), so the
+  // Vercel bouncer resolves it and forwards it here; stale clients (undefined)
+  // fall back to getUCISPrompt's legacy 48000.
+  transcriptBudgetChars?: number;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -994,6 +999,26 @@ function buildStreamResponse(
         return;
       }
 
+      // Truncation guardrail (2026-09-27, user directive — no success-washing):
+      // when the assembled prompt will slice the transcript, SAY SO in the
+      // client's own log stream. The prompt's in-band notice tells the model;
+      // this status frame tells the human. Budget mirrors
+      // analysis.transcriptBudgetChars (registry-resolved client-side,
+      // forwarded per request; fallback matches getUCISPrompt's legacy 48000).
+      {
+        const budget = req.transcriptBudgetChars ?? 48000;
+        const transcriptLen = resolvedTranscriptText?.length ?? 0;
+        if (transcriptLen > budget) {
+          send({
+            type: "status",
+            stage: "transcript-truncated",
+            message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
+            transcriptLength: transcriptLen,
+            budget,
+          } as unknown as Record<string, unknown>);
+        }
+      }
+
       // Dedicated cancel signal (Phase 1, ADR 020) -- deliberately separate from
       // httpConnSignal. httpConnSignal fires on ANY disconnect (navigation away,
       // tab close, network drop) and must NOT abort generation (2026-07-29 fix,
@@ -1045,6 +1070,7 @@ function buildStreamResponse(
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
+            transcriptBudgetChars: req.transcriptBudgetChars,
           },
           {
             onDelta: (delta: string) => {

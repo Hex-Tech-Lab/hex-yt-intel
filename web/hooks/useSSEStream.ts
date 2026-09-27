@@ -296,9 +296,20 @@ export function useSSEStream() {
 
               // 3. Stream directly from the Cloudflare Worker (no Vercel in the LLM path).
               if (!job.stream?.url) {
-                const msg = 'Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).';
+                // RCA 2026-09-27: a restore-shaped job (existing analysis, no
+                // stream token) landing here produced a misleading "Streaming
+                // endpoint not configured (NEXT_PUBLIC_WORKER_URL)" error —
+                // the config was never the problem. Distinguish: fresh jobs
+                // MUST have a stream (config error is correct); restore-shaped
+                // jobs without usable content mean the cached row is dead —
+                // the correct action is re-analyze, not a config red herring.
+                const restoreShaped = typeof job.analysisId === 'string' && job.analysisId.length > 0 && !job.stream?.url;
+                const msg = restoreShaped
+                  ? 'Cached analysis has no usable content — use Re-analyze to run it fresh.'
+                  : 'Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).';
+                const code = restoreShaped ? 'ERR_RESTORE_UNUSABLE' : 'ERR_STREAM_UNCONFIGURED';
                 store.logError(`Configuration error: ${msg}`);
-                setError({ code: 'ERR_STREAM_UNCONFIGURED', status: 0, message: msg });
+                setError({ code, status: 0, message: msg });
                 setStatus('error');
                 setIsLoading(false);
                 return;
@@ -435,6 +446,7 @@ export function useSSEStream() {
                   llmCascadeHandshakeTimeoutMs: job.llmCascadeHandshakeTimeoutMs,
                   promptCaching: job.promptCaching,
                   cacheWarmTimeoutMs: job.cacheWarmTimeoutMs,
+                  transcriptBudgetChars: job.transcriptBudgetChars,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,

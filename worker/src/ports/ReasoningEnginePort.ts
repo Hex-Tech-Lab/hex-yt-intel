@@ -49,6 +49,13 @@ export interface EngineContext {
   systemPrompt?: string;
   /** Optional dimension bundle for multi-stream execution. */
   dimensions?: number[];
+  /**
+   * Registry-resolved transcript char budget for the assembled prompt
+   * (analysis.transcriptBudgetChars). Registry-driven 2026-09-27 per the
+   * no-hardcoded-tunables directive — was a hardcoded 48000 slice in
+   * getUCISPrompt. Optional; consumers fall back to the same default.
+   */
+  transcriptBudgetChars?: number;
 }
 
 /** Structured lifecycle event emitted during the cascade. */

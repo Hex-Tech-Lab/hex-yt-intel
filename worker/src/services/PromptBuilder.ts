@@ -68,6 +68,7 @@ export class PromptBuilder implements PromptBuilderPort {
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
       skipAllDimensionsInstruction: true,
+      transcriptBudgetChars: context.transcriptBudgetChars,
     });
 
     if (context.dimensions !== undefined && context.dimensions.length > 0) {

@@ -7,6 +7,14 @@ import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 export interface GetUCISPromptParams {
   version?: string;
   /**
+   * Registry-resolved transcript char budget (analysis.transcriptBudgetChars),
+   * forwarded by callers that can reach the Settings Registry (the Vercel
+   * bouncer resolves it and threads it through the signed stream request).
+   * Falls back to the legacy 48000 when absent. Replaces the hardcoded slice
+   * (RCA 2026-09-27: 3-hour videos silently analyzed ~27% of their transcript).
+   */
+  transcriptBudgetChars?: number;
+  /**
    * Pre-resolved template text, supplied by callers (e.g. the Workers
    * runtime) that can't reach resolveUCISPromptTemplate's process.env-based
    * Supabase/Redis reads. When set, resolveUCISPromptTemplate is never
@@ -59,6 +67,7 @@ export async function getUCISPrompt({
   timezone,
   duration,
   skipAllDimensionsInstruction,
+  transcriptBudgetChars,
 }: GetUCISPromptParams): Promise<string> {
   const systemPrompt = promptOverride ?? (await resolveUCISPromptTemplate(version));
   // PR #318 round 2: DB/Redis-resolved templates and promptOverride replace
@@ -71,6 +80,18 @@ export async function getUCISPrompt({
   const formattedDuration = duration !== undefined ? formatDuration(duration) : undefined;
   const metadataWithDuration = { ...metadata, duration: formattedDuration };
   const metadataJson = JSON.stringify(metadataWithDuration, null, 2);
+
+  // Transcript budget: registry-resolved per request (analysis.transcriptBudgetChars,
+  // forwarded by CreateAnalysisUseCase) with the legacy 48000 fallback for stale
+  // callers that don't send one. The truncation notice states the real coverage %
+  // in-band so the model (and any prompt log) can never present a truncated read
+  // as a complete one (RCA 2026-09-27: 3-hour videos sent ~27% of the transcript
+  // with the log reading "Analysis stream completed successfully").
+  const TRANSCRIPT_BUDGET = transcriptBudgetChars ?? 48000;
+  const transcriptDisplay = transcript.slice(0, TRANSCRIPT_BUDGET);
+  const truncationNotice = transcript.length > TRANSCRIPT_BUDGET
+    ? `\n\n[...transcript truncated to ${(TRANSCRIPT_BUDGET / 1024).toFixed(0)}K characters — model coverage limited to the first ${Math.round((TRANSCRIPT_BUDGET / transcript.length) * 100)}% of the full transcript (${transcript.length} chars total)]...`
+    : '';
 
   // Short-form detection: inject notice if video is < 3 minutes (180 seconds)
   const isShortForm = duration !== undefined && duration < 180;
@@ -98,7 +119,7 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Timezone**: ${timezone}${durationNotice}${shortFormNotice}
 
 **Transcript**:
-${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${groundingBlock}`;
+${transcriptDisplay}${truncationNotice}${groundingBlock}`;
   }
 
   const promptVersion = version || '5.1';
@@ -122,7 +143,7 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Timezone**: ${timezone}${durationNotice}${shortFormNotice}
 
 **Transcript**:
-${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${dimensionsInstruction}
+${transcriptDisplay}${truncationNotice}${dimensionsInstruction}
 
 **CRITICAL**: Do NOT include any closing tags, summary lines, or metadata markers (e.g., "End of UCIS v${promptVersion} Report") at the end of your response. The output must end immediately after the final dimension content.${groundingBlock}`;
 

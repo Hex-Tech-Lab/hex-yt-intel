@@ -15,6 +15,27 @@ import { PLAYBACK_POLL_INTERVAL_MS } from '@/lib/utils/highlights-settings';
 
 import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
 
+// Thumbnail quality ladder (RCA 2026-09-27, user-reported: the pre-interaction
+// facade swapped a clean render for a blurry upscale — hqdefault is 480x360
+// and object-cover stretches it across a full-width card). Best-available
+// first with graceful degradation: maxresdefault (1280x720) 404s on videos
+// without an HD master, then sddefault (640x480), then hqdefault (always
+// exists). Each <img> degrades independently, no shared state.
+const THUMBNAIL_TIERS = ['maxresdefault', 'sddefault', 'hqdefault'] as const;
+
+function YouTubeThumbnail({ videoId, className }: { videoId: string; className: string }) {
+  const [tier, setTier] = useState(0);
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */
+    <img
+      src={`https://i.ytimg.com/vi/${videoId}/${THUMBNAIL_TIERS[Math.min(tier, THUMBNAIL_TIERS.length - 1)]}.jpg`}
+      alt=""
+      className={className}
+      onError={() => setTier((t) => Math.min(t + 1, THUMBNAIL_TIERS.length - 1))}
+    />
+  );
+}
+
 export function VideoPlayerCard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<VideoPlayerPort | null>(null);
@@ -314,12 +335,7 @@ export function VideoPlayerCard() {
         volumeGain={getVolumeGain()}
       />
       <div className={`absolute inset-0 z-10 flex-col items-center justify-center p-6 text-center text-xs font-mono ${embedRestricted ? 'flex' : 'hidden'}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
-        <img
-          src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-30"
-        />
+        <YouTubeThumbnail videoId={videoId} className="absolute inset-0 w-full h-full object-cover opacity-30" />
         {/* Solid backing so the destroyed-but-briefly-still-painting YouTube
             iframe (and its own "Video unavailable" chrome) can never show
             through the thumbnail's 30% opacity during the render gap. */}
@@ -340,12 +356,7 @@ export function VideoPlayerCard() {
       </div>
       {interacted && !ready && !embedRestricted && !playbackError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[rgb(11_14_20_/_0.85)] backdrop-blur-sm pointer-events-none">
-          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
-          <img
-            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-20"
-          />
+          <YouTubeThumbnail videoId={videoId} className="absolute inset-0 w-full h-full object-cover opacity-20" />
           <div className="relative flex flex-col items-center gap-2">
             <Spinner size="lg" label="Initializing YouTube Player…" />
           </div>
@@ -358,12 +369,7 @@ export function VideoPlayerCard() {
           aria-label="Play video"
           className="absolute inset-0 z-10 w-full h-full group cursor-pointer"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
-          <img
-            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <YouTubeThumbnail videoId={videoId} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-[rgb(11_14_20_/_0.35)] group-hover:bg-[rgb(11_14_20_/_0.5)] transition-colors flex items-center justify-center">
             <span className="flex items-center justify-center w-16 h-16 rounded-full bg-[rgb(11_14_20_/_0.75)] border border-[var(--accent)] text-[var(--accent)] group-hover:scale-105 transition-transform">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 translate-x-0.5">

@@ -99,6 +99,15 @@ export class SupabaseAnalysisAdapter {
       .eq('video_id', params.videoId)
       .eq('user_id', params.userId)
       .neq('billing_status', 'processing') // Skip active jobs
+      // RCA 2026-09-27 (user rerun crash, 13:45 local): failed rows were
+      // served as cache hits — zero usable content (analysis_markdown null,
+      // no stream to attach) — and the client fell through to a misleading
+      // "Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL)" error.
+      // A cache hit is a CONTENT contract: only rows that actually carry a
+      // usable analysis qualify. Failed rows stay re-analyzable (a fresh
+      // analyze creates a new row; the reaper already terminalized the old
+      // one). Partial rows (real persisted dimensions) still restore.
+      .neq('billing_status', 'failed')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
