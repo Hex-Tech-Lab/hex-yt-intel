@@ -1,0 +1,18 @@
+scripts/quality-engine/__tests__/reliability-q2-rules.test.ts
+  h_60000122af7b55 55,69
+web/lib/chat/outbox.ts
+  h_60000122af7b55 69-78
+web/vitest.config.ts
+  h_60000122af7b55 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "afba07266202908100ff7ec6986b172dae93ff12",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
