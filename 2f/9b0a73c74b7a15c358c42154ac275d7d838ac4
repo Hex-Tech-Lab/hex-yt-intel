@@ -1,0 +1,81 @@
+docs/history/BAKEOFF_L2_TRENDS_1790423740928.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/BAKEOFF_L2_TRENDS_1790421078764.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-314
+docs/history/BAKEOFF_L2_TRENDS_1790458518958.html
+  s_358672d53d4d2d::t_a100b5d95fb8ab 1-23
+docs/history/BAKEOFF_L2_TRENDS_1790423740928.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+docs/history/BAKEOFF_L2_TRENDS_1790423460998.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-47
+docs/history/BAKEOFF_L2_TRENDS_1790421078729.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-314
+docs/history/BAKEOFF_L2_TRENDS_1790423460998.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-4
+docs/history/BAKEOFF_L2_TRENDS_1790458518958.json
+  s_358672d53d4d2d::t_a100b5d95fb8ab 1-1171
+docs/history/BAKEOFF_L2_TRENDS_1790423895450.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/BAKEOFF_L2_TRENDS_1790421868397.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+docs/history/BAKEOFF_L2_TRENDS_1790423895449.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+docs/history/BAKEOFF_L2_TRENDS_1790423740911.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+supabase/migrations/20260926163000_history_overview_function_v15_failure_reason.sql
+  s_60372075d15109::t_1e76a15d1d1f4f 1-141
+docs/history/BAKEOFF_L2_TRENDS_1790423895449.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/BAKEOFF_L2_TRENDS_1790417564714.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-468
+docs/agent-prompts/2026-09-27-agy1-highlights-spinner-consistency.md
+  s_358672d53d4d2d::t_3985d098c2c193 1-38
+docs/history/BAKEOFF_L2_TRENDS_LATEST.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1,3-5,67,69-71,133,135-137,199,201-203,265,267-269,331,333-335,397,399-401,463,465-467,529,531-533,595,597-599,661,663-665,727,729-731,793,795-800,827-831,858-862,889-893,920-924,951-955,982-986,1013-1017,1044-1048,1075-1079,1106-1110,1137-1141,1168-1171
+  s_358672d53d4d2d::t_a100b5d95fb8ab 2,6-66,68,72-132,134,138-198,200,204-264,266,270-330,332,336-396,398,402-462,464,468-528,530,534-594,596,600-660,662,666-726,728,732-792,794,801-826,832-857,863-888,894-919,925-950,956-981,987-1012,1018-1043,1049-1074,1080-1105,1111-1136,1142-1167
+docs/history/BAKEOFF_L2_TRENDS_1790417564714.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-156
+docs/history/BAKEOFF_L2_TRENDS_1790421868374.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/BAKEOFF_L2_TRENDS_1790421868374.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+docs/history/BAKEOFF_L2_TRENDS_1790423740911.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/HANDOVER_2026-09-27-OC-BAKEOFF-PIPELINE-REENGINEERING.md
+  s_60372075d15109::t_1e363f85a9def1 1-83
+docs/history/BAKEOFF_L2_TRENDS_1790423895450.json
+  s_60372075d15109::t_1e76a15d1d1f4f 1-342
+docs/history/BAKEOFF_L2_TRENDS_1790421868397.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-166
+docs/history/BAKEOFF_L2_TRENDS_1790421078729.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-156
+docs/history/BAKEOFF_L2_TRENDS_LATEST.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1,4,8
+  s_358672d53d4d2d::t_a100b5d95fb8ab 2-3,5-7,9-23
+docs/history/BAKEOFF_L2_TRENDS_1790421078764.html
+  s_60372075d15109::t_1e76a15d1d1f4f 1-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2f9b0a73c74b7a15c358c42154ac275d7d838ac4",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_60372075d15109": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f22c66d4bffeXPfLBaQVr5BHan",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
