@@ -1,0 +1,26 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 13,16
+docs/agent-prompts/2026-09-27-oc-wave-4-task-3-inp.md
+  h_60000122af7b55 1-75
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 962-967,1135
+web/components/dashboard/DimensionAccordion.tsx
+  h_60000122af7b55 3,16-22,83-89
+web/components/dashboard/HighlightsScrubber.tsx
+  h_60000122af7b55 2-3,56,514-519
+web/components/organisms/ExecutiveSummary.tsx
+  h_60000122af7b55 3,38,146-150
+web/components/templates/console/DimensionAccordion.tsx
+  h_60000122af7b55 3,22-41,43-94,96-104,106-111,113-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "42de147240e9001ae66936dd14d27666998dfa13",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
