@@ -1,0 +1,21 @@
+web/lib/utils/dedupe-fetch.ts
+  s_358672d53d4d2d::t_55a0eaf54ee859 51-52,56-57,60
+web/components/dashboard/HighlightsScrubber.tsx
+  s_358672d53d4d2d::t_a0f673c8f1c375 307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e1c87964ab4be78a17a3dbc15227afa3b7f7b7cb",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
