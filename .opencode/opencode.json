@@ -1,9 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openrouter/@preset/glm-53-flash-on-cheap",
-  "small_model": "openrouter/@preset/glm-53-flash-on-cheap",
+  "model": "glm-preset/@preset/glm-53-flash-on-cheap",
+  "small_model": "glm-preset/@preset/glm-53-flash-on-cheap",
   "provider": {
-    "openrouter": {
+    "glm-preset": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Preset (Morph)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1"
+      },
       "models": {
         "@preset/glm-53-flash-on-cheap": {
           "name": "GLM 5.3 Flash (Morph preset)"
