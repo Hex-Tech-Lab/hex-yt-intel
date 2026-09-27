@@ -13,12 +13,15 @@ export class StreamStatusTracker {
   public handleStatus(
     fragment: {
       type: 'status';
-      stage: 'extracting' | 'starting' | 'llm-started' | 'model' | 'fallback';
+      stage: 'extracting' | 'starting' | 'llm-started' | 'model' | 'fallback' | 'transcript-truncated';
       videoId?: string;
       model?: string;
       from?: string;
       error?: string;
       rawError?: string;
+      message?: string;
+      transcriptLength?: number;
+      budget?: number;
     },
     options: StreamAdapterOptions,
     resetRawSink: () => void,
@@ -32,6 +35,11 @@ export class StreamStatusTracker {
     } else if (fragment.stage === 'model') {
       store.logInfo(`Contacting OpenRouter endpoint...`);
       store.logInfo(`Running model cascade node: ${fragment.model}`);
+    } else if (fragment.stage === 'transcript-truncated') {
+      // Truncation guardrail surfacing (2026-09-27): the worker's in-band
+      // prompt notice reaches the MODEL; this log line reaches the HUMAN.
+      // logError (not logInfo) so it visually stands out in the stream log.
+      store.logError(fragment.message || `Transcript truncated: model coverage limited to the first ${fragment.budget ?? 48000} of ${fragment.transcriptLength ?? '?'} chars.`);
     } else if (fragment.stage === 'fallback') {
       // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
       resetRawSink();

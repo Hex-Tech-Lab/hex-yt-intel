@@ -36,39 +36,7 @@ export const UCISDimensionSchema = z
   })
   .strict();
 
-/**
- * Validate the complete payload
- */
-export const UCISPayloadSchema = z
-  .object({
-    id: z.string().min(1),
-    videoId: z.string().min(1),
-    title: z.string().min(1),
-    channelTitle: z.string().optional(),
-    analysisAt: z.string().datetime(),
-    completedAt: z.string().datetime().optional(),
-    model: z.string(),
-    detectedPersona: z.enum([
-      "creator",
-      "indieMaker",
-      "consultant",
-      "researcher",
-      "productManager",
-    ]),
-    dimensions: z.record(z.coerce.number(), UCISDimensionSchema),
-    validation: z.object({
-      passed: z.boolean(),
-      errors: z.array(z.string()).optional(),
-      warnings: z.array(z.string()).optional(),
-    }),
-    streaming: z.object({
-      started: z.string().datetime(),
-      ended: z.string().datetime().optional(),
-      interrupted: z.boolean(),
-      dimensionsReceived: z.array(z.number()),
-    }),
-  })
-  .strict();
+// Obsolete v1 UCISPayloadSchema removed; unified as SSOT with UCISPayloadV2Schema below.
 
 // =============================================================================
 // ADR 006: Structured JSON Streaming — v2.0 Zod Schemas
@@ -307,23 +275,9 @@ export const PersonaConfigSchema = z.preprocess(
  * Single dimension in the JSON payload (v2.0).
  * Content is markdown (same richness as before) but properly JSON-escaped.
  * Dimension 0 is the Executive Digest (ADR 010), dimensions 1-11 are main analysis.
+ * Aliased to UCISDimensionSchema as the Single Source of Truth.
  */
-export const UCISDimensionV2Schema = z
-  .object({
-    number: z.number().int().min(0).max(TOTAL_DIMENSIONS),
-    name: z.string().min(1).max(100),
-    content: z.string().min(10),
-    metadata: z
-      .object({
-        wordCount: z.number().optional(),
-        keyTerms: z.array(z.string()).optional(),
-        confidence: z.number().min(0).max(1).optional(),
-        insufficientData: z.boolean().optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict();
+export const UCISDimensionV2Schema = UCISDimensionSchema;
 
 /**
  * Classification data for the analysis.
@@ -420,6 +374,31 @@ export const KnowledgeGraphSchema = z.preprocess(
 );
 
 /**
+ * Stance relations insights between dimensions (ADR 031).
+ * Persisted in Supabase analyses.analysis_payload->'stance_relations'.
+ */
+export const StanceRelationInsightSchema = z
+  .object({
+    kind: z.enum(["tangent", "contrarian"]),
+    source: z.number().int().min(0).max(TOTAL_DIMENSIONS),
+    target: z.number().int().min(0).max(TOTAL_DIMENSIONS),
+    sourceLabel: z.string(),
+    targetLabel: z.string(),
+    rationale: z.string(),
+  })
+  .passthrough();
+
+export const StanceRelationsSchema = z
+  .object({
+    analysisId: z.string().optional(),
+    generatedAt: z.string().optional(),
+    model: z.string().optional(),
+    insights: z.array(StanceRelationInsightSchema).optional().default([]),
+    contentHash: z.string().optional(),
+  })
+  .passthrough();
+
+/**
  * Complete structured JSON payload — v2.0 schema.
  * This is what the LLM emits and what gets persisted to analysis_payload JSONB.
  * Dual-write with analysis_markdown ensures backward compatibility.
@@ -428,15 +407,22 @@ export const UCISPayloadV2Schema = z
   .object({
     schemaVersion: z.literal("2.0"),
     persona: PersonaConfigSchema,
-    dimensions: z.array(UCISDimensionV2Schema).min(1).max(TOTAL_DIMENSIONS),
+    dimensions: z.array(UCISDimensionSchema).min(1).max(TOTAL_DIMENSIONS),
     knowledgeGraph: KnowledgeGraphSchema,
     classification: ClassificationDataSchema,
     monetizationVerdict: MonetizationVerdictSchema.optional(),
     videoMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
     channelMeta: z.record(z.string(), z.unknown()).nullable().optional(),
     comments: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
+    stance_relations: StanceRelationsSchema.nullable().optional(),
   })
   .strict();
+
+/**
+ * Authoritative SSOT for the complete analysis payload.
+ * Unified with UCISPayloadV2Schema to resolve contract drift.
+ */
+export const UCISPayloadSchema = UCISPayloadV2Schema;
 
 // =============================================================================
 // Stream Fragment Schema — Extended with ADR 006 fragment types
@@ -462,12 +448,25 @@ export const UCISStreamFragmentSchema = z.preprocess((val) => {
   z
     .object({
       type: z.literal("status"),
-      stage: z.enum(["extracting", "starting", "llm-started", "model", "fallback"]),
+      stage: z.enum(["extracting", "starting", "llm-started", "model", "fallback",
+        // Truncation guardrail frame (2026-09-27, worker side): the worker
+        // emits 'transcript-truncated' when the prompt budget slices the
+        // transcript. RCA: added worker-side without updating this consumer
+        // schema — the strict status variant rejected the frame AND its
+        // extra fields, so the client never saw the truncation warning
+        // (the exact end-to-end contract lesson this file's KG section
+        // documents). carried fields optional; strict() keeps unknown keys
+        // rejected so future frame drift still surfaces.
+        "transcript-truncated"]),
       videoId: z.string().optional(),
       model: z.string().optional(),
       from: z.string().optional(),
       error: z.string().optional(),
       rawError: z.string().optional(),
+      // transcript-truncated payload (optional on other stages):
+      message: z.string().optional(),
+      transcriptLength: z.number().optional(),
+      budget: z.number().optional(),
     })
     .strict(),
 

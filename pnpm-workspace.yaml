@@ -29,9 +29,14 @@ overrides:
   # existing pins above had drifted stale (still resolving inside newer
   # vulnerable ranges); ip-address had no pin at all. All 4 bumped to the
   # first version each advisory confirms as patched.
-  "fast-uri": "^3.1.5"
-  "sharp": "^0.35.0"
-  "hono": "^4.12.34"
+  # Dependabot #114-118 (2026-09-27): fast-uri 3.1.8 (host-confusion/SSRF cluster).
+  "fast-uri": "^3.1.8"
+  # Dependabot #132 (2026-09-27): sharp 0.35.4 — advisory GHSA-rgj7-g3m4-5g8c
+  # confirms patched range ">= 0.35.4" (libheif GHSA-g89c-p67h-r497 /
+  # GHSA-2jg2-4ch7-h545).
+  "sharp": "^0.35.4"
+  # Dependabot #122-127 (2026-09-27): hono 4.13.9 (toSSG/query-parser/parseBody cluster).
+  "hono": "^4.13.9"
   "ip-address": "^10.3.1"
   "eslint-plugin-react-hooks": "5.1.0"
   "eslint-plugin-react": "7.34.3"
@@ -66,7 +71,8 @@ overrides:
   "tar": "^7.5.19"
   "minimatch": "^10.2.5"
   "brace-expansion": "^5.0.7"
-  "smol-toml": "^1.6.1"
+  # Dependabot #130 (2026-09-27): smol-toml 1.9.0 (DoS via malformed TOML).
+  "smol-toml": "^1.9.0"
   "srvx": "^0.11.16"
   "@tootallnate/once": "^3.0.1"
   "ws": "^8.21.0"
@@ -76,8 +82,13 @@ overrides:
   # Dependabot #108 (2026-08-07): bumped ^4.3.0 -> ^4.3.1 (GHSA-5p4m-2wfm-xmqj /
   # CVE-2026-59870, quadratic CPU in !!omap resolution -- the 5.x fix for the
   # same weakness was never backported to 3.x/4.x until 4.3.1).
-  "js-yaml": "^4.3.1"
+  # Dependabot #137 (2026-09-27): js-yaml 4.3.2 (maxTotalMergeKeys CPU DoS) —
+  # the 4.x patched line (dist-tag v4-legacy); 5.x is a major, not taken here.
+  "js-yaml": "^4.3.2"
   "@opentelemetry/core": "^2.8.0"
+  # Dependabot #116/#121 (2026-09-27): qs 6.16.0 (bracket-key comma bypass +
+  # isBuffer DoS).
+  "qs": "^6.16.0"
 
 allowBuilds:
   '@astryxdesign/core': true

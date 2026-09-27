@@ -16,6 +16,19 @@ export class ReconcileHighlightsUseCase {
       const highlights = await this.persistence.findHighlightsForAnalysis(analysisId);
       if (highlights.length === 0) return;
 
+      // Cheap pre-guard (RCA 2026-09-27, "swarm of gpt-oss-120b on groq"):
+      // this usecase runs on EVERY cached-digest view (the digest early-return
+      // path schedules it unconditionally), and each run fired a real LLM
+      // completion even when every highlight already had a valid takeaway
+      // link — so N digest polls = N paid model calls with zero effect.
+      // Reconciliation's only write outcome is assigning takeawayIdx; when no
+      // row is missing/out-of-range one, there is nothing to reconcile. Skip
+      // the model call entirely in that case.
+      const hasBrokenLinks = highlights.some(
+        (h) => h.takeawayIdx === null || h.takeawayIdx === undefined || (h.takeawayIdx !== null && h.takeawayIdx !== undefined && (h.takeawayIdx < 0 || h.takeawayIdx >= takeaways.length))
+      );
+      if (!hasBrokenLinks) return;
+
       const completion = await this.completion.complete({
         system: buildHighlightsReconciliationSystemPrompt(),
         user: buildHighlightsReconciliationUserMessage(takeaways, highlights as any),
