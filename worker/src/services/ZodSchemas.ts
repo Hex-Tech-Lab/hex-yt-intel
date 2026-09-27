@@ -52,7 +52,7 @@ export const PersonaConfigSchema = z.object({
 
 
 export const MAX_KG_NODES = 24;
-export const MAX_KG_EDGES = 18;
+export const MAX_KG_EDGES = 24;
 
 export const KnowledgeGraphSchema = z.preprocess(
   (val: unknown) => {
