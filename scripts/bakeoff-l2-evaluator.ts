@@ -126,8 +126,8 @@ async function fetchTranscriptFromDB(videoId: string): Promise<string> {
   return Array.isArray(data) && data[0]?.content ? data[0].content as string : '';
 }
 
-async function fetchTranscriptFromCache(videoId: string): Promise<string> {
-  try { return fs.readFileSync(path.join(TRANSCRIPT_CACHE_DIR, `${videoId}.txt`), 'utf8'); } catch { return ''; }
+function fetchTranscriptFromCache(videoId: string): string {
+  try { return fs.readFileSync(path.join(TRANSCRIPT_CACHE_DIR, `${videoId}.txt`), 'utf8'); } catch (err) { console.error('[bakeoff-cache]', err); return ''; }
 }
 
 async function fetchTranscriptFromYouTube(videoId: string): Promise<string> {
@@ -144,7 +144,7 @@ async function fetchTranscriptFromYouTube(videoId: string): Promise<string> {
         if (text.length > 200) return text;
       }
     }
-  } catch { /* fall through */ }
+  } catch (err) { console.error('[bakeoff-yt-transcript]', err); }
   const TAPI = process.env.TRANSCRIPTAPI_API_KEY ?? '';
   if (TAPI) {
     try {
@@ -156,7 +156,7 @@ async function fetchTranscriptFromYouTube(videoId: string): Promise<string> {
           .map(s => (s.text ?? '').replace(/\s+/g, ' ').trim()).join(' ').replace(/\s+/g, ' ').trim();
         if (text.length > 200) return text;
       }
-    } catch { /* fall through */ }
+    } catch (err) { console.error('[bakeoff-tapi]', err); }
   }
   return '';
 }
@@ -397,7 +397,7 @@ async function main() {
     const record = analysisMap.get(videoId);
     if (!record) { console.warn(`[bakeoff] No completed analysis for ${videoId}, skipping`); continue; }
     let transcript = await fetchTranscriptFromDB(videoId);
-    if (!transcript) transcript = await fetchTranscriptFromCache(videoId);
+    if (!transcript) transcript = fetchTranscriptFromCache(videoId);
     if (!transcript) transcript = await fetchTranscriptFromYouTube(videoId);
     if (!transcript) { console.warn(`[bakeoff] No transcript for ${videoId}, skipping`); continue; }
 
