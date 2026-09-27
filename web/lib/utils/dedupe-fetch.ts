@@ -48,16 +48,16 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
   }
   if (!entry) {
     const controller = new AbortController();
-    const promise = (async () => {
+    const created: InFlightEntry = { promise: undefined as unknown as Promise<Response>, controller, consumers: 0, settled: false };
+    created.promise = (async () => {
       try {
         return await fetch(url, { signal: controller.signal });
       } finally {
-        entry.settled = true;
-        if (inFlight.get(url) === entry) inFlight.delete(url);
+        created.settled = true;
+        if (inFlight.get(url) === created) inFlight.delete(url);
       }
     })();
-    
-    entry = { promise, controller, consumers: 0, settled: false };
+    entry = created;
     inFlight.set(url, entry);
   }
 

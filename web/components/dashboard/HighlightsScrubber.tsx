@@ -304,7 +304,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     return (
       <Card variant="transparent" padding={3} className="flex flex-col gap-1.5 border border-[var(--border-muted)] bg-[var(--surface)] h-[80px] items-center justify-center">
         <span className="text-[11px] font-mono text-[var(--ink-muted)] uppercase tracking-wider">No highlights yet</span>
-        <span className="text-xs text-[var(--ink-secondary)]">Use Re-analyze to generate this video's keypoint reel.</span>
+        <span className="text-xs text-[var(--ink-secondary)]">Use Re-analyze to generate this video&apos;s keypoint reel.</span>
       </Card>
     );
   }
