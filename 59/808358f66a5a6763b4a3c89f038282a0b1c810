@@ -1,0 +1,18 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 13
+pnpm-lock.yaml
+  h_60000122af7b55 40-41,306,6115,6499,11214,11277,12798,12804
+pnpm-workspace.yaml
+  h_60000122af7b55 92-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "59808358f66a5a6763b4a3c89f038282a0b1c810",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
