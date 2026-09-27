@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { z } from 'zod';
+import { safeStateLocalStorage } from '@/lib/utils/safe-storage';
 
 export const InputUrlSchema = z.string().url().regex(/youtube\.com|youtu\.be/, 'Must be a valid YouTube URL');
 
@@ -27,7 +28,7 @@ export const useInputStore = create<InputState>()(
     }),
     {
       name: 'hex_intel_saved_input',
-      storage: createJSONStorage(() => (typeof window !== 'undefined' ? localStorage : ({} as any))), // Persist across sessions
+      storage: createJSONStorage(() => safeStateLocalStorage), // Persist across sessions
     }
   )
 );

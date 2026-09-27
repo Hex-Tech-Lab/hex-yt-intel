@@ -11,7 +11,18 @@
       },
       "models": {
         "@preset/glm-53-flash-on-cheap": {
-          "name": "GLM 5.3 Flash (Morph preset)"
+          "name": "GLM 5.3 Flash (Morph preset)",
+          "options": {
+            "reasoning_effort": "low",
+            "provider": {
+              "order": [
+                "baseten",
+                "morph",
+                "together"
+              ],
+              "allow_fallbacks": false
+            }
+          }
         }
       }
     }

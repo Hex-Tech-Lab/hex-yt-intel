@@ -27,6 +27,7 @@ import { CHAT_REGISTRY_FALLBACK } from '@/lib/utils/chat-options-settings';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
+import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -208,7 +209,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
   useEffect(() => {
     try {
-      const savedOpen = localStorage.getItem(OPEN_KEY);
+      const savedOpen = safeLocalStorage.getItem(OPEN_KEY);
       if (savedOpen === '1') setOpen(true);
     } catch (e) {
       console.debug('[ChatDock] LocalStorage open_key read failed:', e);
@@ -217,7 +218,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(OPEN_KEY, open ? '1' : '0');
+      safeLocalStorage.setItem(OPEN_KEY, open ? '1' : '0');
     } catch (e) {
       console.debug('[ChatDock] LocalStorage open_key write failed:', e);
     }

@@ -5,9 +5,12 @@
  * queue therefore lives on the client. Each entry carries a client idempotency key,
  * so replaying on reconnect can never double-insert (server dedupes on client_msg_id).
  *
- * localStorage is used (synchronous, simple, fine for small text queues). Swap for
+ * localStorage is used (synchronous, simple, fine for small text queues) via the
+ * safe-storage shim (Android WebView SecurityError / null localStorage). Swap for
  * IndexedDB if volume/size ever warrants it — the interface stays the same.
  */
+
+import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
 export interface OutboxEntry {
   clientMsgId: string;
@@ -20,7 +23,7 @@ const OUTBOX_STORAGE_NAME = 'hx-chat-outbox';
 
 function read(): OutboxEntry[] {
   try {
-    const raw = localStorage.getItem(OUTBOX_STORAGE_NAME);
+    const raw = safeLocalStorage.getItem(OUTBOX_STORAGE_NAME);
     return raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
   } catch {
     return [];
@@ -29,7 +32,7 @@ function read(): OutboxEntry[] {
 
 function write(entries: OutboxEntry[]): void {
   try {
-    localStorage.setItem(OUTBOX_STORAGE_NAME, JSON.stringify(entries));
+    safeLocalStorage.setItem(OUTBOX_STORAGE_NAME, JSON.stringify(entries));
   } catch (err) {
     console.warn('[outbox] failed to persist entry (quota exceeded or private mode)', err);
   }

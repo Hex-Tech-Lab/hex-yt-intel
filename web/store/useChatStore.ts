@@ -20,6 +20,7 @@ import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
+import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
 const VALID_PERSIST_STATUSES = new Set(['saving', 'saved', 'failed', 'aborted'] as const);
 
@@ -530,7 +531,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       if (get().activeId) return;
       let savedId: string | null = null;
       try {
-        savedId = localStorage.getItem('hex_yt_last_active_conv');
+        savedId = safeLocalStorage.getItem('hex_yt_last_active_conv');
       } catch (e) {
         console.debug('[ChatStore] Read last_active_conv failed:', e);
         return;
@@ -544,7 +545,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       set({ activeId: id });
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('hex_yt_last_active_conv', id);
+          safeLocalStorage.setItem('hex_yt_last_active_conv', id);
         } catch (e) {
           console.debug('[ChatStore] Write last_active_conv failed:', e);
         }
@@ -692,7 +693,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     reset: () => {
       if (typeof window !== 'undefined') {
         try {
-          localStorage.removeItem('hex_yt_last_active_conv');
+          safeLocalStorage.removeItem('hex_yt_last_active_conv');
         } catch (e) {
           console.debug('[ChatStore] Clear last_active_conv failed:', e);
         }
