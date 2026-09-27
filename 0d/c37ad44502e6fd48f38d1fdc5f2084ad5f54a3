@@ -1,0 +1,41 @@
+.memory/ADRS.md
+  s_60372075d15109::t_7e22cf51e53f45 29
+  s_60372075d15109::t_367908c6ebd424 30-31
+  s_60372075d15109::t_1e76a15d1d1f4f 27
+  s_60372075d15109::t_349913ffc88fff 28
+docs/history/ROSTER_TECH_DEBT_2026-09-27.md
+  s_358672d53d4d2d::t_8c851bf4b31329 1-8
+.memory/AGENT_LEDGER.md
+  s_358672d53d4d2d::t_36ac1257ae10fd 1414
+  s_60372075d15109::t_8c5b544766b063 1412
+  s_60372075d15109::t_ec77767915a9f7 1410
+  s_358672d53d4d2d::t_b1507528734d85 1415
+  s_358672d53d4d2d::t_f0576f75dc4c3e 1413
+  s_60372075d15109::t_fb8d31f09c3f4c 1411
+docs/research/2026-09-27-long-video-repro-corpus.json
+  s_358672d53d4d2d::t_3b1690d1766313 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0dc37ad44502e6fd48f38d1fdc5f2084ad5f54a3",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_60372075d15109": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f22c66d4bffeXPfLBaQVr5BHan",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
