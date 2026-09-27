@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PromptBuilder } from '../services/PromptBuilder';
-import { UCIS_PERSON_CREDIBILITY_GROUNDING } from '../../../web/lib/prompts/ucis-v5.3';
+import { UCIS_PERSON_CREDIBILITY_GROUNDING } from '../../../web/lib/prompts/ucis-v5.4';
 import type { PromptConfigPort } from '../../ports/PromptConfigPort';
 import type { EngineContext } from '../../ports/ReasoningEnginePort';
 

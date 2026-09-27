@@ -1,5 +1,5 @@
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
-import { UCIS_V5_3_SYSTEM } from '../../../web/lib/prompts/ucis-v5.3';
+import { UCIS_V5_4_SYSTEM } from '../../../web/lib/prompts/ucis-v5.4';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { PromptConfigPort } from '../ports/PromptConfigPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
@@ -48,7 +48,7 @@ export class PromptBuilder implements PromptBuilderPort {
   async buildSegmented(context: EngineContext): Promise<{ sharedPrefix: string; segmentInstruction: string }> {
     const validPersona = isValidPersona(context.persona) ? (context.persona as PersonaId) : 'creator';
 
-    const promptOverride = (await this.promptConfig?.resolvePromptTemplate()) ?? UCIS_V5_3_SYSTEM;
+    const promptOverride = (await this.promptConfig?.resolvePromptTemplate()) ?? UCIS_V5_4_SYSTEM;
 
     const basePrompt = await getUCISPrompt({
       promptOverride,
