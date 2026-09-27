@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { IconButton } from '@astryxdesign/core';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
@@ -35,7 +35,7 @@ interface ConfirmationState {
  * a mutually exclusive accordion. First item opens by default. Smooth transitions
  * with copy-to-clipboard feature on each summary.
  */
-export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProps) {
+export const ExecutiveSummary = memo(function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProps) {
   const [openItemId, setOpenItemId] = useState<AccordionItemId>('snapshot');
   const [copyConfirmation, setCopyConfirmation] = useState<ConfirmationState>({
     itemId: null,
@@ -143,7 +143,11 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
       ) : null}
     </section>
   );
-}
+},
+(prev, next) => (
+  prev.loading === next.loading &&
+  prev.data === next.data
+));
 
 interface AccordionItemProps {
   id: AccordionItemId;

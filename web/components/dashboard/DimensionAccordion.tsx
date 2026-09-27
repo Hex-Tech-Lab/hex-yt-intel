@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { DimensionAccordion as BaseAccordion, type Dimension } from '@/components/templates/console/DimensionAccordion';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -12,12 +13,13 @@ interface DimensionAccordionProps {
   status: string;
 }
 
-export function DimensionAccordion({
-  dimensions,
-  selectedDimensionKey,
-  onSelectDimension,
-  status,
-}: DimensionAccordionProps) {
+export const DimensionAccordion = memo(
+  function DimensionAccordion({
+    dimensions,
+    selectedDimensionKey,
+    onSelectDimension,
+    status,
+  }: DimensionAccordionProps) {
   const error = useAnalysisStore((store) => store.error);
   const missingDimensions = error?.missingDimensions;
   const hasPartialProgress = Array.isArray(missingDimensions) && missingDimensions.length > 0 && missingDimensions.length < TOTAL_DIMENSIONS;
@@ -78,4 +80,10 @@ export function DimensionAccordion({
       )}
     </div>
   );
-}
+},
+(prev, next) => (
+  prev.status === next.status &&
+  prev.selectedDimensionKey === next.selectedDimensionKey &&
+  prev.dimensions === next.dimensions &&
+  prev.onSelectDimension === next.onSelectDimension
+));

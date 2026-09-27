@@ -959,6 +959,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     startTransition(() => setSelectedDimensionKey(null));
   }, []);
 
+  const handleSelectDimension = useCallback((key: string | null) => {
+    startTransition(() => {
+      setSelectedDimensionKey(key);
+    });
+  }, []);
+
   const handleSearchChange = useCallback((v: string) => {
     startTransition(() => setSearch(v));
   }, []);
@@ -1126,7 +1132,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     chapters={chapters}
                     dimensions={dimensions}
                     selectedDimensionKey={selectedDimensionKey}
-                    setSelectedDimensionKey={(k) => startTransition(() => setSelectedDimensionKey(k))}
+                    setSelectedDimensionKey={handleSelectDimension}
                     selectedNodeId={selectedNodeId}
                     handleSelectNode={handleSelectNode}
                     hasHadVideo={Boolean(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId)}

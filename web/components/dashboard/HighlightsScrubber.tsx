@@ -1,5 +1,6 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Tooltip } from '@astryxdesign/core';
 import { GlowBorder, Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
@@ -52,7 +53,7 @@ interface HighlightsResponse {
  * docs/agent-prompts/2026-08-20-cc-simplify-shared-playback-hook.md) --
  * this component only supplies the store-backed primitives and renders.
  */
-export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoading }: { analysisId: string; videoDurationSeconds: number | null; digestLoading?: boolean }) {
+export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoading }: { analysisId: string; videoDurationSeconds: number | null; digestLoading?: boolean }) {
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -510,4 +511,9 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
       </div>
     </Card>
   );
-}
+},
+(prev, next) => (
+  prev.analysisId === next.analysisId &&
+  prev.videoDurationSeconds === next.videoDurationSeconds &&
+  prev.digestLoading === next.digestLoading
+));
