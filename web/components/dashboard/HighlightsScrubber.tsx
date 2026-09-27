@@ -287,7 +287,7 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     console.debug(`[HighlightsScrubber] collapsing: fetch error for ${analysisId}`);
     return null;
   }
-  if (loading || !data) {
+  if (loading) {
     // RCA 2026-09-27 (user directive): the loading state must visually match
     // the accordion chips/control — the revolving conic border (GlowBorder
     // active, hx-spin) — not a circular spinner glyph. Same effect, same
@@ -300,11 +300,11 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
       </GlowBorder>
     );
   }
-  if (data.highlights.length === 0) {
+  if (!data || data.highlights.length === 0) {
     return (
       <Card variant="transparent" padding={3} className="flex flex-col gap-1.5 border border-[var(--border-muted)] bg-[var(--surface)] h-[80px] items-center justify-center">
         <span className="text-[11px] font-mono text-[var(--ink-muted)] uppercase tracking-wider">No highlights yet</span>
-        <span className="text-xs text-[var(--ink-secondary)]">This video has no keypoint reel — watch the video in full instead.</span>
+        <span className="text-xs text-[var(--ink-secondary)]">Use Re-analyze to generate this video's keypoint reel.</span>
       </Card>
     );
   }

@@ -27,23 +27,37 @@ interface InFlightEntry {
   promise: Promise<Response>;
   controller: AbortController;
   consumers: number;
+  /** Settled flag — RCA 2026-09-27: a caller could inherit an entry whose
+   * shared fetch had ALREADY rejected (e.g. the last consumer detached and
+   * aborted it between map insertion and the next caller's map.get — the
+   * deleting finally is async, the rejection is synchronous). The new
+   * caller then rejected with the dead entry's AbortError and, in
+   * HighlightsScrubber, rendered the loading state forever. New callers
+   * now bypass settled entries and start a fresh request. */
+  settled: boolean;
 }
 
 const inFlight = new Map<string, InFlightEntry>();
 
 export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Promise<Response> {
   let entry = inFlight.get(url);
+  // Never inherit a settled (dead) entry — start fresh instead.
+  if (entry?.settled) {
+    inFlight.delete(url);
+    entry = undefined;
+  }
   if (!entry) {
     const controller = new AbortController();
     const promise = (async () => {
       try {
         return await fetch(url, { signal: controller.signal });
       } finally {
+        entry.settled = true;
         if (inFlight.get(url) === entry) inFlight.delete(url);
       }
     })();
     
-    entry = { promise, controller, consumers: 0 };
+    entry = { promise, controller, consumers: 0, settled: false };
     inFlight.set(url, entry);
   }
 

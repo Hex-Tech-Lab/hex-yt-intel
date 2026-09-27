@@ -218,6 +218,23 @@ export class LLMCascade implements LLMCascadePort {
         tags: { operation: 'llm-cascade-fallback', model: name, classifiedError },
         extra: { streamId, tierIndex, rawError, chainLength: this.chain.length },
       });
+      // Owner-alert escalation (user directive 2026-09-27): credit/payment
+      // exhaustion is NOT a routine fallback — it means every further model
+      // in the cascade will also 402 (all require the same OpenRouter
+      // balance) and the whole analysis is dead on arrival. Captured as
+      // ERROR with a stable fingerprint-friendly message so it aggregates
+      // into a single high-priority Sentry issue (owner email alerts fire
+      // on high-priority issues). Deliberately generic to END USERS (the
+      // stream error stays "All models in cascade failed") — the
+      // advertising boundary is the owner's alerting, not the user UI.
+      if (classifiedError === 'ERR_MONTHLY_QUOTA_EXHAUSTED') {
+        Sentry.captureMessage('OpenRouter account out of credits — all paid models will 402 until topped up', {
+          level: 'error',
+          tags: { operation: 'llm-cascade-quota-exhausted', model: name },
+          extra: { streamId, tierIndex, rawError },
+        });
+        console.error(`[LLMCascade] Stream ${streamId} OUT-OF-CREDITS: ${name} 402 — every paid model in the cascade will fail until the OpenRouter balance is topped up. Raw: ${rawError}`);
+      }
       onStatus?.({ stage: 'fallback', from: name, error: classifiedError, rawError });
       previousModel = name;
     }
