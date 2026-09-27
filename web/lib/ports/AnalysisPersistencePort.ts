@@ -56,6 +56,8 @@ export interface HistoryOverviewItem {
   missingDimensions: number[];
   /** Honest rollup: complete (validated) | partial (usable) | processing (in flight, <15 min) | stalled (background recovery pending — reaper/requeue) | failed. Reflects the latest attempt's outcome, not the best-ever attempt. Added by overview-function v14. */
   status: 'complete' | 'partial' | 'processing' | 'stalled' | 'failed';
+  /** Stored failure explanation (analyses.validation_report.reason) for terminal-failure cards; null otherwise. Added by overview-function v15 so failed attempts are self-explanatory in history (user request 2026-09-26). */
+  failureReason: string | null;
   /** Aux-element status row (Wave A4, mirrored from the console screen) for the latest analysis attempt. */
   hasDigest: boolean;
   hasDescription: boolean;

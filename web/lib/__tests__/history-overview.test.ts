@@ -49,6 +49,7 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     has_comments: true,
     has_chapters: null,
     client_platform: 'ios',
+    failure_reason: null,
     ...overrides,
   };
 }
@@ -76,7 +77,17 @@ describe('mapHistoryOverviewRow', () => {
       hasComments: true,
       hasChapters: null,
       clientPlatform: 'ios',
+      failureReason: null,
     });
+  });
+
+  it('surfaces the stored failure reason for terminal-failure rows', () => {
+    const item = mapHistoryOverviewRow(baseRow({
+      status: 'failed',
+      failure_reason: 'All analysis streams failed.',
+    }));
+    expect(item.status).toBe('failed');
+    expect(item.failureReason).toBe('All analysis streams failed.');
   });
 
   it('nulls clientPlatform for rows predating the column', () => {

@@ -26,6 +26,7 @@ export interface RawHistoryOverviewRow {
   has_comments: boolean | null;
   has_chapters: boolean | null;
   client_platform: ClientPlatform | null;
+  failure_reason: string | null;
 }
 
 /**
@@ -93,6 +94,7 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     presentDimensions,
     missingDimensions: computeMissingDimensions(presentDimensions),
     status: row.status,
+    failureReason: row.failure_reason ?? null,
     hasDigest: !!row.has_digest,
     hasDescription: !!row.has_description,
     hasChannelMeta: !!row.has_channel_meta,
