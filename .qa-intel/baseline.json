@@ -628,5 +628,173 @@
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/components/dashboard/HighlightsScrubber.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (520 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/components/dashboard/HighlightsScrubber.tsx",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/components/organisms/ExecutiveSummary.tsx",
+    "severity": "medium",
+    "title": "Cross-Platform: LF-only string splitting",
+    "why": "2 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
+    "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+  },
+  {
+    "file": "web/components/organisms/ExecutiveSummary.tsx",
+    "severity": "medium",
+    "title": "Resource Leak: Timer handle 'timeoutId' not cleared",
+    "why": "Variable 'timeoutId' holds a timeout/interval ID but is never cleared. This can cause memory leaks or unintended side effects.",
+    "fix": "Add cleanup in finally block or useEffect cleanup: clearTimeout(timeoutId); or clearInterval(timeoutId);"
+  },
+  {
+    "file": "web/components/organisms/ExecutiveSummary.tsx",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/components/organisms/ExecutiveSummary.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/organisms/ExecutiveSummary.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name '_'",
+    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (892 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/nextjs' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 't'",
+    "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/templates/console/DimensionAccordion.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'd'",
+    "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/__tests__/analysis-reaper.test.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'n'",
+    "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/__tests__/analysis-reaper.test.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name '_'",
+    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/chat/outbox.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (706 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/store/useInputStore.ts",
+    "severity": "high",
+    "title": "INP: Synchronous validation in onChange/state setter",
+    "why": "Zod safeParse (regex) runs on every keystroke. Blocks UI for 200-500ms per keystroke.",
+    "fix": "Remove validation from the state setter. Defer to submit/analyze time: validate only when user triggers action."
   }
 ]

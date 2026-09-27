@@ -15,7 +15,7 @@ import { TOTAL_STREAMS, TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /** Build markdown containing exactly `n` UCIS dimension headers (1..n). */
 function markdownWithDimensions(n: number): string {
-  return Array.from({ length: n }, (_, i) => `### DIMENSION ${i + 1}: Section ${i + 1}\n\nSome analysis content for dimension ${i + 1}.`).join('\n\n');
+  return Array.from({ length: n }, (_unused, index) => `### DIMENSION ${index + 1}: Section ${index + 1}\n\nSome analysis content for dimension ${index + 1}.`).join('\n\n');
 }
 
 describe('decideReapOutcome', () => {
@@ -76,7 +76,7 @@ describe('buildSettlePatch', () => {
     // still flips 'completed' at this threshold (it also gates the
     // requeue-partial branch in processStuckRow -- unrelated to billing), but
     // billing_status must never follow it below TOTAL_DIMENSIONS.
-    const md = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
+    const md = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_unused, index) => `### DIMENSION ${index + 1}: X\n\nbody`).join('\n\n');
     const { outcome, patch } = buildSettlePatch(md, null, nowIso);
     expect(outcome).toBe('completed');
     expect(patch.billing_status).toBe('failed');

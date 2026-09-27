@@ -25,7 +25,8 @@ function read(): OutboxEntry[] {
   try {
     const raw = safeLocalStorage.getItem(OUTBOX_STORAGE_NAME);
     return raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
-  } catch {
+  } catch (err) {
+    console.warn('[outbox] failed to read entries:', err);
     return [];
   }
 }
@@ -64,7 +65,9 @@ export const outbox = {
 export function newClientMsgId(): string {
   try {
     return crypto.randomUUID();
-  } catch {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  } catch (err) {
+    console.warn('[outbox] randomUUID failed, falling back to timestamp:', err);
+    const suffix = Math.random().toString(36).slice(2, 10);
+    return `${Date.now()}-${suffix}`;
   }
 }
