@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 13
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 1065-1069
+web/components/templates/console/AnalysisHistory.tsx
+  h_60000122af7b55 87-118,714,721-722,762-766,838-846
+web/lib/__tests__/dedupe-fetch.test.ts
+  h_60000122af7b55 88-106
+web/lib/utils/dedupe-fetch.ts
+  h_60000122af7b55 43-46,81,87,90-91,96-99,107-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c819669ae83dee6cc512d7608edb275e229a578c",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
