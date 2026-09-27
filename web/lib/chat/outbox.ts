@@ -66,8 +66,15 @@ export function newClientMsgId(): string {
   try {
     return crypto.randomUUID();
   } catch (err) {
-    console.warn('[outbox] randomUUID failed, falling back to timestamp:', err);
-    const suffix = Math.random().toString(36).slice(2, 10);
-    return `${Date.now()}-${suffix}`;
+    console.warn('[outbox] randomUUID failed, falling back to secure random values:', err);
+    try {
+      const bytes = new Uint8Array(6);
+      crypto.getRandomValues(bytes);
+      const suffix = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      return `${Date.now()}-${suffix}`;
+    } catch (cryptoErr) {
+      console.warn('[outbox] getRandomValues failed, falling back to timestamp suffix:', cryptoErr);
+      return `${Date.now()}-${Date.now().toString(36)}`;
+    }
   }
 }

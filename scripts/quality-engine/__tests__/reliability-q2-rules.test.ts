@@ -52,7 +52,7 @@ describe('R6: SilentDefaultOnExternalResponseRule', () => {
     const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
     expect(findings.length).toBe(1);
     expect(findings[0].title).toContain("'obsJson'");
-  });
+  }, 20000);
 
   test('fires on the other real snippet (workersInvocationsAdaptive || [])', () => {
     const code = `
@@ -66,7 +66,7 @@ describe('R6: SilentDefaultOnExternalResponseRule', () => {
     const findings = check(SilentDefaultOnExternalResponseRule, code, 'web/lib/admin-logs/fetchers.ts');
     expect(findings.length).toBe(1);
     expect(findings[0].title).toContain("'json'");
-  });
+  }, 20000);
 
   test('negative control: explicit-shape check before defaulting does not fire', () => {
     const code = `

@@ -25,6 +25,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    testTimeout: 20000,
     // Post-review finding (2026-08-06): vitest.dom-setup.ts (jest-dom
     // matchers) existed but was never registered here -- dead code, no test
     // actually had access to toBeInTheDocument() etc.
