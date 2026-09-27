@@ -397,6 +397,37 @@ const COMMENTS_CACHE_TTL = 604_800;
  */
 // skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic here (DS "wrap in IIFE" false positive);
 // complexity 7 is pre-existing on untouched lines, out of this PR's blast radius.
+/**
+ * Normalize the comments value to the persist contract's exact shape
+ * (VideoComment[] | null) regardless of what any upstream/cache layer
+ * emits. RCA 2026-09-27 (DlNWYzaL_F0 rerun): the persist route 400'd with
+ * "comments: expected array, received object" — an object-shaped value
+ * reached the S2S persist body and every completed persist 400'd,
+ * exhausting retries and zeroing out the analysis. The persist contract
+ * (route bodySchema) requires an ARRAY of {author,text,publishedAt,
+ * likeCount}; this is the single producer-side choke point enforcing it —
+ * unknown shapes (stale 7-day COMMENTS_CACHE_TTL entries, wrapper objects,
+ * future refactors) degrade to null instead of 400ing the whole write.
+ */
+function normalizeVideoComments(value: unknown): VideoComment[] | null {
+  // Wrapper-object tolerance: { comments: [...] } styles unwrap to their array.
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const inner = (value as Record<string, unknown>).comments;
+    if (Array.isArray(inner)) return normalizeVideoComments(inner);
+    return null;
+  }
+  if (!Array.isArray(value)) return null;
+  const valid = value.filter(
+    (c): c is VideoComment =>
+      !!c && typeof c === "object" &&
+      typeof (c as Record<string, unknown>).author === "string" &&
+      typeof (c as Record<string, unknown>).text === "string" &&
+      typeof (c as Record<string, unknown>).publishedAt === "string" &&
+      typeof (c as Record<string, unknown>).likeCount === "number",
+  );
+  return valid.length > 0 ? valid : null;
+}
+
 function truncateComments(comments: VideoComment[] | null, maxBytes: number): VideoComment[] | null {
   if (!comments || comments.length === 0) return null;
   const serialized = JSON.stringify(comments);
@@ -440,7 +471,7 @@ async function fetchCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return JSON.parse(cached) as VideoComment[];
+          return normalizeVideoComments(JSON.parse(cached));
         } catch {
           console.debug(`[analyze-llm-stream] comments cache entry for ${videoId} is not JSON, ignoring`);
         }
@@ -548,7 +579,7 @@ async function fetchSampledCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return JSON.parse(cached) as VideoComment[];
+          return normalizeVideoComments(JSON.parse(cached));
         } catch {
           console.debug(`[analyze-llm-stream] sampled-comments cache entry for ${videoId} is not JSON, ignoring`);
         }
@@ -934,7 +965,7 @@ function buildStreamResponse(
         resolvedChannelMeta = fetchResult.value.channelMeta;
       }
       if (fetchResult.status === 'fulfilled' && fetchResult.value.comments) {
-        resolvedComments = fetchResult.value.comments;
+        resolvedComments = normalizeVideoComments(fetchResult.value.comments);
       }
       // Gap 1 (2026-08-05): actually invoke the chapter parser. The video
       // description travels in req.metadata (AnalysisJobMetadataSchema has
