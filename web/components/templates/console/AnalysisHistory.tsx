@@ -84,6 +84,38 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
   );
 }
 
+const THUMBNAIL_TIERS = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'] as const;
+
+function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }) {
+  const [tier, setTier] = useState(0);
+  const [failed, setFailed] = useState(false);
+
+  if (failed || !videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return (
+      <div className="w-full h-full min-h-[90px] flex items-center justify-center bg-[var(--surface-muted)] text-[var(--ink-muted)]/40" title="No thumbnail available">
+        <Icon icon="solar:video-frame-linear" size={24} />
+      </div>
+    );
+  }
+
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */
+    <img
+      src={`https://i.ytimg.com/vi/${videoId}/${THUMBNAIL_TIERS[tier]}.jpg`}
+      alt={title}
+      loading="lazy"
+      className="w-full h-full object-cover select-none"
+      onError={() => {
+        if (tier < THUMBNAIL_TIERS.length - 1) {
+          setTier((t) => t + 1);
+        } else {
+          setFailed(true);
+        }
+      }}
+    />
+  );
+}
+
 /**
  * At-a-glance completeness map: one numbered cell per dimension (1..N).
  * Generated dimensions read green; missing ones read as dashed hollow cells,
@@ -679,13 +711,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); restoreAnalysis(item.analysisId); } }}
-                  className={`rounded-xl border border-[var(--line)] p-4 transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                  className={`rounded-xl border border-[var(--line)] overflow-hidden transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] flex items-stretch ${
                     idx % 2 === 1 ? 'bg-[var(--card-quiet)]' : 'bg-[var(--card)]'
                   } ${
                     busy ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                   }`}
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
+                  {/* Card Content Column */}
+                  <div className="flex-1 min-w-0 p-4">
                   {/* Title row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -723,6 +757,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     {item.status === 'partial' && (
                       <MetricChip icon="solar:danger-circle-linear" title="Partial analysis with incomplete data">
                         <span className="text-[var(--warn)]">Incomplete</span>
+                      </MetricChip>
+                    )}
+                    {item.status === 'failed' && (
+                      <MetricChip icon="solar:danger-circle-linear" title={item.failureReason ?? 'Analysis failed — no details recorded'}>
+                        <span className="text-[var(--err)] truncate max-w-[220px]">{item.failureReason ?? 'Failed — reason unavailable'}</span>
                       </MetricChip>
                     )}
                     {item.status === 'complete' && (
@@ -796,6 +835,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       }
                     />
                   )}
+                  </div>
+
+                  {/* Video thumbnail: top-to-bottom, flush with right border, square-like aspect */}
+                  <div className="relative shrink-0 w-28 sm:w-36 md:w-44 self-stretch border-l border-[var(--line)]/60 bg-[var(--surface-muted)] overflow-hidden">
+                    <HistoryThumbnail
+                      videoId={item.baseVideoId}
+                      title={item.title || 'Video thumbnail'}
+                    />
+                  </div>
                 </div>
               );
             })}

@@ -85,4 +85,23 @@ describe('dedupedFetch (network-storms in-flight share)', () => {
     expect(controllers[0]!.signal.aborted).toBe(false);
     expect(results.every((r) => r.status === 200)).toBe(true);
   });
+
+  it('immediately rejects when signal is pre-aborted', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(OK_RESPONSE()));
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+    controller.abort();
+    const promise = dedupedFetch('/api/test-pre-aborted', { signal: controller.signal });
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('cleans up abort event listener after fetch settles', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(OK_RESPONSE()));
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+    const removeSpy = vi.spyOn(controller.signal, 'removeEventListener');
+    await dedupedFetch('/api/test-listener-cleanup', { signal: controller.signal });
+    expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+  });
 });
