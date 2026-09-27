@@ -1,0 +1,18 @@
+web/lib/types/synthesis-nucleus.ts
+  h_60000122af7b55 27-28
+web/lib/utils/__tests__/dedupe-fetch.test.ts
+  h_60000122af7b55 1-107
+web/lib/utils/history-overview.ts
+  h_60000122af7b55 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "59c10f9017928b668a8fdd29dd180479303950fb",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
