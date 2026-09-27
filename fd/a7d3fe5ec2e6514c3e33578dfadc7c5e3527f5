@@ -1,0 +1,16 @@
+web/hooks/__tests__/useHistoryOverview.test.tsx
+  h_60000122af7b55 10
+web/lib/__tests__/highlights-coverage.test.ts
+  h_60000122af7b55 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fda7d3fe5ec2e6514c3e33578dfadc7c5e3527f5",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
