@@ -18,9 +18,11 @@ const isDebugEnabled = () => typeof window !== 'undefined' && window.__CHAT_DEBU
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
-import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
+
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
+
+import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 
 const VALID_PERSIST_STATUSES = new Set(['saving', 'saved', 'failed', 'aborted'] as const);
 

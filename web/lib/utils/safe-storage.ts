@@ -52,7 +52,8 @@ function createSafeStorage(getGlobal: () => Storage | null): SafeStorageLike {
     global.setItem(probeKey, '1');
     global.removeItem(probeKey);
     backing = global;
-  } catch {
+  } catch (probeError) {
+    console.warn('[safe-storage] Storage access probe failed, using in-memory store:', probeError);
     backing = createMemoryStorage();
   }
   const resolved = backing;
@@ -63,29 +64,31 @@ function createSafeStorage(getGlobal: () => Storage | null): SafeStorageLike {
     clear: () => {
       try {
         resolved.clear();
-      } catch {
-        /* unreachable for memory fallback; quota errors are non-fatal */
+      } catch (clearError) {
+        console.warn('[safe-storage] clear failed:', clearError);
       }
     },
     getItem: (key) => {
       try {
         return resolved.getItem(key);
-      } catch {
+      } catch (getItemError) {
+        console.warn('[safe-storage] getItem failed:', getItemError);
         return null;
       }
     },
     key: (index) => {
       try {
         return resolved.key(index);
-      } catch {
+      } catch (keyError) {
+        console.warn('[safe-storage] key failed:', keyError);
         return null;
       }
     },
     removeItem: (key) => {
       try {
         resolved.removeItem(key);
-      } catch {
-        /* non-fatal */
+      } catch (removeError) {
+        console.warn('[safe-storage] removeItem failed:', removeError);
       }
     },
     setItem: (key, value) => {
