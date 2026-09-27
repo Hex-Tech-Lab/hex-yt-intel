@@ -1,0 +1,14 @@
+.qa-intel/baseline.json
+  h_60000122af7b55 2-505,519-630
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "86e233451b0ebd1b30d2a6478e100c6aeb32e50c",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
