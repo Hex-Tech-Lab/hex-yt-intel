@@ -1,0 +1,18 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 13,17
+web/lib/__tests__/analysis-reaper.test.ts
+  h_60000122af7b55 87-101
+web/lib/services/analysis-reap-policy.ts
+  h_60000122af7b55 74-77,94-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fb1a77dfcbf071cd4c19f13a53063ca9ade10012",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
