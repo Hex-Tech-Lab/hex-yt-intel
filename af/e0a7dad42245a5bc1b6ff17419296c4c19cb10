@@ -1,0 +1,16 @@
+web/lib/utils/safe-storage.ts
+  h_60000122af7b55 55-56,67-68,74-75,82-83,90-91
+web/store/useChatStore.ts
+  h_60000122af7b55 21,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "afe0a7dad42245a5bc1b6ff17419296c4c19cb10",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
