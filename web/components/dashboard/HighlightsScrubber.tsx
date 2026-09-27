@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Card, IconButton, Spinner, Tooltip } from '@astryxdesign/core';
-import { Icon } from '@/components/templates/_shared/primitives';
+import { Card, IconButton, Tooltip } from '@astryxdesign/core';
+import { GlowBorder, Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
@@ -288,10 +288,16 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     return null;
   }
   if (loading || !data) {
+    // RCA 2026-09-27 (user directive): the loading state must visually match
+    // the accordion chips/control — the revolving conic border (GlowBorder
+    // active, hx-spin) — not a circular spinner glyph. Same effect, same
+    // tokens; zero logic change.
     return (
-      <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)] h-[100px] items-center justify-center">
-        <Spinner size="sm" />
-      </Card>
+      <GlowBorder active className="h-[100px]">
+        <Card variant="transparent" padding={3} className="flex flex-col gap-2 bg-[var(--surface)] h-full items-center justify-center">
+          <span className="text-[11px] font-mono text-[var(--ink-muted)] uppercase tracking-wider">Generating highlights</span>
+        </Card>
+      </GlowBorder>
     );
   }
   if (data.highlights.length === 0) {
