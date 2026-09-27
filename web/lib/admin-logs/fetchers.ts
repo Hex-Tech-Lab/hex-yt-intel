@@ -586,8 +586,20 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
           // error-exists-only filter silently dropped class (b).
           // `filterCombination: 'or'` is the documented top-level filter
           // combinator (Cloudflare telemetry/query API schema, 2026-09-24).
+          // 2026-09-27 extension: ALSO catch (c) any event carrying
+          // $metadata.message — the worker's console.warn/console.error
+          // lines (BracketBuffer parse failures, persist retry exhaustion,
+          // cascade fallbacks) carry their diagnostics in the message, not
+          // in $metadata.error, and the old error/outcome-only filter made
+          // them invisible to this dashboard — a blind spot that cost real
+          // RCA time during the 2026-09-27 long-video zero-persist
+          // incident. Console lines include routine health-check INFO, so
+          // consumers should filter by level; bounded by
+          // OBSERVABILITY_EVENT_LIMIT with explicit truncation, per PR
+          // #321 round-2 contract.
           filterCombination: 'or',
           filters: [
+            { key: '$metadata.message', operation: 'exists', type: 'string' },
             { key: '$metadata.error', operation: 'exists', type: 'string' },
             { key: '$workers.outcome', operation: 'neq', type: 'string', value: 'ok' },
           ],
