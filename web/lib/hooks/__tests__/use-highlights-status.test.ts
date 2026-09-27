@@ -32,24 +32,44 @@ describe('useHighlightsStatus', () => {
 
     const { result } = renderHook(() => useHighlightsStatus('a1', 'complete'));
 
+    // Attempt 0: fires immediately
     await act(async () => { await vi.advanceTimersByTimeAsync(50); });
     expect(result.current.hasHighlights).toBe(null);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2600); });
+    // Attempt 1: at 3000ms (+2950ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result.current.hasHighlights).toBe(null);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
+    // Attempt 2: at 6000ms (+3000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(result.current.hasHighlights).toBe(null);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(10100); });
+    // Attempt 3: at 10000ms (+4000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
     expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(result.current.hasHighlights).toBe(null);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(15100); });
+    // Attempt 4: at 15000ms (+5000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(result.current.hasHighlights).toBe(null);
+
+    // Attempt 5: at 25000ms (+10000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(result.current.hasHighlights).toBe(null);
+
+    // Attempt 6: at 35000ms (+10000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    expect(result.current.hasHighlights).toBe(null);
+
+    // Attempt 7: at 45000ms (+10000ms)
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(fetchMock).toHaveBeenCalledTimes(8);
     expect(result.current).toEqual({ hasHighlights: false, count: 0 });
   });
 
@@ -61,7 +81,7 @@ describe('useHighlightsStatus', () => {
     // been scheduled server-side. CodeRabbit review, PR #294: the original
     // version of this test only made 1 fetch call before flipping
     // digestLoading, never proving the re-trigger works AFTER the full
-    // 5-attempt retry schedule has genuinely exhausted to confirmed-empty.
+    // 8-attempt retry schedule has genuinely exhausted to confirmed-empty.
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [] }) });
     vi.stubGlobal('fetch', fetchMock);
@@ -71,14 +91,11 @@ describe('useHighlightsStatus', () => {
       { initialProps: { digestLoading: true } }
     );
 
-    // Run through the complete 5-attempt retry schedule (2.5s/5s/10s/15s).
+    // Run through the complete 8-attempt retry schedule (45s total).
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500);
-      await vi.advanceTimersByTimeAsync(5000);
-      await vi.advanceTimersByTimeAsync(10000);
-      await vi.advanceTimersByTimeAsync(15000);
+      await vi.advanceTimersByTimeAsync(46000);
     });
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
     expect(result.current).toEqual({ hasHighlights: false, count: 0 });
 
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}] }) });
@@ -88,7 +105,7 @@ describe('useHighlightsStatus', () => {
     });
 
     expect(result.current).toEqual({ hasHighlights: true, count: 2 });
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
     vi.useRealTimers();
   });
 
@@ -102,7 +119,7 @@ describe('useHighlightsStatus', () => {
 
     const { result } = renderHook(() => useHighlightsStatus('a1', 'complete'));
     await act(async () => { await vi.advanceTimersByTimeAsync(50); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(2600); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3100); });
 
     expect(result.current).toEqual({ hasHighlights: true, count: 1 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
