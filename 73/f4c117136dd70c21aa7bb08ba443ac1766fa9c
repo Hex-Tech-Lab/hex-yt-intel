@@ -1,0 +1,33 @@
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  s_358672d53d4d2d::t_ff2adbde504d95 145-147,153-154
+  s_358672d53d4d2d::t_7d2a5ee596997e 155,157-228
+  s_358672d53d4d2d::t_ec4d1abaf86968 25
+  s_358672d53d4d2d::t_b2e620546d622c 156
+web/lib/prompts/ucis-v5.4.test.ts
+  s_358672d53d4d2d::t_7f3144f4cea945 1-89
+web/lib/validators/synthesis.ts
+  s_358672d53d4d2d::t_013f44658cdca3 561
+  s_358672d53d4d2d::t_480629cc72f347 370-420
+  s_358672d53d4d2d::t_65f188c340a579 106-192,194,209,217-232
+  s_358672d53d4d2d::t_241bf3cd4ed9e2 448-453,455-461
+web/lib/prompts/ucis-v5.4.ts
+  s_358672d53d4d2d::t_cc6b826de7e11f 1-138,140-426,428-433,435-544,546,548-680,682-706
+  s_358672d53d4d2d::t_aeda68a47bb430 139
+  s_358672d53d4d2d::t_5877f369905a10 427,434,545,547,681
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "73f4c117136dd70c21aa7bb08ba443ac1766fa9c",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
