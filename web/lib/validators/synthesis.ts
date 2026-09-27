@@ -103,8 +103,95 @@ const normalizeNodeEntityKey = (val: unknown): unknown => {
   return out;
 };
 
+/**
+ * Tolerant KG node field normalization (RCA 2026-09-27, live production,
+ * video 39hqY3nH5ug — 3-hour Nick Fuentes/Professor Jiang debate): the
+ * model emitted a structurally complete kg fragment (15 nodes / 20 edges)
+ * whose node entityType fell outside KGNodeEntityTypeSchema's fixed enum
+ * (a theological/political video legitimately yields entity kinds the
+ * enum never anticipated). Because the enum check is inside every node,
+ * ONE unmatched value rejected the WHOLE fragment client-side — the
+ * knowledge graph silently vanished (console: "[Synthesis] Fragment
+ * validation failed"). Same all-or-nothing class as the type/entityType
+ * duality above and the 2026-09-25 edge-cap rejection.
+ *
+ * Coercion contract (never reject, always degrade): unknown entityType →
+ * "concept" (the generic bucket already used by consumers like
+ * useKnowledgeGraph for coloring/labeling), weight/polarity clamped into
+ * range, keyTerms string-filtered and sliced to 10, label/id sliced to
+ * schema max, unknown keys dropped (keeping the schema .strict()).
+ */
+const KG_NODE_ENTITY_TYPES = [
+  "person",
+  "concept",
+  "framework",
+  "tool",
+  "organization",
+  "study",
+  "trend",
+  "metric",
+  "Person",
+  "Organization",
+  "Location",
+  "Event",
+  "Object",
+] as const;
+
+const clampNumber = (val: unknown, min: number, max: number, fallback: number): number => {
+  const n = typeof val === "number" && Number.isFinite(val) ? val : fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
+const normalizeKgNodeFields = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = {
+    ...(normalizeNodeEntityKey(val) as Record<string, unknown>),
+  };
+  if (typeof out.entityType !== "string" || !(KG_NODE_ENTITY_TYPES as readonly string[]).includes(out.entityType)) {
+    out.entityType = "concept";
+  }
+  // Node dimension: clamp into 0..TOTAL_DIMENSIONS (fallback 8 -- nodes are
+  // produced by the Dimension-8 bundle, so 8 is the model's own semantic
+  // home for KG nodes; out-of-range/missing values previously rejected the
+  // whole fragment).
+  const dimNum = typeof out.dimension === "number" && Number.isFinite(out.dimension) ? Math.round(out.dimension) : 8;
+  out.dimension = Math.min(TOTAL_DIMENSIONS, Math.max(0, dimNum));
+  out.weight = clampNumber(out.weight, 0.1, 10, 5);
+  out.polarity = clampNumber(out.polarity, -1, 1, 0);
+  if (Array.isArray(out.keyTerms)) {
+    out.keyTerms = out.keyTerms.filter((t): t is string => typeof t === "string").slice(0, 10);
+  }
+  if (typeof out.label === "string") out.label = out.label.slice(0, 200);
+  if (typeof out.id === "string") out.id = out.id.slice(0, 100);
+  if (out.content !== undefined && typeof out.content !== "string") delete out.content;
+  const allowed = ["id", "dimension", "label", "content", "weight", "polarity", "keyTerms", "entityType"];
+  for (const key of Object.keys(out)) {
+    if (!allowed.includes(key)) delete out[key];
+  }
+  return out;
+};
+
+const normalizeKgEdgeFields = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = { ...(val as Record<string, unknown>) };
+  if (typeof out.kind !== "string" || !["similar", "related", "tangent", "contrarian"].includes(out.kind)) {
+    out.kind = "related";
+  }
+  out.strength = clampNumber(out.strength, 1, 10, 5);
+  if (typeof out.rationale === "string" && out.rationale.length > 500) {
+    out.rationale = out.rationale.slice(0, 500);
+  } else if (out.rationale !== undefined && typeof out.rationale !== "string") {
+    delete out.rationale;
+  }
+  const allowed = ["source", "target", "strength", "kind", "rationale"];
+  for (const key of Object.keys(out)) {
+    if (!allowed.includes(key)) delete out[key];
+  }
+  return out;
+};
+
 export const KGNodeSchema = z.preprocess(
-  normalizeNodeEntityKey,
+  normalizeKgNodeFields,
   z
     .object({
       id: z.string().min(1).max(100),
@@ -119,21 +206,7 @@ export const KGNodeSchema = z.preprocess(
       weight: z.number().min(0.1).max(10.0),
       polarity: z.number().min(-1).max(1),
       keyTerms: z.array(z.string()).max(10),
-      entityType: z.enum([
-        "person",
-        "concept",
-        "framework",
-        "tool",
-        "organization",
-        "study",
-        "trend",
-        "metric",
-        "Person",
-        "Organization",
-        "Location",
-        "Event",
-        "Object",
-      ]),
+      entityType: z.enum(KG_NODE_ENTITY_TYPES),
     })
     .strict(),
 );
@@ -141,19 +214,22 @@ export const KGNodeSchema = z.preprocess(
 /**
  * Knowledge Graph Edge — relationship between nodes.
  */
-export const KGEdgeSchema = z
-  .object({
-    source: z.string().min(1),
-    target: z.string().min(1),
-    // 1-10, per the prompt's own instruction (ucis-v5.3.ts: "strength:
-    // Connection strength (1-10)") -- see weight above for why this cap
-    // matters: it was the actual cause of complete analyses being marked
-    // partial/failed.
-    strength: z.number().min(1).max(10),
-    kind: z.enum(["similar", "related", "tangent", "contrarian"]),
-    rationale: z.string().min(5).max(500).optional(),
-  })
-  .strict();
+export const KGEdgeSchema = z.preprocess(
+  normalizeKgEdgeFields,
+  z
+    .object({
+      source: z.string().min(1),
+      target: z.string().min(1),
+      // 1-10, per the prompt's own instruction (ucis-v5.4.ts: "strength:
+      // Connection strength (1-10)") -- see weight above for why this cap
+      // matters: it was the actual cause of complete analyses being marked
+      // partial/failed.
+      strength: z.number().min(1).max(10),
+      kind: z.enum(["similar", "related", "tangent", "contrarian"]),
+      rationale: z.string().min(5).max(500).optional(),
+    })
+    .strict(),
+);
 
 /**
  * Persona configuration — structured replacement for the text header block.
@@ -291,13 +367,57 @@ export const MAX_KG_NODES = 24;
 // edge-count cap in the prompt). 20 observed max + ~20% margin = 24.
 export const MAX_KG_EDGES = 24;
 
-export const KnowledgeGraphSchema = z
-  .object({
-    nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
-    edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
-    rootId: z.string().nullable(),
-  })
-  .strict();
+/**
+ * Graph-level tolerant normalization (same 2026-09-27 RCA as the node/edge
+ * field coercion): 25+ nodes or edges used to reject the ENTIRE graph/
+ * fragment; unreferencable nodes (missing id) or dangling edges (missing
+ * source/target) did the same. Now: arrays sliced to cap, structurally
+ * unusable entries filtered out, rootId defaulted to the first surviving
+ * node when the model omitted it (rootId null is schema-legal, but the
+ * graph UI centers on rootId — a graph with nodes and a null root rendered
+ * headless; first-node fallback preserves the original model's ordering).
+ */
+const normalizeKgGraphFields = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = { ...(val as Record<string, unknown>) };
+  if (Array.isArray(out.nodes)) {
+    out.nodes = out.nodes
+      .filter((n) => n && typeof n === "object" && typeof (n as Record<string, unknown>).id === "string" && (n as Record<string, unknown>).id !== "")
+      .slice(0, MAX_KG_NODES);
+  }
+  if (Array.isArray(out.edges)) {
+    out.edges = out.edges
+      .filter(
+        (e) =>
+          e &&
+          typeof e === "object" &&
+          typeof (e as Record<string, unknown>).source === "string" &&
+          (e as Record<string, unknown>).source !== "" &&
+          typeof (e as Record<string, unknown>).target === "string" &&
+          (e as Record<string, unknown>).target !== "",
+      )
+      .slice(0, MAX_KG_EDGES);
+  }
+  if (typeof out.rootId !== "string") {
+    out.rootId = null;
+  }
+  const allowed = ["nodes", "edges", "rootId"];
+  for (const key of Object.keys(out)) {
+    if (!allowed.includes(key)) delete out[key];
+  }
+  return out;
+};
+
+export const KnowledgeGraphSchema = z.preprocess(
+  normalizeKgGraphFields,
+  z
+    .object({
+      nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
+      edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
+      rootId: z.string().nullable(),
+    })
+    .strict(),
+);
 
 /**
  * Complete structured JSON payload — v2.0 schema.
@@ -325,8 +445,20 @@ export const UCISPayloadV2Schema = z
 /**
  * Validate stream fragments from Worker
  * Handles: dimension, metadata, complete, error, persona, kg, classification
+ *
+ * The whole union is wrapped in a preprocess (rather than preprocessing the
+ * kg option) because a discriminated union discriminates on the option
+ * objects' own `type` literal — a wrapped option breaks discrimination
+ * ("Invalid discriminated union option"). The pass-through only touches
+ * objects whose type is already "kg", so non-kg fragments are untouched.
  */
-export const UCISStreamFragmentSchema = z.discriminatedUnion("type", [
+export const UCISStreamFragmentSchema = z.preprocess((val) => {
+  if (val && typeof val === "object" && !Array.isArray(val) && (val as Record<string, unknown>).type === "kg") {
+    const normalized = normalizeKgGraphFields(val) as Record<string, unknown>;
+    return { ...normalized, type: "kg" };
+  }
+  return val;
+}, z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("status"),
@@ -426,7 +558,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion("type", [
       data: ClassificationDataSchema,
     })
     .strict(),
-]);
+]));
 
 // =============================================================================
 // Safe parse helpers with detailed error reporting

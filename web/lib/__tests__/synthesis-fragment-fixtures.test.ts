@@ -22,6 +22,7 @@ import {
   validateFragment,
   UCISPayloadV2Schema,
   KGNodeSchema,
+  KGEdgeSchema,
   MAX_KG_EDGES,
 } from "@/lib/validators/synthesis";
 
@@ -141,12 +142,89 @@ describe("kg fragment accepts real node/edge shapes (2026-09-25 regression)", ()
     }
   });
 
-  it("still rejects a node with an unknown entityType", () => {
+  it("coerces a node with an unknown entityType to 'concept' (2026-09-27 tolerance contract)", () => {
+    // Was: rejected outright (which dropped the WHOLE kg fragment on live
+    // production video 39hqY3nH5ug). Now degrades to the generic bucket.
     const result = KGNodeSchema.safeParse({
       ...REAL_NODE_SHAPE,
       entityType: "widget",
       type: undefined,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.entityType).toBe("concept");
+  });
+});
+
+describe("kg fragment tolerant normalization (2026-09-27 regression, 39hqY3nH5ug)", () => {
+  // RCA: a 3-hour geopolitical/theological video legitimately yields node
+  // entityTypes outside the fixed enum; ONE unmatched value used to reject
+  // the WHOLE kg fragment client-side ("[Synthesis] Fragment validation
+  // failed"), silently erasing the knowledge graph. Contract: never reject,
+  // always degrade.
+
+  it("coerces unknown entityType to 'concept' instead of rejecting the fragment", () => {
+    const result = validateFragment({
+      type: "kg",
+      nodes: [
+        { id: "eschatology", dimension: 8, label: "Eschatology", weight: 7, polarity: 0, keyTerms: ["end times"], entityType: "religion" },
+      ],
+      edges: [],
+      rootId: "eschatology",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.nodes[0].entityType).toBe("concept");
+    }
+  });
+
+  it("clamps out-of-range weight/polarity/strength and unknown edge kind", () => {
+    const node = KGNodeSchema.parse({ id: "x", dimension: 8, label: "X", weight: 42, polarity: 9, keyTerms: [], entityType: "concept" });
+    expect(node.weight).toBe(10);
+    expect(node.polarity).toBe(1);
+    const edge = KGEdgeSchema.parse({ source: "a", target: "b", strength: 99, kind: "supports" });
+    expect(edge.strength).toBe(10);
+    expect(edge.kind).toBe("related");
+  });
+
+  it("slices nodes/edges over cap instead of rejecting the whole graph", () => {
+    const nodes = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, dimension: 8, label: `N${i}`, weight: 5, polarity: 0, keyTerms: [], entityType: "concept" }));
+    const edges = Array.from({ length: 30 }, (_, i) => ({ source: `n${i}`, target: `n${(i + 1) % 30}`, strength: 5, kind: "related" }));
+    const result = validateFragment({ type: "kg", nodes, edges, rootId: "n0" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.nodes.length).toBe(24);
+      expect(result.data.edges.length).toBe(24);
+    }
+  });
+
+  it("drops structurally unusable nodes/edges, keeps the rest", () => {
+    const result = validateFragment({
+      type: "kg",
+      nodes: [
+        { id: "ok", dimension: 8, label: "OK", weight: 5, polarity: 0, keyTerms: [], entityType: "concept" },
+        null,
+        { dimension: 8, label: "No id", weight: 5, polarity: 0, keyTerms: [], entityType: "concept" },
+      ],
+      edges: [
+        { source: "ok", target: "ok", strength: 5, kind: "related" },
+        { target: "ok", strength: 5, kind: "related" }, // no source
+      ],
+      rootId: "ok",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.nodes.length).toBe(1);
+      expect(result.data.edges.length).toBe(1);
+    }
+  });
+
+  it("normalizes node type/entityType key duality still (original 2026-09-25 regression)", () => {
+    const node = KGNodeSchema.parse({ id: "n", dimension: 8, label: "N", weight: 5, polarity: 0, keyTerms: [], type: "person" });
+    expect(node.entityType).toBe("person");
+  });
+
+  it("clamps out-of-range node dimension", () => {
+    const node = KGNodeSchema.parse({ id: "n", dimension: 99, label: "N", weight: 5, polarity: 0, keyTerms: [], entityType: "concept" });
+    expect(node.dimension).toBe(11);
   });
 });
