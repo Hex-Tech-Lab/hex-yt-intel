@@ -15,7 +15,7 @@ export const KGNodeSchema = z.object({
   id: z.string(),
   dimension: z.number(),
   label: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
   weight: z.number(),
   polarity: z.number(),
   keyTerms: z.array(z.string()),
@@ -54,11 +54,24 @@ export const PersonaConfigSchema = z.object({
 export const MAX_KG_NODES = 24;
 export const MAX_KG_EDGES = 18;
 
-export const KnowledgeGraphSchema = z.object({
-  nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
-  edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
-  rootId: z.string().nullable(),
-});
+export const KnowledgeGraphSchema = z.preprocess(
+  (val: unknown) => {
+    if (!val || typeof val !== 'object' || Array.isArray(val)) return val;
+    const out = { ...(val as Record<string, unknown>) };
+    if (Array.isArray(out.nodes)) {
+      out.nodes = out.nodes.slice(0, MAX_KG_NODES);
+    }
+    if (Array.isArray(out.edges)) {
+      out.edges = out.edges.slice(0, MAX_KG_EDGES);
+    }
+    return out;
+  },
+  z.object({
+    nodes: z.array(KGNodeSchema).max(MAX_KG_NODES),
+    edges: z.array(KGEdgeSchema).max(MAX_KG_EDGES),
+    rootId: z.string().nullable(),
+  }).passthrough()
+);
 
 export const UCISDimensionSchema = z.object({
   number: z.number(),
@@ -76,7 +89,7 @@ export const UCISPayloadSchema = z.object({
   schemaVersion: z.literal('2.0'),
   persona: PersonaConfigSchema,
   dimensions: z.array(UCISDimensionSchema),
-  knowledgeGraph: KnowledgeGraphSchema.passthrough().optional().nullable(),
+  knowledgeGraph: KnowledgeGraphSchema.optional().nullable(),
   classification: z.object({
     authoritative: z.boolean(),
     practicallyActionable: z.boolean(),

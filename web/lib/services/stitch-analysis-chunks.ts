@@ -16,6 +16,8 @@ import {
   UCISPayloadV2Schema,
   KGNodeSchema,
   KGEdgeSchema,
+  MAX_KG_NODES,
+  MAX_KG_EDGES,
   normalizePersonaId,
 } from "@/lib/validators/synthesis";
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
@@ -123,12 +125,13 @@ export { resolveBillingStatus } from '@/lib/services/billing-status';
 export function stitchChunksIntoPayload(
   chunkMap: Map<number, any>,
   resolvedTotal: number,
-  extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any },
+  extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any; stance_relations?: any },
 ): StitchResult {
   const stitchedDimensions: any[] = [];
   let stitchedPersona: any = null;
   let stitchedClassification: any = null;
   let stitchedMonetization: any = null;
+  let stitchedStanceRelations: any = null;
   let stitchedNodes: any[] = [];
   let stitchedEdges: any[] = [];
 
@@ -146,6 +149,9 @@ export function stitchChunksIntoPayload(
     }
     if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
       stitchedMonetization = chunkPayload.monetizationVerdict;
+    }
+    if (chunkPayload.stance_relations && !stitchedStanceRelations) {
+      stitchedStanceRelations = chunkPayload.stance_relations;
     }
     if (
       chunkPayload.knowledgeGraph &&
@@ -345,8 +351,8 @@ export function stitchChunksIntoPayload(
       `[stitch-analysis-chunks] Dropped ${droppedEdgeCount} malformed/dangling KG edge(s) before validation`,
     );
   }
-  stitchedNodes = validNodes;
-  stitchedEdges = validEdges;
+  stitchedNodes = validNodes.slice(0, MAX_KG_NODES);
+  stitchedEdges = validEdges.slice(0, MAX_KG_EDGES);
 
   // Normalize persona id spelling before validation.
   //
@@ -400,6 +406,9 @@ export function stitchChunksIntoPayload(
       ? { channelMeta: extraMetadata.channelMeta }
       : {}),
     ...(extraMetadata?.comments ? { comments: extraMetadata.comments } : {}),
+    ...(stitchedStanceRelations || extraMetadata?.stance_relations
+      ? { stance_relations: stitchedStanceRelations || extraMetadata?.stance_relations }
+      : {}),
   };
 
   // Validate stitched payload. The schema is .strict(), but LLMs routinely emit

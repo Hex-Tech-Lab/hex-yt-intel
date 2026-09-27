@@ -952,6 +952,7 @@ export async function POST(request: NextRequest) {
             videoMetadata: priorPayload?.videoMetadata ?? (priorReport as any)?.metadata ?? null,
             channelMeta: channelMeta ?? priorPayload?.channelMeta ?? (priorReport as any)?.channelMeta ?? null,
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
+            stance_relations: priorPayload?.stance_relations ?? null,
           };
           const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal, extraMetadata);
           const stitchedPayload = stitchResult.payload ?? null;
@@ -1266,6 +1267,7 @@ export async function POST(request: NextRequest) {
             videoMetadata: priorPayload?.videoMetadata ?? (priorReport as any)?.metadata ?? null,
             channelMeta: channelMeta ?? priorPayload?.channelMeta ?? (priorReport as any)?.channelMeta ?? null,
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
+            stance_relations: priorPayload?.stance_relations ?? null,
           };
           const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal, extraMetadata);
           if (stitchResult.payload !== undefined) {

@@ -317,9 +317,10 @@ export const MonetizationVerdictSchema = z
 export const MAX_KG_NODES = 24;
 // Derived from production data (2026-09-25): across 88 completed analyses the
 // observed per-bundle/stitched edge count is p50=15, p90=20, max=20 -- the
-// previous 18 cap rejected 31/88 rows' real output (the model is under no
-// edge-count cap in the prompt). 20 observed max + ~20% margin = 24.
-export const MAX_KG_EDGES = 24;
+// ROE (RAGraph Ontological Engine) reference architecture standard:
+// ≤24 nodes / ≤18 edges (docs/private/html/2026-08-17-SYNTHESIS-cross-article-findings.html:102).
+// Normalization preprocessor below clamps edges to MAX_KG_EDGES so excess edges never reject.
+export const MAX_KG_EDGES = 18;
 
 /**
  * Graph-level tolerant normalization (same 2026-09-27 RCA as the node/edge
