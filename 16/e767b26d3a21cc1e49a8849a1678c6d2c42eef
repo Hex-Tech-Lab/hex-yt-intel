@@ -1,0 +1,21 @@
+docs/adr/ADR-033-PROVIDER-AUTOMATION-DRAFT.html
+  s_358672d53d4d2d::t_f60a843dc97464 1-63
+.memory/ADRS.md
+  s_358672d53d4d2d::t_78256c35e3d904 32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "16e767b26d3a21cc1e49a8849a1678c6d2c42eef",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
