@@ -1,0 +1,19 @@
+CLAUDE.md
+  s_358672d53d4d2d::t_98743e49ec46f5 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1cca63698c97aa6ef044716fb9afaa6899a00026",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
