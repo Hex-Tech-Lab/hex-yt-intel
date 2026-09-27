@@ -16,7 +16,7 @@
 </head>
 <body>
 <h1>ADR 033 (DRAFT — awaiting user confirmation) — Dynamic LLM Provider Routing Automation</h1>
-<p class="status">Status: DRAFT — not implemented. Per the standing protocol, no build until the user confirms.</p>
+<p class="status">Status: DRAFT v2 — revised with user feedback 2026-09-27 (p95 latency, throughput, 3-component price, dynamic candidate set + two-step allowlist, auto-mode-first). Awaiting explicit confirmation.</p>
 
 <h2>Context</h2>
 <p>The OC model standard pins GLM-5.3-flash to a sticky provider order
@@ -33,10 +33,10 @@ the <strong>preset itself</strong>, not opencode.json.</p>
 <p>A scheduled checker (Vercel Cron, 1×/hour, well under the existing cron budget) that:</p>
 <table>
 <tr><th>#</th><th>Step</th><th>Detail</th></tr>
-<tr><td>1</td><td>Measure</td><td>Query OpenRouter for glm-5.3-flash endpoint health: per-provider latency (p50), uptime over the trailing 24h, and a synthetic 1-token probe per candidate provider (cost ≈ $0.0001/probe).</td></tr>
-<tr><td>2</td><td>Decide</td><td>Score the four pinned providers (uptime ≥ 99% first, then p50 latency, then price). If the current preset order's head is degraded and another pinned provider is materially better, compute a new order.</td></tr>
-<tr><td>3</td><td>Act (two modes)</td><td><b>Alert mode (default):</b> write the recommendation to the admin dashboard + log line; the user edits the preset manually. <b>Auto mode (opt-in, Settings Registry key <code>provider.automation.autoUpdate</code>, default false):</b> PATCH the preset via OpenRouter's presets API when the new order differs from the current one, with a minimum change interval (24h) and a full audit log.</td></tr>
-<tr><td>4</td><td>Guardrails</td><td>Never adds providers outside the pinned four. Never disables <code>allow_fallbacks: false</code>. Settings-Registry-gated (<code>provider.automation.enabled</code>, default false), <code>provider.automation.mode</code> = alert|auto. No hardcoded tunables.</td></tr>
+<tr><td>1</td><td>Measure</td><td>Query OpenRouter for glm-5.3-flash endpoint health per provider over the trailing 24h: <b>p95 latency</b>, <b>p95 throughput (tps)</b>, uptime, and the <b>three price components — input, output, cache-read</b> (cache-read weighted most: a sticky provider serves mostly cache hits, so cache price is the real cost driver). Plus a synthetic 1-token probe per candidate (cost ≈ $0.0001/probe). Empirical anchors (user-provided, 2026-09-27): Morph p95-latency ~3s vs Together 5.68s vs Relace 8.13s; throughput ≥50 tps acceptable, higher better; cache-read $0.032/M (Morph) vs $0.05 (CoreWeave) vs $0.03 (Together) vs $0.02 (Relace); input/output $0.16/$0.57 (Morph) vs ~$0.15/$0.50 (others).</td></tr>
+<tr><td>2</td><td>Decide</td><td>Score the candidate set (uptime ≥99% first, then p95 latency, then p95 throughput, then the 3-component price weighted cache-read > input ≈ output). The candidate set is NOT frozen at the pinned four: if a provider outside the current set is doing better, it is <b>recommended but flagged</b> — activating it is a two-step process (add it in OpenRouter privacy settings FIRST, then add to the order; reordering alone leaves it unavailable, the exact Morph-onboarding lesson of 2026-09-27).</td></tr>
+<tr><td>3</td><td>Act (two modes)</td><td><b>Auto mode (user preference, starts immediately):</b> PATCH the preset via OpenRouter's presets API when the new order differs from the current one, with a minimum change interval (24h) and a full audit log; every automatic decision is also surfaced as an alert on the admin dashboard so the user can audit it. <b>Alert-only mode</b> remains available via <code>provider.automation.mode = alert</code>. Run in auto+alerts for 2-3 days; if decisions are wrong, tune the scoring algorithm with the recorded evidence.</td></tr>
+<tr><td>4</td><td>Guardrails</td><td>Never auto-activates a provider that is not in the OpenRouter privacy allowlist — it recommends the two-step activation instead. Order changes are confined to already-allowlisted providers. Never disables <code>allow_fallbacks: false</code>. Settings-Registry-gated (<code>provider.automation.enabled</code>, default true after confirmation; <code>provider.automation.mode</code> = auto|alert, default auto). No hardcoded tunables.</td></tr>
 </table>
 
 <h2>Alternatives considered</h2>
