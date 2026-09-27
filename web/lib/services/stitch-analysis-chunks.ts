@@ -12,6 +12,12 @@
  * behind tonight's KG-schema and persona-id incidents; this module exists
  * specifically to not repeat that mistake here.
  */
+import * as Sentry from "@sentry/nextjs";
+
+import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
+import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
+import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
+import { normalizeNodeWeight } from "@/lib/utils/node-weight-normalization";
 import {
   UCISPayloadV2Schema,
   KGNodeSchema,
@@ -20,17 +26,13 @@ import {
   MAX_KG_EDGES,
   normalizePersonaId,
 } from "@/lib/validators/synthesis";
-import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
+
 import type { UCISPayloadV2 } from "@/lib/types/synthesis-nucleus";
-import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
-import { normalizeNodeWeight } from "@/lib/utils/node-weight-normalization";
-import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
 import type {
   DimensionStatus,
   BillingStatus,
   ValidationReportStatus,
 } from "@/lib/types/validation-report";
-import * as Sentry from "@sentry/nextjs";
 
 export interface StitchResult {
   payload: UCISPayloadV2 | undefined;

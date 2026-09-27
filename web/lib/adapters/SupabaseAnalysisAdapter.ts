@@ -1,23 +1,26 @@
-import { normalizeTranscriptSegments } from '@/lib/utils/transcript-normalizer';
-import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
-import { getSupabaseServiceClient } from '@/lib/supabase';
-import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
-import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import * as Sentry from '@sentry/nextjs';
+
+import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
+import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
+import { getSupabaseServiceClient } from '@/lib/supabase';
+import { isPersistedValidationReport } from '@/lib/types/validation-report';
+import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
+import { mapHistoryOverviewRow } from '@/lib/utils/history-overview';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { normalizeTranscriptSegments } from '@/lib/utils/transcript-normalizer';
+
 import type {
   CachedAnalysis,
   AnalysisStub,
   ValidationReportInput,
   HistoryOverviewItem,
 } from '@/lib/ports';
-import type { AnalysisJobMetadata } from '@/lib/types/contracts';
-import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
-import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
-import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
-import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
-import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import type { AnalysisJobMetadata } from '@/lib/types/contracts';
+import type { HighlightData, AnalysisGroundingData } from '@/lib/types/highlights';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
+import type { RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 
 const MAX_GROUNDING_PAYLOAD_BYTES = 100_000;
 
