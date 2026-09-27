@@ -77,13 +77,27 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
  * not unbounded exponential, so a larger MAX_ATTEMPTS can't make a single
  * retry wait minutes.
  */
-export const HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS = 5;
+export const HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS = 8;
 export const HIGHLIGHTS_STATUS_RETRY_BASE_DELAY_MS = 2500;
 export const HIGHLIGHTS_STATUS_RETRY_MAX_DELAY_MS = 15000;
 
-/** Capped exponential backoff shared by both highlights-status retry loops. */
+/**
+ * Explicit per-attempt wait schedule spanning the full recovery window
+ * (~45s from first attempt to final poll). Wave 4 Task 2: replaces the
+ * implicit capped-exponential arithmetic as the declared source of truth
+ * for `getHighlightsRetryDelayMs` -- attempt N waits
+ * HIGHLIGHTS_POLL_INTERVALS[N] ms (attempt 0 polls immediately). Length
+ * must match HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS; entry 0 is the
+ * immediate first poll, so total elapsed coverage is the last entry.
+ */
+export const HIGHLIGHTS_POLL_INTERVALS = [0, 3000, 6000, 10000, 15000, 25000, 35000, 45000] as const;
+
+/** Per-attempt delay derived from the 45s decaying schedule HIGHLIGHTS_POLL_INTERVALS. */
 export function getHighlightsRetryDelayMs(attempt: number): number {
-  return Math.min(HIGHLIGHTS_STATUS_RETRY_BASE_DELAY_MS * Math.pow(2, attempt), HIGHLIGHTS_STATUS_RETRY_MAX_DELAY_MS);
+  if (attempt >= 0 && attempt < HIGHLIGHTS_POLL_INTERVALS.length - 1) {
+    return HIGHLIGHTS_POLL_INTERVALS[attempt + 1]! - HIGHLIGHTS_POLL_INTERVALS[attempt]!;
+  }
+  return 10000;
 }
 
 /** A malformed/missing/out-of-range registry value must never reach the

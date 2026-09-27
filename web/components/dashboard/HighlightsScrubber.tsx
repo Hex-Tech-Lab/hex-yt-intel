@@ -304,7 +304,21 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds, digestLoa
     return (
       <Card variant="transparent" padding={3} className="flex flex-col gap-1.5 border border-[var(--border-muted)] bg-[var(--surface)] h-[80px] items-center justify-center">
         <span className="text-[11px] font-mono text-[var(--ink-muted)] uppercase tracking-wider">No highlights yet</span>
-        <span className="text-xs text-[var(--ink-secondary)]">Use Re-analyze to generate this video&apos;s keypoint reel.</span>
+        {/* Wave 4 Task 2: manual recovery poll -- highlights may land after the
+            initial retry budget expires (scheduleHighlightsRecovery is
+            server-side async). Re-runs the same fetch cycle without full
+            re-analysis; runFetchCycle flips `loading`, which swaps this panel
+            for the generating state, so no separate spinner flag needed. */}
+        <button
+          type="button"
+          onClick={() => runFetchCycle(analysisId)}
+          disabled={loading}
+          data-testid="highlights-check-status"
+          className="text-[11px] font-mono text-[var(--accent)] hover:text-[var(--accent-a70)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider inline-flex items-center gap-1.5"
+        >
+          {loading ? <Icon icon="eos-icons:bubble-loading" size={12} /> : null}
+          {loading ? 'Checking…' : 'Check Status'}
+        </button>
       </Card>
     );
   }

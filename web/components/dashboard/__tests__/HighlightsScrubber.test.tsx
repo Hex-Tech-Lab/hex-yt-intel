@@ -55,27 +55,27 @@ describe('HighlightsScrubber', () => {
   });
 
   it('collapses gracefully without crashing when highlights array is empty', async () => {
+    vi.useFakeTimers();
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => ({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
+        json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }),
       })
     );
 
     const { container } = render(<HighlightsScrubber analysisId="analysis-empty" videoDurationSeconds={60} />);
 
-    await waitFor(() => {
-      // Empty state banner is now rendered instead of collapsing to null
-      expect(container.firstChild).not.toBeNull();
-      expect(container.firstChild?.textContent).toContain('No highlights yet');
-    }, { timeout: 40000 });
-  }, 45000);
+    await vi.advanceTimersByTimeAsync(50000);
+    await Promise.resolve();
+
+    expect(container.firstChild).not.toBeNull();
+    expect(container.firstChild?.textContent).toContain('No highlights yet');
+  });
 
   it('bounded polling retries on empty before showing empty state banner', async () => {
-    // 5 attempts, capped-exponential backoff (2.5s/5s/10s/15s -- see
-    // highlights-settings.ts's HIGHLIGHTS_STATUS_RETRY_* constants and their
-    // doc comment for why this window widened from the original 3/2.5s/5s).
+    // 8 attempts, 45s decaying schedule (3s/3s/4s/5s/10s/10s/10s -- see
+    // highlights-settings.ts's HIGHLIGHTS_POLL_INTERVALS).
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -85,17 +85,26 @@ describe('HighlightsScrubber', () => {
 
     const { container } = render(<HighlightsScrubber analysisId="analysis-poll" videoDurationSeconds={60} />);
 
-    await vi.advanceTimersByTimeAsync(2600);
+    await vi.advanceTimersByTimeAsync(3100);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    await vi.advanceTimersByTimeAsync(5100);
+    await vi.advanceTimersByTimeAsync(3100);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    await vi.advanceTimersByTimeAsync(10100);
+    await vi.advanceTimersByTimeAsync(4100);
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
-    await vi.advanceTimersByTimeAsync(15100);
+    await vi.advanceTimersByTimeAsync(5100);
     expect(fetchMock).toHaveBeenCalledTimes(5);
+
+    await vi.advanceTimersByTimeAsync(10100);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+
+    await vi.advanceTimersByTimeAsync(10100);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+
+    await vi.advanceTimersByTimeAsync(10100);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
 
     await vi.advanceTimersByTimeAsync(100);
     // Empty state banner is now rendered instead of collapsing to null
@@ -109,10 +118,8 @@ describe('HighlightsScrubber', () => {
     // AFTER digest generation, which can land well after this component's
     // own retry budget gives up. digestLoading:true->false is the real
     // signal that recovery has now been scheduled server-side -- verify it
-    // actually restarts the fetch cycle AFTER the full 5-attempt schedule
-    // has already run out (CodeRabbit review, PR #298: the original version
-    // of this test only exercised 1 fetch call before switching
-    // digestLoading, never proving recovery works post-exhaustion).
+    // actually restarts the fetch cycle AFTER the full 8-attempt schedule
+    // has already run out.
     vi.useFakeTimers();
     const fetchMock = vi
       .fn()
@@ -123,13 +130,16 @@ describe('HighlightsScrubber', () => {
       <HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={true} />
     );
 
-    // Run through the complete 5-attempt retry schedule (2.5s/5s/10s/15s).
-    await vi.advanceTimersByTimeAsync(2600);
+    // Run through the complete 8-attempt retry schedule (3s/3s/4s/5s/10s/10s/10s).
+    await vi.advanceTimersByTimeAsync(3100);
+    await vi.advanceTimersByTimeAsync(3100);
+    await vi.advanceTimersByTimeAsync(4100);
     await vi.advanceTimersByTimeAsync(5100);
     await vi.advanceTimersByTimeAsync(10100);
-    await vi.advanceTimersByTimeAsync(15100);
+    await vi.advanceTimersByTimeAsync(10100);
+    await vi.advanceTimersByTimeAsync(10100);
     await vi.advanceTimersByTimeAsync(100);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
     expect(container.firstChild?.textContent).toContain('No highlights yet');
 
     // Now the recovery response is available -- simulate digest finishing.
@@ -143,13 +153,13 @@ describe('HighlightsScrubber', () => {
         }),
     });
     rerender(<HighlightsScrubber analysisId="analysis-digest-race" videoDurationSeconds={60} digestLoading={false} />);
-    // First attempt of the new fetch cycle resolves with real highlights --
-    // no retry delay needed, but a microtask flush is required under fake timers.
-    await vi.advanceTimersByTimeAsync(0);
+    // Allow the async fetch and React state settlement to flush
+    await vi.waitFor(() => {
+      expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    });
 
     expect(container.firstChild?.textContent).not.toContain('No highlights yet');
-    expect(container.firstChild?.textContent).toContain('keypoints ready to play');
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 
   it('ignores a stale response that resolves AFTER the analysisId already changed, even if abort() cannot stop an already-buffered .json() (deeper review, PR #298)', async () => {
@@ -219,7 +229,7 @@ describe('HighlightsScrubber', () => {
     // changed. Advancing past the first retry delay must still produce a
     // SECOND fetch call from the continuing cycle itself, not a dead cycle
     // waiting for something that will never come.
-    await vi.advanceTimersByTimeAsync(2600);
+    await vi.advanceTimersByTimeAsync(3100);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     // true -> false: the real recovery signal -- this SHOULD start a fresh
@@ -277,6 +287,43 @@ describe('HighlightsScrubber', () => {
     // Give any erroneous duplicate a chance to fire before asserting it didn't.
     await new Promise((resolveTick) => setTimeout(resolveTick, 10));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('manual Check Status button in the empty state re-runs the fetch cycle and shows highlights when recovery lands (Wave 4 Task 2)', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [], segmentDurationSeconds: 5, contextLeadSeconds: 2 }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container } = render(<HighlightsScrubber analysisId="analysis-manual" videoDurationSeconds={60} />);
+
+    // Exhaust the full 8-attempt budget -> empty state with the manual button.
+    await vi.advanceTimersByTimeAsync(3100 + 3100 + 4100 + 5100 + 10100 + 10100 + 10100 + 100);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(container.firstChild?.textContent).toContain('No highlights yet');
+
+    const refreshButton = screen.getByTestId('highlights-check-status');
+    expect(refreshButton.textContent).toContain('Check Status');
+
+    // Recovery has landed server-side by the time the user clicks.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          highlights: [{ idx: 0, start: 10, end: 15, label: 'Manual-refresh highlight' }],
+          segmentDurationSeconds: 5,
+          contextLeadSeconds: 2,
+        }),
+    });
+    fireEvent.click(refreshButton);
+    await vi.waitFor(() => {
+      expect(container.firstChild?.textContent).toContain('keypoints ready to play');
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock.mock.calls[8]![0]).toContain('analysisId=analysis-manual');
+    expect(container.firstChild?.textContent).toContain('Manual-refresh highlight');
   });
 
   it('collapses gracefully on fetch error without throwing', async () => {
