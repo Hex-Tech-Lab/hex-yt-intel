@@ -1,0 +1,41 @@
+web/lib/__tests__/history-overview.test.ts
+  s_358672d53d4d2d::t_629625ed7afa25 79-80
+web/lib/utils/history-overview.ts
+  s_358672d53d4d2d::t_4df39dfde9f1e8 28-29
+  s_358672d53d4d2d::t_171826a3e1a32c 105-106
+web/components/templates/console/AnalysisHistory.tsx
+  s_358672d53d4d2d::t_af0d8596fd63d7 87-96,117,764-768,859-869
+  s_358672d53d4d2d::t_f4be283b0f4944 848-850
+supabase/migrations/20260928100000_history_overview_function_v16_highlights_duration.sql
+  s_358672d53d4d2d::t_59d941abe14dcd 1-160
+web/store/useAnalysisStore.ts
+  s_358672d53d4d2d::t_2bc73c74c26fb4 110-121
+web/sentry.client.config.ts
+  s_358672d53d4d2d::t_2bc73c74c26fb4 5-7
+web/lib/ports/AnalysisPersistencePort.ts
+  s_358672d53d4d2d::t_171826a3e1a32c 68-69
+.opencode/opencode.json
+  s_358672d53d4d2d::t_5242ee72c46080 16
+.opencode/opencode.json.bak-2026-09-28-evening
+  s_358672d53d4d2d::t_f1e078a70326ab 1-30
+web/components/dashboard/HighlightsScrubber.tsx
+  s_358672d53d4d2d::t_930380d83080ee 161-187
+web/lib/utils/dedupe-fetch.ts
+  s_358672d53d4d2d::t_f6b9da6c50329e 48-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "06feacd9b91838683cc2d0467f1e572553c6cc2c",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
