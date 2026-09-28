@@ -1,0 +1,31 @@
+web/components/containers/DashboardContainer.tsx
+  s_4ecf2aee69f2ad::t_c49ed5527e1b60 248-264,304-315,739-745,757
+web/components/containers/ProDashboardView.tsx
+  s_4ecf2aee69f2ad::t_c5e96e6788b10c 89
+web/components/containers/SimpleDashboardView.tsx
+  s_4ecf2aee69f2ad::t_e2179869a6379f 42
+web/components/templates/console/AnalysisHistory.tsx
+  s_4ecf2aee69f2ad::t_65d6a7869974e7 14,265-268,289,483-518,892-906
+web/lib/types.ts
+  s_4ecf2aee69f2ad::t_d3703cb9b36fd0 37
+web/lib/utils/__tests__/safe-storage.test.ts
+  s_4ecf2aee69f2ad::t_6cff2d586afb8a 224-270
+web/lib/utils/safe-storage.ts
+  s_4ecf2aee69f2ad::t_843539609087a7 15-33,210-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "93f1b02c8d7b9ec5a13eb9fc7325882a99f5ee98",
+  "prompts": {},
+  "sessions": {
+    "s_4ecf2aee69f2ad": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f17f0bca7ffeHO1riu0nZm2JBH",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
