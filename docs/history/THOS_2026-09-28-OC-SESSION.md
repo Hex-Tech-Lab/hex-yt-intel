@@ -100,3 +100,32 @@ Verify-before-trust (live probes, not self-reports); contracts enforced end-to-e
 4. INP profiling.
 5. Baselines 3/5: yB92mx97A8s → _LCeJZFIsd4 → uZ5kJ9CBbv0 (user runs, OC verifies + freezes).
 6. Await: ADR 033 confirmation, ADR 021 Phase 2-4 confirmation.
+
+---
+
+## 11. HANDOVER UPDATE #2 — 2026-09-28T09:24Z (session clear, cost)
+
+Everything below happened AFTER the original THOS body above and IS INCLUDED in this update. Branch at handover: `fix/wave-4-remediation`, HEAD `06feacd9`, **pushed to origin** (verified: origin/fix/wave-4-remediation = 06feacd9). Working tree CLEAN. Full vitest 209 files / 2167 tests, 0 failed. tsc 0. eslint 0 issues.
+
+### 11.1 Wave: history-overview v16 + highlights "once and for all" + memory leak (commit 06feacd9)
+
+1. **Highlights "once and for all" — ROOT CAUSE CONFIRMED as client-side, NOT generation**: the user's fresh EOiypb2wXM0 re-analysis (0b4918dd, 11:40 local) has billing=completed, digest present, AND **16 highlight rows in the DB** — generation works end-to-end. The UI failure is the dedupe-fetch **abort-window race**: when consumer A's local abort empties the shared entry's consumer count, the shared controller aborts SYNCHRONOUSLY but the deleting `finally` is ASYNC — a caller joining in that window inherits the dying entry, gets its AbortError, and its whole retry cycle dies at `data=null` → renders "No highlights yet / Use Re-analyze" while rows exist. TWO fixes in `web/lib/utils/dedupe-fetch.ts` + `web/components/dashboard/HighlightsScrubber.tsx`: (a) new callers bypass entries that are `settled || controller.signal.aborted`; (b) the scrubber's fetch loop treats an inherited-AbortError (own controller alive) as a RETRYABLE attempt failure — continues its own backoff loop instead of dying.
+2. **Memory leak (~1GB Chrome tab, user screenshot)**: (a) `useAnalysisStore.terminalLines` grew UNBOUNDED (every append copies the whole array = O(n) per call, quadratic garbage across hours of streaming + the reconcile-swarm period) → **capped to newest 400 lines**; (b) client Sentry `tracesSampleRate` 1.0 → **0.1** (all-day OTel span retention). Note: Sentry Session Replay was NOT configured (ruled out).
+3. **History cards (user feedback batch)**: v16 migration `20260928100000_history_overview_function_v16_highlights_duration.sql` adds `has_highlights` + `duration_seconds` to the overview RPC (restores the **Highlights chip** that silently disappeared, adds the **duration clock chip** the user requested); **applied live via Management API + registered** (verified: 95 rows, EOiypb2wXM0 has_highlights=true, duration 1169s). Mapper/port/raw-row types extended (`hasHighlights`, `durationSeconds`); history-overview test updated. **Thumbnail polish** (user: shrink + thin empty space + zoom out, less left/right chop): tile padded `p-1.5` with a rounded inner frame, `object-cover` → `object-contain`.
+4. **KG edges 24→18** (user: "24 nodes / 18 edges — this is the correct one"): both `web/lib/validators/synthesis.ts` and `worker/src/services/ZodSchemas.ts` set to 18 with the supersession recorded in comments; tests aligned (20-edge real fragment now SLICES to 18 — the never-reject principle stands); §2 above's "pending implementation" is now DONE — the 2026-09-25 telemetry-derived 24 is formally superseded by user standard.
+5. **Digest provider lock (user directive)**: exec-digest gpt-oss-120b was landing on BaseTen/DeepInfra. Two leak paths fixed: adapter hardcoded `allow_fallbacks: true` → **false**; fallback list + LIVE registry carried a Baseten entry → removed from both (registry updated live: Groq → Cerebras only, verified via REST). Groq serves automatic prefix caching, so sticky repeats hit cache reads.
+6. **Mapper test fix**: `history-overview.test.ts` expected-object updated for the two new fields (the only full-suite failure; caught and fixed same wave).
+
+### 11.2 User's last message this segment (verbatim)
+
+"Please create a THOS report for LLM handover because the context window is blown up and I need to clear the session. It costs me a lot of money. So once you're done with this task you're doing, proceed with creating a THS using the template and let me know where the path is and what are the key highlights. So it's the same THS you're updating. So it's an update to the existing."
+
+### 11.3 RESUME CHECKLIST (next session, in order)
+
+1. **Deploy check**: this commit (06feacd9) is on branch `fix/wave-4-remediation` — merge/PR to main when ready so the highlights fix + history cards + memory-cap reach production; then user verifies EOiypb2wXM0 shows its 16 highlights WITHOUT re-analyze (pure client fix).
+2. **Baselines 3/5**: user reruns yB92mx97A8s → _LCeJZFIsd4 → uZ5kJ9CBbv0; OC verifies from DB (11/11 dims, chunks, highlights, digest) + freezes the record; then the frozen 14-video pool is complete and Phase B can start.
+3. **INP still open** (~208–256ms on URL paste + Re-analyze click): Task 3's startTransition landed but insufficient — needs real profiling; user: "you broke something and it needs fixing."
+4. **`TranscriptAPI key not configured`** (33 Sentry events): worker secret `TRANSCRIPTAPI_API_KEY` never set — `wrangler secret put TRANSCRIPTAPI_API_KEY --env production` (user-side; chain falls back to Apify meanwhile).
+5. **Awaiting user confirmation**: ADR 033 build (provider automation, draft at docs/adr/ADR-033-PROVIDER-AUTOMATION-DRAFT.html); ADR 021 Phase 2–4 build (selective re-analyze).
+6. **Sentry triage**: `persist: invalid request payload schema` (was 121→230 events, Escalating) — should STOP after this deploy (root causes fixed earlier); `InvalidNodeTypeError selectNode on Range` (HEX-YT-INTEL-5K, 2 events) — un-RCA'd, queue; `Colon expected` (3Z) — known best-effort BracketBuffer class.
+7. **THOS maintenance**: update THIS FILE (append a new `## N. HANDOVER UPDATE` section) at the end of every wave per the standing protocol.
