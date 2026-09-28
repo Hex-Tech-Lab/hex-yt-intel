@@ -158,7 +158,33 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           // request per attempt. The local controller still owns
           // staleness: the aborted check below discards a response that
           // this cycle's own controller has outlived.
-          const res = await dedupedFetch(`/api/analyses/highlights?analysisId=${id}`, { signal: controller.signal });
+          let res: Response;
+          try {
+            res = await dedupedFetch(`/api/analyses/highlights?analysisId=${id}`, { signal: controller.signal });
+          } catch (err) {
+            // Inherited-abort resilience (RCA 2026-09-28): a shared dedupe
+            // entry can reject with AbortError even when THIS cycle's own
+            // controller is alive (another consumer's detach killed the
+            // shared request). That is a retryable attempt failure, not a
+            // cycle death — swallowing it here lets the loop's own backoff
+            // continue; the finally still guards staleness via the aborted
+            // check below.
+            if (!controller.signal.aborted && err instanceof DOMException && err.name === 'AbortError') {
+              lastJson = lastJson; // no state change; fall through to backoff
+              if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
+                await new Promise<void>((resolve) => {
+                  const timer = setTimeout(resolve, getHighlightsRetryDelayMs(attempt));
+                  controller.signal.addEventListener('abort', () => {
+                    clearTimeout(timer);
+                    resolve();
+                  }, { once: true });
+                });
+                if (controller.signal.aborted) return;
+              }
+              continue;
+            }
+            throw err;
+          }
           if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
           const json: HighlightsResponse | null = await res.json();
           // Real bug (deeper review, PR #298): AbortController.abort() only

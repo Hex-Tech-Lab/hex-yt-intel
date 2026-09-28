@@ -65,6 +65,8 @@ export interface HistoryOverviewItem {
   hasComments: boolean;
   /** Chapter parse status for the video description: true (has chapters, green) | false (attempted/empty, orange) | null (not attempted/predates, grey). */
   hasChapters: boolean | null;
+  hasHighlights: boolean;
+  durationSeconds: number | null;
   /** UA-derived device the latest analysis attempt was run from. Null for rows predating this column. */
   clientPlatform: ClientPlatform | null;
 }

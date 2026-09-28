@@ -45,8 +45,13 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
   }
 
   let entry = inFlight.get(url);
-  // Never inherit a settled (dead) entry — start fresh instead.
-  if (entry?.settled) {
+  // Never inherit a settled OR aborted (dying) entry — start fresh instead.
+  // Abort-window RCA 2026-09-28: the last consumer's detach aborts the shared
+  // controller synchronously, but the deleting finally is ASYNC — a caller
+  // joining between those two moments inherited the dying entry, got its
+  // AbortError rejection, and its whole retry cycle died at data=null
+  // (highlights UI showed "No highlights yet" while rows existed in the DB).
+  if (entry && (entry.settled || entry.controller.signal.aborted)) {
     inFlight.delete(url);
     entry = undefined;
   }

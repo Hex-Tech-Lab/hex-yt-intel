@@ -25,6 +25,8 @@ export interface RawHistoryOverviewRow {
   has_channel_meta: boolean | null;
   has_comments: boolean | null;
   has_chapters: boolean | null;
+  has_highlights: boolean | null;
+  duration_seconds: number | null;
   client_platform: ClientPlatform | null;
   failure_reason: string | null;
 }
@@ -100,6 +102,8 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     hasChannelMeta: !!row.has_channel_meta,
     hasComments: !!row.has_comments,
     hasChapters: row.has_chapters ?? null,
+    hasHighlights: !!row.has_highlights,
+    durationSeconds: row.duration_seconds ?? null,
     clientPlatform: row.client_platform ?? null,
   };
 }

@@ -107,9 +107,18 @@ function appendLogLine(
     updated[updated.length - 1] = { ...last, count: (last.count ?? 1) + 1, timestamp: new Date().toLocaleTimeString() };
     return { terminalLines: updated };
   }
-  return {
-    terminalLines: [...lines, { timestamp: new Date().toLocaleTimeString(), type, message: sanitized }],
-  };
+  // Memory-bound window (RCA 2026-09-28, user-reported ~1GB tab after an
+  // all-day session): terminalLines grew UNBOUNDED — hours of streaming
+  // (5 bundles x status frames x per-dimension logOk) plus the reconcile-
+  // swarm period appended tens of thousands of lines, and EVERY append
+  // copies the whole array (O(n) per call = quadratic garbage generation
+  // during streaming). Cap to the newest window; the panel is a live
+  // activity view, not an archive.
+  const MAX_TERMINAL_LINES = 400;
+  const next = [...lines, { timestamp: new Date().toLocaleTimeString(), type, message: sanitized }];
+  return next.length > MAX_TERMINAL_LINES
+    ? { terminalLines: next.slice(next.length - MAX_TERMINAL_LINES) }
+    : { terminalLines: next };
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({

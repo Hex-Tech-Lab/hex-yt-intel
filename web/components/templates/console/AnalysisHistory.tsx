@@ -84,6 +84,16 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
   );
 }
 
+/** Seconds -> compact clock-chip duration (h:mm:ss, hours omitted when 0). */
+function formatHistoryDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const sec = Math.round(seconds % 60);
+  const mm = String(m).padStart(h > 0 ? 2 : 1, '0');
+  const ss = String(sec).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
 const THUMBNAIL_TIERS = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'] as const;
 
 function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }) {
@@ -104,7 +114,7 @@ function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }
       src={`https://i.ytimg.com/vi/${videoId}/${THUMBNAIL_TIERS[tier]}.jpg`}
       alt={title}
       loading="lazy"
-      className="w-full h-full object-cover select-none"
+      className="w-full h-full object-contain select-none"
       onError={() => {
         if (tier < THUMBNAIL_TIERS.length - 1) {
           setTier((t) => t + 1);
@@ -751,6 +761,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
                   {/* Metrics row — wraps on narrow screens (no horizontal overflow) */}
                   <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                    {item.durationSeconds != null && (
+                      <MetricChip icon="solar:clock-circle-linear" title="Video length">
+                        {formatHistoryDuration(item.durationSeconds)}
+                      </MetricChip>
+                    )}
                     <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced">
                       <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
                     </MetricChip>
@@ -830,6 +845,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                             <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
                             <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="Comments" />
                             <ChapterChip hasChapters={item.hasChapters} />
+                            {item.hasHighlights !== null && (
+                              <StatusBadge status={item.hasHighlights ? 'done' : 'idle'} label="Highlights" />
+                            )}
                           </span>
                         )
                       }
@@ -838,11 +856,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   </div>
 
                   {/* Video thumbnail: top-to-bottom, flush with right border, square-like aspect */}
-                  <div className="relative shrink-0 w-28 sm:w-36 md:w-44 self-stretch border-l border-[var(--line)]/60 bg-[var(--surface-muted)] overflow-hidden">
-                    <HistoryThumbnail
-                      videoId={item.baseVideoId}
-                      title={item.title || 'Video thumbnail'}
-                    />
+                  {/* Thumbnail polish (user feedback 2026-09-28): thin empty
+                       space around the image, zoomed out (object-contain within a
+                       padded frame) so the landscape thumbnail is not chopped at
+                       the left/right edges the way object-cover full-bleed was. */}
+                  <div className="relative shrink-0 w-28 sm:w-36 md:w-44 self-stretch border-l border-[var(--line)]/60 bg-[var(--surface-muted)] overflow-hidden p-1.5">
+                    <div className="w-full h-full rounded-md overflow-hidden bg-[var(--surface-muted)]">
+                      <HistoryThumbnail
+                        videoId={item.baseVideoId}
+                        title={item.title || 'Video thumbnail'}
+                      />
+                    </div>
                   </div>
                 </div>
               );
