@@ -34,7 +34,7 @@ export interface VideoMetadata {
   description?: string;
 }
 
-export type AnalysisStatus = 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
+export type AnalysisStatus = 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error' | 'partial' | 'incomplete';
 
 /**
  * Structured analysis error.

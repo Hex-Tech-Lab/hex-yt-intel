@@ -12,6 +12,25 @@
  * remainder of the session (per-tab, matching the storage lifetime loss).
  */
 
+/**
+ * SafeStorageLike — a never-throwing storage facade over an optional
+ * backing `Storage`.
+ *
+ * DATA-LOSS BOUNDARY (Wave 10.7, Cubic P1 — documented limitation):
+ * once `isMemoryFallbackActive()` returns true, ALL subsequent mutations —
+ * writes, removals, and clears — are strictly session-local: they apply
+ * only to the per-session in-memory overlay / deletion mask and are never
+ * reconciled back to the backing store. On page reload:
+ *
+ *   - failed WRITES are lost (the overlay never reached disk), and
+ *   - failed DELETIONS reappear (the deletion mask is volatile; the
+ *     backing store still holds the "zombie" value).
+ *
+ * This is a hard limitation of browser storage failures — if the disk is
+ * broken, deletion cannot be guaranteed. Callers that promise durability
+ * or deletion (e.g. the chat outbox) must surface this honestly while the
+ * fallback is active; only a successful underlying mutation is durable.
+ */
 export interface SafeStorageLike {
   readonly length: number;
   clear(): void;
@@ -188,6 +207,11 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
           deletedKeys.delete(key);
           return;
         } catch (err) {
+          // The latch is intentionally one-way for the session.
+          // Re-enabling writes dynamically after a transient failure would
+          // risk writing stale in-memory states over recovered disk
+          // states. Full page reload is required to reset the storage
+          // baseline.
           canWrite = false; // Degrade writes to in-memory overlay only
           console.warn('[safe-storage] underlying.setItem failed; degraded to in-memory write overlay:', err);
         }

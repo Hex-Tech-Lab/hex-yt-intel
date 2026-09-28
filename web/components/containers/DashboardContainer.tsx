@@ -245,6 +245,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     setMounted(true);
   }, []);
 
+  // Wave 10.8 — refresh-hydration precedence: the `?v=` route parameter is
+  // the single source of truth for WHICH video a refresh rehydrates. Without
+  // this, the persisted input-store URL (safeStateLocalStorage) acts as the
+  // de-facto hydrator via useAutoRestoreAnalysis below and can point at a
+  // different (typically the most-recently-analyzed) video than the one the
+  // user was actually viewing — the reported refresh-swap bug. Route
+  // parameter wins; when absent, the persisted-URL behavior is unchanged.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const routeVideoId = new URLSearchParams(window.location.search).get("v");
+    if (!routeVideoId) return;
+    const currentInputId = extractVideoId(useInputStore.getState().url);
+    if (currentInputId !== routeVideoId) {
+      useInputStore.getState().setUrl(`https://www.youtube.com/watch?v=${routeVideoId}`);
+    }
+  }, []);
+
   useAutoRestoreAnalysis(url);
   useStreamReattach(
     nucleusAnalysis?.id ?? analysis?.id ?? null,
@@ -283,6 +300,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         useInputStore
           .getState()
           .setUrl(`https://www.youtube.com/watch?v=${activeVideoId}`);
+      }
+      // Wave 10.8: mirror the active video into the `?v=` route parameter so
+      // a refresh always rehydrates THIS video (the mount-precedence effect
+      // reads it). replaceState — no navigation, no history-entry spam.
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("v") !== activeVideoId) {
+          params.set("v", activeVideoId);
+          const next = new URL(window.location.href);
+          next.search = params.toString();
+          window.history.replaceState(null, "", next.toString());
+        }
       }
     }
   }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
@@ -707,7 +736,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // TOTAL_DIMENSIONS whenever currentStatus === 'complete', which showed 11/11
   // for analyses with billing_status: 'failed').
   const partialInfo = useMemo(() => {
-    if (status !== "complete" || !analysis?.analysis_markdown) return null;
+    // Wave 10.8: content-derived for ANY status, not just 'complete' — the
+    // ghost-row contract: a partial/failed-billing row whose markdown carries
+    // real dimensions must surface its missing-dimension map (and unlock the
+    // highlights reel in the dashboard views), not vanish behind a status
+    // gate. Rows with an entirely empty payload still return null (hard
+    // error path unchanged).
+    if (!analysis?.analysis_markdown) return null;
     const presentNumbers = parseUcisDimensionNumbers(
       analysis.analysis_markdown,
     );
@@ -719,7 +754,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       if (!present.has(i)) missing.push(i);
     }
     return { presentCount, missing };
-  }, [analysis?.analysis_markdown, status, TOTAL_DIMENSIONS]);
+  }, [analysis?.analysis_markdown, TOTAL_DIMENSIONS]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
