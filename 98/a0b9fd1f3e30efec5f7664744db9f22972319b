@@ -1,0 +1,27 @@
+web/lib/__tests__/useChatStore-resilience.test.ts
+  s_4ecf2aee69f2ad::t_31699c3719a0ae 29,45-48,64
+web/lib/chat/outbox.ts
+  s_4ecf2aee69f2ad::t_927102f37452f5 11-17,31-34,48-53,82-83,96-97
+web/lib/utils/__tests__/safe-storage.test.ts
+  s_4ecf2aee69f2ad::t_6454407a93a1a3 2,33-105,107
+web/lib/utils/safe-storage.ts
+  s_4ecf2aee69f2ad::t_34174fb6a12208 22-29,50,54-60,63-74,76,78,81-96,99-106,110-118,120,124-137,141-148,152-160,163
+web/store/__tests__/useChatStore-resilience.test.ts
+  s_4ecf2aee69f2ad::t_85d556fb37122b 48,66-71,106-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "98a0b9fd1f3e30efec5f7664744db9f22972319b",
+  "prompts": {},
+  "sessions": {
+    "s_4ecf2aee69f2ad": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f17f0bca7ffeHO1riu0nZm2JBH",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
