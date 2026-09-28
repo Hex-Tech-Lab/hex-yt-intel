@@ -85,7 +85,8 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
         const keys = new Set<string>();
         for (let i = 0; i < underlying.length; i++) {
           const k = underlying.key(i);
-          if (k && !deletedKeys.has(k)) keys.add(k);
+          // "" is a valid storage key — only null means "no key here".
+          if (k !== null && !deletedKeys.has(k)) keys.add(k);
         }
         for (const k of overlay.keys()) {
           keys.add(k);
@@ -104,6 +105,7 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
           underlying.clear();
           backingCleared = true;
         } catch (clearError) {
+          canWrite = false; // Non-durable clear: latch writes off (zombie-deletion contract)
           console.warn('[safe-storage] underlying.clear failed:', clearError);
         }
       }
@@ -117,7 +119,8 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
       try {
         for (let i = 0; i < underlying.length; i++) {
           const k = underlying.key(i);
-          if (k) deletedKeys.add(k);
+          // "" is a valid storage key — only null means "no key here".
+          if (k !== null) deletedKeys.add(k);
         }
       } catch (enumError) {
         console.warn('[safe-storage] underlying key enumeration failed during clear:', enumError);
@@ -142,7 +145,8 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
         if (underlying && canRead) {
           for (let i = 0; i < underlying.length; i++) {
             const k = underlying.key(i);
-            if (k && !deletedKeys.has(k) && !overlay.has(k)) keys.push(k);
+            // "" is a valid storage key — only null means "no key here".
+            if (k !== null && !deletedKeys.has(k) && !overlay.has(k)) keys.push(k);
           }
         }
         for (const k of overlay.keys()) {
@@ -163,7 +167,8 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
           deletedKeys.delete(key);
           return;
         } catch (removeError) {
-          console.warn('[safe-storage] underlying.removeItem failed:', removeError);
+          canWrite = false; // Non-durable deletion: latch writes off (zombie-deletion contract)
+          console.warn('[safe-storage] underlying.removeItem failed; writes degraded to in-memory overlay:', removeError);
           // Mask for readers regardless — the item must be gone as observed.
           overlay.delete(key);
           deletedKeys.add(key);

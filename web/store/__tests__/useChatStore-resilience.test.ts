@@ -231,4 +231,43 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
     expect(replayFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(stalledFetch.mock.calls.length).toBe(1); // no further attempts on the failed fetch
   });
+
+  it('outbox emits the durability warning exactly once when the backing write fails mid-session (no duplicates)', () => {
+    // NOTE: must stay the LAST test in this file — flipping the backing
+    // write failure latches the safeLocalStorage singleton into
+    // memory-only mode for the remainder of the module's lifetime.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const durabilityCalls = () =>
+      warnSpy.mock.calls.filter((args) => String(args[0]).includes('DURABILITY WARNING'));
+
+    // 1. Healthy backing: a successful write emits NO durability warning.
+    outbox.add({ clientMsgId: 'ok-1', conversationId: CONV_ID, content: 'written while healthy', createdAt: new Date().toISOString() });
+    expect(durabilityCalls().length).toBe(0);
+
+    // 2. Flip the fallback mid-session: the backing write now throws — the
+    // facade latches canWrite=false and serves the write from the overlay.
+    // Spy on the INSTANCE (the exact object the facade captured as its
+    // underlying) — happy-dom's Storage methods are not all reachable via
+    // Storage.prototype.
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota full', 'QuotaExceededError');
+    });
+
+    outbox.add({ clientMsgId: 'degraded-1', conversationId: CONV_ID, content: 'queued while degraded', createdAt: new Date().toISOString() });
+    // First degraded write: exactly ONE durability warning.
+    expect(durabilityCalls().length).toBe(1);
+
+    // 3. The warning is a one-time latch: later writes must not duplicate it.
+    outbox.add({ clientMsgId: 'degraded-2', conversationId: CONV_ID, content: 'queued still degraded', createdAt: new Date().toISOString() });
+    expect(durabilityCalls().length).toBe(1);
+
+    // All entries retained for replay despite the degraded backing.
+    const ids = outbox.all().map((e) => e.clientMsgId);
+    expect(ids).toContain('ok-1');
+    expect(ids).toContain('degraded-1');
+    expect(ids).toContain('degraded-2');
+
+    setItemSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
 });
