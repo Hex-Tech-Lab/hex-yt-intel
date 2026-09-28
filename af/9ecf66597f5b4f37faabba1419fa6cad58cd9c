@@ -1,0 +1,23 @@
+web/lib/utils/__tests__/safe-storage.test.ts
+  s_4ecf2aee69f2ad::t_e9664f3bf63de9 60-65,73,85,88-90,93,145-147,152-223
+web/lib/utils/safe-storage.ts
+  s_4ecf2aee69f2ad::t_55bd238f876bc1 88-89,108,122-123,148-149,170-171
+web/store/__tests__/useChatStore-resilience.test.ts
+  s_4ecf2aee69f2ad::t_9f313ef15c69c0 234-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "af9ecf66597f5b4f37faabba1419fa6cad58cd9c",
+  "prompts": {},
+  "sessions": {
+    "s_4ecf2aee69f2ad": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f17f0bca7ffeHO1riu0nZm2JBH",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
