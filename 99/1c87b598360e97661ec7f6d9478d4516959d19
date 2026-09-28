@@ -1,0 +1,25 @@
+web/lib/validators/synthesis.ts
+  s_358672d53d4d2d::t_c2a398fbbf1999 318-324
+worker/src/services/ZodSchemas.ts
+  s_358672d53d4d2d::t_c2a398fbbf1999 55-57
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  s_358672d53d4d2d::t_733374dd7c5f79 141
+  s_358672d53d4d2d::t_8793f14ddafa24 124
+  s_358672d53d4d2d::t_ae202c1e65b913 123,196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "991c87b598360e97661ec7f6d9478d4516959d19",
+  "prompts": {},
+  "sessions": {
+    "s_358672d53d4d2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f205b8f35ffeVo6iwjQH6m6lfA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
