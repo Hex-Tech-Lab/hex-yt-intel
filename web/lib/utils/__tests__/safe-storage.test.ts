@@ -221,5 +221,52 @@ describe('safe-storage', () => {
     storage.clear();
     expect(storage.getItem('')).toBeNull();
   });
+
+  it('failed deletions reappear after a page reload (documented zombie-reload limitation)', () => {
+    // Backing store whose removeItem fails ONLY for the zombie key — the
+    // mid-session deletion-glitch shape. The probe deletion (probeKey) and
+    // any other removals succeed, so the fresh facade after "reload" comes
+    // up fully healthy: the sharpest form of the limitation, since the
+    // disk itself has recovered yet the deletion is still lost.
+    const disk = new Map<string, string>();
+    const ZOMBIE_KEY = 'persistent_key';
+    const mockStorage = {
+      get length() {
+        return disk.size;
+      },
+      getItem: (key: string) => disk.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        disk.set(key, value);
+      },
+      removeItem: (key: string) => {
+        if (key === ZOMBIE_KEY) throw new DOMException('deletion glitch', 'SecurityError');
+        disk.delete(key);
+      },
+      clear: () => disk.clear(),
+      key: (index: number) => Array.from(disk.keys())[index] ?? null,
+    } as unknown as Storage;
+
+    // Session 1: the write succeeds durably, then the deletion fails.
+    const sessionA = createSafeStorage(() => mockStorage);
+    sessionA.setItem(ZOMBIE_KEY, 'survives');
+    expect(disk.get(ZOMBIE_KEY)).toBe('survives'); // durably on disk
+    expect(sessionA.isMemoryFallbackActive()).toBe(false);
+
+    sessionA.removeItem(ZOMBIE_KEY);
+    // In-session view: masked + latched (Wave 10.6 zombie-deletion contract).
+    expect(sessionA.getItem(ZOMBIE_KEY)).toBeNull();
+    expect(sessionA.isMemoryFallbackActive()).toBe(true);
+
+    // Session 2 ("page reload"): a FRESH facade over the SAME backing. The
+    // deletion mask was in-memory only — the zombie value is still on disk
+    // and the fresh facade serves it again. This reappearing deletion is
+    // the DOCUMENTED data-loss boundary (see SafeStorageLike JSDoc): if
+    // the disk is broken we cannot guarantee deletion; only a successful
+    // underlying removal truly deletes.
+    const sessionB = createSafeStorage(() => mockStorage);
+    expect(sessionB.isMemoryFallbackActive()).toBe(false); // storage itself recovered
+    expect(sessionB.getItem(ZOMBIE_KEY)).toBe('survives');
+    expect(disk.get(ZOMBIE_KEY)).toBe('survives'); // never left the backing
+  });
 });
 

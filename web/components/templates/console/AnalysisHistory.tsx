@@ -11,6 +11,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { showToast } from '@/lib/dashboard/export';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
@@ -261,6 +262,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // comparison since restoreAnalysis has no cancellable network primitive.
   const latestRestoreRequestRef = useRef<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  // Wave 10.8: per-row in-flight marker for the selective dimension retry
+  // (POST /api/analyses with missingDimensions) — independent of loadingId,
+  // which tracks cache-restores.
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
 
   // Determine if actively analyzing (as opposed to complete analysis in window)
@@ -281,7 +286,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     if (!currentAnalysis) return 0;
     return Math.min(TOTAL_DIMENSIONS, countUcisDimensions(currentAnalysis?.analysis_markdown));
   }, [currentAnalysis, TOTAL_DIMENSIONS]);
-  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
+  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete' || currentStatus === 'partial');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
   if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
@@ -472,6 +477,42 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         setLoadingId(null);
         setIsLoading(false);
       }
+    }
+  };
+
+  // Wave 10.8: the "Retry Missing" affordance previously called
+  // restoreAnalysis — it re-loaded the row into the view but never triggered
+  // the targeted re-analysis, so missing dimensions were never regenerated
+  // (the button read as a dead stub). Wire it to the ADR 021 Phase 4
+  // selective-retry contract: POST /api/analyses with analysisId +
+  // missingDimensions; the server loads priorPayload from the referenced row
+  // and re-runs only the missing bundles.
+  const retryMissingDimensions = async (item: HistoryOverviewItem): Promise<void> => {
+    if (retryingId !== null || item.missingDimensions.length === 0) return;
+    setRetryingId(item.analysisId);
+    setRestoreError(null);
+    try {
+      const res = await fetch('/api/analyses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${item.baseVideoId}`,
+          analysisId: item.analysisId,
+          missingDimensions: item.missingDimensions,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error || `Retry failed (HTTP ${res.status})`);
+      }
+      showToast(`Retrying ${item.missingDimensions.length} missing dimension${item.missingDimensions.length === 1 ? '' : 's'}`);
+      await refetchHistoryOverview();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setRestoreError(message);
+      showToast(`Retry failed: ${message}`);
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -847,6 +888,21 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                             <ChapterChip hasChapters={item.hasChapters} />
                             {item.hasHighlights !== null && (
                               <StatusBadge status={item.hasHighlights ? 'done' : 'idle'} label="Highlights" />
+                            )}
+                            {item.status === 'partial' && item.missingDimensions.length > 0 && (
+                              <button
+                                type="button"
+                                disabled={busy || retryingId === item.analysisId}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void retryMissingDimensions(item);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--warn)]/15 text-[var(--warn)] hover:bg-[var(--warn)]/25 border border-[var(--warn)]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={`Retry missing dimensions: ${item.missingDimensions.join(', ')}`}
+                              >
+                                <Icon icon={retryingId === item.analysisId ? 'eos-icons:bubble-loading' : 'solar:restart-linear'} size={11} />
+                                {retryingId === item.analysisId ? 'Retrying…' : `Retry Missing (${item.missingDimensions.length})`}
+                              </button>
                             )}
                           </span>
                         )

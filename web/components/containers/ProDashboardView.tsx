@@ -86,7 +86,7 @@ export function ProDashboardView({
       {hasHadVideo && (
         <div className="flex flex-col gap-1">
           <VideoPlayerCard />
-          {status === "complete" && analysisId && (
+          {(status === "complete" || (status === "partial" && partialInfo)) && analysisId && (
             <HighlightsScrubber
               analysisId={analysisId}
               videoDurationSeconds={videoMetadata?.duration ?? null}
