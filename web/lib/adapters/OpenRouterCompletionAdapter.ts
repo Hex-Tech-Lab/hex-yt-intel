@@ -35,7 +35,11 @@ async function requestCompletion(
       messages,
       temperature: 0.3,
       max_tokens: maxTokens,
-      ...(entry.providerOrder ? { provider: { order: entry.providerOrder, allow_fallbacks: true } } : {}),
+      // allow_fallbacks: false (user directive 2026-09-28): a pinned entry must
+      // NEVER leak to unlisted providers — 'true' is how exec-digest calls
+      // landed on BaseTen/DeepInfra despite providerOrder. Cross-provider
+      // resilience is the CASCADE's job (next entry), not OpenRouter's.
+      ...(entry.providerOrder ? { provider: { order: entry.providerOrder, allow_fallbacks: false } } : {}),
       ...(userId ? { user: userId } : {}),
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

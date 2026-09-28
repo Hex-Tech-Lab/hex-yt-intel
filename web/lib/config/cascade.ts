@@ -38,10 +38,13 @@ const CHAT_CASCADE_FALLBACK: readonly CascadeItem[] = [
 // Groq-primary/Cerebras-fallback rather than chat's Cerebras-primary, since
 // the digest pass runs in the background and does not need chat's
 // speed-first tradeoff (user directive 2026-08-17).
+// Provider lock (user directive 2026-09-28): exec-digest gpt-oss-120b is
+// Groq (1) -> Cerebras (2) ONLY, no unlisted-provider fallback (allow_fallbacks
+// false in the adapter). Baseten/DeepInfra/other routes are unacceptable for
+// the digest — they were leaking in via allow_fallbacks:true + this entry.
 const DIGEST_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
   { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Cerebras)', cost: 0.00035, providerOrder: ['cerebras'] },
-  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Baseten)', cost: 0.00015, providerOrder: ['baseten'] },
 ];
 
 const ANALYSIS_CASCADE_FALLBACK: readonly CascadeItem[] = [
