@@ -315,11 +315,13 @@ export const MonetizationVerdictSchema = z
  * Knowledge Graph structure within the v2.0 payload.
  */
 export const MAX_KG_NODES = 24;
-// Derived from production data (2026-09-25): across 88 completed analyses the
-// observed per-bundle/stitched edge count is p50=15, p90=20, max=20 -- the
-// Production telemetry (p90/max = 20 edges + 20% margin = 24 edges; PR #346).
-// Normalization preprocessor below clamps edges to MAX_KG_EDGES so excess edges never reject.
-export const MAX_KG_EDGES = 24;
+// USER STANDARD (2026-09-28, explicit): 24 nodes / 18 edges is the correct
+// contract (ROE spec). This supersedes the 2026-09-25 telemetry-derived 24
+// (p90=20 +20% margin) — rows whose stitched edge count exceeds 18 are now
+// SLICED to 18 by the normalization preprocessor (never rejected; excess
+// edges beyond 18 are the weakest-weight ones by construction). Any future
+// change requires the user's explicit sign-off, not telemetry alone.
+export const MAX_KG_EDGES = 18;
 
 /**
  * Graph-level tolerant normalization (same 2026-09-27 RCA as the node/edge

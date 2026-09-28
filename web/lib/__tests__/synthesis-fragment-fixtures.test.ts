@@ -120,8 +120,8 @@ describe("kg fragment accepts real node/edge shapes (2026-09-25 regression)", ()
     if (result.success) expect(result.data.content).toBeUndefined();
   });
 
-  it("accepts the real chunk-2 kg fragment with 20 edges (old cap was 18)", () => {
-    expect(MAX_KG_EDGES).toBeGreaterThanOrEqual(20);
+  it("accepts the real chunk-2 kg fragment, slicing 20 edges to the 18-edge standard (user directive 2026-09-28)", () => {
+    expect(MAX_KG_EDGES).toBe(18);
     const fragment = {
       type: "kg",
       nodes: Array.from({ length: 15 }, (_item, i) => ({
@@ -138,7 +138,7 @@ describe("kg fragment accepts real node/edge shapes (2026-09-25 regression)", ()
     const result = validateFragment(fragment);
     expect(result.success).toBe(true);
     if (result.success && result.data.type === "kg") {
-      expect(result.data.edges).toHaveLength(20);
+      expect(result.data.edges).toHaveLength(18);
     }
   });
 
@@ -193,7 +193,7 @@ describe("kg fragment tolerant normalization (2026-09-27 regression, 39hqY3nH5ug
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.nodes.length).toBe(24);
-      expect(result.data.edges.length).toBe(24);
+      expect(result.data.edges.length).toBe(MAX_KG_EDGES);
     }
   });
 

@@ -52,7 +52,9 @@ export const PersonaConfigSchema = z.object({
 
 
 export const MAX_KG_NODES = 24;
-export const MAX_KG_EDGES = 24;
+// USER STANDARD (2026-09-28): 24 nodes / 18 edges (ROE spec) — supersedes the
+// telemetry-derived 24. Persist-side schema must mirror the web contract.
+export const MAX_KG_EDGES = 18;
 
 export const KnowledgeGraphSchema = z.preprocess(
   (val: unknown) => {
