@@ -45,6 +45,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useChatStore } from '@/store/useChatStore';
 import { outbox } from '@/lib/chat/outbox';
+import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
 vi.mock('@/lib/monitoring/sentry-utils', () => ({
   addBreadcrumb: vi.fn(),
@@ -62,7 +63,12 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
 
   beforeEach(() => {
     vi.useFakeTimers();
-    localStorage.clear();
+    // Clear through the safe-storage FACADE, not the raw global: since Wave
+    // 7, safeLocalStorage keeps writes in a per-session in-memory overlay,
+    // so a raw localStorage.clear() leaves stale outbox entries in the
+    // overlay that leak into later tests. safeLocalStorage.clear() resets
+    // overlay + deletedKeys + underlying in one call.
+    safeLocalStorage.clear();
     outbox.remove('nonexistent'); // no-op, ensures read path works on an empty box
     useChatStore.setState({
       conversations: [{ id: CONV_ID, title: 'Test', analysisId: null, videoId: 'vid1', createdAt: new Date().toISOString(), archived: false }],
@@ -97,9 +103,10 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
     // 3s replay timer (and any other pending timer) can never fire into a
     // later test.
     vi.useRealTimers();
-    // Full state reset — the outbox lives in localStorage and survives
-    // between tests otherwise.
-    localStorage.clear();
+    // Full state reset — the outbox lives in the safe-storage facade
+    // (in-memory overlay + underlying localStorage) and survives between
+    // tests otherwise; raw localStorage.clear() alone no longer suffices.
+    safeLocalStorage.clear();
     useChatStore.getState().reset();
     useChatStore.setState({ networkBound: false, sending: false, error: null });
   });
