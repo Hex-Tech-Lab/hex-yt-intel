@@ -19,6 +19,14 @@ export interface SafeStorageLike {
   key(index: number): string | null;
   removeItem(key: string): void;
   setItem(key: string, value: string): void;
+  /**
+   * True when writes are NOT reaching durable disk storage (no backing
+   * storage, access probe failed, or a write error latched write mode off).
+   * Data written in this mode lives only in the per-session in-memory
+   * overlay and is lost on page reload — callers that promise durability
+   * (e.g. the chat outbox) must surface that honestly.
+   */
+  isMemoryFallbackActive(): boolean;
 }
 
 function createMemoryStorage(): SafeStorageLike {
@@ -39,65 +47,120 @@ function createMemoryStorage(): SafeStorageLike {
     setItem: (key, value) => {
       map.set(key, value);
     },
+    isMemoryFallbackActive: () => true,
   };
 }
 
-function createSafeStorage(getGlobal: () => Storage | null): SafeStorageLike {
-  let backing: SafeStorageLike | null = null;
+export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageLike {
+  let underlying: Storage | null = null;
+  let canRead = false;
+  let canWrite = false;
+  const overlay = new Map<string, string>();
+  const deletedKeys = new Set<string>();
+
   try {
     const global = getGlobal();
-    if (!global) throw new Error('storage unavailable');
-    // Probe with a real access — SecurityError throws here on Android WebView.
-    const probeKey = '__hx_safe_storage_probe__';
-    global.setItem(probeKey, '1');
-    global.removeItem(probeKey);
-    backing = global;
+    if (global) {
+      underlying = global;
+      // Probe read first — if SecurityError throws, reading is disabled
+      underlying.getItem('__hx_probe__');
+      canRead = true;
+
+      // Probe write
+      const probeKey = '__hx_safe_storage_probe__';
+      underlying.setItem(probeKey, '1');
+      underlying.removeItem(probeKey);
+      canWrite = true;
+    }
   } catch (probeError) {
-    console.warn('[safe-storage] Storage access probe failed, using in-memory store:', probeError);
-    backing = createMemoryStorage();
+    console.warn('[safe-storage] Storage access probe encountered limitation:', probeError);
   }
-  const resolved = backing;
+
   return {
     get length() {
-      return resolved.length;
+      if (!underlying || !canRead) {
+        return overlay.size;
+      }
+      try {
+        const keys = new Set<string>();
+        for (let i = 0; i < underlying.length; i++) {
+          const k = underlying.key(i);
+          if (k && !deletedKeys.has(k)) keys.add(k);
+        }
+        for (const k of overlay.keys()) {
+          keys.add(k);
+        }
+        return keys.size;
+      } catch {
+        return overlay.size;
+      }
     },
     clear: () => {
-      try {
-        resolved.clear();
-      } catch (clearError) {
-        console.warn('[safe-storage] clear failed:', clearError);
+      overlay.clear();
+      deletedKeys.clear();
+      if (underlying && canWrite) {
+        try {
+          underlying.clear();
+        } catch (clearError) {
+          console.warn('[safe-storage] underlying.clear failed:', clearError);
+        }
       }
     },
     getItem: (key) => {
-      try {
-        return resolved.getItem(key);
-      } catch (getItemError) {
-        console.warn('[safe-storage] getItem failed:', getItemError);
-        return null;
+      if (deletedKeys.has(key)) return null;
+      if (overlay.has(key)) return overlay.get(key) ?? null;
+      if (underlying && canRead) {
+        try {
+          return underlying.getItem(key);
+        } catch (getItemError) {
+          console.warn('[safe-storage] underlying.getItem failed:', getItemError);
+          return null;
+        }
       }
+      return null;
     },
     key: (index) => {
       try {
-        return resolved.key(index);
-      } catch (keyError) {
-        console.warn('[safe-storage] key failed:', keyError);
-        return null;
+        const keys: string[] = [];
+        if (underlying && canRead) {
+          for (let i = 0; i < underlying.length; i++) {
+            const k = underlying.key(i);
+            if (k && !deletedKeys.has(k) && !overlay.has(k)) keys.push(k);
+          }
+        }
+        for (const k of overlay.keys()) {
+          keys.push(k);
+        }
+        return index >= 0 && index < keys.length ? keys[index]! : null;
+      } catch {
+        const keys = Array.from(overlay.keys());
+        return index >= 0 && index < keys.length ? keys[index]! : null;
       }
     },
     removeItem: (key) => {
-      try {
-        resolved.removeItem(key);
-      } catch (removeError) {
-        console.warn('[safe-storage] removeItem failed:', removeError);
+      overlay.delete(key);
+      deletedKeys.add(key);
+      if (underlying && canWrite) {
+        try {
+          underlying.removeItem(key);
+        } catch (removeError) {
+          console.warn('[safe-storage] underlying.removeItem failed:', removeError);
+        }
       }
     },
     setItem: (key, value) => {
-      try {
-        resolved.setItem(key, value);
-      } catch (err) {
-        console.warn('[safe-storage] setItem failed (quota/private mode):', err);
+      overlay.set(key, value);
+      deletedKeys.delete(key);
+      if (underlying && canWrite) {
+        try {
+          underlying.setItem(key, value);
+        } catch (err) {
+          canWrite = false; // Degrade writes to in-memory overlay only
+          console.warn('[safe-storage] underlying.setItem failed; degraded to in-memory write overlay:', err);
+        }
       }
     },
+    isMemoryFallbackActive: () => !underlying || !canWrite,
   };
 }
 

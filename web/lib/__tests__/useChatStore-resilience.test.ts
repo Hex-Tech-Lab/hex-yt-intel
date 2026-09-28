@@ -26,6 +26,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useChatStore } from '@/store/useChatStore';
 import { outbox } from '@/lib/chat/outbox';
+import { safeLocalStorage } from '@/lib/utils/safe-storage';
 import type { ChatConversation } from '@/lib/types/chat';
 
 const CONV: ChatConversation = {
@@ -41,7 +42,10 @@ const CONV: ChatConversation = {
 
 describe('useChatStore send resilience (2026-09-15 incident RCA)', () => {
   beforeEach(() => {
-    localStorage.clear();
+    // Facade clear (Wave 7 safe-storage contract): resets the in-memory
+    // overlay + underlying storage — a raw localStorage.clear() leaves
+    // stale outbox entries in the overlay.
+    safeLocalStorage.clear();
     useChatStore.setState({
       conversations: [CONV],
       activeId: CONV.id,
@@ -57,7 +61,7 @@ describe('useChatStore send resilience (2026-09-15 incident RCA)', () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-    localStorage.clear();
+    safeLocalStorage.clear();
   });
 
   it('issues the bouncer fetch WITH a bounded abort signal (previously unbounded)', () => {

@@ -8,6 +8,13 @@
  * localStorage is used (synchronous, simple, fine for small text queues) via the
  * safe-storage shim (Android WebView SecurityError / null localStorage). Swap for
  * IndexedDB if volume/size ever warrants it — the interface stays the same.
+ *
+ * DURABILITY CAVEAT: when the safe-storage shim falls back to its in-memory
+ * overlay (storage unavailable, or a quota/security write error), queued
+ * messages survive only for the current session — they are LOST on a hard
+ * page reload while the user is offline. write() emits a distinct one-time
+ * console.warn when that mode is active; do not present the outbox to users
+ * as durable storage while it is.
  */
 
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
@@ -20,6 +27,10 @@ export interface OutboxEntry {
 }
 
 const OUTBOX_STORAGE_NAME = 'hx-chat-outbox';
+
+// Warn only ONCE per session when the outbox is memory-only — repeating the
+// same durability warning on every queued message would be log spam.
+let durabilityWarned = false;
 
 function read(): OutboxEntry[] {
   try {
@@ -34,6 +45,12 @@ function read(): OutboxEntry[] {
 function write(entries: OutboxEntry[]): void {
   try {
     safeLocalStorage.setItem(OUTBOX_STORAGE_NAME, JSON.stringify(entries));
+    if (!durabilityWarned && safeLocalStorage.isMemoryFallbackActive()) {
+      durabilityWarned = true;
+      console.warn(
+        '[outbox] DURABILITY WARNING: storage is memory-only (unavailable or quota/security fallback); queued messages will NOT survive a page reload while offline',
+      );
+    }
   } catch (err) {
     console.warn('[outbox] failed to persist entry (quota exceeded or private mode)', err);
   }
@@ -62,6 +79,8 @@ export const outbox = {
   },
 };
 
+let fallbackCounter = 0;
+
 export function newClientMsgId(): string {
   try {
     return crypto.randomUUID();
@@ -74,7 +93,8 @@ export function newClientMsgId(): string {
       return `${Date.now()}-${suffix}`;
     } catch (cryptoErr) {
       console.warn('[outbox] getRandomValues failed, falling back to timestamp suffix:', cryptoErr);
-      return `${Date.now()}-${Date.now().toString(36)}`;
+      fallbackCounter = (fallbackCounter + 1) & 0xffff;
+      return `${Date.now()}-${fallbackCounter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     }
   }
 }
