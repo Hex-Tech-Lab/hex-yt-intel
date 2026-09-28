@@ -91,19 +91,36 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
           keys.add(k);
         }
         return keys.size;
-      } catch {
+      } catch (lengthError) {
+        console.warn('[safe-storage] underlying length enumeration failed; reporting overlay only:', lengthError);
         return overlay.size;
       }
     },
     clear: () => {
       overlay.clear();
-      deletedKeys.clear();
+      let backingCleared = false;
       if (underlying && canWrite) {
         try {
           underlying.clear();
+          backingCleared = true;
         } catch (clearError) {
           console.warn('[safe-storage] underlying.clear failed:', clearError);
         }
+      }
+      if (backingCleared || !underlying || !canRead) {
+        deletedKeys.clear();
+        return;
+      }
+      // Underlying could not be cleared (write-degraded or clear threw) but
+      // is still readable: mask its keys via deletedKeys so clear() is
+      // observably complete — getItem/key/length must report empty for them.
+      try {
+        for (let i = 0; i < underlying.length; i++) {
+          const k = underlying.key(i);
+          if (k) deletedKeys.add(k);
+        }
+      } catch (enumError) {
+        console.warn('[safe-storage] underlying key enumeration failed during clear:', enumError);
       }
     },
     getItem: (key) => {
@@ -132,33 +149,46 @@ export function createSafeStorage(getGlobal: () => Storage | null): SafeStorageL
           keys.push(k);
         }
         return index >= 0 && index < keys.length ? keys[index]! : null;
-      } catch {
+      } catch (keyError) {
+        console.warn('[safe-storage] underlying key enumeration failed; reporting overlay only:', keyError);
         const keys = Array.from(overlay.keys());
         return index >= 0 && index < keys.length ? keys[index]! : null;
       }
     },
     removeItem: (key) => {
-      overlay.delete(key);
-      deletedKeys.add(key);
       if (underlying && canWrite) {
         try {
           underlying.removeItem(key);
+          overlay.delete(key);
+          deletedKeys.delete(key);
+          return;
         } catch (removeError) {
           console.warn('[safe-storage] underlying.removeItem failed:', removeError);
+          // Mask for readers regardless — the item must be gone as observed.
+          overlay.delete(key);
+          deletedKeys.add(key);
+          return;
         }
       }
+      overlay.delete(key);
+      deletedKeys.add(key);
     },
     setItem: (key, value) => {
-      overlay.set(key, value);
-      deletedKeys.delete(key);
       if (underlying && canWrite) {
         try {
           underlying.setItem(key, value);
+          // Backing store is authoritative on success: drop any stale
+          // overlay copy / deletion mask so it cannot shadow fresh reads.
+          overlay.delete(key);
+          deletedKeys.delete(key);
+          return;
         } catch (err) {
           canWrite = false; // Degrade writes to in-memory overlay only
           console.warn('[safe-storage] underlying.setItem failed; degraded to in-memory write overlay:', err);
         }
       }
+      overlay.set(key, value);
+      deletedKeys.delete(key);
     },
     isMemoryFallbackActive: () => !underlying || !canWrite,
   };

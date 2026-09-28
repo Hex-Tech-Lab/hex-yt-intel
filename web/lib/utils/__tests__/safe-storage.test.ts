@@ -35,7 +35,7 @@ describe('safe-storage', () => {
     const existing = new Map<string, string>([['existing_key', 'saved_data']]);
     const mockStorage = {
       length: 1,
-      getItem: (k: string) => existing.get(k) ?? null,
+      getItem: (key: string) => existing.get(key) ?? null,
       setItem: () => {
         throw new Error('QuotaExceededError');
       },
@@ -63,14 +63,14 @@ describe('safe-storage', () => {
     const disk = new Map<string, string>();
     const mockStorage = {
       length: 0,
-      getItem: (k: string) => disk.get(k) ?? null,
-      setItem: (k: string, v: string) => {
+      getItem: (key: string) => disk.get(key) ?? null,
+      setItem: (key: string, value: string) => {
         writes += 1;
         if (writes > 1) throw new DOMException('quota full', 'QuotaExceededError');
-        disk.set(k, v);
+        disk.set(key, value);
       },
-      removeItem: (k: string) => {
-        disk.delete(k);
+      removeItem: (key: string) => {
+        disk.delete(key);
       },
       clear: () => disk.clear(),
       key: (i: number) => Array.from(disk.keys())[i] ?? null,
@@ -102,6 +102,42 @@ describe('safe-storage', () => {
     storage.setItem('k', 'v');
     expect(storage.isMemoryFallbackActive()).toBe(true);
     expect(storage.getItem('k')).toBe('v');
+  });
+
+  it('clear() masks backing keys the backing itself could not clear', () => {
+    const disk = new Map<string, string>([['stale_key', 'old_value']]);
+    const mockStorage = {
+      get length() {
+        return disk.size;
+      },
+      getItem: (key: string) => disk.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        disk.set(key, value);
+      },
+      removeItem: (key: string) => {
+        disk.delete(key);
+      },
+      clear: () => {
+        throw new DOMException('clear blocked', 'SecurityError');
+      },
+      key: (index: number) => Array.from(disk.keys())[index] ?? null,
+    } as unknown as Storage;
+
+    const storage = createSafeStorage(() => mockStorage);
+    // Probe + a real write reach disk fine.
+    storage.setItem('fresh_key', 'fresh_value');
+    expect(storage.getItem('fresh_key')).toBe('fresh_value');
+    expect(storage.getItem('stale_key')).toBe('old_value');
+
+    // clear() cannot clear the backing, but must be observably complete:
+    // every backing key becomes masked for readers.
+    storage.clear();
+    expect(storage.getItem('stale_key')).toBeNull();
+    expect(storage.getItem('fresh_key')).toBeNull();
+    expect(storage.length).toBe(0);
+    // Writes still succeed via the overlay after the failed backing clear.
+    expect(() => storage.setItem('after_clear', 'mem_only')).not.toThrow();
+    expect(storage.getItem('after_clear')).toBe('mem_only');
   });
 });
 
