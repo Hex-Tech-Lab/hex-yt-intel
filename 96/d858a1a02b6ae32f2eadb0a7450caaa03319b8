@@ -1,0 +1,31 @@
+web/app/api/analyses/[id]/retry/route.ts
+  s_dd73041b1be5a2::t_c8bd6b5668bb70 42-43,52-75
+web/lib/__tests__/dimension-remediation.test.ts
+  s_dd73041b1be5a2::t_56d4ea315b6ee9 291-342
+web/lib/__tests__/retry-missing-route.test.ts
+  s_dd73041b1be5a2::t_89529408d8d2f3 1-70
+web/lib/services/dimension-remediation.ts
+  s_dd73041b1be5a2::t_14c9cc1b29a13f 53,769-777,989-997,1028-1029
+web/lib/usecases/RetryMissingDimensionsUseCase.ts
+  s_dd73041b1be5a2::t_7adc3787fef978 9-10,35-37,92-96,174-178,183,185
+web/lib/usecases/__tests__/RetryMissingDimensionsUseCase.test.ts
+  s_dd73041b1be5a2::t_3cefb368c46d8b 157-163
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_b91250ac2f317a 1009-1022
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "96d858a1a02b6ae32f2eadb0a7450caaa03319b8",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
