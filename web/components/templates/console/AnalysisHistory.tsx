@@ -87,12 +87,12 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
 
 /** Seconds -> compact clock-chip duration (h:mm:ss, hours omitted when 0). */
 function formatHistoryDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
   const sec = Math.round(seconds % 60);
-  const mm = String(m).padStart(h > 0 ? 2 : 1, '0');
+  const mm = String(minutes).padStart(hours > 0 ? 2 : 1, '0');
   const ss = String(sec).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 const THUMBNAIL_TIERS = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'] as const;
@@ -514,6 +514,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setRestoreError(message);
+      console.error('[AnalysisHistory] Retry failed:', err);
       showToast(`Retry failed: ${message}`);
     } finally {
       setRetryingId(null);
@@ -884,7 +885,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       totalDimensions={TOTAL_DIMENSIONS}
                       auxChips={
                         (item.status === 'complete' || item.status === 'partial') && (
-                          <span className="flex flex-wrap gap-1.5 ml-1" role="status" aria-label="Auxiliary data status">
+                           <span className="flex flex-wrap gap-1.5 ml-1" role="status" aria-live="polite" aria-label="Auxiliary data status">
                             <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="Digest" />
                             <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="Description" />
                             <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
