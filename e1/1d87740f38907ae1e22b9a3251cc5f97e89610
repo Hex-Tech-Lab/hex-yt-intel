@@ -1,0 +1,21 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_672adf3c496407::t_d6ab51c20f2b4e 888
+  s_672adf3c496407::t_73c5662b327d1c 90-91,93,95
+  s_672adf3c496407::t_9bc437e9c9bda8 517
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e11d87740f38907ae1e22b9a3251cc5f97e89610",
+  "prompts": {},
+  "sessions": {
+    "s_672adf3c496407": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1362b496ffeB6Q5D289dghYfB",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
