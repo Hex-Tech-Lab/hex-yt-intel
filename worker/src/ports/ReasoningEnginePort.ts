@@ -56,6 +56,8 @@ export interface EngineContext {
    * getUCISPrompt. Optional; consumers fall back to the same default.
    */
   transcriptBudgetChars?: number;
+  /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
+  prior_payload?: Record<string, any>;
 }
 
 /** Structured lifecycle event emitted during the cascade. */

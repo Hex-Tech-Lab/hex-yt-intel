@@ -121,6 +121,27 @@ export function buildDimensionStatus(
 export { resolveBillingStatus } from '@/lib/services/billing-status';
 
 /**
+ * Cap the Cross-Domain Bridges markdown at the registry-resolved max. Display
+ * text, not a security boundary — truncation appends a visible marker so the
+ * cut is never silent. Default 4000 matches the registry key's default
+ * (analysis.layer2.crossDomainBridgesMaxChars).
+ */
+export const CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS = 4000;
+const BRIDGES_HEADING = "#### 8.3 Cross-Domain Bridges";
+
+export function truncateBridges(markdown: string, maxChars?: number): string {
+  const cap = typeof maxChars === "number" && Number.isFinite(maxChars) && maxChars > 0
+    ? Math.floor(maxChars)
+    : CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS;
+  if (markdown.length <= cap) return markdown;
+  console.warn(
+    "[stitch-analysis-chunks] crossDomainBridges exceeded cap — truncating",
+    { cap, actual: markdown.length },
+  );
+  return `${markdown.slice(0, cap)}\n\n_(truncated at ${cap} characters — analysis.layer2.crossDomainBridgesMaxChars)_`;
+}
+
+/**
  * Unified stitching logic: merge chunk payloads into a single analysis payload.
  * Used by the live persist route AND the stuck-analysis reaper's recovery path.
  */
@@ -128,12 +149,14 @@ export function stitchChunksIntoPayload(
   chunkMap: Map<number, any>,
   resolvedTotal: number,
   extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any; stance_relations?: any },
+  crossDomainBridgesMaxChars?: number,
 ): StitchResult {
   const stitchedDimensions: any[] = [];
   let stitchedPersona: any = null;
   let stitchedClassification: any = null;
   let stitchedMonetization: any = null;
   let stitchedStanceRelations: any = null;
+  let stitchedCrossDomainBridges: string | null = null;
   let stitchedNodes: any[] = [];
   let stitchedEdges: any[] = [];
 
@@ -154,6 +177,17 @@ export function stitchChunksIntoPayload(
     }
     if (chunkPayload.stance_relations && !stitchedStanceRelations) {
       stitchedStanceRelations = chunkPayload.stance_relations;
+    }
+    // R1b (2026-09-29): sub-dimension 8.3 Cross-Domain Bridges arrives as a
+    // top-level root field on the projective bundle's payload (it belongs to
+    // no emitted dimension object). First non-empty wins, mirroring the
+    // monetizationVerdict precedent above.
+    if (
+      typeof chunkPayload.crossDomainBridges === "string" &&
+      chunkPayload.crossDomainBridges.trim().length > 0 &&
+      !stitchedCrossDomainBridges
+    ) {
+      stitchedCrossDomainBridges = chunkPayload.crossDomainBridges;
     }
     if (
       chunkPayload.knowledgeGraph &&
@@ -401,6 +435,15 @@ export function stitchChunksIntoPayload(
     ...(stitchedMonetization
       ? { monetizationVerdict: stitchedMonetization }
       : {}),
+    // R1b (2026-09-29): stitch sub-dimension 8.3 Cross-Domain Bridges back
+    // into dimension 8's content (the projective bundle carries it as a
+    // top-level root field because it belongs to no emitted dimension
+    // object). Appended after 8.2/before 8.4 is NOT attempted — the content
+    // is appended at the end of dim 8's markdown so the grounded bundle's
+    // output is never reordered. Capped at
+    // analysis.layer2.crossDomainBridgesMaxChars (code fallback 4000);
+    // over-cap is truncated with a logged warning — display text, not a
+    // security boundary.
     ...(extraMetadata?.videoMetadata
       ? { videoMetadata: extraMetadata.videoMetadata }
       : {}),
@@ -412,6 +455,36 @@ export function stitchChunksIntoPayload(
       ? { stance_relations: stitchedStanceRelations || extraMetadata?.stance_relations }
       : {}),
   };
+
+  // R1b (2026-09-29): append the stitched Cross-Domain Bridges markdown into
+  // dimension 8's content so it renders inside the Semantic Foundation card
+  // (dim 8 is grounded and its grounded bundle was told to OMIT 8.3). The
+  // grounded content is never reordered — bridges append at the end.
+  if (stitchedCrossDomainBridges) {
+    const bridges = truncateBridges(stitchedCrossDomainBridges, crossDomainBridgesMaxChars);
+    const dim8 = cleanDimensions.find((d) => d.number === 8);
+    if (dim8) {
+      // Contract: 8.3 sits between 8.2 and 8.4 so readers see 8.1 → 8.4 in
+      // order. Insert before an existing 8.4 heading, otherwise append.
+      // Idempotent: never insert twice.
+      const content = (dim8.content || "").trim();
+      if (!content.includes(BRIDGES_HEADING) && !content.includes("8.3 Cross-Domain Bridges")) {
+        const body = bridges.includes("8.3 Cross-Domain Bridges") ? bridges : `${BRIDGES_HEADING}\n\n${bridges}`;
+        const at = content.search(/^#{1,6}\s*8\.4\b/m);
+        dim8.content = at >= 0
+          ? `${content.slice(0, at).trimEnd()}\n\n${body}\n\n${content.slice(at)}`
+          : `${content}\n\n${body}`;
+      }
+    } else {
+      (stitchedPayload as UCISPayloadV2 & { crossDomainBridges?: string }).crossDomainBridges = bridges;
+      // Degraded case: grounded dim 8 never arrived. Keep the bridges on the
+      // root field so the content survives (rendering falls back to the
+      // payload field) but dim 8 stays absent — do not fabricate a dim-8 object.
+      console.warn(
+        "[stitch-analysis-chunks] crossDomainBridges present but dimension 8 missing — keeping bridges on payload root only",
+      );
+    }
+  }
 
   // Validate stitched payload. The schema is .strict(), but LLMs routinely emit
   // benign extra keys (e.g. persona.tier2A, edges[].relation) — strip those and

@@ -3,7 +3,7 @@ import { UCIS_V5_4_SYSTEM } from '../../../web/lib/prompts/ucis-v5.4';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { PromptConfigPort } from '../ports/PromptConfigPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
-import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
+import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS, isProjectiveBundle } from '../../../web/lib/config/synthesis';
 import type { PersonaId } from '../../../web/lib/types/persona';
 import { isValidPersona } from '../../../web/lib/types/persona';
 
@@ -117,19 +117,54 @@ export class PromptBuilder implements PromptBuilderPort {
 
       const fallbackInstructions = `If insufficient data exists for any dimension, invoke the Insufficient Data Protocol (section 0.6) and provide a brief explanation in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`;
 
+      // R1b (2026-09-29) Layer 2 epistemic schism: grounded ("Universe of 1")
+      // and projective bundles are never asked to be a blind transcriber AND a
+      // market visionary in the same request. The constraint lives in the
+      // segmentInstruction (after the cacheable sharedPrefix) so the
+      // prompt-cache identity contract — sharedPrefix byte-identical across
+      // every bundle of the same video — is preserved.
+      const isProjective = isProjectiveBundle(dims);
+      const epistemicConstraint = isProjective
+        ? `EPISTEMIC MODE - PLURALISTIC PROJECTION: You are an expert strategic analyst. Using the rigidly extracted data provided as your foundational truth, project its implications onto the broader market. You are authorized to use your internal knowledge to evaluate monetization viability, audience impact, and cross-domain connections. This request is EXEMPT from the Insufficient Data Protocol's zero-extrapolation restriction.`
+        : `EPISTEMIC MODE - UNIVERSE OF 1: You are a sterile extraction engine. Your universe consists ONLY of the provided transcript. If a concept, entity, or claim is not explicitly spoken in the text, it does not exist. Zero extrapolation.`;
+      const bundleFallback = isProjective
+        ? `If the grounded evidence is genuinely insufficient for a projection, state the limitation explicitly in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`
+        : fallbackInstructions;
+
+      const priorPayloadInstruction = (isProjective && context.prior_payload)
+        ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(context.prior_payload)}\n`
+        : '';
+
+      // R1b: a grounded bundle containing dimension 8 produces 8.1/8.2/8.4
+      // ONLY — sub-dimension 8.3 Cross-Domain Bridges belongs to the
+      // projective bundle, which carries it as the top-level
+      // `crossDomainBridges` root field and which is stitched back into
+      // dimension 8's content client-side.
+      const dim8GroundedOmission = (!isProjective && dims.includes(8))
+        ? `\nIMPORTANT: For DIMENSION 8, produce ONLY sub-sections 8.1, 8.2, and 8.4. Do NOT include the "Cross-Domain Bridges" sub-section (8.3) anywhere in your output.\n`
+        : '';
+
+      // R1b: the projective bundle ALWAYS owns sub-dimension 8.3 Cross-Domain
+      // Bridges, carried as the top-level `crossDomainBridges` root field —
+      // independent of which dimension extraFields happen to be in play.
+      const projectiveBridgeInstruction = isProjective
+        ? ` You must also generate and include the "crossDomainBridges" markdown string in the JSON root (your sub-dimension 8.3 Cross-Domain Bridges section: at least 2 bridges connecting the video's core ideas to adjacent domains, formatted as markdown under the heading "#### 8.3 Cross-Domain Bridges"). Do NOT emit a dimension-8 object.`
+        : '';
+
       return {
         sharedPrefix: basePrompt,
         segmentInstruction: `
 
 ---
+${epistemicConstraint}
 CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (${label}):
 You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension(s):
 ${dimLabels}
-
-Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}
+${priorPayloadInstruction}${dim8GroundedOmission}
+Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}${projectiveBridgeInstruction}
 Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
-${fallbackInstructions}
-Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`,
+${bundleFallback}
+Do NOT output any other dimensions. Do NOT include any other JSON root fields${isProjective ? ' besides "crossDomainBridges"' : ''}. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`,
       };
     }
 

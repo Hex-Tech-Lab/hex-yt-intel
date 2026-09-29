@@ -417,6 +417,13 @@ export const UCISPayloadV2Schema = z
     channelMeta: z.record(z.string(), z.unknown()).nullable().optional(),
     comments: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
     stance_relations: StanceRelationsSchema.nullable().optional(),
+    // R1b (2026-09-29): markdown body of UCIS sub-dimension 8.3 Cross-Domain
+    // Bridges, emitted by the PROJECTIVE bundle as a top-level root field (it
+    // belongs to no emitted dimension object) and stitched into dimension 8's
+    // content by stitchChunksIntoPayload. Optional; max length comes from
+    // registry key analysis.layer2.crossDomainBridgesMaxChars (code fallback
+    // 4000) — over-cap is truncated at the stitch step, display text only.
+    crossDomainBridges: z.string().min(1).optional(),
   })
   .strict();
 

@@ -32,6 +32,40 @@ export const STREAM_BUNDLES: number[][] = [
 ];
 
 /**
+ * R1b (2026-09-29) — Layer 2 epistemic split at SUB-DIMENSION level.
+ * Dimensions whose UCIS definitions are PROJECTIVE (external knowledge
+ * allowed) rather than GROUNDED ("Universe of 1", transcript-only). A bundle
+ * containing any of these runs in projective mode and consumes the grounded
+ * bundles' settled output as prior_payload. Single source of truth shared by
+ * the client dispatch (useSSEStream) and the worker prompt builder.
+ * User-approved mapping (2026-09-29): grounded = 1-7, 8.1, 8.2, 8.4, 10;
+ * projective = 8.3, 9, 11. Dim 8 itself is GROUNDED (its KG nodes/relations
+ * feed chat grounding per ADR 008 and entity-click timestamp seek per
+ * ADR 022); only sub-section 8.3 Cross-Domain Bridges is projective and is
+ * carried as the top-level `crossDomainBridges` payload field.
+ */
+export const PROJECTIVE_DIMENSIONS: readonly number[] = [9, 11];
+
+/**
+ * Sub-dimension-level projective entries: 8.3 Cross-Domain Bridges. Not a
+ * dimension number (it belongs to no emitted dimension object), so it cannot
+ * live in PROJECTIVE_DIMENSIONS; it is requested by the projective bundle's
+ * prompt and stitched back into dimension 8's content by
+ * stitchChunksIntoPayload.
+ */
+export const PROJECTIVE_SUBDIMENSIONS: readonly string[] = ['8.3'];
+
+/**
+ * A bundle is PROJECTIVE iff any of its dimensions is a projective dimension
+ * (dims 9/11). Note the inverse does NOT make a bundle grounded-only-relevant:
+ * a grounded bundle containing dim 8 must still explicitly OMIT 8.3
+ * (see PromptBuilder's epistemic constraint).
+ */
+export function isProjectiveBundle(dims: readonly number[]): boolean {
+  return dims.some((d) => PROJECTIVE_DIMENSIONS.includes(d));
+}
+
+/**
  * R1a bundle-partition invariant (server-enforced before any registry-resolved
  * map reaches the client): exactly TOTAL_STREAMS bundles, every dimension
  * 1..TOTAL_DIMENSIONS appears EXACTLY once, no 0 and no duplicates.

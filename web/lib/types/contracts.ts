@@ -276,6 +276,8 @@ export interface WorkerStreamRequest {
   cacheWarmTimeoutMs?: number;
   /** Registry-resolved prompt transcript char budget (analysis.transcriptBudgetChars). */
   transcriptBudgetChars?: number;
+  /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
+  prior_payload?: Record<string, unknown>;
   sig: string;
   exp: number;
   appUrl?: string;

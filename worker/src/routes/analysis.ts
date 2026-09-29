@@ -119,6 +119,8 @@ interface StreamRequest {
   // Vercel bouncer resolves it and forwards it here; stale clients (undefined)
   // fall back to getUCISPrompt's legacy 48000.
   transcriptBudgetChars?: number;
+  /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
+  prior_payload?: Record<string, any>;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -1071,6 +1073,7 @@ function buildStreamResponse(
             timezone: req.timezone,
             dimensions: req.dimensions,
             transcriptBudgetChars: req.transcriptBudgetChars,
+            prior_payload: req.prior_payload,
           },
           {
             onDelta: (delta: string) => {

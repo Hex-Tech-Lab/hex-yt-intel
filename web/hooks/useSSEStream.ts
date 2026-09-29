@@ -8,7 +8,7 @@ import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter'
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
-import { STREAM_BUNDLES } from '@/lib/config/synthesis';
+import { STREAM_BUNDLES, isProjectiveBundle } from '@/lib/config/synthesis';
 import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
@@ -429,7 +429,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void, priorPayloadOverride?: Record<string, unknown>) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -457,6 +457,7 @@ export function useSSEStream() {
                   channelMetaConfig: job.channelMetaConfig,
                   commentsSamplePlan: job.commentsSamplePlan,
                   commentsSyncPoolConfig: job.commentsSyncPoolConfig,
+                  prior_payload: priorPayloadOverride ?? job.prior_payload,
                 };
 
                 const streamController = new AbortController();
@@ -634,7 +635,7 @@ export function useSSEStream() {
                 // leaving it running in the background alongside the fresh
                 // retry attempt -- an onError callback firing is not itself
                 // proof the underlying stream has stopped.
-                const attemptBundle = (i: number, dimensions: number[], attemptController: AbortController): Promise<BundleOutcome> => {
+                const attemptBundle = (i: number, dimensions: number[], attemptController: AbortController, priorPayloadOverride?: Record<string, unknown>): Promise<BundleOutcome> => {
                   return new Promise<BundleOutcome>((resolve) => {
                     let settledLocal = false;
                     const resolveOnce = (result: BundleOutcome) => {
@@ -648,18 +649,18 @@ export function useSSEStream() {
                       onError: (error, code) => resolveOnce({ ok: false, error, code }),
                       onComplete: () => resolveOnce({ ok: true }),
                     });
-                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0LlmStart : undefined)
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0LlmStart : undefined, priorPayloadOverride)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
                       .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                   });
                 };
 
-                const runBundleWithRetry = async (i: number, dimensions: number[]) => {
+                const runBundleWithRetry = async (i: number, dimensions: number[], priorPayloadOverride?: Record<string, unknown>) => {
                   // Cache-warm stagger applies to the FIRST attempt only --
                   // retries must never wait again.
                   await awaitWarmGate(i);
                   let attemptController = new AbortController();
-                  let outcome = await attemptBundle(i, dimensions, attemptController);
+                  let outcome = await attemptBundle(i, dimensions, attemptController, priorPayloadOverride);
                   if (!outcome.ok && !currentSignal.aborted && !hasSettled) {
                     // Stop the failed attempt's own stream before starting a
                     // fresh one for the same bundle index -- see the comment
@@ -667,7 +668,7 @@ export function useSSEStream() {
                     attemptController.abort();
                     store.logError(`[Bundle ${i + 1}] failed, retrying once: ${outcome.error}`);
                     attemptController = new AbortController();
-                    outcome = await attemptBundle(i, dimensions, attemptController);
+                    outcome = await attemptBundle(i, dimensions, attemptController, priorPayloadOverride);
                   }
                   if (currentSignal.aborted || hasSettled) return;
                   if (outcome.ok) {
@@ -700,10 +701,41 @@ export function useSSEStream() {
                   });
                 }
 
-                store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
-                await Promise.all(
-                  dimensionsList.map((dimensions, i) => runBundleWithRetry(i, dimensions))
+                // R1b (2026-09-29) Layer 2 epistemic split: grounded ("Universe
+                // of 1") bundles run first, in parallel; the projective bundle
+                // — dims 9/11 — is dispatched ONLY after every grounded bundle
+                // has settled, and consumes the grounded output as prior_payload
+                // (isProjectiveBundle SSOT in web/lib/config/synthesis.ts).
+                // Grounded failures degrade gracefully: whatever landed is
+                // still handed to the projective call as foundational truth.
+                const groundedIndexes = dimensionsList
+                  .map((_bundle, bundleIndex) => bundleIndex)
+                  .filter((bundleIndex) => !isProjectiveBundle(dimensionsList[bundleIndex]!));
+                const projectiveIndexes = dimensionsList
+                  .map((_bundle, bundleIndex) => bundleIndex)
+                  .filter((bundleIndex) => isProjectiveBundle(dimensionsList[bundleIndex]!));
+
+                store.logInfo(
+                  `Connecting to Cloudflare edge worker for parallel synthesis (${groundedIndexes.length} grounded, then ${projectiveIndexes.length} projective of ${TOTAL_STREAMS} streams)...`,
                 );
+                await Promise.all(
+                  groundedIndexes.map((i) => runBundleWithRetry(i, dimensionsList[i]!))
+                );
+
+                // Finalized grounded output from the synthesis nucleus — the
+                // adapter has already fed every completed grounded chunk into
+                // it by the time the phase gate above releases. Single-bundle
+                // remediation dispatches (no grounded phase) fall back to the
+                // job's own prior_payload, preserving the remediation contract.
+                const buildGroundedPriorPayload = (): Record<string, unknown> | null => {
+                  const dimsRecord = useSynthesisNucleus.getState().analysis?.dimensions ?? {};
+                  const grounded = Object.values(dimsRecord).filter((d) => !isProjectiveBundle([d.number]));
+                  return grounded.length > 0 ? { schemaVersion: '2.0', dimensions: grounded } : null;
+                };
+
+                for (const i of projectiveIndexes) {
+                  await runBundleWithRetry(i, dimensionsList[i]!, buildGroundedPriorPayload() ?? undefined);
+                }
 
                 if (!hasSettled) checkSettleState();
               };
