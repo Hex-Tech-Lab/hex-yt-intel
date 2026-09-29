@@ -1,0 +1,45 @@
+web/lib/usecases/__tests__/RetryMissingDimensionsUseCase.test.ts
+  s_dfc1d510565848::t_2bf6c98e2cb399 54-55,57,59
+  s_dfc1d510565848::t_720db9c4a5c729 1-53,56,58,60-188
+  s_dfc1d510565848::t_95606970a533fc 189-191
+  s_dd73041b1be5a2::t_410cb2cdffbd99 192-221
+web/app/api/analyses/[id]/retry/route.ts
+  s_dfc1d510565848::t_e0261d1e1951f5 51-58,61-62
+  s_dfc1d510565848::t_3300116d80bd15 19
+  s_dfc1d510565848::t_0bddfd6a935676 1-18,20-50,59-60,63-108
+web/lib/services/dimension-remediation.ts
+  s_dfc1d510565848::t_d3545512f8b005 222-228
+  s_dfc1d510565848::t_ce7048e4dd060d 254-255
+web/lib/usecases/RetryMissingDimensionsUseCase.ts
+  s_dfc1d510565848::t_4fde87ed7e786d 1-6,9-12,14-23,25-31,36-63,69-73,76-86,119,147
+  s_dfc1d510565848::t_a4affbab9f0f5e 7-8,13,24,32-35,64-68,74-75,87-118,120-146,167
+  s_dfc1d510565848::t_6d310a790745ac 148-150,164-166
+  s_dfc1d510565848::t_dd4ffd8f806798 168-170
+  s_dd73041b1be5a2::t_58f02ac70de272 151-163,171-175
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_5b57f99df490cc 967-1001
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f0e49c1a167707d103d90f2d533507c2943a638b",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_dfc1d510565848": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f12731083ffedYS9z2a4GInYnM",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
