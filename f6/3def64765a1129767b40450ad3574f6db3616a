@@ -1,0 +1,33 @@
+web/lib/utils/dedupe-fetch.ts
+  s_74835ebf2bac9e::t_b8372476d740aa 16-26
+  s_54a0e99e759ab4::t_62001a85b008d3 96
+  s_74835ebf2bac9e::t_9c612d3e788932 89-95
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_54a0e99e759ab4::t_e9674fee799cd5 329-374
+web/lib/__tests__/dedupe-fetch.test.ts
+  s_54a0e99e759ab4::t_5878ccfe6e4d93 107-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f63def64765a1129767b40450ad3574f6db3616a",
+  "prompts": {},
+  "sessions": {
+    "s_54a0e99e759ab4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f134315aeffeYNB3olZYs935Sj",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_74835ebf2bac9e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f135308b3ffeoECMjkT682oIOQ",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
