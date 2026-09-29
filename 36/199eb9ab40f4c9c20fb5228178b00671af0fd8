@@ -1,0 +1,63 @@
+web/lib/__tests__/bundle-partition.test.ts
+  s_18bd23b16bc1ea::t_89cb72cc1851fa 1-152
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_18bd23b16bc1ea::t_09648f6c423abc 63
+supabase/migrations/20260929120000_stream_bundles_registry_key.sql
+  s_18bd23b16bc1ea::t_0450187654baef 1-48
+web/lib/config/synthesis.ts
+  s_18bd23b16bc1ea::t_88e91877f1629d 22-25,27-31,34-68
+  s_18bd23b16bc1ea::t_4c8e23ef2489f8 69
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_830982d10bbcf1::t_b9170e22fb2105 1
+  s_dd73041b1be5a2::t_77267a00417f22 20,68-69,228-248,388
+web/lib/adapters/settings-adapter.ts
+  s_18bd23b16bc1ea::t_94fef683fcdbd0 9
+  s_830982d10bbcf1::t_b91e285489646b 8
+  s_18bd23b16bc1ea::t_b0bca1214adbc9 171-173
+web/hooks/__tests__/useSSEStream-cache-stagger.test.tsx
+  s_830982d10bbcf1::t_1c76bd9ae7c087 14-15
+  s_830982d10bbcf1::t_75d3ca95e8f7d8 50-52
+  s_830982d10bbcf1::t_17a0158a9d1f2e 29
+  s_830982d10bbcf1::t_81ea8828a36788 108
+  s_830982d10bbcf1::t_30486bb256b0aa 161-163
+  s_830982d10bbcf1::t_723e68f6b7b9e4 164
+  s_dd73041b1be5a2::t_7d0381a104a39e 240
+web/hooks/__tests__/useSSEStream-partial-failure.test.tsx
+  s_830982d10bbcf1::t_72d45dc5a99354 52-54
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_9ff0fc0eaa78d7 91,98,105,112,119,126,133,140,147,154,161,237,245,252,259,279,301,308,315,322,350,357,364,371,378,385,392,399,406,413,427,434,441,448,483,490,497,504,510,525,532,560,616,672,679,699,714,721,735,742,749,791,799-861
+web/hooks/useSSEStream.ts
+  s_dd73041b1be5a2::t_4a0e20eab96140 11,687-700
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "36199eb9ab40f4c9c20fb5228178b00671af0fd8",
+  "prompts": {},
+  "sessions": {
+    "s_18bd23b16bc1ea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f135cf4b1ffeRsbrHlX5izaUNg",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_830982d10bbcf1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1347d2acffeb0Y8RwHYgSzNID",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
