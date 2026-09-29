@@ -1,7 +1,7 @@
 -- R1c — Finding 5: lock billing/validation columns on analyses away from client roles.
 -- Contract (dispatch 2026-09-29, migration 20260929140000_analyses_column_grants_lockdown.sql):
 --   anon           : NO insert/update/delete on public.analyses
---   authenticated  : NO insert; UPDATE only on shared_token + shared_expires_at
+--   authenticated  : NO insert, NO delete (quota bypass, 20260929160000); UPDATE only on shared_token + shared_expires_at
 --                    (the share route, the only user-session writer)
 --   service_role   : unchanged. SELECT: unchanged.
 --
@@ -37,6 +37,13 @@ begin
 
   if has_table_privilege('authenticated', 'public.analyses', 'INSERT') then
     raise exception 'GRANT LOCKDOWN VIOLATION: authenticated can INSERT on public.analyses';
+  end if;
+
+  -- Quota bypass guard (20260929160000): deleting one's own completed rows
+  -- would reset reserve_analysis_quota's monthly count.
+  if has_table_privilege('authenticated', 'public.analyses', 'DELETE') then
+    raise exception 'GRANT LOCKDOWN VIOLATION: authenticated can DELETE on public.analyses (quota bypass)'
+      using hint = 'Re-run migration 20260929160000_analyses_revoke_client_delete.sql';
   end if;
 
   raise notice 'R1c grant lockdown assertion PASSED: client roles locked out of billing/validation columns.';
