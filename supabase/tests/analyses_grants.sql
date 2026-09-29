@@ -46,5 +46,11 @@ begin
       using hint = 'Re-run migration 20260929160000_analyses_revoke_client_delete.sql';
   end if;
 
+  -- The free-tier cleanup (pg_cron + trigger, run as the table owner /
+  -- service_role paths) must keep DELETE, or free rows are never cleaned up.
+  if not has_table_privilege('service_role', 'public.analyses', 'DELETE') then
+    raise exception 'GRANT LOCKDOWN VIOLATION: service_role lost DELETE on public.analyses (cleanup would break)';
+  end if;
+
   raise notice 'R1c grant lockdown assertion PASSED: client roles locked out of billing/validation columns.';
 end $$;
