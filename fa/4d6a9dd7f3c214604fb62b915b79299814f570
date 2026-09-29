@@ -1,0 +1,23 @@
+web/store/__tests__/useInputStore-hydration.test.ts
+  s_1d1bec99fd4ca5::t_4889b57166a6cb 48
+web/store/useInputStore.ts
+  s_1d1bec99fd4ca5::t_022c107542d511 52-58
+web/components/templates/console/__tests__/AnalysisHistory-restore.test.tsx
+  s_1d1bec99fd4ca5::t_499c0af00aa203 302-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fa4d6a9dd7f3c214604fb62b915b79299814f570",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
