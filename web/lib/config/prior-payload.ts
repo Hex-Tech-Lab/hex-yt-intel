@@ -125,6 +125,14 @@ export function fitPriorPayloadToCap(
       return { number: dim.number, content: originals[index]!.slice(0, keep) + '...' + TRIM_NOTE };
     });
   }
+  // Small caps: per-dimension JSON + trim-note overhead can exceed the cap even
+  // with near-empty content. Keep the largest fitting PREFIX (lowest dimension
+  // numbers first) instead of sending nothing (CodeRabbit #363).
+  while (dims.length > 0) {
+    dims = dims.slice(0, -1);
+    const subset = { schemaVersion: '2.0' as const, dimensions: dims };
+    if (serializedBytes(subset) <= cap) return subset;
+  }
   return { schemaVersion: '2.0', dimensions: [] };
 }
 

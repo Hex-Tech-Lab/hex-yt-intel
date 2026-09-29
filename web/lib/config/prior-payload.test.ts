@@ -155,6 +155,23 @@ describe('fitPriorPayloadToCap (client-side, CodeRabbit #363)', () => {
     expect(fitted.dimensions).toEqual([{ number: 5, content: 'ok' }]);
   });
 
+  it('fits multi-byte (CJK) content by BYTES, not UTF-16 code units, and keeps it non-empty', () => {
+    const cjk = [1, 2, 3].map((number) => ({ number, content: '知识图谱'.repeat(2000) }));
+    const fitted = fitPriorPayloadToCap(cjk, 4096);
+    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(4096);
+    expect(fitted.dimensions.length).toBeGreaterThan(0);
+    expect(validatePriorPayload(fitted, { maxBytes: 4096, isProjective: true }).ok).toBe(true);
+  });
+
+  it('keeps a fitting subset when even trimmed dimensions overflow a very small cap', () => {
+    // 9 trimmed dims cost ~80 bytes each in JSON + trim note, so 400 bytes
+    // cannot hold all of them even with empty content.
+    const fitted = fitPriorPayloadToCap(grounded(20_000), 400);
+    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(400);
+    expect(fitted.dimensions.length).toBeGreaterThan(0);
+    expect(fitted.dimensions[0]!.number).toBe(1);
+  });
+
   it('keeps one entry per dimension number (duplicates would otherwise reach the prompt)', () => {
     const fitted = fitPriorPayloadToCap([{ number: 2, content: 'first' }, { number: 2, content: 'second' }], 65536);
     expect(fitted.dimensions).toEqual([{ number: 2, content: 'first' }]);
