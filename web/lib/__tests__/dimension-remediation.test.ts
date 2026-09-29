@@ -288,6 +288,58 @@ describe('runRemediationHarness — quarantine gate (P1b)', () => {
     vi.restoreAllMocks();
   });
 
+  it('skips a candidate whose per-row lock is held (owner retry in flight) — no budget, no worker call (#367 review)', async () => {
+    const tryConsumeTokenBucket = vi.fn().mockResolvedValue(true);
+    const acquireRedisLock = vi.fn().mockResolvedValue(null); // held by a user retry
+    const releaseRedisLock = vi.fn(() => Promise.resolve());
+    const client = fakeServiceClient({
+      analyses: { rows: [rowFor('live-1', 'LIVEID')] },
+      transcripts: { rows: [{ video_id: 'LIVEID' }] },
+    });
+    vi.doMock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => client }));
+    vi.doMock('@/lib/redis', () => ({
+      getRedisValue: vi.fn().mockResolvedValue(null), // not quarantined
+      setRedisValue: vi.fn(() => Promise.resolve()),
+      tryConsumeTokenBucket,
+      incrementRedisValue: vi.fn().mockResolvedValue(1),
+      acquireRedisLock,
+      releaseRedisLock,
+    }));
+    vi.doMock('@/lib/config/cascade', () => ({
+      resolveAnalysisCascade: vi.fn().mockResolvedValue([{ model: 'm1', name: 'M1' }]),
+    }));
+    vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
+      SupabaseSettingsAdapter: {
+        getRegistrySettings: vi.fn().mockResolvedValue({
+          'remediation.enabled': true,
+          'remediation.budgetPercentOfRemaining': 10,
+          'remediation.hardCapUsdCents': 200,
+          'remediation.maxRetries': 3,
+          'remediation.quarantineTtlSeconds': 21600,
+        }),
+      },
+    }));
+    vi.doMock('@/lib/adapters/SupabaseBillingAdapter', () => ({
+      SupabaseBillingAdapter: { logUsageEvent: vi.fn(() => Promise.resolve()) },
+    }));
+    const updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+    vi.doMock('@/lib/adapters', () => ({
+      SupabasePersistenceAdapter: class {
+        updateAnalysisResult = updateAnalysisResult;
+        recordRemediationFailure = vi.fn().mockResolvedValue({ updated: true });
+      },
+    }));
+    vi.stubGlobal('fetch', vi.fn());
+
+    const mod = await import('@/lib/services/dimension-remediation');
+    const result = await mod.runRemediationHarness();
+    expect(acquireRedisLock).toHaveBeenCalledWith('retry:analysis:live-1', 600);
+    expect(result.skipped).toBe(1);
+    expect(tryConsumeTokenBucket).not.toHaveBeenCalled();
+    expect(updateAnalysisResult).not.toHaveBeenCalled();
+    expect(releaseRedisLock).not.toHaveBeenCalled(); // never ours
+  });
+
   it('skips quarantined candidates entirely — no budget consumption, no worker call', async () => {
     const tryConsumeTokenBucket = vi.fn().mockResolvedValue(true);
     const client = fakeServiceClient({
