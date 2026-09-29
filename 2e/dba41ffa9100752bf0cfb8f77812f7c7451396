@@ -1,0 +1,55 @@
+web/store/useInputStore.ts
+  s_43dc8b013821f5::t_50bfbd18c73fb5 48-54
+  s_43dc8b013821f5::t_09cd55c7ca938b 9-22
+  s_43dc8b013821f5::t_2f80f787ee88fd 23
+  s_43dc8b013821f5::t_438960386e8c41 55
+  s_1d1bec99fd4ca5::t_cefeb97789a8d8 5
+web/components/templates/console/AnalysisHistory.tsx
+  s_43dc8b013821f5::t_2e63073437dc1c 299
+  s_43dc8b013821f5::t_794012c4b9fbab 493-496,502,505,509-517,520-524
+  s_43dc8b013821f5::t_755ef927452b68 525-527
+  s_1d1bec99fd4ca5::t_dd8f42d41ded2e 212-221,528-529,706-708,732,923-930
+web/components/containers/DashboardContainer.tsx
+  s_43dc8b013821f5::t_613023a3341d74 248-253
+  s_43dc8b013821f5::t_8f169fd29f7845 736
+  s_43dc8b013821f5::t_e4d4bccc1727ee 735
+  s_1d1bec99fd4ca5::t_e01bbf9aeccdc0 108
+web/store/__tests__/useInputStore-hydration.test.ts
+  s_43dc8b013821f5::t_ec443bb160fe7b 3-30,32-43
+  s_43dc8b013821f5::t_52b96d6899b1a3 1-2
+  s_43dc8b013821f5::t_61a3907d940553 31
+  s_43dc8b013821f5::t_1f9368790a07b7 44-46
+  s_1d1bec99fd4ca5::t_3475db002d734c 47-49
+web/lib/__tests__/count-ucis-dimensions.test.ts
+  s_1d1bec99fd4ca5::t_c25ba40e831a89 7,59-76
+.qa-intel/baseline.json
+  s_1d1bec99fd4ca5::t_a47f1005314b37 1044-1078
+web/components/templates/console/__tests__/AnalysisHistory-restore.test.tsx
+  s_1d1bec99fd4ca5::t_d13555da1714b4 217-231,236,239,243-244,246-247,249-252,254-257,259,261-278,280-296,298-300,302-311
+web/lib/utils/count-ucis-dimensions.ts
+  s_1d1bec99fd4ca5::t_68be4d30cc31bb 72-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2edba41ffa9100752bf0cfb8f77812f7c7451396",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_43dc8b013821f5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f114934e5ffeMtfD7HUtQnjZGj",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
