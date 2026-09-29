@@ -9,6 +9,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { STREAM_BUNDLES, isProjectiveBundle } from '@/lib/config/synthesis';
+import { fitPriorPayloadToCap } from '@/lib/config/prior-payload';
 import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
@@ -731,7 +732,11 @@ export function useSSEStream() {
                 const buildGroundedPriorPayload = (): Record<string, unknown> | null => {
                   const dimsRecord = useSynthesisNucleus.getState().analysis?.dimensions ?? {};
                   const grounded = Object.values(dimsRecord).filter((d) => !isProjectiveBundle([d.number]));
-                  return grounded.length > 0 ? { schemaVersion: '2.0', dimensions: grounded } : null;
+                  if (grounded.length === 0) return null;
+                  // Shaped to what the worker guard accepts (R1d): only
+                  // {number, content}, trimmed to the byte cap, so a long
+                  // analysis can never get dims 9/11 rejected with a 400.
+                  return fitPriorPayloadToCap(grounded, job.priorPayloadMaxBytes);
                 };
 
                 for (const i of projectiveIndexes) {

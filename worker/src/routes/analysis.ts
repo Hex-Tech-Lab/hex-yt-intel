@@ -1244,7 +1244,36 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
 
-  // R1d (2026-09-29, Finding 4): boundary guard on prior_payload BEFORE any
+  if (!c.env.STREAM_HMAC_SECRET || !apiKey) {
+    console.error("[analyze-llm-stream] Server misconfigured: missing signature key or router credentials");
+    return c.json({ error: "Server misconfigured" }, 500);
+  }
+
+  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
+
+  if (!isTokenValid) {
+    // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
+    // message from the signature-mismatch path.
+    const reason = msg === "" ? "expired" : "invalid_signature";
+    // Full diagnostics go to SERVER logs only — never the client response, which
+    // previously echoed the internal msg (analysisId/models/exp) + sig to any
+    // caller (the prod worker leaked this because NODE_ENV is unset, so the old
+    // NODE_ENV !== "production" guard was always true). Secret fingerprints let
+    // ops compare the Worker's secrets against the Vercel signer's without
+    // logging the secrets themselves.
+    const keyFpPrimary = await secretFingerprint(c.env.STREAM_HMAC_SECRET);
+    const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
+    console.warn("[analyze-llm-stream] stream signature rejected", {
+      reason,
+      videoId: req.videoId,
+      analysisId: req.analysisId,
+      keyFpPrimary,
+      keyFpFallback,
+    });
+    return c.json({ error: "Invalid token", reason }, 401);
+  }
+
+  // R1d (2026-09-29, Finding 4): boundary guard on prior_payload AFTER the HMAC check (CodeRabbit #363: no parsing/Sentry for unauthenticated requests) and BEFORE any
   // LLM call or cache write. Contract: strict Zod schema (schemaVersion '2.0',
   // 1..11 int-numbered dimensions), serialized size <= priorPayloadMaxBytes
   // (registry-resolved by CreateAnalysisUseCase, ADR 005), and only projective
@@ -1280,35 +1309,6 @@ analysis.post("/analyze-llm-stream", async (c) => {
       Sentry.captureMessage("invalid_prior_payload rejected at boundary", { level: "warning", extra: { reason: verdict.reason, videoId: req.videoId, analysisId: req.analysisId } });
       return c.json({ error: "invalid_prior_payload", reason: verdict.reason }, 400);
     }
-  }
-
-  if (!c.env.STREAM_HMAC_SECRET || !apiKey) {
-    console.error("[analyze-llm-stream] Server misconfigured: missing signature key or router credentials");
-    return c.json({ error: "Server misconfigured" }, 500);
-  }
-
-  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
-
-  if (!isTokenValid) {
-    // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
-    // message from the signature-mismatch path.
-    const reason = msg === "" ? "expired" : "invalid_signature";
-    // Full diagnostics go to SERVER logs only — never the client response, which
-    // previously echoed the internal msg (analysisId/models/exp) + sig to any
-    // caller (the prod worker leaked this because NODE_ENV is unset, so the old
-    // NODE_ENV !== "production" guard was always true). Secret fingerprints let
-    // ops compare the Worker's secrets against the Vercel signer's without
-    // logging the secrets themselves.
-    const keyFpPrimary = await secretFingerprint(c.env.STREAM_HMAC_SECRET);
-    const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
-    console.warn("[analyze-llm-stream] stream signature rejected", {
-      reason,
-      videoId: req.videoId,
-      analysisId: req.analysisId,
-      keyFpPrimary,
-      keyFpFallback,
-    });
-    return c.json({ error: "Invalid token", reason }, 401);
   }
 
   // 2026-08-28 (stream-5 RCA): everything from token verification through stream

@@ -83,3 +83,48 @@ export function validatePriorPayload(
     dimensions: parsed.data.dimensions.map((d) => ({ number: d.number, content: d.content })),
   };
 }
+
+const TRIM_NOTE = ' [trimmed to fit the grounded-evidence size cap]';
+
+function serializedBytes(payload: { schemaVersion: '2.0'; dimensions: SanitizedPriorDimension[] }): number {
+  return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
+
+/**
+ * Client-side counterpart of the worker guard (CodeRabbit #363): shape the
+ * grounded dimensions into a payload that the worker will ACCEPT. Without
+ * this, a long analysis's grounded output could exceed the byte cap, the
+ * worker returns 400, the retry resends the same payload, and dims 9/11
+ * never run. Keeps only {number, content}; when over the cap, trims every
+ * dimension's content by the same ratio (visible marker) until it fits; if
+ * nothing fits, returns an empty-but-valid payload so the projective stream
+ * still runs rather than failing.
+ */
+export function fitPriorPayloadToCap(
+  dimensions: ReadonlyArray<{ number: unknown; content: unknown }>,
+  maxBytes: unknown
+): { schemaVersion: '2.0'; dimensions: SanitizedPriorDimension[] } {
+  const cap = resolvePriorPayloadMaxBytes(maxBytes);
+  let dims: SanitizedPriorDimension[] = dimensions
+    .filter((dim): dim is SanitizedPriorDimension =>
+      Number.isInteger(dim.number) && (dim.number as number) >= 1 && (dim.number as number) <= PRIOR_PAYLOAD_DIMENSIONS_MAX
+      && typeof dim.content === 'string')
+    // One entry per dimension number (first wins) -- also bounds the list at
+    // PRIOR_PAYLOAD_DIMENSIONS_MAX, since numbers are already limited to 1..11.
+    .filter((dim, index, all) => all.findIndex((other) => other.number === dim.number) === index)
+    .map((dim) => ({ number: dim.number, content: dim.content }));
+  const originals = dims.map((dim) => dim.content);
+  let ratio = 1;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const payload = { schemaVersion: '2.0' as const, dimensions: dims };
+    const size = serializedBytes(payload);
+    if (size <= cap) return payload;
+    ratio *= (cap / size) * 0.9;
+    dims = dims.map((dim, index) => {
+      const keep = Math.max(0, Math.floor(originals[index]!.length * ratio));
+      return { number: dim.number, content: originals[index]!.slice(0, keep) + '...' + TRIM_NOTE };
+    });
+  }
+  return { schemaVersion: '2.0', dimensions: [] };
+}
+

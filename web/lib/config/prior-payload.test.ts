@@ -5,6 +5,7 @@ import {
   PRIOR_PAYLOAD_MAX_BYTES_FALLBACK,
   resolvePriorPayloadMaxBytes,
   PRIOR_PAYLOAD_MAX_BYTES_CEILING,
+  fitPriorPayloadToCap,
 } from './prior-payload';
 
 /**
@@ -125,3 +126,38 @@ describe('resolvePriorPayloadMaxBytes (unsigned client value)', () => {
     }
   });
 });
+
+describe('fitPriorPayloadToCap (client-side, CodeRabbit #363)', () => {
+  const grounded = (chars: number) =>
+    [1, 2, 3, 4, 5, 6, 7, 8, 10].map((number) => ({ number, content: 'g'.repeat(chars), extra: { kg: 'x'.repeat(500) } }));
+
+  it('passes an under-cap payload through untouched (only number + content kept)', () => {
+    const fitted = fitPriorPayloadToCap(grounded(100), 65536);
+    expect(fitted.dimensions).toHaveLength(9);
+    expect(fitted.dimensions[0]).toEqual({ number: 1, content: 'g'.repeat(100) });
+  });
+
+  it('trims an over-cap payload until the WORKER guard accepts it (dims 9/11 can never be 400d)', () => {
+    const fitted = fitPriorPayloadToCap(grounded(20_000), 8192);
+    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(8192);
+    expect(fitted.dimensions).toHaveLength(9);
+    expect(fitted.dimensions[0]!.content).toContain('[trimmed to fit the grounded-evidence size cap]');
+    expect(validatePriorPayload(fitted, { maxBytes: 8192, isProjective: true }).ok).toBe(true);
+  });
+
+  it('respects the hard ceiling even when the job asks for more', () => {
+    const fitted = fitPriorPayloadToCap(grounded(20_000), 999_999_999);
+    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(PRIOR_PAYLOAD_MAX_BYTES_CEILING);
+  });
+
+  it('drops malformed dimensions rather than sending something the worker rejects', () => {
+    const fitted = fitPriorPayloadToCap([{ number: 0, content: 'x' }, { number: 3, content: 42 }, { number: 5, content: 'ok' }], 65536);
+    expect(fitted.dimensions).toEqual([{ number: 5, content: 'ok' }]);
+  });
+
+  it('keeps one entry per dimension number (duplicates would otherwise reach the prompt)', () => {
+    const fitted = fitPriorPayloadToCap([{ number: 2, content: 'first' }, { number: 2, content: 'second' }], 65536);
+    expect(fitted.dimensions).toEqual([{ number: 2, content: 'first' }]);
+  });
+});
+
