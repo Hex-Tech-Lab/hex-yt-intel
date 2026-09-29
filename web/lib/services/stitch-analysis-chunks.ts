@@ -516,19 +516,26 @@ export function stitchChunksIntoPayload(
     const pathways = truncateBridges(stitchedDiscoveryPathways, crossDomainBridgesMaxChars);
     const dim8 = cleanDimensions.find((d) => d.number === 8);
     if (dim8) {
-      // Contract: 8.4 always comes after 8.3. If dim 8 already carries an
-      // 8.3 heading (legacy row) but no 8.4, insert after the 8.3 section
-      // — i.e. before the next heading, otherwise append. Idempotent.
+      // Contract (CodeRabbit #366): the projective 8.4 is authoritative.
+      // - dim 8 already has an 8.4 section (legacy grounded 8.4 on an older
+      //   row, or a re-stitch): REPLACE that section, heading to the next
+      //   8.x heading or end, so the external recommendations and the
+      //   > [EXTERNAL_PROJECTION] delimiter always land;
+      // - otherwise APPEND. 8.3 is stitched first, so the end of dim 8 is
+      //   always after 8.1/8.2/8.3; never search from the top (that put 8.4
+      //   above 8.1 when no 8.3 existed).
+      // Replacing with an identical body is a no-op, so re-stitching is stable.
       const content = (dim8.content || "").trim();
-      if (!content.includes(PATHWAYS_HEADING) && !content.includes("8.4 Discovery Pathways")) {
-        const body = pathways.includes("8.4 Discovery Pathways") ? pathways : `${PATHWAYS_HEADING}\n\n${pathways}`;
-        // First heading AFTER the 8.3 section ends (if 8.3 exists), else append.
-        const bridgesAt = content.search(/^#{1,6}\s*8\.3\b/m);
-        const searchFrom = bridgesAt >= 0 ? bridgesAt + 1 : 0;
-        const after = content.slice(searchFrom).search(/^#{1,6}\s*8\.(?!3\b)\d/m);
-        dim8.content = after >= 0
-          ? `${content.slice(0, searchFrom + after).trimEnd()}\n\n${body}\n\n${content.slice(searchFrom + after)}`
-          : `${content}\n\n${body}`;
+      const body = /^#{1,6}\s*8\.4\b/m.test(pathways) ? pathways.trim() : `${PATHWAYS_HEADING}\n\n${pathways.trim()}`;
+      const existingAt = content.search(/^#{1,6}\s*8\.4\b/m);
+      if (existingAt >= 0) {
+        const afterHeading = content.slice(existingAt + 1);
+        const nextRelative = afterHeading.search(/^#{1,6}\s*8\.(?!4\b)\d/m);
+        const sectionEnd = nextRelative >= 0 ? existingAt + 1 + nextRelative : content.length;
+        const tail = content.slice(sectionEnd).trim();
+        dim8.content = `${content.slice(0, existingAt).trimEnd()}\n\n${body}${tail ? `\n\n${tail}` : ""}`;
+      } else {
+        dim8.content = `${content}\n\n${body}`;
       }
     } else {
       stitchedPayload.discoveryPathways = pathways;
