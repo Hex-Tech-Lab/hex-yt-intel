@@ -1,0 +1,21 @@
+scripts/quality-engine/rules/streaming.ts
+  s_5fa91def1d3c19::t_4162b1c482a862 106-111
+web/lib/utils/dedupe-fetch.ts
+  s_5fa91def1d3c19::t_73b954a3d905fa 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f386cda46bc3e9ecc6f829fe79b6ad3088002cd8",
+  "prompts": {},
+  "sessions": {
+    "s_5fa91def1d3c19": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f134cdb2fffeIQPjkpKjN2aTzn",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
