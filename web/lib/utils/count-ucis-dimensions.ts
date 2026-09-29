@@ -69,3 +69,27 @@ export function parseUcisDimensionNumbers(markdown: string | null | undefined): 
 export function countUcisDimensions(markdown: string | null | undefined): number {
   return parseUcisDimensionNumbers(markdown).length;
 }
+
+/**
+ * Dashboard partial-analysis warning: present count + missing dimension
+ * numbers, or null when there is nothing to warn about. Content-derived for
+ * any terminal status (Wave 10.8 ghost-row contract), but suppressed while the
+ * analysis is still streaming ('analyzing') -- the markdown is mid-write and
+ * the missing map is not yet meaningful (R4 T3a).
+ */
+export function computePartialInfo(
+  markdown: string | null | undefined,
+  totalDimensions: number,
+  status: string,
+): { presentCount: number; missing: number[] } | null {
+  if (!markdown || status === 'analyzing') return null;
+  const presentNumbers = parseUcisDimensionNumbers(markdown);
+  const presentCount = presentNumbers.length;
+  if (presentCount === 0 || presentCount >= totalDimensions) return null;
+  const present = new Set(presentNumbers);
+  const missing: number[] = [];
+  for (let i = 1; i <= totalDimensions; i++) {
+    if (!present.has(i)) missing.push(i);
+  }
+  return { presentCount, missing };
+}
