@@ -1,0 +1,21 @@
+web/lib/__tests__/cross-domain-bridges-stitch.test.ts
+  s_dd73041b1be5a2::t_ed7fd7b8dce6ba 198-219
+web/lib/services/stitch-analysis-chunks.ts
+  s_dd73041b1be5a2::t_dae380e84a6d6f 519-527,529-538
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3d5cb19b49cbf430f8a9ffd53242c66696c00c37",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
