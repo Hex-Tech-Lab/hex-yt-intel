@@ -424,6 +424,19 @@ export const UCISPayloadV2Schema = z
     // registry key analysis.layer2.crossDomainBridgesMaxChars (code fallback
     // 4000) — over-cap is truncated at the stitch step, display text only.
     crossDomainBridges: z.string().min(1).optional(),
+    // R1e (2026-09-29): markdown body of UCIS sub-dimension 8.4 Discovery
+    // Pathways, emitted by the PROJECTIVE bundle as a top-level root field and
+    // stitched into dimension 8's content by stitchChunksIntoPayload.
+    // Optional; max length comes from registry key
+    // analysis.layer2.crossDomainBridgesMaxChars — over-cap is truncated at
+    // the stitch step, display text only.
+    discoveryPathways: z.string().min(1).optional(),
+    // R1e (2026-09-29): resources/tools/further reading the speaker EXPLICITLY
+    // names in the transcript, emitted by the GROUNDED bundle containing dim 8
+    // as a top-level root field. Intermediate handoff input for the projective
+    // bundle's 8.4 Discovery Pathways — stripped at the stitch step, never
+    // persisted into the final payload.
+    explicitSpeakerResources: z.array(z.string().max(200)).max(20).optional(),
   })
   .strict();
 

@@ -119,4 +119,16 @@ export const ChunkPayloadSchema = z.object({
   // char cap (analysis.layer2.crossDomainBridgesMaxChars) is enforced at the
   // stitch step, not here.
   crossDomainBridges: z.string().min(1).optional(),
+  // R1e (2026-09-29): markdown body of UCIS sub-dimension 8.4 Discovery
+  // Pathways, carried by the PROJECTIVE bundle as a top-level root field and
+  // merged into dimension 8's content client-side at the stitch step.
+  // Display text only; the char cap (analysis.layer2.crossDomainBridgesMaxChars)
+  // is enforced at the stitch step, not here.
+  discoveryPathways: z.string().min(1).optional(),
+  // R1e (2026-09-29): resources/tools/further reading the speaker EXPLICITLY
+  // names in the transcript, emitted by the GROUNDED bundle containing dim 8
+  // as a top-level root field. Intermediate handoff input for the projective
+  // bundle's 8.4 Discovery Pathways — stripped at the stitch step, never
+  // persisted into the final payload.
+  explicitSpeakerResources: z.array(z.string().max(200)).max(20).optional(),
 }).passthrough();

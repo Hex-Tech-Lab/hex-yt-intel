@@ -16,6 +16,10 @@ export const PRIOR_PAYLOAD_MAX_BYTES_FALLBACK = 65536;
 
 export const PRIOR_PAYLOAD_DIMENSIONS_MAX = 11;
 
+/** R1e: bounds for the grounded explicitSpeakerResources list (8.4 input). */
+export const PRIOR_PAYLOAD_RESOURCES_MAX = 20;
+export const PRIOR_PAYLOAD_RESOURCE_MAX_CHARS = 200;
+
 /**
  * Hard ceiling the worker enforces no matter what the request says. The byte
  * cap travels in the stream request, which the HMAC token does NOT sign
@@ -41,6 +45,12 @@ export const PriorPayloadSchema = z
   .object({
     schemaVersion: z.literal('2.0'),
     dimensions: z.array(PriorPayloadDimensionSchema).max(PRIOR_PAYLOAD_DIMENSIONS_MAX),
+    // R1e (2026-09-29): resources/tools/further reading the speaker EXPLICITLY
+    // names in the transcript, extracted by the grounded dim-8 pass. An
+    // intermediate — the projective bundle consumes it as the "explicitly
+    // named" list for 8.4 Discovery Pathways; it must NOT survive into the
+    // persisted payload (stripped at stitch).
+    explicitSpeakerResources: z.array(z.string().max(PRIOR_PAYLOAD_RESOURCE_MAX_CHARS)).max(PRIOR_PAYLOAD_RESOURCES_MAX).optional(),
   })
   .strict();
 
@@ -53,7 +63,7 @@ export interface SanitizedPriorDimension {
 }
 
 export type PriorPayloadValidationResult =
-  | { ok: true; dimensions: SanitizedPriorDimension[] }
+  | { ok: true; dimensions: SanitizedPriorDimension[]; explicitSpeakerResources: string[] }
   | { ok: false; reason: string };
 
 /**
@@ -73,7 +83,11 @@ export function validatePriorPayload(
   if (!parsed.success) {
     return { ok: false, reason: `schema_violation: ${parsed.error.issues[0]?.message ?? 'invalid'}` };
   }
-  const serialized = JSON.stringify({ schemaVersion: parsed.data.schemaVersion, dimensions: parsed.data.dimensions });
+  const serialized = JSON.stringify({
+    schemaVersion: parsed.data.schemaVersion,
+    dimensions: parsed.data.dimensions,
+    explicitSpeakerResources: parsed.data.explicitSpeakerResources ?? [],
+  });
   const byteLength = new TextEncoder().encode(serialized).length;
   if (byteLength > options.maxBytes) {
     return { ok: false, reason: `exceeds_max_bytes: ${byteLength} > ${options.maxBytes}` };
@@ -81,12 +95,19 @@ export function validatePriorPayload(
   return {
     ok: true,
     dimensions: parsed.data.dimensions.map((d) => ({ number: d.number, content: d.content })),
+    explicitSpeakerResources: parsed.data.explicitSpeakerResources ?? [],
   };
 }
 
 const TRIM_NOTE = ' [trimmed to fit the grounded-evidence size cap]';
 
-function serializedBytes(payload: { schemaVersion: '2.0'; dimensions: SanitizedPriorDimension[] }): number {
+interface PriorPayloadShape {
+  schemaVersion: '2.0';
+  dimensions: SanitizedPriorDimension[];
+  explicitSpeakerResources?: string[];
+}
+
+function serializedBytes(payload: PriorPayloadShape): number {
   return new TextEncoder().encode(JSON.stringify(payload)).length;
 }
 
@@ -95,15 +116,17 @@ function serializedBytes(payload: { schemaVersion: '2.0'; dimensions: SanitizedP
  * grounded dimensions into a payload that the worker will ACCEPT. Without
  * this, a long analysis's grounded output could exceed the byte cap, the
  * worker returns 400, the retry resends the same payload, and dims 9/11
- * never run. Keeps only {number, content}; when over the cap, trims every
- * dimension's content by the same ratio (visible marker) until it fits; if
- * nothing fits, returns an empty-but-valid payload so the projective stream
- * still runs rather than failing.
+ * never run. Keeps only {number, content} (+ explicitSpeakerResources, R1e);
+ * when over the cap, drops the resources first, then trims every dimension's
+ * content by the same ratio (visible marker) until it fits; if nothing fits,
+ * returns an empty-but-valid payload so the projective stream still runs
+ * rather than failing.
  */
 export function fitPriorPayloadToCap(
   dimensions: ReadonlyArray<{ number: unknown; content: unknown }>,
-  maxBytes: unknown
-): { schemaVersion: '2.0'; dimensions: SanitizedPriorDimension[] } {
+  maxBytes: unknown,
+  explicitSpeakerResources: readonly string[] = []
+): { schemaVersion: '2.0'; dimensions: SanitizedPriorDimension[]; explicitSpeakerResources?: string[] } {
   const cap = resolvePriorPayloadMaxBytes(maxBytes);
   let dims: SanitizedPriorDimension[] = dimensions
     .filter((dim): dim is SanitizedPriorDimension =>
@@ -113,6 +136,17 @@ export function fitPriorPayloadToCap(
     // PRIOR_PAYLOAD_DIMENSIONS_MAX, since numbers are already limited to 1..11.
     .filter((dim, index, all) => all.findIndex((other) => other.number === dim.number) === index)
     .map((dim) => ({ number: dim.number, content: dim.content }));
+  const resources = explicitSpeakerResources
+    .filter((resource): resource is string =>
+      typeof resource === 'string' && resource.length > 0 && resource.length <= PRIOR_PAYLOAD_RESOURCE_MAX_CHARS)
+    .filter((_resource, index) => index < PRIOR_PAYLOAD_RESOURCES_MAX);
+  // R1e: the speaker-named resources ride along when they FIT. If the whole
+  // payload is over the cap, resources are dropped BEFORE any dimension
+  // content is trimmed (the grounded dimensions are the primary evidence).
+  if (resources.length > 0) {
+    const withResources: PriorPayloadShape = { schemaVersion: '2.0', dimensions: dims, explicitSpeakerResources: resources };
+    if (serializedBytes(withResources) <= cap) return withResources;
+  }
   const originals = dims.map((dim) => dim.content);
   let ratio = 1;
   for (let attempt = 0; attempt < 12; attempt++) {

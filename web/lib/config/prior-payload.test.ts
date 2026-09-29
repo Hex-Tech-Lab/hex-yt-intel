@@ -178,3 +178,33 @@ describe('fitPriorPayloadToCap (client-side, CodeRabbit #363)', () => {
   });
 });
 
+describe('R1e explicitSpeakerResources in prior_payload', () => {
+  const dims = [{ number: 1, content: 'grounded apex' }, { number: 8, content: 'kg nodes' }];
+
+  it('schema accepts up to 20 resources of up to 200 chars', () => {
+    const ok = validatePriorPayload({ schemaVersion: '2.0', dimensions: dims, explicitSpeakerResources: ['Book A', 'https://example.org'] }, { maxBytes: 65536, isProjective: true });
+    expect(ok.ok).toBe(true);
+  });
+
+  it('schema rejects 21 resources or a 201-char resource', () => {
+    const many = Array.from({ length: 21 }, (_item, index) => `r${index}`);
+    expect(validatePriorPayload({ schemaVersion: '2.0', dimensions: dims, explicitSpeakerResources: many }, { maxBytes: 65536, isProjective: true }).ok).toBe(false);
+    expect(validatePriorPayload({ schemaVersion: '2.0', dimensions: dims, explicitSpeakerResources: ['x'.repeat(201)] }, { maxBytes: 65536, isProjective: true }).ok).toBe(false);
+  });
+
+  it('KEEPS the resources when the whole payload fits (they must reach the projective 8.4 step)', () => {
+    const fitted = fitPriorPayloadToCap(dims, 65536, ['Thinking, Fast and Slow', 'Tool X']);
+    expect(fitted.explicitSpeakerResources).toEqual(['Thinking, Fast and Slow', 'Tool X']);
+    expect(fitted.dimensions).toEqual(dims);
+  });
+
+  it('drops resources BEFORE trimming any dimension content when over the cap', () => {
+    const bigDims = [{ number: 1, content: 'd'.repeat(900) }];
+    const resources = Array.from({ length: 20 }, (_item, index) => `Resource title number ${index} `.padEnd(60, '.'));
+    const withoutBytes = new TextEncoder().encode(JSON.stringify({ schemaVersion: '2.0', dimensions: bigDims })).length;
+    const fitted = fitPriorPayloadToCap(bigDims, withoutBytes + 10, resources);
+    expect(fitted.explicitSpeakerResources).toBeUndefined();
+    expect(fitted.dimensions[0]!.content).toBe('d'.repeat(900)); // untrimmed
+  });
+});
+

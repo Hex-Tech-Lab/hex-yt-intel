@@ -128,6 +128,8 @@ export { resolveBillingStatus } from '@/lib/services/billing-status';
  */
 export const CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS = 4000;
 const BRIDGES_HEADING = "#### 8.3 Cross-Domain Bridges";
+// R1e: same heading style for the 8.4 Discovery Pathways section.
+const PATHWAYS_HEADING = "#### 8.4 Discovery Pathways";
 
 export function truncateBridges(markdown: string, maxChars?: number): string {
   const cap = typeof maxChars === "number" && Number.isFinite(maxChars) && maxChars > 0
@@ -157,6 +159,11 @@ export function stitchChunksIntoPayload(
   let stitchedMonetization: any = null;
   let stitchedStanceRelations: any = null;
   let stitchedCrossDomainBridges: string | null = null;
+  // R1e (2026-09-29): 8.4 Discovery Pathways markdown from the projective
+  // bundle's root field. The grounded bundle's `explicitSpeakerResources`
+  // intermediate needs no capture — it is simply deleted from the stitched
+  // payload below so it never persists.
+  let stitchedDiscoveryPathways: string | null = null;
   let stitchedNodes: any[] = [];
   let stitchedEdges: any[] = [];
 
@@ -188,6 +195,15 @@ export function stitchChunksIntoPayload(
       !stitchedCrossDomainBridges
     ) {
       stitchedCrossDomainBridges = chunkPayload.crossDomainBridges;
+    }
+    // R1e (2026-09-29): same first-non-empty-wins pattern for the 8.4
+    // Discovery Pathways markdown root field (projective bundle).
+    if (
+      typeof chunkPayload.discoveryPathways === "string" &&
+      chunkPayload.discoveryPathways.trim().length > 0 &&
+      !stitchedDiscoveryPathways
+    ) {
+      stitchedDiscoveryPathways = chunkPayload.discoveryPathways;
     }
     if (
       chunkPayload.knowledgeGraph &&
@@ -456,10 +472,20 @@ export function stitchChunksIntoPayload(
       : {}),
   };
 
+  // R1e (2026-09-29): strip the `explicitSpeakerResources` intermediate. It
+  // exists only as grounded→projective handoff input and must NOT survive
+  // into the persisted payload.
+  delete stitchedPayload.explicitSpeakerResources;
+
   // R1b (2026-09-29): append the stitched Cross-Domain Bridges markdown into
   // dimension 8's content so it renders inside the Semantic Foundation card
   // (dim 8 is grounded and its grounded bundle was told to OMIT 8.3). The
   // grounded content is never reordered — bridges append at the end.
+  // R1e (2026-09-29): 8.4 Discovery Pathways (projective root field
+  // `discoveryPathways`) is appended AFTER 8.3 the same way, reusing the
+  // same cap key (analysis.layer2.crossDomainBridgesMaxChars). Order is
+  // 8.1 → 8.2 → 8.3 → 8.4. The intermediate `explicitSpeakerResources`
+  // root field is stripped — it must NOT survive into the persisted payload.
   if (stitchedCrossDomainBridges) {
     const bridges = truncateBridges(stitchedCrossDomainBridges, crossDomainBridgesMaxChars);
     const dim8 = cleanDimensions.find((d) => d.number === 8);
@@ -476,12 +502,47 @@ export function stitchChunksIntoPayload(
           : `${content}\n\n${body}`;
       }
     } else {
-      (stitchedPayload as UCISPayloadV2 & { crossDomainBridges?: string }).crossDomainBridges = bridges;
+      stitchedPayload.crossDomainBridges = bridges;
       // Degraded case: grounded dim 8 never arrived. Keep the bridges on the
       // root field so the content survives (rendering falls back to the
       // payload field) but dim 8 stays absent — do not fabricate a dim-8 object.
       console.warn(
         "[stitch-analysis-chunks] crossDomainBridges present but dimension 8 missing — keeping bridges on payload root only",
+      );
+    }
+  }
+
+  if (stitchedDiscoveryPathways) {
+    const pathways = truncateBridges(stitchedDiscoveryPathways, crossDomainBridgesMaxChars);
+    const dim8 = cleanDimensions.find((d) => d.number === 8);
+    if (dim8) {
+      // Contract (CodeRabbit #366): the projective 8.4 is authoritative.
+      // - dim 8 already has an 8.4 section (legacy grounded 8.4 on an older
+      //   row, or a re-stitch): REPLACE that section, heading to the next
+      //   8.x heading or end, so the external recommendations and the
+      //   > [EXTERNAL_PROJECTION] delimiter always land;
+      // - otherwise APPEND. 8.3 is stitched first, so the end of dim 8 is
+      //   always after 8.1/8.2/8.3; never search from the top (that put 8.4
+      //   above 8.1 when no 8.3 existed).
+      // Replacing with an identical body is a no-op, so re-stitching is stable.
+      const content = (dim8.content || "").trim();
+      const body = /^#{1,6}\s*8\.4\b/m.test(pathways) ? pathways.trim() : `${PATHWAYS_HEADING}\n\n${pathways.trim()}`;
+      const existingAt = content.search(/^#{1,6}\s*8\.4\b/m);
+      if (existingAt >= 0) {
+        const afterHeading = content.slice(existingAt + 1);
+        const nextRelative = afterHeading.search(/^#{1,6}\s*8\.(?!4\b)\d/m);
+        const sectionEnd = nextRelative >= 0 ? existingAt + 1 + nextRelative : content.length;
+        const tail = content.slice(sectionEnd).trim();
+        dim8.content = `${content.slice(0, existingAt).trimEnd()}\n\n${body}${tail ? `\n\n${tail}` : ""}`;
+      } else {
+        dim8.content = `${content}\n\n${body}`;
+      }
+    } else {
+      stitchedPayload.discoveryPathways = pathways;
+      // Degraded case: grounded dim 8 never arrived. Same root-field
+      // preservation as 8.3 above — content survives on the payload root.
+      console.warn(
+        "[stitch-analysis-chunks] discoveryPathways present but dimension 8 missing — keeping pathways on payload root only",
       );
     }
   }

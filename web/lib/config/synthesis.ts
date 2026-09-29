@@ -27,7 +27,7 @@ export const STREAM_BUNDLES: number[][] = [
   [1, 10],         // grounded: Apex Intelligence + Credibility & Risk
   [2, 4, 6],       // grounded: Provenance, Psychological, Comparative
   [5, 7],          // grounded: Core Intelligence, Implementation Systems
-  [3, 8],          // grounded: Content Architecture + Semantic/KG (dim 8 = 8.1/8.2/8.4 only; 8.3 moves to the projective bundle in R1b)
+  [3, 8],          // grounded: Content Architecture + Semantic/KG (dim 8 = 8.1/8.2 only; 8.3 AND 8.4 move to the projective bundle in R1b/R1e)
   [9, 11],         // PROJECTIVE: Forward Foresight + Commercial Yield
 ];
 
@@ -38,22 +38,25 @@ export const STREAM_BUNDLES: number[][] = [
  * containing any of these runs in projective mode and consumes the grounded
  * bundles' settled output as prior_payload. Single source of truth shared by
  * the client dispatch (useSSEStream) and the worker prompt builder.
- * User-approved mapping (2026-09-29): grounded = 1-7, 8.1, 8.2, 8.4, 10;
- * projective = 8.3, 9, 11. Dim 8 itself is GROUNDED (its KG nodes/relations
- * feed chat grounding per ADR 008 and entity-click timestamp seek per
- * ADR 022); only sub-section 8.3 Cross-Domain Bridges is projective and is
- * carried as the top-level `crossDomainBridges` payload field.
+ * User-approved mapping (2026-09-29, R1e amendment): grounded = 1-7, 8.1, 8.2, 10;
+ * projective = 8.3, 8.4, 9, 11. Dim 8 itself is GROUNDED (its KG nodes/relations
+ * feed chat grounding per ADR 008 and entity-click timestamp seek per ADR 022);
+ * sub-sections 8.3 Cross-Domain Bridges and 8.4 Discovery Pathways are
+ * projective — 8.3 is carried as the top-level `crossDomainBridges` payload
+ * field, 8.4 as the top-level `discoveryPathways` payload field. The grounded
+ * dim-8 pass additionally emits the intermediate root array
+ * `explicitSpeakerResources` (an input to 8.4, stripped at stitch).
  */
 export const PROJECTIVE_DIMENSIONS: readonly number[] = [9, 11];
 
 /**
- * Sub-dimension-level projective entries: 8.3 Cross-Domain Bridges. Not a
- * dimension number (it belongs to no emitted dimension object), so it cannot
- * live in PROJECTIVE_DIMENSIONS; it is requested by the projective bundle's
- * prompt and stitched back into dimension 8's content by
- * stitchChunksIntoPayload.
+ * Sub-dimension-level projective entries: 8.3 Cross-Domain Bridges and
+ * 8.4 Discovery Pathways (R1e). Not dimension numbers (they belong to no
+ * emitted dimension object), so they cannot live in PROJECTIVE_DIMENSIONS;
+ * they are requested by the projective bundle's prompt and stitched back into
+ * dimension 8's content by stitchChunksIntoPayload.
  */
-export const PROJECTIVE_SUBDIMENSIONS: readonly string[] = ['8.3'];
+export const PROJECTIVE_SUBDIMENSIONS: readonly string[] = ['8.3', '8.4'];
 
 /**
  * A bundle is PROJECTIVE iff any of its dimensions is a projective dimension

@@ -175,4 +175,70 @@ describe('truncateBridges', () => {
     expect(truncateBridges('a'.repeat(4001), -5)).toContain('truncated at 4000 characters');
     expect(warnSpy).toHaveBeenCalled();
   });
+
+  describe('R1e: 8.4 Discovery Pathways (projective)', () => {
+    const projectiveWith84 = (extra: Record<string, unknown> = {}) => ({
+      ...projectivePayload('- Bridge one'),
+      discoveryPathways: 'Named by speaker: Book A\n> [EXTERNAL_PROJECTION]\n1. Research B',
+      ...extra,
+    });
+    const groundedWithResources = () => ({ ...groundedPayload(), explicitSpeakerResources: ['Book A'] });
+
+    it('dimension 8 reads 8.1 -> 8.2 -> 8.3 -> 8.4 in order', () => {
+      const grounded = groundedWithResources() as unknown as Fixture;
+      grounded.dimensions[0]!.content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.';
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, grounded), chunk(5, projectiveWith84())]);
+      const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
+      const order = ['#### 8.1', '#### 8.2', '#### 8.3 Cross-Domain Bridges', '#### 8.4 Discovery Pathways'].map((h) => dim8.content.indexOf(h));
+      expect(order.every((i) => i >= 0)).toBe(true);
+      expect([...order].sort((i, j) => i - j)).toEqual(order);
+      expect(dim8.content).toContain('> [EXTERNAL_PROJECTION]');
+    });
+
+    it('REPLACES a legacy grounded 8.4 with the projective one (external recs + delimiter always land)', () => {
+      const grounded = groundedWithResources() as unknown as Fixture;
+      grounded.dimensions[0]!.content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.\n\n#### 8.4 Discovery Pathways\nN/A -- no resources/further reading named in transcript';
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, grounded), chunk(5, projectiveWith84())]);
+      const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
+      expect(dim8.content).not.toContain('N/A -- no resources/further reading named in transcript');
+      expect(dim8.content).toContain('> [EXTERNAL_PROJECTION]');
+      expect(dim8.content.split('8.4 Discovery Pathways').length - 1).toBe(1);
+      const order = ['#### 8.1', '#### 8.2', '#### 8.3 Cross-Domain Bridges', '#### 8.4 Discovery Pathways'].map((h) => dim8.content.indexOf(h));
+      expect([...order].sort((i, j) => i - j)).toEqual(order);
+    });
+
+    it('appends 8.4 AFTER 8.1/8.2 when no 8.3 section exists (never above 8.1)', () => {
+      const grounded = groundedPayload() as unknown as Fixture;
+      grounded.dimensions[0]!.content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.';
+      const projectiveNoBridges = { ...projectivePayload(), discoveryPathways: 'Named: none\n> [EXTERNAL_PROJECTION]\n1. Research B' };
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, grounded), chunk(5, projectiveNoBridges)]);
+      const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
+      expect(dim8.content.indexOf('#### 8.4 Discovery Pathways')).toBeGreaterThan(dim8.content.indexOf('#### 8.2'));
+      expect(dim8.content.indexOf('#### 8.1')).toBeLessThan(dim8.content.indexOf('#### 8.4 Discovery Pathways'));
+    });
+
+    it('never inserts 8.4 twice', () => {
+      const grounded = groundedWithResources() as unknown as Fixture;
+      grounded.dimensions[0]!.content += '\n\n#### 8.4 Discovery Pathways\nAlready present.';
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, grounded), chunk(5, projectiveWith84())]);
+      const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
+      expect(dim8.content.split('8.4 Discovery Pathways').length - 1).toBe(1);
+    });
+
+    it('strips the intermediate explicitSpeakerResources from the stitched payload', () => {
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, groundedWithResources()), chunk(5, projectiveWith84())]);
+      const { payload } = stitchChunksIntoPayload(chunkMap, 5);
+      expect((payload as unknown as Record<string, unknown>).explicitSpeakerResources).toBeUndefined();
+      expect((payload as unknown as Record<string, unknown>).discoveryPathways).toBeUndefined(); // merged into dim 8, not kept on root
+    });
+
+    it('legacy row: grounded dim 8 that already carries an 8.4 heading still gets 8.3 inserted before it', () => {
+      const grounded = groundedPayload() as unknown as Fixture;
+      grounded.dimensions[0]!.content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.\n\n#### 8.4 Discovery Pathways\nLegacy grounded pathways.';
+      const chunkMap = new Map<number, Record<string, unknown>>([chunk(4, grounded), chunk(5, projectivePayload('- Bridge one'))]);
+      const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
+      expect(dim8.content.indexOf('#### 8.3 Cross-Domain Bridges')).toBeLessThan(dim8.content.indexOf('#### 8.4 Discovery Pathways'));
+    });
+  });
 });
+
