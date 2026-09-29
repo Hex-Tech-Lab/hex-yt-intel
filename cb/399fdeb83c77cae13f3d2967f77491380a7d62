@@ -1,0 +1,84 @@
+worker/src/services/PromptBuilder.ts
+  s_c9fcce40815fd8::t_e4c1370db74ac3 149-155,157,160-164,166
+  s_c9fcce40815fd8::t_58db204d031264 182
+web/lib/validators/synthesis.ts
+  s_c9fcce40815fd8::t_c34fbffaac988d 434-439
+  s_c9fcce40815fd8::t_682167cf575eb8 427-433
+web/lib/config/prior-payload.ts
+  s_c9fcce40815fd8::t_a9b44bc8a28303 66
+  s_c9fcce40815fd8::t_e088b0eec152dc 19,104,108,110,119-123,127-129,139-141
+  s_c9fcce40815fd8::t_b63218e0a47e1b 48-53
+  s_c9fcce40815fd8::t_6d8f5713180780 98
+  s_c9fcce40815fd8::t_73b30830268311 86-90
+  s_c9fcce40815fd8::t_b5b1c9565f3e94 20-22
+  s_c9fcce40815fd8::t_ed786400077ad6 105-107
+  s_c9fcce40815fd8::t_f286f06f06aa37 109
+  s_c9fcce40815fd8::t_e4dd1542c0fbee 142-144
+  s_dd73041b1be5a2::t_7779049cef1709 145-149
+web/lib/config/synthesis.ts
+  s_c9fcce40815fd8::t_766b191094fcd1 41-48,53-57,59
+  s_c9fcce40815fd8::t_78adcdf49d2052 30
+worker/src/services/ZodSchemas.ts
+  s_c9fcce40815fd8::t_dd16efa1d28faa 122-127
+  s_c9fcce40815fd8::t_726a30a6e9478b 128-133
+web/lib/prompts/ucis-v5.4.ts
+  s_c9fcce40815fd8::t_ddd1df626cedc4 362,365
+  s_1d21cad567151c::t_a5382a607e4948 363
+web/lib/services/stitch-analysis-chunks.ts
+  s_c9fcce40815fd8::t_8e8645de10354b 475-477,479
+  s_c9fcce40815fd8::t_95898827bdfc22 478
+  s_c9fcce40815fd8::t_1d2326cd681f82 484-488,515-533,535-538
+  s_c9fcce40815fd8::t_2f77da91193b15 163-165
+  s_c9fcce40815fd8::t_ac1b1e97f870d4 199-207,540
+  s_c9fcce40815fd8::t_e5a52c4cd286a2 131-132
+  s_c9fcce40815fd8::t_7bc57462470fad 162,166
+  s_c9fcce40815fd8::t_3002d6beaabcbb 505,534
+  s_c9fcce40815fd8::t_009b2b3d5b9128 539
+  s_c9fcce40815fd8::t_caa02185452661 541-542
+web/lib/types/synthesis-nucleus.ts
+  s_c9fcce40815fd8::t_fc24f82967437b 213-219
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_f284b48756ee0d 967-973
+web/lib/__tests__/cross-domain-bridges-stitch.test.ts
+  s_dd73041b1be5a2::t_8abcd5c3d17566 178-220,222
+web/lib/__tests__/is-projective-bundle.test.ts
+  s_dd73041b1be5a2::t_dd08dd4b2632e3 26-27
+web/lib/config/prior-payload.test.ts
+  s_dd73041b1be5a2::t_14df75276a0167 181-210
+web/lib/prompts/ucis-v5.4.test.ts
+  s_dd73041b1be5a2::t_ed107437d9b4d7 90-104
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_dd73041b1be5a2::t_316fecf4673834 90,99-101,103-105,112-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cb399fdeb83c77cae13f3d2967f77491380a7d62",
+  "prompts": {},
+  "sessions": {
+    "s_1d21cad567151c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1282e347ffesd9u04shk7OtQk",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_c9fcce40815fd8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f12953f7dffeTeZJTesKtm3362",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
