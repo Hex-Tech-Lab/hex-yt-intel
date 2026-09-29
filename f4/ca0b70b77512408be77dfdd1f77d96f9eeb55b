@@ -1,0 +1,21 @@
+supabase/tests/analyses_grants.sql
+  s_3a5bf6234073f4::t_26e521463d3637 1-75
+supabase/migrations/20260929140000_analyses_column_grants_lockdown.sql
+  s_3a5bf6234073f4::t_262191c9ca4159 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f4ca0b70b77512408be77dfdd1f77d96f9eeb55b",
+  "prompts": {},
+  "sessions": {
+    "s_3a5bf6234073f4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f130a4cf5ffeNzuqbyV00tI9sI",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
