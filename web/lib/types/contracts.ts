@@ -280,6 +280,9 @@ export interface WorkerStreamRequest {
   prior_payload?: Record<string, unknown>;
   /** R1d: registry-resolved byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */
   priorPayloadMaxBytes?: number;
+  /** R2b: Vercel signature over the server-loaded prior_payload (web/lib/config/projective-context.ts). */
+  contextSig?: string;
+  contextExp?: number;
   sig: string;
   exp: number;
   appUrl?: string;

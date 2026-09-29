@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PROJECTIVE_DIMENSIONS } from './synthesis';
 
 /**
  * R1d (2026-09-29): boundary guard for `prior_payload` — the grounded
@@ -28,10 +29,15 @@ export const PRIOR_PAYLOAD_RESOURCE_MAX_CHARS = 200;
  */
 export const PRIOR_PAYLOAD_MAX_BYTES_CEILING = 65536;
 
+/** Registry key's declared minimum (analysis.layer2.priorPayloadMaxBytes). */
+export const PRIOR_PAYLOAD_MAX_BYTES_FLOOR = 1024;
+
 export function resolvePriorPayloadMaxBytes(requested: unknown): number {
   const requestedBytes = Number(requested);
   const base = Number.isFinite(requestedBytes) && requestedBytes > 0 ? Math.floor(requestedBytes) : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
-  return Math.min(base, PRIOR_PAYLOAD_MAX_BYTES_CEILING);
+  // Floor as well as ceiling (#363 review, P3): a fractional or tiny value
+  // must never produce a cap smaller than the empty v2 envelope.
+  return Math.max(PRIOR_PAYLOAD_MAX_BYTES_FLOOR, Math.min(base, PRIOR_PAYLOAD_MAX_BYTES_CEILING));
 }
 
 export const PriorPayloadDimensionSchema = z
@@ -52,6 +58,9 @@ export const PriorPayloadSchema = z
     // persisted payload (stripped at stitch).
     explicitSpeakerResources: z.array(z.string().max(PRIOR_PAYLOAD_RESOURCE_MAX_CHARS)).max(PRIOR_PAYLOAD_RESOURCES_MAX).optional(),
   })
+  // #363 review (P1): grounded evidence only, one entry per dimension.
+  .refine((payload) => new Set(payload.dimensions.map((dim) => dim.number)).size === payload.dimensions.length, { message: 'duplicate dimension numbers in prior_payload' })
+  .refine((payload) => payload.dimensions.every((dim) => !PROJECTIVE_DIMENSIONS.includes(dim.number)), { message: 'projective dimension in prior_payload (grounded evidence only)' })
   .strict();
 
 export type PriorPayload = z.infer<typeof PriorPayloadSchema>;

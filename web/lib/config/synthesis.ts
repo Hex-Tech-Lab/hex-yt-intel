@@ -97,6 +97,15 @@ export function assertBundlePartition(bundles: number[][]): void {
       seen.add(dim);
     }
   }
+  // #363 review (P2): the partition must also honour the epistemic contract.
+  // A mixed bundle would run grounded dimensions in projective mode (or vice
+  // versa), and dim 8 (KG, grounded per ADR 008/022) must sit in a grounded bundle.
+  for (const bundle of bundles) {
+    const projective = bundle.filter((dim) => PROJECTIVE_DIMENSIONS.includes(dim));
+    if (projective.length > 0 && projective.length !== bundle.length) {
+      throw new Error(`assertBundlePartition: bundle [${bundle.join(',')}] mixes grounded and projective dimensions`);
+    }
+  }
   for (let d = 1; d <= TOTAL_DIMENSIONS; d++) {
     if (!seen.has(d)) {
       throw new Error(`assertBundlePartition: dimension ${d} is missing from the partition`);

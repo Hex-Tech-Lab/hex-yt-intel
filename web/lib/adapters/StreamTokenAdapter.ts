@@ -1,4 +1,4 @@
-import { signStreamToken, signChatToken, signCommentsTier3Token } from '@/lib/stream-token';
+import { signStreamToken, signChatToken, signCommentsTier3Token, signProjectiveContext } from '@/lib/stream-token';
 import type { StreamToken, CryptographicTokenPort } from '@/lib/ports';
 
 /**
@@ -42,5 +42,14 @@ export class StreamTokenAdapter implements CryptographicTokenPort {
     userId: string;
   }): Promise<StreamToken> {
     return signCommentsTier3Token(params.sampleRunId, params.userId);
+  }
+
+  /** R2b: sign server-loaded grounded context bound to analysisId + dims + payload hash. */
+  async signProjectiveContext(params: {
+    analysisId: string;
+    dimensions: readonly number[];
+    priorPayload: unknown;
+  }): Promise<StreamToken> {
+    return signProjectiveContext(params.analysisId, params.dimensions, params.priorPayload);
   }
 }

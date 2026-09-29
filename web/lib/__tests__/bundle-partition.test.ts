@@ -42,6 +42,11 @@ describe('assertBundlePartition', () => {
     expect(() => assertBundlePartition([[1, 10], 'x'] as unknown as number[][])).toThrow(/expected an array of dimension arrays/);
   });
 
+  it('rejects complete, unique partitions that MIX grounded and projective dims (#363 review P2)', () => {
+    expect(() => assertBundlePartition([[1, 9], [2, 4, 6], [5, 7], [3, 8], [10, 11]])).toThrow(/mixes grounded and projective/);
+    expect(() => assertBundlePartition([[1, 10], [2, 4, 6], [5, 7], [3], [8, 9, 11]])).toThrow(/mixes grounded and projective/);
+  });
+
   it('rejects dimension 0', () => {
     expect(() => assertBundlePartition([[0, 1], [2, 4, 6], [5, 7], [3, 8], [9, 10, 11]]))
       .toThrow(/outside the valid range/);

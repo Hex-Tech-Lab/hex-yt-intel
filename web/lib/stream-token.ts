@@ -83,7 +83,7 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
  * secret. The purpose tag is part of the signed message, so a signature minted
  * for one flow can never be replayed into the other.
  */
-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context';
 
 /**
  * The canonical message for a bound, time-limited S2S content signature. MUST be
@@ -138,3 +138,21 @@ export async function verifyContentSig(
 
   return false;
 }
+
+/**
+ * R2b: sign the server-loaded grounded context for a projective bundle. Bound
+ * to the analysis id, an expiry, the bundle's dimensions and the payload hash
+ * (see web/lib/config/projective-context.ts); verified by the worker with the
+ * same bound-message layout.
+ */
+export async function signProjectiveContext(
+  analysisId: string,
+  dimensions: readonly number[],
+  priorPayload: unknown
+): Promise<{ sig: string; exp: number }> {
+  const { PROJECTIVE_CONTEXT_PURPOSE, PROJECTIVE_CONTEXT_TTL_MS, projectiveContextContent } = await import('@/lib/config/projective-context');
+  const exp = Date.now() + PROJECTIVE_CONTEXT_TTL_MS;
+  const content = await projectiveContextContent(dimensions, priorPayload);
+  return { sig: await hmacHex(env.streamHmacSecret, boundContentMessage(PROJECTIVE_CONTEXT_PURPOSE, analysisId, exp, content)), exp };
+}
+
