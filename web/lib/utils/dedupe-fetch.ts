@@ -39,7 +39,7 @@ interface InFlightEntry {
    * deleting finally is async, the rejection is synchronous). The new
    * caller then rejected with the dead entry's AbortError and, in
    * HighlightsScrubber, rendered the loading state forever. New callers
-   * now bypass settled entries and start a fresh request. */
+   * now skip settled entries and start a fresh request. */
   settled: boolean;
 }
 

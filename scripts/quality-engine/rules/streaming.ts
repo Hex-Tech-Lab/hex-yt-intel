@@ -103,6 +103,12 @@ export const StreamResilienceRule: Rule = {
     const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
 
+    // RCA (2026-09-29, PR #362): test files that SIMULATE a timed-out or
+    // aborted stream (a mock ReadableStream + setTimeout + abort listener)
+    // have no analysis state to settle, so they matched this rule by
+    // construction. Same test-file exemption the reliability-lessons rules use.
+    if (/(\.test|\.spec)\.[cm]?[tj]sx?$|\/__tests__\//.test(filePath)) return findings;
+
     // RCA (2026-07-24, PR #160 + post-merge follow-up): two compounding false-
     // positive sources.
     //
