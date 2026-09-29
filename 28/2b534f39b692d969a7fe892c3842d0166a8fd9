@@ -1,0 +1,19 @@
+docs/history/THOS_2026-09-29_2000_96H_AUDIT_R0-R2_REMEDIATION_OC_TAKEOVERS.md
+  s_43dc8b013821f5::t_7d48116bb99f96 1-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "282b534f39b692d969a7fe892c3842d0166a8fd9",
+  "prompts": {},
+  "sessions": {
+    "s_43dc8b013821f5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f114934e5ffeMtfD7HUtQnjZGj",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
