@@ -101,12 +101,12 @@ describe('CreateAnalysisUseCase streamBundles (R1a)', () => {
 
   it('returns the registry value in the job when it passes the invariant (E2E: registry → job.streamBundles)', async () => {
     vi.spyOn(SupabaseSettingsAdapter, 'getRegistrySettings').mockImplementation(
-      async (keys, fallback) => {
+      (keys, fallback) => {
         const out = { ...fallback };
         if (keys.includes('analysis.streamBundles')) {
           out['analysis.streamBundles' as keyof typeof out] = [[1, 10], [2, 4, 6], [5, 7], [3, 8], [9, 11]];
         }
-        return out as typeof fallback;
+        return Promise.resolve(out as typeof fallback);
       }
     );
     const result = await buildUseCase().execute(params);
@@ -117,13 +117,13 @@ describe('CreateAnalysisUseCase streamBundles (R1a)', () => {
 
   it('falls back to the code constant (with Sentry) when the registry value violates the invariant', async () => {
     vi.spyOn(SupabaseSettingsAdapter, 'getRegistrySettings').mockImplementation(
-      async (keys, fallback) => {
+      (keys, fallback) => {
         const out = { ...fallback };
         if (keys.includes('analysis.streamBundles')) {
           // Duplicate dim 10 + missing dim 9: invalid partition.
           out['analysis.streamBundles' as keyof typeof out] = [[1, 10], [2, 4, 6], [5, 7], [3, 8], [10, 11]];
         }
-        return out as typeof fallback;
+        return Promise.resolve(out as typeof fallback);
       }
     );
     const result = await buildUseCase().execute(params);
@@ -136,12 +136,12 @@ describe('CreateAnalysisUseCase streamBundles (R1a)', () => {
 
   it('falls back to the code constant when the registry value is not an array', async () => {
     vi.spyOn(SupabaseSettingsAdapter, 'getRegistrySettings').mockImplementation(
-      async (keys, fallback) => {
+      (keys, fallback) => {
         const out = { ...fallback };
         if (keys.includes('analysis.streamBundles')) {
           out['analysis.streamBundles' as keyof typeof out] = 'garbage';
         }
-        return out as typeof fallback;
+        return Promise.resolve(out as typeof fallback);
       }
     );
     const result = await buildUseCase().execute(params);
