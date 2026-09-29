@@ -1,0 +1,21 @@
+.opencode/opencode.json
+  s_dd73041b1be5a2::t_c4041e870da801 15-19,45-48
+CLAUDE.md
+  s_dd73041b1be5a2::t_745a53ed7a6354 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b66bab05d0ce3ed201a11627114a4bcc98a437ac",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
