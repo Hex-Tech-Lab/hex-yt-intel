@@ -1,0 +1,27 @@
+supabase/tests/analyses_grants.sql
+  s_dd73041b1be5a2::t_c0592886731ec1 2,4-5,8-12,16-17,19-35,38-39
+web/hooks/useSSEStream.ts
+  s_dd73041b1be5a2::t_07f4a748e806c5 12,735-739
+web/lib/config/prior-payload.test.ts
+  s_dd73041b1be5a2::t_488c88b4d8f0aa 8,129-163
+web/lib/config/prior-payload.ts
+  s_dd73041b1be5a2::t_2e46c60ce0d5f6 86-130
+worker/src/routes/analysis.ts
+  s_dd73041b1be5a2::t_3b8275f7df4ea5 1247-1276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8f8d8bc4ebedb06c5ac305cbe3d25d2e00cf7677",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
