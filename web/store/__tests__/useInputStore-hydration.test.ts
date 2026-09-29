@@ -45,5 +45,6 @@ describe('useInputStore ?v= hydration', () => {
     );
     const mod = await import('@/store/useInputStore');
     expect(mod.useInputStore.getState().url).toBe('https://www.youtube.com/watch?v=AAAAAAAAAAA');
+    expect(mod.useInputStore.getState().isValid).toBe(true);
   });
 });

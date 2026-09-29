@@ -49,7 +49,13 @@ export const useInputStore = create<InputState>()(
         const merged = { ...current, ...(persisted as Partial<InputState> | undefined) };
         if (typeof window === 'undefined') return merged;
         if (typeof merged.url === 'string') {
-          merged.url = resolveHydratedUrl(merged.url, window.location.search);
+          const resolved = resolveHydratedUrl(merged.url, window.location.search);
+          if (resolved !== merged.url) {
+            // The route video replaced the persisted one: re-derive isValid
+            // from the new url so the pair never disagrees.
+            merged.url = resolved;
+            merged.isValid = InputUrlSchema.safeParse(resolved).success;
+          }
         }
         return merged;
       },

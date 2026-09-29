@@ -299,6 +299,45 @@ describe('AnalysisHistory restore flow (real component, real click)', () => {
     expect(urlsOf(fetchSpy).filter((u) => u.includes('analysis-partial-1'))).toHaveLength(0);
   });
 
+  it.each([
+    ['404', new Response(JSON.stringify({ error: 'Analysis not found' }), { status: 404 })],
+    ['generic 500', new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })],
+    ['429 budget_exhausted', new Response(JSON.stringify({ error: 'budget_exhausted' }), { status: 429 })],
+  ])('R4 T2: a %s retry response does not refetch the overview and re-enables the button', async (_label, retryRes) => {
+    const fetchSpy = stubRetryFetch(PARTIAL_ITEM, retryRes);
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fetchSpy.mockClear();
+    fireEvent.click(button);
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const urls = urlsOf(fetchSpy);
+    expect(urls.filter((u) => u.includes('/retry'))).toHaveLength(1);
+    expect(urls.filter((u) => u.includes('/api/analyses/overview'))).toHaveLength(0);
+  });
+
+  it('R4 T2: a second click while a retry is in flight sends no second request', async () => {
+    let release: (response: Response) => void = () => {};
+    const pending = new Promise<Response>((resolve) => { release = resolve; });
+    const fetchSpy = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/overview')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [PARTIAL_ITEM] }), { status: 200 }));
+      }
+      if (url.includes('/retry')) return pending;
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fireEvent.click(button);
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.click(button);
+    release(new Response(JSON.stringify({ status: 'complete', dimensionsRequested: [3, 9] }), { status: 200 }));
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+    expect(urlsOf(fetchSpy).filter((u) => u.includes('/retry'))).toHaveLength(1);
+  });
+
   it('R4 T3b/c: an incomplete current analysis shows the WIP card, labelled labels a partial/incomplete current analysis "Partially complete"', async () => {
     stubRetryFetch(PARTIAL_ITEM, new Response('{}', { status: 200 }));
     useInputStore.setState({ url: 'https://www.youtube.com/watch?v=AAAAAAAAAAA', isValid: true });
