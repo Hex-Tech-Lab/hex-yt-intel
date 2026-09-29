@@ -10,6 +10,7 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask, publishDigestTask, publishHighlightsTask, publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
 import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
@@ -20,7 +21,7 @@ import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
 import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
-import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
+import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
 
@@ -412,6 +413,17 @@ export async function POST(request: NextRequest) {
       }
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
+
+      // R1b (2026-09-29): registry-resolved cap for the crossDomainBridges
+      // field (UCIS sub-dimension 8.3) consumed by stitchChunksIntoPayload.
+      // Code fallback mirrors the registry key's default (4000).
+      const bridgesCapRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+        ['analysis.layer2.crossDomainBridgesMaxChars'],
+        { 'analysis.layer2.crossDomainBridgesMaxChars': CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS }
+      );
+      const crossDomainBridgesMaxChars = Number(
+        bridgesCapRegistry['analysis.layer2.crossDomainBridgesMaxChars']
+      ) || CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS;
 
       let validPayload: UCISPayloadV2 | undefined;
       // P1b (PR #312 post-merge review): payload validity for chunk requests
@@ -954,7 +966,7 @@ export async function POST(request: NextRequest) {
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
             stance_relations: priorPayload?.stance_relations ?? null,
           };
-          const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal, extraMetadata);
+          const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
           const stitchedPayload = stitchResult.payload ?? null;
           const stitchedMarkdown = stitchResult.markdown;
           const isStitchedValid = stitchResult.validationPassed;
@@ -1269,7 +1281,7 @@ export async function POST(request: NextRequest) {
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
             stance_relations: priorPayload?.stance_relations ?? null,
           };
-          const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal, extraMetadata);
+          const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
           if (stitchResult.payload !== undefined) {
             stitchedPayload = stitchResult.payload;
             stitchedMarkdown = stitchResult.markdown;

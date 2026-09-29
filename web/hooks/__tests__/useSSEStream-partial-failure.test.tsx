@@ -49,6 +49,9 @@ const PREP_JOB = {
   status: 'processing',
   metadata: { title: 'Partial Failure Test Video' },
   stream: { url: WORKER_URL, sig: 'sig', exp: 9999999999 },
+  // R1a: dispatch reads job.streamBundles; this 2-bundle fixture keeps the
+  // reduced-stream intent in lockstep with the mocked useAdminSettings config.
+  streamBundles: [[1], [2]],
   userId: 'user-1',
   transcript: 'transcript text',
 };

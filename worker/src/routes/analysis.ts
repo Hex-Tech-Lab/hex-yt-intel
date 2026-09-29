@@ -16,6 +16,8 @@ import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint } from "../crypto";
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
+import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
+import { isProjectiveBundle } from "../../../web/lib/config/synthesis";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
 
@@ -119,6 +121,13 @@ interface StreamRequest {
   // Vercel bouncer resolves it and forwards it here; stale clients (undefined)
   // fall back to getUCISPrompt's legacy 48000.
   transcriptBudgetChars?: number;
+  /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
+  prior_payload?: Record<string, unknown>;
+  // R1d (2026-09-29): registry-resolved byte cap for the prior_payload guard,
+  // resolved by CreateAnalysisUseCase (web/lib/config/prior-payload.ts) and
+  // forwarded per-request -- the worker has no DB access (ADR 005). Stale
+  // clients (undefined) fall back to the same 65536 default.
+  priorPayloadMaxBytes?: number;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -743,6 +752,7 @@ function buildStreamResponse(
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   cache?: UpstashCacheAdapter,
+  priorPayload?: Record<string, unknown>,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
@@ -1071,6 +1081,7 @@ function buildStreamResponse(
             timezone: req.timezone,
             dimensions: req.dimensions,
             transcriptBudgetChars: req.transcriptBudgetChars,
+            prior_payload: priorPayload,
           },
           {
             onDelta: (delta: string) => {
@@ -1262,6 +1273,44 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Invalid token", reason }, 401);
   }
 
+  // R1d (2026-09-29, Finding 4): boundary guard on prior_payload AFTER the HMAC check (CodeRabbit #363: no parsing/Sentry for unauthenticated requests) and BEFORE any
+  // LLM call or cache write. Contract: strict Zod schema (schemaVersion '2.0',
+  // 1..11 int-numbered dimensions), serialized size <= priorPayloadMaxBytes
+  // (registry-resolved by CreateAnalysisUseCase, ADR 005), and only projective
+  // bundles may carry one -- grounded bundles get theirs dropped with a
+  // warning (the client sends the job's stored remediation prior_payload on
+  // single-bundle remediation dispatches, which may be grounded). Rejection is
+  // a hard 400, never silent truncation. Sanitized dims (number + content
+  // only) replace the raw payload so passthrough keys never reach the prompt.
+  let priorPayload: Record<string, unknown> | undefined;
+  if (req.prior_payload !== undefined) {
+    const dims = req.dimensions ?? [];
+    const isProjective = isProjectiveBundle(dims);
+    // Client-supplied (unsigned) -> clamped to a hard ceiling: the registry can
+    // lower the cap, a forged request can never raise it.
+    const maxBytes = resolvePriorPayloadMaxBytes(req.priorPayloadMaxBytes);
+    const verdict = validatePriorPayload(req.prior_payload, { maxBytes, isProjective });
+    if (verdict.ok) {
+      priorPayload = { schemaVersion: "2.0", dimensions: verdict.dimensions };
+    } else if (verdict.reason === "grounded_bundle_rejects_prior_payload") {
+      console.warn("[analyze-llm-stream] grounded bundle sent prior_payload; dropping (R1d)", {
+        videoId: req.videoId,
+        analysisId: req.analysisId,
+        dimensions: dims,
+      });
+      Sentry.captureMessage("prior_payload dropped on grounded bundle", { level: "warning", extra: { videoId: req.videoId, analysisId: req.analysisId, dimensions: dims } });
+    } else {
+      console.warn("[analyze-llm-stream] prior_payload rejected", {
+        reason: verdict.reason,
+        videoId: req.videoId,
+        analysisId: req.analysisId,
+        dimensions: dims,
+      });
+      Sentry.captureMessage("invalid_prior_payload rejected at boundary", { level: "warning", extra: { reason: verdict.reason, videoId: req.videoId, analysisId: req.analysisId } });
+      return c.json({ error: "invalid_prior_payload", reason: verdict.reason }, 400);
+    }
+  }
+
   // 2026-08-28 (stream-5 RCA): everything from token verification through stream
   // construction ran unguarded, so any throw (parseChapters on a malformed
   // description, adapter constructors, buildStreamResponse setup) escaped to the
@@ -1306,7 +1355,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     const persistController = new AbortController();
     const httpConnSignal = c.req.raw['signal'];
 
-    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache);
+    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache, priorPayload);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;

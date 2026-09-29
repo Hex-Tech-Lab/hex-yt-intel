@@ -1,0 +1,60 @@
+-- R1c — Finding 5 (CC 96-hour audit): lock billing/validation columns on
+-- public.analyses away from client roles.
+--
+-- Problem (live DB verified by CC 2026-09-29): both `anon` and `authenticated`
+-- hold INSERT + UPDATE on ALL columns of public.analyses, including
+-- billing_status and validation_report. A user with the public anon key and
+-- their own session can set billing_status='partial' on their own rows; the
+-- ADR 019 remediation sweep then spends the shared OpenRouter budget on them,
+-- and they can forge validation_report or insert rows that bypass quota.
+--
+-- Route audit (step 2 of dispatch 2026-09-29-oc-r1c-analyses-grants.md) —
+-- every user-session-client write on public.analyses found in the codebase
+-- (grep `from('analyses')` web --include=*.ts --include=*.tsx, excluding tests;
+-- client determined per call site; `service` = getSupabaseServiceClient, which
+-- bypasses these grants entirely and is unaffected):
+--
+-- | Route / file                                                              | Client       | Op     | Columns written                                            |
+-- |---------------------------------------------------------------------------|--------------|--------|------------------------------------------------------------|
+-- | web/app/api/analyses/[id]/share/route.ts (~42)                            | user session | update | shared_token, shared_expires_at                             |
+-- | web/app/api/analyses/[id]/fail/route.ts (~69)                             | service      | update | (service_role — unaffected)                                 |
+-- | web/app/api/analyses/[id]/relations/route.ts (~85, ~121)                  | user session | select | (SELECT only — unaffected)                                  |
+-- | web/app/api/comments/persist-sample-run/route.ts (~69, ~88)               | service      | select/update | (service_role — unaffected)                          |
+-- | web/app/api/chat/capture-question/route.ts (~202)                         | service      | select | (service_role — unaffected)                                 |
+-- | web/app/api/webhooks/embed/route.ts (~186)                                | service      | update | (service_role — unaffected)                                 |
+-- | web/lib/services/analysis-requeue.ts (~280)                               | service      | update | (service_role — unaffected)                                 |
+-- | web/lib/skills/wiki-builder/wiki-builder.ts (~195, ~224)                  | service      | storage list/download (`storage.from('analyses')`, not the table) | n/a |
+--
+-- Additional rows found outside the candidate list (same sweep):
+--
+-- | Route / file                                                              | Client       | Op     | Columns written                                            |
+-- |---------------------------------------------------------------------------|--------------|--------|------------------------------------------------------------|
+-- | web/app/api/admin/stats/route.ts (~178)                                   | user session | insert into usage_logs (NOT analyses) | n/a — different table, out of scope |
+-- | web/app/api/comments/tier3/start/route.ts (~44)                           | service      | select | (service_role — unaffected)                                 |
+-- | web/app/api/admin/users/[id]/route.ts (~32)                               | service      | select | (service_role — unaffected)                                 |
+-- | web/app/api/analyses/[id]/export/route.ts, check/route.ts, highlights/route.ts | user session | select | (SELECT only — unaffected)                      |
+-- | web/lib/adapters/SupabaseAnalysisAdapter.ts, SupabasePersistenceAdapter.ts, analysis-reaper.ts, dimension-remediation.ts, analysis-requeue.ts, SupabaseAuxRemediationAdapter.ts, SupabaseGraphAdapter.ts, SupabaseBillingAdapter.ts, web/lib/admin-logs/fetchers.ts | service | select/update/upsert | (service_role — unaffected) |
+--
+-- Result: the ONLY user-session-client write on public.analyses is the share
+-- route, writing shared_token + shared_expires_at. No user-client INSERT or
+-- DELETE on analyses exists anywhere in the codebase, so the dispatch's
+-- [BLOCKED] abort condition does not trigger.
+--
+-- Grant change (this migration):
+--   1. anon    : revoke INSERT/UPDATE/DELETE on public.analyses (table-wide).
+--   2. authenticated: revoke INSERT/UPDATE (table-wide), then re-grant UPDATE
+--      on exactly the columns user-client server routes really write:
+--      shared_token, shared_expires_at.
+--   3. RLS policies (analyses_select_own / insert_own / update_own /
+--      delete_own) are intentionally NOT touched — this is a grant change
+--      only; row ownership stays as-is.
+--   4. service_role and SELECT grants are unchanged.
+--
+-- Verification assertion: supabase/tests/analyses_grants.sql (fails if
+-- authenticated holds UPDATE on billing_status, or on validation_report, or
+-- if anon/authenticated regain any INSERT/UPDATE/DELETE outside the contract).
+
+revoke insert, update, delete on public.analyses from anon;
+revoke insert, update on public.analyses from authenticated;
+
+grant update (shared_token, shared_expires_at) on public.analyses to authenticated;

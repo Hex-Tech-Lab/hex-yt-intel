@@ -60,7 +60,7 @@ function baseContext(dimensions: number[]): EngineContext {
 
 // The real 5-bundle shape: every bundle's shared prefix must be byte-identical
 // so the cache breakpoint hits across all 5 calls.
-const BUNDLE_DIMENSIONS: number[][] = [[1, 2, 3], [4, 5], [6], [7, 8], [9, 10, 11]];
+const BUNDLE_DIMENSIONS: number[][] = [[1, 10], [2, 4, 6], [5, 7], [3, 8], [9, 11]];
 
 describe('prompt-cache request shape (bundle LLM calls)', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -82,6 +82,47 @@ describe('prompt-cache request shape (bundle LLM calls)', () => {
     }
     // Bundles actually differ after the breakpoint (not accidentally identical).
     expect(new Set(built.map((b) => b.segmentInstruction)).size).toBe(BUNDLE_DIMENSIONS.length);
+  });
+
+  // R1b (2026-09-29) Layer 2 epistemic split: the epistemic constraint must
+  // live in the segmentInstruction (AFTER the cacheable sharedPrefix), never
+  // in the prefix, so the cache identity contract survives the split.
+  it('epistemic split: grounded bundles get Universe-of-1 + dim-8 omits 8.3; projective bundle gets projection + crossDomainBridges', async () => {
+    const builder = new PromptBuilder(undefined);
+    const groundedDim8 = await builder.buildSegmented({ ...baseContext([3, 8]), dimensions: [3, 8] });
+    const groundedPlain = await builder.buildSegmented({ ...baseContext([1, 10]), dimensions: [1, 10] });
+    const projective = await builder.buildSegmented({ ...baseContext([9, 11]), dimensions: [9, 11] });
+
+    // Grounded: zero-extrapolation constraint present.
+    expect(groundedDim8.segmentInstruction).toContain('EPISTEMIC MODE - UNIVERSE OF 1');
+    expect(groundedPlain.segmentInstruction).toContain('EPISTEMIC MODE - UNIVERSE OF 1');
+    // Dim 8 grounded bundle explicitly omits sub-dimension 8.3.
+    expect(groundedDim8.segmentInstruction).toContain('8.1, 8.2, and 8.4');
+    expect(groundedDim8.segmentInstruction).toContain('Do NOT include the "Cross-Domain Bridges" sub-section');
+    // Plain grounded bundle (no dim 8) carries no dim-8 omission line.
+    expect(groundedPlain.segmentInstruction).not.toContain('Cross-Domain Bridges');
+
+    // Projective: projection-mode constraint + crossDomainBridges root field.
+    expect(projective.segmentInstruction).toContain('EPISTEMIC MODE - PLURALISTIC PROJECTION');
+    expect(projective.segmentInstruction).toContain('"crossDomainBridges" markdown string');
+    expect(projective.segmentInstruction).not.toContain('EPISTEMIC MODE - UNIVERSE OF 1');
+    expect(projective.segmentInstruction).not.toContain('Cross-Domain Bridges" sub-section (8.3)');
+
+    // Projective bundle WITHOUT prior_payload: no foundational-truth block.
+    expect(projective.segmentInstruction).not.toContain('GROUNDED FOUNDATIONAL TRUTH');
+
+    // Projective bundle WITH prior_payload: the grounded payload is embedded
+    // as the factual foundation, in the segmentInstruction only.
+    const prior = { schemaVersion: '2.0', dimensions: [{ number: 1, content: 'grounded' }] };
+    const projectiveWithPrior = await builder.buildSegmented({ ...baseContext([9, 11]), dimensions: [9, 11], prior_payload: prior });
+    expect(projectiveWithPrior.segmentInstruction).toContain('CRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH)');
+    expect(projectiveWithPrior.segmentInstruction).toContain(JSON.stringify(prior));
+    expect(projectiveWithPrior.sharedPrefix).not.toContain('GROUNDED FOUNDATIONAL TRUTH');
+
+    // Grounded bundles never receive a prior_payload instruction even when
+    // one is present on the context.
+    const groundedWithPrior = await builder.buildSegmented({ ...baseContext([1, 10]), dimensions: [1, 10], prior_payload: prior });
+    expect(groundedWithPrior.segmentInstruction).not.toContain('GROUNDED FOUNDATIONAL TRUTH');
   });
 
   it('places cache_control on the prefix block and leaves the suffix uncached; captures cached_tokens', async () => {

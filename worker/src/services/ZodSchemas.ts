@@ -112,4 +112,11 @@ export const UCISPayloadSchema = z.object({
 export const ChunkPayloadSchema = z.object({
   schemaVersion: z.literal('2.0'),
   dimensions: z.array(UCISDimensionSchema),
+  // R1b (2026-09-29): sub-dimension 8.3 Cross-Domain Bridges, carried by the
+  // PROJECTIVE bundle as a top-level root field (it belongs to no emitted
+  // dimension object). Validated as markdown text and merged into dimension
+  // 8's content client-side at the stitch step. Display text only; the
+  // char cap (analysis.layer2.crossDomainBridgesMaxChars) is enforced at the
+  // stitch step, not here.
+  crossDomainBridges: z.string().min(1).optional(),
 }).passthrough();

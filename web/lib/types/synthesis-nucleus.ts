@@ -209,6 +209,7 @@ export interface UCISPayloadV2 {
   channelMeta?: Record<string, unknown> | null;
   comments?: Array<Record<string, unknown>> | null;
   stance_relations?: (RelationsResult & { contentHash?: string }) | null;
+  crossDomainBridges?: string;
 }
 
 /**

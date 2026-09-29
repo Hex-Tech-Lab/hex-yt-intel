@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type {
   MetadataIngestionPort,
   AnalysisPersistencePort,
@@ -16,7 +17,9 @@ import { createHash } from 'crypto';
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
+import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
+import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 // Must match the registry's seeded defaults (20260725110000_comments_sync_pool_fetch_settings.sql).
@@ -63,6 +66,8 @@ export interface UseCaseSuccess {
   persona: PersonaId;
   /** Registry-resolved prompt transcript char budget (2026-09-27). */
   transcriptBudgetChars: number;
+  /** Registry-resolved dimension partition for the 5 parallel streams (R1a 2026-09-29). */
+  streamBundles: number[][];
   metadata: AnalysisJobMetadata;
   transcript: string;
   segments?: TranscriptSegment[];
@@ -78,6 +83,8 @@ export interface UseCaseSuccess {
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
   commentsSyncPoolConfig: CommentsSyncPoolConfig;
+  /** R1d: byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */
+  priorPayloadMaxBytes: number;
   stream: {
     url: string;
     sig: string;
@@ -221,6 +228,27 @@ export class CreateAnalysisUseCase {
     const cacheWarmRaw = Number(resolvedCachingRegistry['analysis.llmCascade.cacheWarmTimeoutMs']);
     const cacheWarmTimeoutMs = Number.isFinite(cacheWarmRaw) ? cacheWarmRaw : 3000;
 
+    // R1a (2026-09-29): single authority for the dimension partition is the
+    // registry key `analysis.streamBundles`; STREAM_BUNDLES is the only
+    // fallback. The partition invariant is enforced here, server-side, before
+    // the map reaches the client -- an invalid value is reported, not used.
+    const resolvedBundleRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.streamBundles'],
+      { 'analysis.streamBundles': STREAM_BUNDLES }
+    );
+    let streamBundles: number[][] = STREAM_BUNDLES;
+    try {
+      const candidate = resolvedBundleRegistry['analysis.streamBundles'] as number[][];
+      assertBundlePartition(candidate);
+      streamBundles = candidate;
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { component: 'CreateAnalysisUseCase', phase: 'stream-bundles-invariant' },
+        extra: { registryValue: resolvedBundleRegistry['analysis.streamBundles'] },
+      });
+      console.error('[CreateAnalysisUseCase] invalid analysis.streamBundles, using STREAM_BUNDLES fallback:', error instanceof Error ? error.message : String(error));
+    }
+
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
       .update(ingestionResult.transcript || '')
@@ -311,6 +339,20 @@ export class CreateAnalysisUseCase {
       timeoutMs: Number(resolvedSyncPoolRegistry['comments.sampling.syncPoolTimeoutMs']) || SYNC_POOL_CONFIG_FALLBACK.timeoutMs,
     };
 
+    // R1d (2026-09-29): byte cap for the worker's prior_payload boundary guard
+    // (web/lib/config/prior-payload.ts). Resolved here -- the worker has no DB
+    // access (ADR 005) -- and forwarded per-request alongside the other
+    // registry-derived tunables. Stale clients (undefined) fall back to the
+    // same 65536 default worker-side.
+    const resolvedPriorPayloadRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.layer2.priorPayloadMaxBytes'],
+      { 'analysis.layer2.priorPayloadMaxBytes': PRIOR_PAYLOAD_MAX_BYTES_FALLBACK }
+    );
+    const priorPayloadMaxBytesRaw = Number(resolvedPriorPayloadRegistry['analysis.layer2.priorPayloadMaxBytes']);
+    const priorPayloadMaxBytes = Number.isFinite(priorPayloadMaxBytesRaw)
+      ? priorPayloadMaxBytesRaw
+      : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -360,10 +402,12 @@ export class CreateAnalysisUseCase {
         promptCaching,
         cacheWarmTimeoutMs,
         transcriptBudgetChars,
+        streamBundles,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,
         commentsSyncPoolConfig,
+        priorPayloadMaxBytes,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,
