@@ -488,6 +488,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // missingDimensions; the server loads priorPayload from the referenced row
   // and re-runs only the missing bundles.
   const retryMissingDimensions = async (item: HistoryOverviewItem): Promise<void> => {
+    // R0 stopgap (audit 2026-09-29 finding 1): server returns cache_hit for partial rows; real fix in R2.
+    // (boolean-typed flag, not a literal, so the R2 body below stays tsc-reachable and type-checked)
+    const r0Stopgap = { enabled: true };
+    if (r0Stopgap.enabled) return;
     if (retryingId !== null || item.missingDimensions.length === 0) return;
     setRetryingId(item.analysisId);
     setRestoreError(null);
@@ -892,13 +896,14 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                             {item.status === 'partial' && item.missingDimensions.length > 0 && (
                               <button
                                 type="button"
-                                disabled={busy || retryingId === item.analysisId}
+                                disabled
+                                aria-disabled="true"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   void retryMissingDimensions(item);
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--warn)]/15 text-[var(--warn)] hover:bg-[var(--warn)]/25 border border-[var(--warn)]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={`Retry missing dimensions: ${item.missingDimensions.join(', ')}`}
+                                title="Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections."
                               >
                                 <Icon icon={retryingId === item.analysisId ? 'eos-icons:bubble-loading' : 'solar:restart-linear'} size={11} />
                                 {retryingId === item.analysisId ? 'Retrying…' : `Retry Missing (${item.missingDimensions.length})`}

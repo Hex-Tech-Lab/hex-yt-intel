@@ -213,4 +213,53 @@ describe('AnalysisHistory restore flow (real component, real click)', () => {
 
     unmountAux();
   });
+
+  it('R0 stopgap: Retry Missing on a partial row renders disabled with the exact tooltip, and clicking it makes zero network requests', async () => {
+    // R0 stopgap (audit 2026-09-29 finding 1) regression guard. The server
+    // returns cache_hit for partial rows (SupabaseAnalysisAdapter accepts
+    // partial rows with content), so the pre-stopgap button POSTed, got a
+    // cache_hit, and nothing was retried — the button lied. R0 disables it
+    // with an exact tooltip; this pins the contract until R2 rewires
+    // selective retry.
+    const PARTIAL_ITEM = {
+      ...HISTORY_ITEM,
+      analysisId: 'analysis-partial-1',
+      title: 'Partial Retry Test Video',
+      presentDimensions: [1, 2, 4, 5, 6, 7, 8, 10, 11],
+      missingDimensions: [3, 9],
+      status: 'partial' as const,
+    };
+    const fetchSpy = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/overview')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ items: [PARTIAL_ITEM] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    render(createElement(AnalysisHistory));
+    await screen.findByText('Partial Retry Test Video');
+
+    const button = screen.getByTitle(
+      'Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections.'
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.getAttribute('title')).toBe(
+      'Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections.'
+    );
+
+    // The initial overview fetch is the only legitimate request; clear it so
+    // the zero-network assertion below covers the click only.
+    fetchSpy.mockClear();
+
+    fireEvent.click(button);
+    // Flush any async continuation a (buggy, enabled) handler would schedule.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
