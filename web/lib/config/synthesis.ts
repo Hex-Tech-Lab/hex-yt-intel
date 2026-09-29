@@ -19,13 +19,53 @@ export const TOTAL_STREAMS = 5;
  */
 export const MIN_USABLE_DIMENSIONS = 8;
 
+// R1a (2026-09-29): this constant is now the CODE fallback only. The authority
+// is the Settings Registry key `analysis.streamBundles` (type json), resolved
+// server-side by CreateAnalysisUseCase and delivered to the client as
+// `job.streamBundles`. Invariant enforced by assertBundlePartition below.
 export const STREAM_BUNDLES: number[][] = [
-  [1, 10],         // Apex & Credibility
-  [8],             // Semantic / KG (large, has knowledgeGraph)
-  [2, 4, 6],       // Provenance, Psychological, Comparative
-  [5, 7],          // CoreIntel & Implementation
-  [3, 9, 11],      // Architecture, Forward, Monetization (has classification + monetization)
+  [1, 10],         // grounded: Apex Intelligence + Credibility & Risk
+  [2, 4, 6],       // grounded: Provenance, Psychological, Comparative
+  [5, 7],          // grounded: Core Intelligence, Implementation Systems
+  [3, 8],          // grounded: Content Architecture + Semantic/KG (dim 8 = 8.1/8.2/8.4 only; 8.3 moves to the projective bundle in R1b)
+  [9, 11],         // PROJECTIVE: Forward Foresight + Commercial Yield
 ];
+
+/**
+ * R1a bundle-partition invariant (server-enforced before any registry-resolved
+ * map reaches the client): exactly TOTAL_STREAMS bundles, every dimension
+ * 1..TOTAL_DIMENSIONS appears EXACTLY once, no 0 and no duplicates.
+ * Throws a precise message naming the first violated rule.
+ */
+export function assertBundlePartition(bundles: number[][]): void {
+  if (!Array.isArray(bundles) || !bundles.every(Array.isArray)) {
+    throw new Error('assertBundlePartition: expected an array of dimension arrays');
+  }
+  if (bundles.length !== TOTAL_STREAMS) {
+    throw new Error(
+      `assertBundlePartition: expected exactly ${TOTAL_STREAMS} bundles, got ${bundles.length}`
+    );
+  }
+  const seen = new Set<number>();
+  for (const bundle of bundles) {
+    for (const dim of bundle) {
+      if (!Number.isInteger(dim) || dim < 1 || dim > TOTAL_DIMENSIONS) {
+        throw new Error(
+          `assertBundlePartition: dimension ${dim} is outside the valid range 1..${TOTAL_DIMENSIONS}`
+        );
+      }
+      if (seen.has(dim)) {
+        throw new Error(`assertBundlePartition: dimension ${dim} appears more than once`);
+      }
+      seen.add(dim);
+    }
+  }
+  for (let d = 1; d <= TOTAL_DIMENSIONS; d++) {
+    if (!seen.has(d)) {
+      throw new Error(`assertBundlePartition: dimension ${d} is missing from the partition`);
+    }
+  }
+}
 
 /**
  * Whether to abort all parallel streams if a single stream fails.

@@ -4,8 +4,9 @@
  * Settings are cached in context to avoid repeated database hits.
  */
 
-import { getSupabaseBrowserClient } from '@/utils/supabase/client';
 import * as Sentry from '@sentry/nextjs';
+import { getSupabaseBrowserClient } from '@/utils/supabase/client';
+import { STREAM_BUNDLES } from '@/lib/config/synthesis';
 import type { AdminSettings, UserSettings } from '@/lib/types/settings';
 
 /**
@@ -167,13 +168,9 @@ function getDefaultAdminSettings(): AdminSettings {
     id: 'default',
     totalDimensions: 11,
     minUsableDimensions: 8,
-    streamBundles: [
-      { dimensions: [1] }, // Apex (largest, has persona)
-      { dimensions: [8] }, // Semantic / KG (large, has knowledgeGraph)
-      { dimensions: [2, 4, 6] }, // Provenance, Psychological, Comparative
-      { dimensions: [5, 7, 10] }, // CoreIntel, Implementation, Credibility
-      { dimensions: [3, 9, 11] }, // Architecture, Forward, Monetization
-    ],
+    // R1a (2026-09-29): derived from the code constant (single source) --
+    // never a literal here, so this fallback cannot drift from synthesis.ts.
+    streamBundles: STREAM_BUNDLES.map(d => ({ dimensions: d })),
     dimensionConfigs: {
       0: { number: 0, name: 'EXECUTIVE DIGEST' },
       1: { number: 1, name: 'APEX INTELLIGENCE', extraFields: ['persona'] },

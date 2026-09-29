@@ -11,8 +11,8 @@
  * the gate (they arrive before the cache write starts).
  *
  * Reuses the renderHook + fetch-router harness from
- * useSSEStream-partial-failure.test.tsx (real hook, real stores, 2-bundle
- * config via mocked useAdminSettings).
+ * useSSEStream-partial-failure.test.tsx (real hook, real stores, registry-
+ * derived 5-bundle config via mocked useAdminSettings).
  */
 
 // @vitest-environment happy-dom
@@ -26,6 +26,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useChaptersStore } from '@/store/useChaptersStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAdminSettings } from '@/lib/stores/settings-context';
+import { STREAM_BUNDLES, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import type { AdminSettings } from '@/lib/types/settings';
 
 vi.mock('@/lib/stores/settings-context', () => ({
@@ -46,6 +47,9 @@ function makeJob(extra: Record<string, unknown> = {}) {
     status: 'processing',
     metadata: { title: 'Cache Stagger Test Video' },
     stream: { url: WORKER_URL, sig: 'sig', exp: 9999999999 },
+    // R1a: dispatch reads job.streamBundles (registry-resolved server-side);
+    // the 5-bundle target partition replaces the hook's config.streamBundles read.
+    streamBundles: [[1, 10], [2, 4, 6], [5, 7], [3, 8], [9, 11]],
     userId: 'user-1',
     transcript: 'transcript text',
     promptCaching: true,
@@ -101,7 +105,7 @@ describe('useSSEStream prompt-cache warm stagger', () => {
     useVideoStore.getState().reset();
     useChaptersStore.getState().reset(VIDEO_ID);
     vi.mocked(useAdminSettings).mockReturnValue({
-      streamBundles: [{ dimensions: [1] }, { dimensions: [2] }],
+      streamBundles: STREAM_BUNDLES.map(d => ({ dimensions: d })),
       abortOnPartialFailure: undefined,
     } as unknown as AdminSettings);
   });
@@ -154,8 +158,10 @@ describe('useSSEStream prompt-cache warm stagger', () => {
     }, { timeout: 3000 });
 
     expect(bundle1LlmStartTime).toHaveLength(1);
-    expect(bundle2FetchTime).toHaveLength(1);
-    expect(bundle2FetchTime[0]!).toBeGreaterThanOrEqual(bundle1LlmStartTime[0]! - 5);
+    // R1a: 5 job bundles now dispatch, so all 4 follower bundles (2..5) must
+    // fetch exactly once each, and only after bundle 1's llm-start.
+    expect(bundle2FetchTime).toHaveLength(TOTAL_STREAMS - 1);
+    expect(bundle2FetchTime.every(t => t >= bundle1LlmStartTime[0]! - 5)).toBe(true);
   });
 
   it('starts bundles after the bounded wait when bundle 1 never streams a byte (timeout fallback)', async () => {
@@ -231,7 +237,7 @@ describe('useSSEStream prompt-cache warm stagger', () => {
     await waitFor(() => {
       expect(useAnalysisStore.getState().status).toBe('complete');
     }, { timeout: 3000 });
-    expect(bundle2FetchTime).toHaveLength(1);
+    expect(bundle2FetchTime).toHaveLength(TOTAL_STREAMS - 1);
   });
 
   it('does not stagger at all when prompt caching is disabled', async () => {

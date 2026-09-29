@@ -88,77 +88,77 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'q'",
     "why": "Single-letter variable 'q' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'm'",
     "why": "Single-letter variable 'm' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 's'",
     "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'm'",
     "why": "Single-letter variable 'm' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "scripts/bakeoff-l2-evaluator.ts",
@@ -234,7 +234,7 @@
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/lib/services/cache' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/lib/services/cache' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -242,21 +242,21 @@
     "severity": "medium",
     "title": "Validation: Manual range check duplicates Zod schema",
     "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
-    "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+    "fix": "Remove manual range validation after schema.safeParse() \u2014 Zod handles it. Keep only post-parse semantic checks."
   },
   {
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/app/api/analyses/persist/route.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
@@ -276,7 +276,7 @@
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import 'next/dynamic' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import 'next/dynamic' (framework) comes after thirdparty. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -298,28 +298,28 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'q'",
     "why": "Single-letter variable 'q' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'k'",
     "why": "Single-letter variable 'k' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'k' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'k' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
@@ -347,70 +347,70 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/__tests__/dedupe-fetch.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/__tests__/dedupe-fetch.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/__tests__/history-overview.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
@@ -424,28 +424,28 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'h'",
     "why": "Single-letter variable 'h' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'h' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'h' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'm'",
     "why": "Single-letter variable 'm' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 's'",
     "why": "Single-letter variable 's' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 's' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'd'",
     "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
@@ -480,34 +480,34 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/usecases/ExtractHighlightsUseCase.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/lib/utils/simhash' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/lib/utils/simhash' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -522,14 +522,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/utils/__tests__/dedupe-fetch.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/utils/history-overview.ts",
@@ -557,7 +557,7 @@
     "severity": "medium",
     "title": "Validation: Manual range check duplicates Zod schema",
     "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
-    "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+    "fix": "Remove manual range validation after schema.safeParse() \u2014 Zod handles it. Keep only post-parse semantic checks."
   },
   {
     "file": "web/lib/validators/synthesis.ts",
@@ -613,7 +613,7 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/services/ZodSchemas.ts",
@@ -669,14 +669,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/organisms/ExecutiveSummary.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/ChatDock.tsx",
@@ -696,7 +696,7 @@
     "file": "web/components/templates/console/ChatDock.tsx",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/nextjs' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@sentry/nextjs' (framework) comes after thirdparty. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -711,14 +711,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/ChatDock.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/ChatDock.tsx",
@@ -732,21 +732,21 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'd'",
     "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/__tests__/analysis-reaper.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/__tests__/analysis-reaper.test.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/chat/outbox.ts",
@@ -788,7 +788,7 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useInputStore.ts",
@@ -796,5 +796,68 @@
     "title": "INP: Synchronous validation in onChange/state setter",
     "why": "Zod safeParse (regex) runs on every keystroke. Blocks UI for 200-500ms per keystroke.",
     "fix": "Remove validation from the state setter. Defer to submit/analyze time: validate only when user triggers action."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "medium",
+    "title": "Code Quality: Redundant 'async' keyword (no await found)",
+    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
+    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (801 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@/lib/config/synthesis-with-settings' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/usecases/CreateAnalysisUseCase.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@/lib/youtube' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/lib/usecases/CreateAnalysisUseCase.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'this.metadataIngestion.fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   }
 ]

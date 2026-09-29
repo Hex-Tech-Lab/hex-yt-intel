@@ -60,7 +60,7 @@ function baseContext(dimensions: number[]): EngineContext {
 
 // The real 5-bundle shape: every bundle's shared prefix must be byte-identical
 // so the cache breakpoint hits across all 5 calls.
-const BUNDLE_DIMENSIONS: number[][] = [[1, 2, 3], [4, 5], [6], [7, 8], [9, 10, 11]];
+const BUNDLE_DIMENSIONS: number[][] = [[1, 10], [2, 4, 6], [5, 7], [3, 8], [9, 11]];
 
 describe('prompt-cache request shape (bundle LLM calls)', () => {
   afterEach(() => vi.restoreAllMocks());

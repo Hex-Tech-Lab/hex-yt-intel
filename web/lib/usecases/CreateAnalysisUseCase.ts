@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type {
   MetadataIngestionPort,
   AnalysisPersistencePort,
@@ -16,6 +17,7 @@ import { createHash } from 'crypto';
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
+import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -63,6 +65,8 @@ export interface UseCaseSuccess {
   persona: PersonaId;
   /** Registry-resolved prompt transcript char budget (2026-09-27). */
   transcriptBudgetChars: number;
+  /** Registry-resolved dimension partition for the 5 parallel streams (R1a 2026-09-29). */
+  streamBundles: number[][];
   metadata: AnalysisJobMetadata;
   transcript: string;
   segments?: TranscriptSegment[];
@@ -221,6 +225,27 @@ export class CreateAnalysisUseCase {
     const cacheWarmRaw = Number(resolvedCachingRegistry['analysis.llmCascade.cacheWarmTimeoutMs']);
     const cacheWarmTimeoutMs = Number.isFinite(cacheWarmRaw) ? cacheWarmRaw : 3000;
 
+    // R1a (2026-09-29): single authority for the dimension partition is the
+    // registry key `analysis.streamBundles`; STREAM_BUNDLES is the only
+    // fallback. The partition invariant is enforced here, server-side, before
+    // the map reaches the client -- an invalid value is reported, not used.
+    const resolvedBundleRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.streamBundles'],
+      { 'analysis.streamBundles': STREAM_BUNDLES }
+    );
+    let streamBundles: number[][] = STREAM_BUNDLES;
+    try {
+      const candidate = resolvedBundleRegistry['analysis.streamBundles'] as number[][];
+      assertBundlePartition(candidate);
+      streamBundles = candidate;
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { component: 'CreateAnalysisUseCase', phase: 'stream-bundles-invariant' },
+        extra: { registryValue: resolvedBundleRegistry['analysis.streamBundles'] },
+      });
+      console.error('[CreateAnalysisUseCase] invalid analysis.streamBundles, using STREAM_BUNDLES fallback:', error instanceof Error ? error.message : String(error));
+    }
+
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
       .update(ingestionResult.transcript || '')
@@ -360,6 +385,7 @@ export class CreateAnalysisUseCase {
         promptCaching,
         cacheWarmTimeoutMs,
         transcriptBudgetChars,
+        streamBundles,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,

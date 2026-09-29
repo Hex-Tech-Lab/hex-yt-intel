@@ -8,6 +8,7 @@ import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter'
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
+import { STREAM_BUNDLES } from '@/lib/config/synthesis';
 import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
@@ -137,7 +138,6 @@ async function fetchWorkerStream(i: number, url: string, streamPayload: WorkerSt
 export function useSSEStream() {
   const config = useSynthesisConfig();
   const TOTAL_STREAMS = config.totalStreams;
-  const STREAM_BUNDLES = config.streamBundles;
   const ABORT_ON_PARTIAL_FAILURE = config.abortOnPartialFailure;
 
   // Validate that stream config is properly loaded (prevents timing mismatches)
@@ -684,9 +684,20 @@ export function useSSEStream() {
                   handleStreamError(i, outcome.error, outcome.code);
                 };
 
-                const dimensionsList: number[][] = [];
-                for (let i = 0; i < TOTAL_STREAMS; i++) {
-                  dimensionsList.push(STREAM_BUNDLES[i]!);
+                // R1a (2026-09-29): dispatch uses the server-resolved
+                // job.streamBundles (Settings Registry `analysis.streamBundles`,
+                // partition-checked server-side). Stale cached jobs without it
+                // fall back to the STREAM_BUNDLES constant WHOLE -- never mixed
+                // or padded, which could duplicate dimensions.
+                const jobBundles: unknown = job.streamBundles;
+                const dimensionsList: number[][] =
+                  Array.isArray(jobBundles) && jobBundles.length === TOTAL_STREAMS
+                    ? (jobBundles as number[][])
+                    : STREAM_BUNDLES;
+                if (dimensionsList === STREAM_BUNDLES) {
+                  console.warn('[useSSEStream] job.streamBundles missing or malformed; using STREAM_BUNDLES constant', {
+                    received: Array.isArray(jobBundles) ? jobBundles.length : typeof jobBundles,
+                  });
                 }
 
                 store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
