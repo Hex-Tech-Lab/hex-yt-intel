@@ -1,0 +1,23 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_f00d942d639f04::t_3773d7f4b42653 492-494
+  s_f00d942d639f04::t_dddbfc3131e168 491,899-900
+  s_f00d942d639f04::t_f7b61eb28cb789 906
+web/components/templates/console/__tests__/AnalysisHistory-restore.test.tsx
+  s_f00d942d639f04::t_a4ef88a4e8b4d3 216-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3ce9c066621d4d89387815212a17143bcd17ea7f",
+  "prompts": {},
+  "sessions": {
+    "s_f00d942d639f04": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1379c9c6ffeoHwh320GKH0cJM",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
