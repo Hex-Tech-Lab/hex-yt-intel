@@ -131,8 +131,18 @@ export class PromptBuilder implements PromptBuilderPort {
         ? `If the grounded evidence is genuinely insufficient for a projection, state the limitation explicitly in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`
         : fallbackInstructions;
 
-      const priorPayloadInstruction = (isProjective && context.prior_payload)
-        ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(context.prior_payload)}\n`
+      // R1d: inject ONLY the validated number + content pairs. The boundary
+      // (routes/analysis.ts) already sanitizes prior_payload down to
+      // {schemaVersion, dimensions:[{number, content}]}, so any passthrough
+      // or adversarial root keys never reach the prompt; this mapping is the
+      // belt-and-braces projection if a legacy context carries extra keys.
+      const sanitizedPriorDimensions = (context.prior_payload?.dimensions ?? [])
+        .map((d: { number?: unknown; content?: unknown }) => ({ number: d.number, content: d.content }))
+        .filter((d: { number: unknown; content: unknown }): d is { number: number; content: string } =>
+          typeof d.number === 'number' && typeof d.content === 'string');
+      const sanitizedPriorPayload = { schemaVersion: '2.0', dimensions: sanitizedPriorDimensions };
+      const priorPayloadInstruction = (isProjective && sanitizedPriorDimensions.length > 0)
+        ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(sanitizedPriorPayload)}\n`
         : '';
 
       // R1b: a grounded bundle containing dimension 8 produces 8.1/8.2/8.4

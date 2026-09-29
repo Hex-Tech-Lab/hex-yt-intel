@@ -19,6 +19,7 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
 import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
+import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 // Must match the registry's seeded defaults (20260725110000_comments_sync_pool_fetch_settings.sql).
@@ -82,6 +83,8 @@ export interface UseCaseSuccess {
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
   commentsSyncPoolConfig: CommentsSyncPoolConfig;
+  /** R1d: byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */
+  priorPayloadMaxBytes: number;
   stream: {
     url: string;
     sig: string;
@@ -336,6 +339,20 @@ export class CreateAnalysisUseCase {
       timeoutMs: Number(resolvedSyncPoolRegistry['comments.sampling.syncPoolTimeoutMs']) || SYNC_POOL_CONFIG_FALLBACK.timeoutMs,
     };
 
+    // R1d (2026-09-29): byte cap for the worker's prior_payload boundary guard
+    // (web/lib/config/prior-payload.ts). Resolved here -- the worker has no DB
+    // access (ADR 005) -- and forwarded per-request alongside the other
+    // registry-derived tunables. Stale clients (undefined) fall back to the
+    // same 65536 default worker-side.
+    const resolvedPriorPayloadRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.layer2.priorPayloadMaxBytes'],
+      { 'analysis.layer2.priorPayloadMaxBytes': PRIOR_PAYLOAD_MAX_BYTES_FALLBACK }
+    );
+    const priorPayloadMaxBytesRaw = Number(resolvedPriorPayloadRegistry['analysis.layer2.priorPayloadMaxBytes']);
+    const priorPayloadMaxBytes = Number.isFinite(priorPayloadMaxBytesRaw)
+      ? priorPayloadMaxBytesRaw
+      : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -390,6 +407,7 @@ export class CreateAnalysisUseCase {
         channelMetaConfig,
         commentsSamplePlan,
         commentsSyncPoolConfig,
+        priorPayloadMaxBytes,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

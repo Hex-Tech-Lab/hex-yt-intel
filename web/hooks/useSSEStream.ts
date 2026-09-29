@@ -458,6 +458,7 @@ export function useSSEStream() {
                   commentsSamplePlan: job.commentsSamplePlan,
                   commentsSyncPoolConfig: job.commentsSyncPoolConfig,
                   prior_payload: priorPayloadOverride ?? job.prior_payload,
+                  priorPayloadMaxBytes: job.priorPayloadMaxBytes,
                 };
 
                 const streamController = new AbortController();

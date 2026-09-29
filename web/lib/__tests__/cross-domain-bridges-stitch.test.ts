@@ -84,19 +84,19 @@ describe('crossDomainBridges stitch rule (R1b)', () => {
   });
 
   it('inserts 8.3 before an existing 8.4 heading so sub-sections read 8.1 → 8.4 in order', () => {
-    const g = groundedPayload() as any;
-    g.dimensions[0].content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.\n\n#### 8.4 Discovery Pathways\nPathway text.';
-    const chunkMap = new Map<number, any>([chunk(4, g), chunk(5, projectivePayload('- Bridge one'))]);
+    const grounded = groundedPayload() as any;
+    grounded.dimensions[0].content = '#### 8.1 Nodes\nNode text long enough.\n\n#### 8.2 Relations\nRelation text.\n\n#### 8.4 Discovery Pathways\nPathway text.';
+    const chunkMap = new Map<number, any>([chunk(4, grounded), chunk(5, projectivePayload('- Bridge one'))]);
     const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
     const order = ['#### 8.1', '#### 8.2', '#### 8.3 Cross-Domain Bridges', '#### 8.4'].map((h) => dim8.content.indexOf(h));
     expect(order.every((i) => i >= 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect([...order].sort((i, j) => i - j)).toEqual(order);
   });
 
   it('never inserts 8.3 twice when dimension 8 already carries it', () => {
-    const g = groundedPayload() as any;
-    g.dimensions[0].content += '\n\n#### 8.3 Cross-Domain Bridges\nAlready present.';
-    const chunkMap = new Map<number, any>([chunk(4, g), chunk(5, projectivePayload('- Bridge one'))]);
+    const grounded = groundedPayload() as any;
+    grounded.dimensions[0].content += '\n\n#### 8.3 Cross-Domain Bridges\nAlready present.';
+    const chunkMap = new Map<number, any>([chunk(4, grounded), chunk(5, projectivePayload('- Bridge one'))]);
     const dim8 = stitchChunksIntoPayload(chunkMap, 5).payload!.dimensions.find((d) => d.number === 8)!;
     expect(dim8.content.split('8.3 Cross-Domain Bridges').length - 1).toBe(1);
   });
