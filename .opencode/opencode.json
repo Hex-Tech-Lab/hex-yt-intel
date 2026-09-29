@@ -5,18 +5,189 @@
   "provider": {
     "glm-preset": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Preset (Morph)",
+      "name": "OpenRouter Preset (glm-53-flash-on-cheap, Modal-first)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "headers": {
+          "X-Title": "OC-hex-vIntel",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-yt-intel"
+        }
+      },
+      "models": {
+        "@preset/glm-53-flash-on-cheap": {
+          "name": "GLM 5.3 Flash (user preset)",
+          "options": {},
+          "limit": {
+            "context": 110000,
+            "output": 16000
+          }
+        }
+      }
+    },
+    "glm-dmb": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Direct (Decart→Modal→BaseTen)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1"
+      },
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (Decart/Modal/BaseTen)",
+          "options": {
+            "reasoning_effort": "low",
+            "provider": {
+              "order": [
+                "decart",
+                "modal",
+                "baseten"
+              ],
+              "allow_fallbacks": false
+            }
+          }
+        }
+      }
+    },
+    "glm-cheap-preset": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Preset (cheap)",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1"
       },
       "models": {
         "@preset/glm-53-flash-on-cheap": {
-          "name": "GLM 5.3 Flash (Morph preset)",
+          "name": "GLM 5.3 Flash (cheap preset)"
+        }
+      }
+    },
+    "glm-mb": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Direct (Modal→BaseTen, no fallback)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "headers": {
+          "X-Title": "OC-hex-vIntel",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-yt-intel"
+        }
+      },
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (Modal→BaseTen)",
           "options": {
-            "reasoning_effort": "low"
+            "provider": {
+              "order": [
+                "modal",
+                "baseten",
+                "inference-net",
+                "open-inference"
+              ],
+              "only": [
+                "modal",
+                "baseten",
+                "inference-net",
+                "open-inference"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "effort": "minimal",
+              "enabled": true,
+              "exclude": true
+            }
+          },
+          "limit": {
+            "context": 110000,
+            "output": 16000
+          }
+        }
+      }
+    },
+    "glm-mbio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Direct (Modal→BaseTen→InferenceNet→OpenInference, no fallback)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "headers": {
+          "X-Title": "OC-hex-expan",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-expan-press"
+        }
+      },
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (MBIO)",
+          "options": {
+            "reasoning": {
+              "effort": "minimal",
+              "enabled": true,
+              "exclude": true
+            },
+            "cache_enabled": true,
+            "cache_ttl_seconds": 10800,
+            "provider": {
+              "only": [],
+              "sort": {
+                "by": "latency",
+                "partition": null
+              },
+              "order": [
+                "modal",
+                "baseten",
+                "inference-net",
+                "open-inference"
+              ],
+              "allow_fallbacks": false
+            }
+          },
+          "limit": {
+            "context": 110000,
+            "output": 16000
+          }
+        }
+      }
+    },
+    "glm-bmt": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenRouter Direct (BaseTen→Morph→Together, no fallback)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "headers": {
+          "X-Title": "hex-expan",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-expan-press"
+        }
+      },
+      "models": {
+        "z-ai/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (BMT)",
+          "options": {
+            "reasoning": {
+              "effort": "minimal",
+              "enabled": true,
+              "exclude": true
+            },
+            "cache_enabled": true,
+            "cache_ttl_seconds": 10800,
+            "provider": {
+              "only": [],
+              "sort": {
+                "by": "latency",
+                "partition": null
+              },
+              "order": [
+                "baseten",
+                "morph",
+                "together"
+              ],
+              "allow_fallbacks": false
+            }
+          },
+          "limit": {
+            "context": 110000,
+            "output": 16000
           }
         }
       }
     }
+  },
+  "compaction": {
+    "auto": true
   }
 }
