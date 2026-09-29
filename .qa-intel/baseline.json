@@ -964,5 +964,12 @@
     "title": "Code Quality: Unclear variable name 'd'",
     "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/prompts/ucis-v5.4.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (704 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
   }
 ]

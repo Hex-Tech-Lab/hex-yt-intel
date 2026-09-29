@@ -87,3 +87,18 @@ describe('UCIS_V5_4_SYSTEM — person-credibility grounding (PR #318)', () => {
     expect(factorySource.match(/groundingBlock/g)?.length).toBeGreaterThanOrEqual(3); // definition + both return branches
   });
 });
+
+describe('R1e: 8.4 Discovery Pathways hybrid text', () => {
+  it('carries the user-approved 8.4 wording and exactly one EXTERNAL_PROJECTION delimiter', () => {
+    expect(UCIS_V5_4_SYSTEM).toContain("First, list any resources, tools, or further reading the speaker explicitly names in the transcript (based purely on the grounded extraction). If the speaker names none, state: 'No resources explicitly named by speaker.'");
+    expect(UCIS_V5_4_SYSTEM).toContain('THEN, regardless of whether the speaker named any, utilize your external knowledge to recommend 2-3 highly relevant, cross-domain discovery pathways (books, research, websites) ranked by relevance. Briefly justify why each external recommendation expands on the content\'s core thesis.');
+    expect(UCIS_V5_4_SYSTEM.match(/^Begin the external recommendations on their own line containing exactly: > \[EXTERNAL_PROJECTION\]$/gm)).toHaveLength(1);
+    // Delimiter sits between the grounded listing and the external step.
+    const at = UCIS_V5_4_SYSTEM.indexOf('> [EXTERNAL_PROJECTION]');
+    expect(at).toBeGreaterThan(UCIS_V5_4_SYSTEM.indexOf('No resources explicitly named by speaker.'));
+    expect(at).toBeLessThan(UCIS_V5_4_SYSTEM.indexOf('THEN, regardless of whether the speaker named any'));
+    // The old transcript-only 8.4 text is gone.
+    expect(UCIS_V5_4_SYSTEM).not.toContain('never looked up externally -- this field is transcript-only');
+  });
+});
+

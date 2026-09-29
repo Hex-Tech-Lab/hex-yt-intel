@@ -146,20 +146,24 @@ export class PromptBuilder implements PromptBuilderPort {
         ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(sanitizedPriorPayload)}\n`
         : '';
 
-      // R1b: a grounded bundle containing dimension 8 produces 8.1/8.2/8.4
-      // ONLY — sub-dimension 8.3 Cross-Domain Bridges belongs to the
-      // projective bundle, which carries it as the top-level
-      // `crossDomainBridges` root field and which is stitched back into
-      // dimension 8's content client-side.
+      // R1b/R1e: a grounded bundle containing dimension 8 produces 8.1/8.2
+      // ONLY — sub-dimensions 8.3 Cross-Domain Bridges and 8.4 Discovery
+      // Pathways belong to the projective bundle (8.3 as `crossDomainBridges`,
+      // 8.4 as `discoveryPathways`), stitched back into dimension 8's content
+      // client-side. The grounded pass instead emits the intermediate root
+      // array `explicitSpeakerResources` (max 20 items) — the "explicitly
+      // named" input the projective 8.4 needs.
       const dim8GroundedOmission = (!isProjective && dims.includes(8))
-        ? `\nIMPORTANT: For DIMENSION 8, produce ONLY sub-sections 8.1, 8.2, and 8.4. Do NOT include the "Cross-Domain Bridges" sub-section (8.3) anywhere in your output.\n`
+        ? `\nIMPORTANT: For DIMENSION 8, produce ONLY sub-sections 8.1 and 8.2. Do NOT include the "Cross-Domain Bridges" sub-section (8.3) and do NOT include a "Discovery Pathways" sub-section (8.4) anywhere in your output. Instead, you must also generate and include the "explicitSpeakerResources" string array in the JSON root: resources, tools, or further reading the speaker EXPLICITLY names in the transcript (verbatim-ish, maximum 20 items; use an empty array if none).\n`
         : '';
 
-      // R1b: the projective bundle ALWAYS owns sub-dimension 8.3 Cross-Domain
-      // Bridges, carried as the top-level `crossDomainBridges` root field —
-      // independent of which dimension extraFields happen to be in play.
+      // R1b/R1e: the projective bundle ALWAYS owns sub-dimension 8.3 Cross-
+      // Domain Bridges (as `crossDomainBridges`) and sub-dimension 8.4
+      // Discovery Pathways (as `discoveryPathways`), both carried as top-level
+      // root fields — independent of which dimension extraFields happen to be
+      // in play.
       const projectiveBridgeInstruction = isProjective
-        ? ` You must also generate and include the "crossDomainBridges" markdown string in the JSON root (your sub-dimension 8.3 Cross-Domain Bridges section: at least 2 bridges connecting the video's core ideas to adjacent domains, formatted as markdown under the heading "#### 8.3 Cross-Domain Bridges"). Do NOT emit a dimension-8 object.`
+        ? ` You must also generate and include the "crossDomainBridges" markdown string in the JSON root (your sub-dimension 8.3 Cross-Domain Bridges section: at least 2 bridges connecting the video's core ideas to adjacent domains, formatted as markdown under the heading "#### 8.3 Cross-Domain Bridges"). You must also generate and include the "discoveryPathways" markdown string in the JSON root (your sub-dimension 8.4 Discovery Pathways section, written per the "#### 8.4 Discovery Pathways" instructions in the framework, using the explicitly-named resources listed in the prior payload where applicable, formatted as markdown under the heading "#### 8.4 Discovery Pathways"). Do NOT emit a dimension-8 object.`
         : '';
 
       return {
@@ -175,7 +179,7 @@ ${priorPayloadInstruction}${dim8GroundedOmission}
 Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}${projectiveBridgeInstruction}
 Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
 ${bundleFallback}
-Do NOT output any other dimensions. Do NOT include any other JSON root fields${isProjective ? ' besides "crossDomainBridges"' : ''}. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`,
+Do NOT output any other dimensions. Do NOT include any other JSON root fields${isProjective ? ' besides "crossDomainBridges" and "discoveryPathways"' : `${dims.includes(8) ? ' besides "explicitSpeakerResources"' : ''}`}. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`,
       };
     }
 

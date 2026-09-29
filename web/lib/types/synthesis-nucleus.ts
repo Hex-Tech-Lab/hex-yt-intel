@@ -210,6 +210,13 @@ export interface UCISPayloadV2 {
   comments?: Array<Record<string, unknown>> | null;
   stance_relations?: (RelationsResult & { contentHash?: string }) | null;
   crossDomainBridges?: string;
+  /** R1e: 8.4 Discovery Pathways markdown, degraded-path root field (dim 8 missing). */
+  discoveryPathways?: string;
+  /**
+   * R1e: INTERMEDIATE ONLY — grounded→projective handoff input for 8.4.
+   * Must never appear in a persisted payload (stripped at stitch).
+   */
+  explicitSpeakerResources?: string[];
 }
 
 /**

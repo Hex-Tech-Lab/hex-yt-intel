@@ -87,7 +87,7 @@ describe('prompt-cache request shape (bundle LLM calls)', () => {
   // R1b (2026-09-29) Layer 2 epistemic split: the epistemic constraint must
   // live in the segmentInstruction (AFTER the cacheable sharedPrefix), never
   // in the prefix, so the cache identity contract survives the split.
-  it('epistemic split: grounded bundles get Universe-of-1 + dim-8 omits 8.3; projective bundle gets projection + crossDomainBridges', async () => {
+  it('epistemic split: grounded bundles get Universe-of-1 + dim-8 omits 8.3/8.4 and emits explicitSpeakerResources; projective bundle gets projection + crossDomainBridges + discoveryPathways', async () => {
     const builder = new PromptBuilder(undefined);
     const groundedDim8 = await builder.buildSegmented({ ...baseContext([3, 8]), dimensions: [3, 8] });
     const groundedPlain = await builder.buildSegmented({ ...baseContext([1, 10]), dimensions: [1, 10] });
@@ -96,15 +96,22 @@ describe('prompt-cache request shape (bundle LLM calls)', () => {
     // Grounded: zero-extrapolation constraint present.
     expect(groundedDim8.segmentInstruction).toContain('EPISTEMIC MODE - UNIVERSE OF 1');
     expect(groundedPlain.segmentInstruction).toContain('EPISTEMIC MODE - UNIVERSE OF 1');
-    // Dim 8 grounded bundle explicitly omits sub-dimension 8.3.
-    expect(groundedDim8.segmentInstruction).toContain('8.1, 8.2, and 8.4');
+    // Dim 8 grounded bundle produces ONLY 8.1/8.2 (R1e: 8.4 moved to projective)
+    // and emits the intermediate explicitSpeakerResources root array.
+    expect(groundedDim8.segmentInstruction).toContain('produce ONLY sub-sections 8.1 and 8.2');
     expect(groundedDim8.segmentInstruction).toContain('Do NOT include the "Cross-Domain Bridges" sub-section');
+    expect(groundedDim8.segmentInstruction).toContain('do NOT include a "Discovery Pathways" sub-section (8.4)');
+    expect(groundedDim8.segmentInstruction).toContain('"explicitSpeakerResources" string array');
+    expect(groundedDim8.sharedPrefix).not.toContain('explicitSpeakerResources');
     // Plain grounded bundle (no dim 8) carries no dim-8 omission line.
     expect(groundedPlain.segmentInstruction).not.toContain('Cross-Domain Bridges');
 
     // Projective: projection-mode constraint + crossDomainBridges root field.
     expect(projective.segmentInstruction).toContain('EPISTEMIC MODE - PLURALISTIC PROJECTION');
     expect(projective.segmentInstruction).toContain('"crossDomainBridges" markdown string');
+    expect(projective.segmentInstruction).toContain('"discoveryPathways" markdown string');
+    expect(projective.segmentInstruction).toContain('besides "crossDomainBridges" and "discoveryPathways"');
+    expect(projective.sharedPrefix).not.toContain('discoveryPathways');
     expect(projective.segmentInstruction).not.toContain('EPISTEMIC MODE - UNIVERSE OF 1');
     expect(projective.segmentInstruction).not.toContain('Cross-Domain Bridges" sub-section (8.3)');
 

@@ -359,13 +359,10 @@ Extract relations between the entities extracted in 8.1 as edges in a Knowledge 
 Where concepts connect to entirely different domains (at least 2 required).
 
 #### 8.4 Discovery Pathways
+First, list any resources, tools, or further reading the speaker explicitly names in the transcript (based purely on the grounded extraction). If the speaker names none, state: 'No resources explicitly named by speaker.'
+Begin the external recommendations on their own line containing exactly: > [EXTERNAL_PROJECTION]
 
-Resources, tools, or further reading the speaker explicitly names in the
-transcript (never looked up externally -- this field is transcript-only,
-same as every other field under section 0.5). If the speaker names none, output
-this subsection header and write "N/A -- no resources/further reading
-named in transcript" per the Insufficient Data Protocol. Do NOT omit this
-subsection.
+THEN, regardless of whether the speaker named any, utilize your external knowledge to recommend 2-3 highly relevant, cross-domain discovery pathways (books, research, websites) ranked by relevance. Briefly justify why each external recommendation expands on the content's core thesis.
 
 ---
 
