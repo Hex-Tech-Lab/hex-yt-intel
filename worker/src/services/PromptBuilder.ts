@@ -136,7 +136,8 @@ export class PromptBuilder implements PromptBuilderPort {
       // {schemaVersion, dimensions:[{number, content}]}, so any passthrough
       // or adversarial root keys never reach the prompt; this mapping is the
       // belt-and-braces projection if a legacy context carries extra keys.
-      const sanitizedPriorDimensions = (context.prior_payload?.dimensions ?? [])
+      const rawPriorDimensions: unknown = context.prior_payload?.dimensions;
+      const sanitizedPriorDimensions = (Array.isArray(rawPriorDimensions) ? rawPriorDimensions : [])
         .map((d: { number?: unknown; content?: unknown }) => ({ number: d.number, content: d.content }))
         .filter((d: { number: unknown; content: unknown }): d is { number: number; content: string } =>
           typeof d.number === 'number' && typeof d.content === 'string');

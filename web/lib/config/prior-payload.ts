@@ -25,8 +25,8 @@ export const PRIOR_PAYLOAD_DIMENSIONS_MAX = 11;
 export const PRIOR_PAYLOAD_MAX_BYTES_CEILING = 65536;
 
 export function resolvePriorPayloadMaxBytes(requested: unknown): number {
-  const n = Number(requested);
-  const base = Number.isFinite(n) && n > 0 ? Math.floor(n) : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
+  const requestedBytes = Number(requested);
+  const base = Number.isFinite(requestedBytes) && requestedBytes > 0 ? Math.floor(requestedBytes) : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
   return Math.min(base, PRIOR_PAYLOAD_MAX_BYTES_CEILING);
 }
 

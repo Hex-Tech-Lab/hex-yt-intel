@@ -122,7 +122,7 @@ interface StreamRequest {
   // fall back to getUCISPrompt's legacy 48000.
   transcriptBudgetChars?: number;
   /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
-  prior_payload?: Record<string, any>;
+  prior_payload?: Record<string, unknown>;
   // R1d (2026-09-29): registry-resolved byte cap for the prior_payload guard,
   // resolved by CreateAnalysisUseCase (web/lib/config/prior-payload.ts) and
   // forwarded per-request -- the worker has no DB access (ADR 005). Stale

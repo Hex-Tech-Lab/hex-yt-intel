@@ -31,7 +31,7 @@ describe('PriorPayloadSchema', () => {
   it('rejects a 12th dimension (max 11)', () => {
     const payload = {
       schemaVersion: '2.0',
-      dimensions: Array.from({ length: 12 }, (_, i) => ({ number: i + 1, content: 'x' })),
+      dimensions: Array.from({ length: 12 }, (_slot, slotIndex) => ({ number: slotIndex + 1, content: 'x' })),
     };
     expect(PriorPayloadSchema.safeParse(payload).success).toBe(false);
   });

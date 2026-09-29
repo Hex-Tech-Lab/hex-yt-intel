@@ -57,7 +57,7 @@ export interface EngineContext {
    */
   transcriptBudgetChars?: number;
   /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
-  prior_payload?: Record<string, any>;
+  prior_payload?: Record<string, unknown>;
 }
 
 /** Structured lifecycle event emitted during the cascade. */
