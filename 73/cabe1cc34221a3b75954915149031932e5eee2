@@ -1,0 +1,49 @@
+.memory/AGENT_LEDGER.md
+  s_1d1bec99fd4ca5::t_21510126aa0c89 1439-1445
+docs/agent-prompts/2026-09-28-oc-wave-5-security-and-adr021.md
+  s_1d1bec99fd4ca5::t_430fe5146fe1f0 1-34
+docs/agent-prompts/2026-09-28-oc-wave-7-cubic-p1-and-sampling.md
+  s_1d1bec99fd4ca5::t_bfaa882f776e6e 1-58
+docs/agent-prompts/2026-09-28-oc-wave-8-retry-resilience.md
+  s_1d1bec99fd4ca5::t_a6a70e61204486 1-46
+docs/agent-prompts/2026-09-28-oc-wave-9-reaper-integration.md
+  s_1d1bec99fd4ca5::t_466a81a0046014 1-32
+docs/agent-prompts/2026-09-29-agy-96h-e2e-audit.md
+  s_1d1bec99fd4ca5::t_bffc858dd9c6b8 1-238
+docs/agent-prompts/2026-09-29-oc-hotfix-dedupe-body-abort.md
+  s_1d1bec99fd4ca5::t_a7d4eafbc2665f 1-82
+docs/agent-prompts/2026-09-29-oc-r0-stopgaps.md
+  s_1d1bec99fd4ca5::t_997e4abd724b6c 1-103
+docs/agent-prompts/2026-09-29-oc-r1a-bundle-ssot.md
+  s_1d1bec99fd4ca5::t_ce0e175f797169 1-106
+docs/agent-prompts/2026-09-29-oc-r1b-dim8-epistemic-split.md
+  s_1d1bec99fd4ca5::t_70f73f80a6aa3c 1-119
+docs/agent-prompts/2026-09-29-oc-r1c-analyses-grants.md
+  s_1d1bec99fd4ca5::t_a6ae123c49bb33 1-96
+docs/agent-prompts/2026-09-29-oc-r1d-prior-payload-guard.md
+  s_1d1bec99fd4ca5::t_565125405f0e05 1-102
+docs/agent-prompts/2026-09-29-oc-r1e-dim84-hybrid.md
+  s_1d1bec99fd4ca5::t_f3ff3acf6a6108 1-100
+docs/agent-prompts/2026-09-29-oc-r2a-retry-usecase.md
+  s_1d1bec99fd4ca5::t_a1d649ff92c1f0 1-89
+docs/agent-prompts/2026-09-29-oc-r2b-signed-projective-context.md
+  s_1d1bec99fd4ca5::t_d8dc53d54d8a5d 1-90
+docs/agent-prompts/2026-09-29-oc-r4-ui-hydration-retry.md
+  s_1d1bec99fd4ca5::t_7a827e43eaedee 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "73cabe1cc34221a3b75954915149031932e5eee2",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
