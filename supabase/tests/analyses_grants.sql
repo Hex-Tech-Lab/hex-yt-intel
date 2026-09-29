@@ -28,7 +28,7 @@ begin
 
   if v_count > 0 then
     raise exception 'GRANT LOCKDOWN VIOLATION: authenticated holds UPDATE on public.analyses.billing_status (% grant(s) found)', v_count
-      using hint = 'Re-run migration 2026092912XXXX_analyses_column_grants_lockdown.sql';
+      using hint = 'Re-run migration 20260929140000_analyses_column_grants_lockdown.sql';
   end if;
 
   -- Companion check: authenticated must not hold UPDATE on validation_report either.
