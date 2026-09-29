@@ -1,0 +1,29 @@
+CLAUDE.md
+  s_5fa91def1d3c19::t_063004d847b830 41
+.opencode/opencode.json
+  s_830982d10bbcf1::t_ec289dd2546394 10-14,27,29,35,40,44-82,85-135,147-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0ae770d5ee01e404a1ad7c2f9f5dd065d412e7ed",
+  "prompts": {},
+  "sessions": {
+    "s_5fa91def1d3c19": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f134cdb2fffeIQPjkpKjN2aTzn",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_830982d10bbcf1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1347d2acffeb0Y8RwHYgSzNID",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
