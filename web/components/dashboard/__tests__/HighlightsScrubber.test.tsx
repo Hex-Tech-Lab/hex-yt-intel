@@ -326,6 +326,52 @@ describe('HighlightsScrubber', () => {
     expect(container.firstChild?.textContent).toContain('Manual-refresh highlight');
   });
 
+  it('renders highlights, not "No highlights yet", when the response BODY streams in after headers (2026-09-29 dedupe abort regression)', async () => {
+    // RCA: dedupedFetch aborted the shared request when the last consumer's
+    // detach ran post-headers, killing every consumer's in-flight res.json()
+    // with AbortError while the cycle's own controller was NOT aborted -- the
+    // outer catch returned early with data still null -> "No highlights yet"
+    // despite 16 DB rows. This fixture mirrors that: headers land first, the
+    // JSON body arrives on a delayed ReadableStream that errors on abort.
+    const PAYLOAD = {
+      highlights: [{ idx: 0, start: 10, end: 15, label: 'Body-stream regression highlight' }],
+      segmentDurationSeconds: 5,
+      contextLeadSeconds: 2,
+    };
+    const JSON_TEXT = JSON.stringify(PAYLOAD);
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const signal = (init?.signal as AbortSignal) ?? new AbortController().signal;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          setTimeout(() => {
+            if (!signal.aborted) {
+              controller.enqueue(encoder.encode(JSON_TEXT));
+              controller.close();
+            }
+          }, 20);
+          signal.addEventListener(
+            'abort',
+            () => controller.error(new DOMException('The operation was aborted.', 'AbortError')),
+            { once: true },
+          );
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<HighlightsScrubber analysisId="analysis-body-stream" videoDurationSeconds={60} />);
+
+    // The scrubber's visible label renders via the ticker/tooltip, so match
+    // the highlight marker (aria-label carries the label) rather than text.
+    await waitFor(
+      () => expect(screen.getByLabelText(/Jump to highlight 1: Body-stream regression highlight/)).toBeTruthy(),
+      { interval: 20, timeout: 5000 },
+    );
+    expect(screen.queryByText('No highlights yet')).toBeNull();
+  });
+
   it('collapses gracefully on fetch error without throwing', async () => {
     vi.stubGlobal(
       'fetch',

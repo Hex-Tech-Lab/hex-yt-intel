@@ -104,4 +104,46 @@ describe('dedupedFetch (network-storms in-flight share)', () => {
     await dedupedFetch('/api/test-listener-cleanup', { signal: controller.signal });
     expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
   });
+
+  it('both consumers read the FULL body after headers arrive (never aborts post-settle, 2026-09-29)', async () => {
+    const PAYLOAD = { highlights: [{ idx: 0, label: 'Body-stream regression highlight' }] };
+    const JSON_TEXT = JSON.stringify(PAYLOAD);
+    // Real Response whose body JSON arrives AFTER a delay (mirrors a live
+    // network stream: headers land first, the body trickles in later), and
+    // whose stream errors on abort exactly like a real aborted mid-stream
+    // fetch -- so a post-settle detach abort rejects any consumer's
+    // in-flight body read, reproducing the 2026-09-29 incident.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const signal = (init?.signal as AbortSignal) ?? new AbortController().signal;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          setTimeout(() => {
+            if (!signal.aborted) {
+              controller.enqueue(encoder.encode(JSON_TEXT));
+              controller.close();
+            }
+          }, 20);
+          signal.addEventListener(
+            'abort',
+            () => controller.error(new DOMException('The operation was aborted.', 'AbortError')),
+            { once: true },
+          );
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const url = '/api/analyses/highlights?analysisId=body-stream-1';
+
+    const [a, b] = await Promise.all([dedupedFetch(url), dedupedFetch(url)]);
+    // Headers have arrived for both consumers; the shared entry is settled
+    // and both consumers' detach .finally() has already run.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const [jsonA, jsonB] = await Promise.all([a.json(), b.json()]);
+    // Both clones must deliver the full body.
+    expect(jsonA).toEqual(PAYLOAD);
+    expect(jsonB).toEqual(PAYLOAD);
+  });
 });
