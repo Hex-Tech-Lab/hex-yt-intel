@@ -1,0 +1,52 @@
+web/lib/config/prior-payload.ts
+  s_f237dff22a5144::t_076c2844131f23 1-85
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_f237dff22a5144::t_cc0ef664961662 86-87
+  s_f237dff22a5144::t_2e931e04b5523a 410
+  s_f237dff22a5144::t_30b44a7df9efd2 22
+  s_f237dff22a5144::t_6fea07d9d6b275 342-355
+worker/src/routes/analysis.ts
+  s_f237dff22a5144::t_3668d7defcc987 755
+  s_f237dff22a5144::t_f59eaf479d2e0c 1084
+  s_f237dff22a5144::t_35b30677159e62 19
+  s_f237dff22a5144::t_fadf1004d16127 20
+  s_f237dff22a5144::t_0ae2a759f8af1b 1247-1284
+  s_f237dff22a5144::t_1770825c49c23e 126-130
+  s_f237dff22a5144::t_3d8f9f8b7cca72 1358
+supabase/migrations/20260929150000_prior_payload_max_bytes_registry_key.sql
+  s_f237dff22a5144::t_f98dec7ea81f6a 1-27
+web/hooks/useSSEStream.ts
+  s_f237dff22a5144::t_10903540f2e60b 461
+web/lib/types/contracts.ts
+  s_f237dff22a5144::t_9f32f69c195cfa 281-282
+worker/src/services/PromptBuilder.ts
+  s_f237dff22a5144::t_60298a59ce2cb7 134-145
+web/lib/config/prior-payload.test.ts
+  s_f237dff22a5144::t_faf8c2009f24ed 1-127
+web/lib/__tests__/cross-domain-bridges-stitch.test.ts
+  s_dd73041b1be5a2::t_251fe0722ae4d0 87-89,93,97-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "915a4235e1440753bb0c02622745827ddff9988e",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f237dff22a5144": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f13002559ffehDgJ8zHDmuriiB",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
