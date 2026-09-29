@@ -1,0 +1,89 @@
+web/lib/config/synthesis.ts
+  s_f53bf6b2900c4c::t_e5fa2f4b82f7f3 34-67
+web/lib/validators/synthesis.ts
+  s_f53bf6b2900c4c::t_b2022d7f606970 420-426
+worker/src/routes/analysis.ts
+  s_f53bf6b2900c4c::t_039ed13d6503e0 122-123
+  s_f53bf6b2900c4c::t_1964740574aca4 1076
+worker/src/services/PromptBuilder.ts
+  s_f53bf6b2900c4c::t_a69b124ee180a4 147-152
+  s_f53bf6b2900c4c::t_58aa1386ff58d1 163
+  s_f53bf6b2900c4c::t_2f08e9e95447c1 138-146
+  s_f53bf6b2900c4c::t_5d1d568b47dd01 120-137
+  s_f53bf6b2900c4c::t_c8d20b3bd88384 6
+  s_f53bf6b2900c4c::t_9b7a55672102fd 153,159,164,166-167
+worker/src/services/ZodSchemas.ts
+  s_f53bf6b2900c4c::t_eb67f1ab8a96df 115-121
+web/lib/__tests__/cross-domain-bridges-stitch.test.ts
+  s_f53bf6b2900c4c::t_870adae1a2bcf3 125,127
+  s_f53bf6b2900c4c::t_318d88f39c6a6e 77
+  s_f53bf6b2900c4c::t_45fd398a5d474e 28-29
+  s_f53bf6b2900c4c::t_c316466a9f67e8 1-13,15-17,25-27,30,36-41,43-50,53-76,78-88,92,96-124,126,128-157
+  s_f53bf6b2900c4c::t_a3f4810c87cd08 89-91,93-95
+  s_f53bf6b2900c4c::t_f20225b16daafe 14,18-24,31,34-35,42,51-52
+  s_f53bf6b2900c4c::t_7eb11173e7c728 32-33
+  s_f53bf6b2900c4c::t_8a120fca630a53 158-160
+  s_dd73041b1be5a2::t_58048402001b61 161-174
+web/lib/__tests__/is-projective-bundle.test.ts
+  s_f53bf6b2900c4c::t_5d9fc7e531b17d 1-29
+web/hooks/useSSEStream.ts
+  s_f53bf6b2900c4c::t_056e8de318b3cb 11
+  s_f53bf6b2900c4c::t_fbc2fb6debba52 658,663
+  s_f53bf6b2900c4c::t_39c3d27441fc73 432
+  s_f53bf6b2900c4c::t_ca29d7fcc5c0ef 460
+  s_f53bf6b2900c4c::t_25db59c35754f2 638
+  s_f53bf6b2900c4c::t_4686574bd16c0b 652
+  s_f53bf6b2900c4c::t_8e567216fcf641 671
+  s_f53bf6b2900c4c::t_edb298d940e798 704-720,722,725-738
+  s_f53bf6b2900c4c::t_ffc9ca2fef17a8 739
+web/lib/types/synthesis-nucleus.ts
+  s_f53bf6b2900c4c::t_d169638c90f0cc 212
+web/lib/services/stitch-analysis-chunks.ts
+  s_f53bf6b2900c4c::t_da7210af33582e 123-143
+  s_f53bf6b2900c4c::t_ec4b7c09e5a508 459-476
+  s_f53bf6b2900c4c::t_340198d0873c2d 181-191,477
+  s_f53bf6b2900c4c::t_8e7c0ba61afeb2 438-445
+  s_f53bf6b2900c4c::t_db4ac7fa89d770 446
+  s_f53bf6b2900c4c::t_6acc08d6a51b02 478-480
+  s_dd73041b1be5a2::t_d9c03820cf016c 152,159,481-488
+web/lib/types/contracts.ts
+  s_f53bf6b2900c4c::t_4000ffa3583c86 279-280
+worker/src/ports/ReasoningEnginePort.ts
+  s_f53bf6b2900c4c::t_eb4cae4878ce98 59-60
+web/app/api/analyses/persist/route.ts
+  s_f53bf6b2900c4c::t_fadd1e97280322 1284
+  s_f53bf6b2900c4c::t_5f78d70f7be24d 13
+  s_f53bf6b2900c4c::t_c80fad4665f758 969
+  s_f53bf6b2900c4c::t_d9a34a697261f2 417-427
+  s_dd73041b1be5a2::t_6cea400d315096 24
+supabase/migrations/20260929130000_cross_domain_bridges_registry_key.sql
+  s_f53bf6b2900c4c::t_e2e5c29b4577de 1-24
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_f53bf6b2900c4c::t_a87dc92624bc7f 87-127
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_c819ef64626e4c 862-966
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8b8d560b78307119456280b79182d976cf2f1ce2",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f53bf6b2900c4c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f132218dbffeWBoc3ZAJOls0AR",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
