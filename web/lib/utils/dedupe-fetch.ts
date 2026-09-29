@@ -13,11 +13,17 @@
  * Abort semantics: callers keep their OWN AbortController for lifecycle
  * (staleness) checks as before -- a local abort must not kill a shared
  * request another consumer still needs. The underlying request IS aborted
- * when the LAST consumer detaches while still in flight (unmount of the
- * sole interested party), so real cancellation is preserved. Callers that
- * already check their own `controller.signal.aborted` after awaiting
- * (both highlights consumers do) remain correct when they receive a
- * response that their local controller has since outlived.
+ * when the LAST consumer detaches while the request is still PENDING
+ * (pre-settle -- before headers arrive; unmount of the sole interested
+ * party), so real cancellation is preserved. After the shared promise has
+ * settled, detach never aborts: each consumer holds its own res.clone()
+ * whose body may still be streaming, and killing the underlying request
+ * post-headers would abort every consumer's in-flight body read
+ * (res.json()) with AbortError -- the 2026-09-29 "No highlights yet"
+ * incident. Callers that already check their own
+ * `controller.signal.aborted` after awaiting (both highlights consumers
+ * do) remain correct when they receive a response that their local
+ * controller has since outlived.
  *
  * Deliberately GET-only in practice (idempotent reads); keyed by URL --
  * callers must not pass per-request headers that vary between consumers.
@@ -33,7 +39,7 @@ interface InFlightEntry {
    * deleting finally is async, the rejection is synchronous). The new
    * caller then rejected with the dead entry's AbortError and, in
    * HighlightsScrubber, rendered the loading state forever. New callers
-   * now bypass settled entries and start a fresh request. */
+   * now skip settled entries and start a fresh request. */
   settled: boolean;
 }
 
@@ -80,7 +86,14 @@ export function dedupedFetch(url: string, init?: { signal?: AbortSignal }): Prom
       if (detached) return;
       detached = true;
       currentEntry.consumers -= 1;
-      if (currentEntry.consumers === 0) currentEntry.controller.abort();
+      // Abort ONLY while the shared request is still pending (pre-settle,
+      // before headers). After `settled`, each consumer holds its own
+      // res.clone() whose body may still be streaming -- aborting the
+      // underlying request now would kill every consumer's in-flight
+      // res.json() with AbortError (2026-09-29 live incident: highlights
+      // showed "No highlights yet" and Check Status did nothing while 16
+      // DB rows existed). Post-settle detach is therefore a no-op.
+      if (currentEntry.consumers === 0 && !currentEntry.settled) currentEntry.controller.abort();
     };
 
     let onAbort: (() => void) | undefined;
