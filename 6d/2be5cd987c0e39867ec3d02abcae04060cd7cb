@@ -1,0 +1,21 @@
+web/lib/usecases/RetryMissingDimensionsUseCase.ts
+  s_dd73041b1be5a2::t_72583d5dfde9e4 72-94,117-119
+web/lib/usecases/__tests__/RetryMissingDimensionsUseCase.test.ts
+  s_dd73041b1be5a2::t_3d85477958afce 17,223-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6d2be5cd987c0e39867ec3d02abcae04060cd7cb",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
