@@ -209,6 +209,16 @@ function extractExecutiveSummary(digest?: Record<string, any> | null): Executive
   return null;
 }
 
+// R4: /api/analyses/[id]/retry 409/429/503 error codes → user-facing toast.
+const RETRY_ERROR_TOASTS: Record<string, string> = {
+  in_progress: 'This analysis is still running — retry once it finishes',
+  retry_in_progress: 'A retry is already running for this analysis',
+  cancelled: 'This analysis was cancelled and cannot be retried',
+  ineligible: 'This analysis cannot be retried',
+  budget_exhausted: 'Retry budget is used up for now — try again later',
+  disabled: 'Retries are paused',
+};
+
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
   const { items, isLoading, error, refetch: refetchHistoryOverview } = useHistoryOverview();
@@ -286,7 +296,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     if (!currentAnalysis) return 0;
     return Math.min(TOTAL_DIMENSIONS, countUcisDimensions(currentAnalysis?.analysis_markdown));
   }, [currentAnalysis, TOTAL_DIMENSIONS]);
-  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete' || currentStatus === 'partial');
+  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete' || currentStatus === 'partial' || currentStatus === 'incomplete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
   if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
@@ -480,36 +490,43 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     }
   };
 
-  // Wave 10.8: the "Retry Missing" affordance previously called
-  // restoreAnalysis — it re-loaded the row into the view but never triggered
-  // the targeted re-analysis, so missing dimensions were never regenerated
-  // (the button read as a dead stub). Wire it to the ADR 021 Phase 4
-  // selective-retry contract: POST /api/analyses with analysisId +
-  // missingDimensions; the server loads priorPayload from the referenced row
-  // and re-runs only the missing bundles.
+  // R4 (2026-09-29): the R0 stopgap is removed. The backend exists (PR #367):
+  // POST /api/analyses/[id]/retry runs remediation INSIDE the request and
+  // returns when done. On success the history overview is refetched so the
+  // row's dimension map reflects the recovered sections.
   const retryMissingDimensions = async (item: HistoryOverviewItem): Promise<void> => {
-    // R0 stopgap (audit 2026-09-29 finding 1): server returns cache_hit for partial rows; real fix in R2.
-    // (boolean-typed flag, not a literal, so the R2 body below stays tsc-reachable and type-checked)
-    const r0Stopgap = { enabled: true };
-    if (r0Stopgap.enabled) return;
     if (retryingId !== null || item.missingDimensions.length === 0) return;
     setRetryingId(item.analysisId);
     setRestoreError(null);
     try {
-      const res = await fetch('/api/analyses', {
+      const res = await fetch(`/api/analyses/${item.analysisId}/retry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${item.baseVideoId}`,
-          analysisId: item.analysisId,
-          missingDimensions: item.missingDimensions,
-        }),
+        body: JSON.stringify({ missingDimensions: item.missingDimensions }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const busy = RETRY_ERROR_TOASTS[body?.error ?? ''];
+        if (busy) {
+          showToast(busy);
+          return;
+        }
+        if (res.status === 404) {
+          showToast('This analysis could no longer be found');
+          return;
+        }
         throw new Error(body?.error || `Retry failed (HTTP ${res.status})`);
       }
-      showToast(`Retrying ${item.missingDimensions.length} missing dimension${item.missingDimensions.length === 1 ? '' : 's'}`);
+      const body = (await res.json().catch(() => null)) as
+        | { status?: string; dimensionsRequested?: number[]; dimensionCountAfter?: number }
+        | null;
+      if (body?.status === 'nothing_missing') {
+        showToast('Nothing left to retry');
+      } else {
+        const requested = body?.dimensionsRequested?.length ?? item.missingDimensions.length;
+        const after = typeof body?.dimensionCountAfter === 'number' ? ` — now ${body.dimensionCountAfter}/${TOTAL_DIMENSIONS}` : '';
+        showToast(`Retried ${requested} section${requested === 1 ? '' : 's'}${after}`);
+      }
       await refetchHistoryOverview();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -686,7 +703,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                 <h2 className="text-lg font-semibold text-[var(--ink)]">
                   Last Analyzed <span className="text-[var(--ink-muted)] font-normal">(1)</span>
                 </h2>
-                <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analysis complete</span>
+                <span className="text-[10px] font-mono text-[var(--ink-muted)]">
+                  {(currentStatus === 'partial' || currentStatus === 'incomplete') ? 'Partially complete' : 'Analysis complete'}
+                </span>
               </>
             )}
             {wipListPosition && (
@@ -710,7 +729,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     </span>
                   ) : (
                     <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ok)]/10 text-[var(--ok)]">
-                      Complete
+                      {(currentStatus === 'partial' || currentStatus === 'incomplete') ? 'Partially complete' : 'Complete'}
                     </span>
                   )}
                 </div>
@@ -897,14 +916,19 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                             {item.status === 'partial' && item.missingDimensions.length > 0 && (
                               <button
                                 type="button"
-                                disabled
-                                aria-disabled="true"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   void retryMissingDimensions(item);
                                 }}
+                                onKeyDown={(e) => {
+                                  // R4: Enter/Space must NOT also reach the row's
+                                  // onKeyDown restore handler (the row would navigate
+                                  // away mid-retry). Native button activation still
+                                  // fires onClick, so no second retry call here.
+                                  if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+                                }}
+                                disabled={retryingId !== null}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--warn)]/15 text-[var(--warn)] hover:bg-[var(--warn)]/25 border border-[var(--warn)]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections."
                               >
                                 <Icon icon={retryingId === item.analysisId ? 'eos-icons:bubble-loading' : 'solar:restart-linear'} size={11} />
                                 {retryingId === item.analysisId ? 'Retrying…' : `Retry Missing (${item.missingDimensions.length})`}

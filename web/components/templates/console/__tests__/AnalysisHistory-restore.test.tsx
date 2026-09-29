@@ -214,52 +214,139 @@ describe('AnalysisHistory restore flow (real component, real click)', () => {
     unmountAux();
   });
 
-  it('R0 stopgap: Retry Missing on a partial row renders disabled with the exact tooltip, and clicking it makes zero network requests', async () => {
-    // R0 stopgap (audit 2026-09-29 finding 1) regression guard. The server
-    // returns cache_hit for partial rows (SupabaseAnalysisAdapter accepts
-    // partial rows with content), so the pre-stopgap button POSTed, got a
-    // cache_hit, and nothing was retried — the button lied. R0 disables it
-    // with an exact tooltip; this pins the contract until R2 rewires
-    // selective retry.
-    const PARTIAL_ITEM = {
-      ...HISTORY_ITEM,
-      analysisId: 'analysis-partial-1',
-      title: 'Partial Retry Test Video',
-      presentDimensions: [1, 2, 4, 5, 6, 7, 8, 10, 11],
-      missingDimensions: [3, 9],
-      status: 'partial' as const,
-    };
+  // R4 (2026-09-29): the R0 stopgap test is DELIBERATELY replaced. R0 pinned the
+  // button as disabled until R2 shipped a real selective-retry backend; PR #367
+  // did (POST /api/analyses/[id]/retry), so the contract is now "enabled and
+  // wired", not "disabled".
+  const PARTIAL_ITEM = {
+    ...HISTORY_ITEM,
+    analysisId: 'analysis-partial-1',
+    title: 'Partial Retry Test Video',
+    bestDimensions: 9,
+    presentDimensions: [1, 2, 4, 5, 6, 7, 8, 10, 11],
+    missingDimensions: [3, 9],
+    status: 'partial' as const,
+  };
+
+  function stubRetryFetch(item: typeof PARTIAL_ITEM, retry: Response) {
     const fetchSpy = vi.fn((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.includes('/api/analyses/overview')) {
         return Promise.resolve(
-          new Response(JSON.stringify({ items: [PARTIAL_ITEM] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+          new Response(JSON.stringify({ items: [item] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
         );
       }
+      if (url.includes('/retry')) return Promise.resolve(retry);
       return Promise.resolve(new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     vi.stubGlobal('fetch', fetchSpy);
+    return fetchSpy;
+  }
 
-    render(createElement(AnalysisHistory));
-    await screen.findByText('Partial Retry Test Video');
+  const urlsOf = (spy: ReturnType<typeof vi.fn>) =>
+    spy.mock.calls.map((args) => String((args as unknown[])[0]));
 
-    const button = screen.getByTitle(
-      'Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections.'
-    ) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute('aria-disabled')).toBe('true');
-    expect(button.getAttribute('title')).toBe(
-      'Retrying missing sections is temporarily unavailable. Open the analysis to view the finished sections.'
+  it('R4 T2: Retry Missing POSTs to /api/analyses/[id]/retry with the missing dims, then refetches the overview', async () => {
+    const fetchSpy = stubRetryFetch(
+      PARTIAL_ITEM,
+      new Response(JSON.stringify({ status: 'complete', dimensionsRequested: [3, 9], dimensionCountAfter: 11 }), { status: 200 }),
     );
-
-    // The initial overview fetch is the only legitimate request; clear it so
-    // the zero-network assertion below covers the click only.
-    fetchSpy.mockClear();
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing \(2\)/ });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    const overviewCallsBefore = urlsOf(fetchSpy).filter((u) => u.includes('/api/analyses/overview')).length;
 
     fireEvent.click(button);
-    // Flush any async continuation a (buggy, enabled) handler would schedule.
-    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(urlsOf(fetchSpy).filter((u) => u.includes('/api/analyses/overview')).length).toBeGreaterThan(overviewCallsBefore);
+    });
+    const retryCall = fetchSpy.mock.calls.find((args) => String((args as unknown[])[0]).includes('/retry')) as unknown[];
+    expect(String(retryCall[0])).toBe('/api/analyses/analysis-partial-1/retry');
+    const init = retryCall[1] as RequestInit;
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({ missingDimensions: [3, 9] });
+  });
+
+  it('R4 T2: a 409 retry_in_progress does not refetch the overview', async () => {
+    const fetchSpy = stubRetryFetch(
+      PARTIAL_ITEM,
+      new Response(JSON.stringify({ error: 'retry_in_progress' }), { status: 409 }),
+    );
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fetchSpy.mockClear();
+    fireEvent.click(button);
+    await waitFor(() => expect(button.textContent).toMatch(/Retry Missing/));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const urls = urlsOf(fetchSpy);
+    expect(urls.filter((u) => u.includes('/retry'))).toHaveLength(1);
+    expect(urls.filter((u) => u.includes('/api/analyses/overview'))).toHaveLength(0);
+  });
+
+  it('R4 T2: Enter on the Retry button does not bubble to the row restore handler', async () => {
+    const fetchSpy = stubRetryFetch(
+      PARTIAL_ITEM,
+      new Response(JSON.stringify({ status: 'complete', dimensionsRequested: [3, 9] }), { status: 200 }),
+    );
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fetchSpy.mockClear();
+    fireEvent.keyDown(button, { key: 'Enter' });
+    fireEvent.keyDown(button, { key: ' ' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Row restore fetches /api/analyses/<id>; nothing may have been requested.
+    expect(urlsOf(fetchSpy).filter((u) => u.includes('analysis-partial-1'))).toHaveLength(0);
+  });
+
+  it.each([
+    ['404', new Response(JSON.stringify({ error: 'Analysis not found' }), { status: 404 })],
+    ['generic 500', new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })],
+    ['429 budget_exhausted', new Response(JSON.stringify({ error: 'budget_exhausted' }), { status: 429 })],
+  ])('R4 T2: a %s retry response does not refetch the overview and re-enables the button', async (_label, retryRes) => {
+    const fetchSpy = stubRetryFetch(PARTIAL_ITEM, retryRes);
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fetchSpy.mockClear();
+    fireEvent.click(button);
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const urls = urlsOf(fetchSpy);
+    expect(urls.filter((u) => u.includes('/retry'))).toHaveLength(1);
+    expect(urls.filter((u) => u.includes('/api/analyses/overview'))).toHaveLength(0);
+  });
+
+  it('R4 T2: a second click while a retry is in flight sends no second request', async () => {
+    let release: (response: Response) => void = () => {};
+    const pending = new Promise<Response>((resolve) => { release = resolve; });
+    const fetchSpy = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/analyses/overview')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [PARTIAL_ITEM] }), { status: 200 }));
+      }
+      if (url.includes('/retry')) return pending;
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    render(createElement(AnalysisHistory));
+    const button = await screen.findByRole('button', { name: /Retry Missing/ });
+    fireEvent.click(button);
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.click(button);
+    release(new Response(JSON.stringify({ status: 'complete', dimensionsRequested: [3, 9] }), { status: 200 }));
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+    expect(urlsOf(fetchSpy).filter((u) => u.includes('/retry'))).toHaveLength(1);
+  });
+
+  it('R4 T3b/c: an incomplete current analysis shows the WIP card, labelled labels a partial/incomplete current analysis "Partially complete"', async () => {
+    stubRetryFetch(PARTIAL_ITEM, new Response('{}', { status: 200 }));
+    useInputStore.setState({ url: 'https://www.youtube.com/watch?v=AAAAAAAAAAA', isValid: true });
+    useAnalysisStore.setState({
+      status: 'incomplete',
+      analysis: { id: 'analysis-current-1', analysis_markdown: '### DIMENSION 1: A\n\nBody.' } as never,
+    });
+    render(createElement(AnalysisHistory));
+    expect((await screen.findAllByText('Partially complete')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Analysis complete')).toBeNull();
   });
 });

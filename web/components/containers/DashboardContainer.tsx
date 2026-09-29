@@ -105,7 +105,7 @@ import {
   exportPanelContent,
   type PanelId,
 } from "@/lib/dashboard/export";
-import { parseUcisDimensionNumbers } from "@/lib/utils/count-ucis-dimensions";
+import { computePartialInfo } from "@/lib/utils/count-ucis-dimensions";
 import { signOutWithTimeout } from "@/lib/utils/sign-out-with-timeout";
 import { Avatar } from "@astryxdesign/core";
 
@@ -245,22 +245,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     setMounted(true);
   }, []);
 
-  // Wave 10.8 — refresh-hydration precedence: the `?v=` route parameter is
-  // the single source of truth for WHICH video a refresh rehydrates. Without
-  // this, the persisted input-store URL (safeStateLocalStorage) acts as the
-  // de-facto hydrator via useAutoRestoreAnalysis below and can point at a
-  // different (typically the most-recently-analyzed) video than the one the
-  // user was actually viewing — the reported refresh-swap bug. Route
-  // parameter wins; when absent, the persisted-URL behavior is unchanged.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const routeVideoId = new URLSearchParams(window.location.search).get("v");
-    if (!routeVideoId) return;
-    const currentInputId = extractVideoId(useInputStore.getState().url);
-    if (currentInputId !== routeVideoId) {
-      useInputStore.getState().setUrl(`https://www.youtube.com/watch?v=${routeVideoId}`);
-    }
-  }, []);
+  // Wave 10.8 — refresh-hydration precedence (R4): the `?v=` route parameter
+  // is applied INSIDE useInputStore's persist hydration (resolveHydratedUrl),
+  // so the store's very first hydrated `url` is already the route's video and
+  // useAutoRestoreAnalysis below restores the right analysis in the same
+  // commit. The former mount-precedence effect here ran AFTER hydration in
+  // the same commit and could not cancel a restore that had already started.
 
   useAutoRestoreAnalysis(url);
   useStreamReattach(
@@ -742,19 +732,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     // highlights reel in the dashboard views), not vanish behind a status
     // gate. Rows with an entirely empty payload still return null (hard
     // error path unchanged).
-    if (!analysis?.analysis_markdown) return null;
-    const presentNumbers = parseUcisDimensionNumbers(
-      analysis.analysis_markdown,
-    );
-    const presentCount = presentNumbers.length;
-    if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
-    const present = new Set(presentNumbers);
-    const missing: number[] = [];
-    for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
-      if (!present.has(i)) missing.push(i);
-    }
-    return { presentCount, missing };
-  }, [analysis?.analysis_markdown, TOTAL_DIMENSIONS]);
+    return computePartialInfo(analysis?.analysis_markdown, TOTAL_DIMENSIONS, status);
+  }, [analysis?.analysis_markdown, TOTAL_DIMENSIONS, status]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so

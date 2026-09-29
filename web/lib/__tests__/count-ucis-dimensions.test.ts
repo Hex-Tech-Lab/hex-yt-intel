@@ -4,7 +4,7 @@
  * stitched "### DIMENSION N" markdown.
  */
 import { describe, it, expect } from 'vitest';
-import { parseUcisDimensionNumbers, countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
+import { parseUcisDimensionNumbers, countUcisDimensions, computePartialInfo } from '@/lib/utils/count-ucis-dimensions';
 
 function markdownHeaders(nums: number[]): string {
   return nums.map((n) => `### DIMENSION ${n}: Section ${n}\n\nBody for ${n}.`).join('\n\n');
@@ -54,5 +54,23 @@ describe('parseUcisDimensionNumbers', () => {
   it('ignores a mid-line cross-reference in markdown (line-anchored)', () => {
     const md = '### DIMENSION 1: A\n\nSee ### DIMENSION 9 above for detail.\n\n### DIMENSION 2: B';
     expect(parseUcisDimensionNumbers(md)).toEqual([1, 2]);
+  });
+});
+
+describe('computePartialInfo (R4 T3a)', () => {
+  const partial = markdownHeaders([1, 2, 4]);
+
+  it('reports the missing map for a terminal partial row', () => {
+    expect(computePartialInfo(partial, 5, 'partial')).toEqual({ presentCount: 3, missing: [3, 5] });
+    expect(computePartialInfo(partial, 5, 'complete')).toEqual({ presentCount: 3, missing: [3, 5] });
+  });
+
+  it('suppresses the warning while the analysis is still streaming', () => {
+    expect(computePartialInfo(partial, 5, 'analyzing')).toBeNull();
+  });
+
+  it('returns null for empty markdown or a full set', () => {
+    expect(computePartialInfo('', 5, 'partial')).toBeNull();
+    expect(computePartialInfo(markdownHeaders([1, 2, 3, 4, 5]), 5, 'partial')).toBeNull();
   });
 });
