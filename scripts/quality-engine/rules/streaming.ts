@@ -107,7 +107,7 @@ export const StreamResilienceRule: Rule = {
     // aborted stream (a mock ReadableStream + setTimeout + abort listener)
     // have no analysis state to settle, so they matched this rule by
     // construction. Same test-file exemption the reliability-lessons rules use.
-    if (/(\.test|\.spec)\.[cm]?[tj]sx?$|\/__tests__\//.test(filePath)) return findings;
+    if (/(\.test|\.spec)\.[cm]?[tj]sx?$|(?:^|\/)__tests__\//.test(filePath)) return findings;
 
     // RCA (2026-07-24, PR #160 + post-merge follow-up): two compounding false-
     // positive sources.
