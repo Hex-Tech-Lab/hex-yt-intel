@@ -1,0 +1,29 @@
+web/lib/__tests__/cross-domain-bridges-stitch.test.ts
+  s_dd73041b1be5a2::t_2598a80cfd009d 62-65,74,87,91,93,101,103,109,116-117,121,126,133,147,150,157
+web/lib/config/prior-payload.test.ts
+  s_dd73041b1be5a2::t_33cd6c265d19b6 34
+web/lib/config/prior-payload.ts
+  s_dd73041b1be5a2::t_de5b4a75015b24 28-29
+worker/src/ports/ReasoningEnginePort.ts
+  s_dd73041b1be5a2::t_02a8b117632304 60
+worker/src/routes/analysis.ts
+  s_dd73041b1be5a2::t_d4e5afdea43577 125
+worker/src/services/PromptBuilder.ts
+  s_dd73041b1be5a2::t_63cbaf5d70274b 139-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ae56504a6aa85d1771c754b2bfc187607c319a58",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
