@@ -50,7 +50,7 @@ import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import { tryConsumeTokenBucket, incrementRedisValue, getRedisValue, setRedisValue } from '@/lib/redis';
+import { tryConsumeTokenBucket, incrementRedisValue, getRedisValue, setRedisValue, acquireRedisLock, releaseRedisLock } from '@/lib/redis';
 
 /**
  * Per-candidate outcome. Doubles as the tally key in RemediationSweepResult
@@ -219,7 +219,13 @@ function currentPeriodAnchorMs(): number {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
 }
 
-async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number; quarantineTtlSeconds: number }> {
+/**
+ * Exported for R2a (RetryMissingDimensionsUseCase) so a user-initiated retry
+ * resolves the SAME models/cascade/budget the cron uses — per the dispatch
+ * contract: extract/extend a shared helper rather than duplicating the
+ * resolution inline in the route path.
+ */
+export async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number; quarantineTtlSeconds: number }> {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
   const enabled = Boolean(settings['remediation.enabled']);
   const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
@@ -245,8 +251,8 @@ async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: 
  * average -- revisit once real per-dimension token usage is logged.
  */
 const ESTIMATED_TOKENS_PER_DIMENSION = 2_000;
-/** cascade's cheapest resolved cost/1K tokens -- computed once per harness run by the caller, not re-scanned per candidate (same "resolve once per run" convention the module already applies to cascade/models). */
-function cheapestCostPer1K(cascade: Array<{ cost?: number }>): number {
+/** cascade's cheapest resolved cost/1K tokens -- computed once per harness run by the caller, not re-scanned per candidate (same "resolve once per run" convention the module already applies to cascade/models). Exported for R2a (RetryMissingDimensionsUseCase) reuse. */
+export function cheapestCostPer1K(cascade: Array<{ cost?: number }>): number {
   const cheapest = cascade.reduce((min, c) => (typeof c.cost === 'number' && c.cost < min ? c.cost : min), Infinity);
   return Number.isFinite(cheapest) ? cheapest : 0.002; // fallback if cascade has no cost data at all
 }
@@ -760,6 +766,15 @@ async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: A
  * 019) -- the token bucket's atomicity is what prevents overlapping callers
  * from double-spending the same budget, not a lock on the harness itself.
  */
+/**
+ * Per-analysis remediation lock, shared by the 5-minute cron and the owner
+ * retry endpoint (R2a) so the two can never remediate the same row at once
+ * (#367 review). Held for the whole remediateAnalysis call; released
+ * token-safely.
+ */
+export const REMEDIATION_ROW_LOCK_KEY_PREFIX = 'retry:analysis:';
+export const REMEDIATION_ROW_LOCK_TTL_SECONDS = 600;
+
 export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
@@ -971,6 +986,15 @@ export async function runRemediationHarness(): Promise<RemediationSweepResult> {
       result.skipped++;
       continue;
     }
+    // Same per-row lock as the owner retry endpoint: if a user retry (or an
+    // overlapping sweep) holds it, skip this row this cycle -- no spend.
+    const rowLockKey = `${REMEDIATION_ROW_LOCK_KEY_PREFIX}${gap.id}`;
+    const rowLockToken = await acquireRedisLock(rowLockKey, REMEDIATION_ROW_LOCK_TTL_SECONDS);
+    if (!rowLockToken) {
+      console.log('[dimension-remediation] candidate locked by another remediation, skipping', { analysisId: gap.id });
+      result.skipped++;
+      continue;
+    }
     try {
       const outcome = await remediateAnalysis(gap, models, cascade, budgetWithCost);
       console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage, order });
@@ -1001,6 +1025,8 @@ export async function runRemediationHarness(): Promise<RemediationSweepResult> {
         },
       });
       result.errored++;
+    } finally {
+      await releaseRedisLock(rowLockKey, rowLockToken);
     }
   }
   return result;

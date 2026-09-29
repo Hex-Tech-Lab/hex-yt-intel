@@ -992,5 +992,54 @@
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (975 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/__tests__/dimension-remediation.test.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name '_'",
+    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/__tests__/dimension-remediation.test.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'n'",
+    "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   }
 ]
