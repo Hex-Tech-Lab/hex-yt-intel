@@ -1,0 +1,21 @@
+CLAUDE.md
+  s_1d1bec99fd4ca5::t_3a0cba7162cd6e 102
+supabase/migrations/20260930130000_analyses_stream_count_and_chunk_matrix.sql
+  s_1d1bec99fd4ca5::t_71a14c16f7cfbd 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8486cb96bdf69e1cbdb67b4c5a2a387bf1356334",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
