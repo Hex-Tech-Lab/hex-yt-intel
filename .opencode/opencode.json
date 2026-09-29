@@ -12,7 +12,11 @@
       "models": {
         "@preset/glm-53-flash-on-cheap": {
           "name": "GLM 5.3 Flash (user preset)",
-          "options": {}
+          "options": {},
+          "limit": {
+            "context": 110000,
+            "output": 16000
+          }
         }
       }
     },
@@ -38,6 +42,10 @@
               ],
               "allow_fallbacks": false
             }
+          },
+          "limit": {
+            "context": 110000,
+            "output": 16000
           }
         }
       }
