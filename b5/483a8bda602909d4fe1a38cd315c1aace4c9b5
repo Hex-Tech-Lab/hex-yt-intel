@@ -1,0 +1,53 @@
+supabase/migrations/20260929180000_projective_context_wait_registry_keys.sql
+  s_dd73041b1be5a2::t_24e13f691c91c4 1-37
+web/app/api/analyses/[id]/projective-context/route.ts
+  s_dd73041b1be5a2::t_1d4f8455354bb4 1-83
+web/hooks/useSSEStream.ts
+  s_dd73041b1be5a2::t_838d75f64b7522 10-12,435,463-468,647,661,667,672,680,734-756,759-766
+web/lib/__tests__/bundle-partition.test.ts
+  s_dd73041b1be5a2::t_4ba4dfedb17b92 45-49
+web/lib/__tests__/projective-context-signature.test.ts
+  s_dd73041b1be5a2::t_d2cea4b67ec3a7 1-52
+web/lib/adapters/StreamTokenAdapter.ts
+  s_dd73041b1be5a2::t_7a00917df752e4 1,46-54
+web/lib/config/prior-payload.test.ts
+  s_dd73041b1be5a2::t_c69efd0a3cce34 9,167-170,172-173,214-235
+web/lib/config/prior-payload.ts
+  s_dd73041b1be5a2::t_3b7f3ba260172d 2,32-34,38-40,61-63
+web/lib/config/projective-context.ts
+  s_dd73041b1be5a2::t_8fcde1013def0b 1-82
+web/lib/config/synthesis.ts
+  s_dd73041b1be5a2::t_8f4c2a209766fa 100-108
+web/lib/ports/CryptographicTokenPort.ts
+  s_dd73041b1be5a2::t_eeed179251f1bf 20-26
+web/lib/stream-token.ts
+  s_dd73041b1be5a2::t_9cca876bafbb76 86,141-158
+web/lib/types/contracts.ts
+  s_dd73041b1be5a2::t_0f6069bbadaaf3 283-285
+web/lib/usecases/ProjectiveContextUseCase.ts
+  s_dd73041b1be5a2::t_cc40179e469e72 1-125
+web/lib/usecases/__tests__/ProjectiveContextUseCase.test.ts
+  s_dd73041b1be5a2::t_c2d19814b5e99e 1-72
+worker/src/crypto.ts
+  s_dd73041b1be5a2::t_9f2c2cefecfd94 34
+worker/src/routes/analysis.ts
+  s_dd73041b1be5a2::t_efe2f2c4a1f88f 20,132-134,1292-1309
+.qa-intel/baseline.json
+  s_dd73041b1be5a2::t_cd791e32a41c44 974-994
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b5483a8bda602909d4fe1a38cd315c1aace4c9b5",
+  "prompts": {},
+  "sessions": {
+    "s_dd73041b1be5a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "498d50ae-8aef-4fef-9586-7bc1348c2b32",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
