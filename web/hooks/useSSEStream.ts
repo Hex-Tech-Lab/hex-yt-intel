@@ -7,9 +7,11 @@ import { useChaptersStore } from '@/store/useChaptersStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
+
+/** R2b: signed, server-loaded grounded context for the projective bundle. */
+type ProjectiveContext = { prior_payload: Record<string, unknown>; contextSig: string; contextExp: number };
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { STREAM_BUNDLES, isProjectiveBundle } from '@/lib/config/synthesis';
-import { fitPriorPayloadToCap } from '@/lib/config/prior-payload';
 import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
@@ -430,7 +432,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void, priorPayloadOverride?: Record<string, unknown>) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void, projectiveContext?: ProjectiveContext) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -458,7 +460,12 @@ export function useSSEStream() {
                   channelMetaConfig: job.channelMetaConfig,
                   commentsSamplePlan: job.commentsSamplePlan,
                   commentsSyncPoolConfig: job.commentsSyncPoolConfig,
-                  prior_payload: priorPayloadOverride ?? job.prior_payload,
+                  // R2b: only Vercel-signed, server-loaded grounded context
+                  // (never the browser's own copy, never an unsigned stored
+                  // job.prior_payload fallback).
+                  prior_payload: projectiveContext?.prior_payload,
+                  contextSig: projectiveContext?.contextSig,
+                  contextExp: projectiveContext?.contextExp,
                   priorPayloadMaxBytes: job.priorPayloadMaxBytes,
                 };
 
@@ -637,7 +644,7 @@ export function useSSEStream() {
                 // leaving it running in the background alongside the fresh
                 // retry attempt -- an onError callback firing is not itself
                 // proof the underlying stream has stopped.
-                const attemptBundle = (i: number, dimensions: number[], attemptController: AbortController, priorPayloadOverride?: Record<string, unknown>): Promise<BundleOutcome> => {
+                const attemptBundle = (i: number, dimensions: number[], attemptController: AbortController, projectiveContext?: ProjectiveContext): Promise<BundleOutcome> => {
                   return new Promise<BundleOutcome>((resolve) => {
                     let settledLocal = false;
                     const resolveOnce = (result: BundleOutcome) => {
@@ -651,18 +658,18 @@ export function useSSEStream() {
                       onError: (error, code) => resolveOnce({ ok: false, error, code }),
                       onComplete: () => resolveOnce({ ok: true }),
                     });
-                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0LlmStart : undefined, priorPayloadOverride)
+                    runSingleStream(i, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, i === 0 ? onBundle0LlmStart : undefined, projectiveContext)
                       .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
                       .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                   });
                 };
 
-                const runBundleWithRetry = async (i: number, dimensions: number[], priorPayloadOverride?: Record<string, unknown>) => {
+                const runBundleWithRetry = async (i: number, dimensions: number[], projectiveContext?: ProjectiveContext) => {
                   // Cache-warm stagger applies to the FIRST attempt only --
                   // retries must never wait again.
                   await awaitWarmGate(i);
                   let attemptController = new AbortController();
-                  let outcome = await attemptBundle(i, dimensions, attemptController, priorPayloadOverride);
+                  let outcome = await attemptBundle(i, dimensions, attemptController, projectiveContext);
                   if (!outcome.ok && !currentSignal.aborted && !hasSettled) {
                     // Stop the failed attempt's own stream before starting a
                     // fresh one for the same bundle index -- see the comment
@@ -670,7 +677,7 @@ export function useSSEStream() {
                     attemptController.abort();
                     store.logError(`[Bundle ${i + 1}] failed, retrying once: ${outcome.error}`);
                     attemptController = new AbortController();
-                    outcome = await attemptBundle(i, dimensions, attemptController, priorPayloadOverride);
+                    outcome = await attemptBundle(i, dimensions, attemptController, projectiveContext);
                   }
                   if (currentSignal.aborted || hasSettled) return;
                   if (outcome.ok) {
@@ -724,23 +731,39 @@ export function useSSEStream() {
                   groundedIndexes.map((i) => runBundleWithRetry(i, dimensionsList[i]!))
                 );
 
-                // Finalized grounded output from the synthesis nucleus — the
-                // adapter has already fed every completed grounded chunk into
-                // it by the time the phase gate above releases. Single-bundle
-                // remediation dispatches (no grounded phase) fall back to the
-                // job's own prior_payload, preserving the remediation contract.
-                const buildGroundedPriorPayload = (): Record<string, unknown> | null => {
-                  const dimsRecord = useSynthesisNucleus.getState().analysis?.dimensions ?? {};
-                  const grounded = Object.values(dimsRecord).filter((d) => !isProjectiveBundle([d.number]));
-                  if (grounded.length === 0) return null;
-                  // Shaped to what the worker guard accepts (R1d): only
-                  // {number, content}, trimmed to the byte cap, so a long
-                  // analysis can never get dims 9/11 rejected with a 400.
-                  return fitPriorPayloadToCap(grounded, job.priorPayloadMaxBytes);
+                // R2b: the grounded evidence for the projective bundle comes
+                // from the SERVER, read from PERSISTED grounded chunks and
+                // signed (see /api/analyses/[id]/projective-context). 409 means
+                // the grounded chunks are not persisted yet: poll with the
+                // server's retryAfterMs up to its maxWaitMs. Any other failure,
+                // or the wait running out, dispatches the projective bundle
+                // WITHOUT grounded context rather than hanging.
+                const fetchProjectiveContext = async (): Promise<ProjectiveContext | undefined> => {
+                  const analysisId = job.analysisId || job.id;
+                  if (!analysisId) return undefined;
+                  const startedAt = Date.now();
+                  let maxWaitMs = 20000;
+                  while (!currentSignal.aborted) {
+                    const res = await fetch(`/api/analyses/${analysisId}/projective-context`, { method: 'POST', credentials: 'include', signal: currentSignal });
+                    if (res.ok) return (await res.json()) as ProjectiveContext;
+                    const body = (await res.json().catch(() => ({}))) as { error?: string; retryAfterMs?: number; maxWaitMs?: number };
+                    if (res.status !== 409 || body.error !== 'grounded_not_persisted') return undefined;
+                    maxWaitMs = Number(body.maxWaitMs) || maxWaitMs;
+                    const retryAfterMs = Number(body.retryAfterMs) || 1500;
+                    if (Date.now() - startedAt + retryAfterMs > maxWaitMs) return undefined;
+                    await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+                  }
+                  return undefined;
                 };
 
-                for (const i of projectiveIndexes) {
-                  await runBundleWithRetry(i, dimensionsList[i]!, buildGroundedPriorPayload() ?? undefined);
+                if (projectiveIndexes.length > 0) {
+                  const projectiveContext = await fetchProjectiveContext().catch((contextErr: unknown) => {
+                    if (!currentSignal.aborted) console.warn('[useSSEStream] projective context unavailable, dispatching without grounded evidence:', contextErr);
+                    return undefined;
+                  });
+                  for (const i of projectiveIndexes) {
+                    await runBundleWithRetry(i, dimensionsList[i]!, projectiveContext);
+                  }
                 }
 
                 if (!hasSettled) checkSettleState();

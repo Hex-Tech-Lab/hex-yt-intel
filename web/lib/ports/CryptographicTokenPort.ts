@@ -17,4 +17,11 @@ export interface CryptographicTokenPort {
     sampleRunId: string;
     userId: string;
   }): Promise<StreamToken>;
+
+  /** R2b: sign server-loaded grounded context for a projective bundle. */
+  signProjectiveContext(params: {
+    analysisId: string;
+    dimensions: readonly number[];
+    priorPayload: unknown;
+  }): Promise<StreamToken>;
 }

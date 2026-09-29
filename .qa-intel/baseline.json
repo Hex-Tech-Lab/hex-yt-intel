@@ -971,5 +971,26 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (704 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/stream-token.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/stream-token.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/crypto.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   }
 ]

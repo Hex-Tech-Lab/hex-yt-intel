@@ -6,6 +6,7 @@ import {
   resolvePriorPayloadMaxBytes,
   PRIOR_PAYLOAD_MAX_BYTES_CEILING,
   fitPriorPayloadToCap,
+  PRIOR_PAYLOAD_MAX_BYTES_FLOOR,
 } from './prior-payload';
 
 /**
@@ -163,11 +164,13 @@ describe('fitPriorPayloadToCap (client-side, CodeRabbit #363)', () => {
     expect(validatePriorPayload(fitted, { maxBytes: 4096, isProjective: true }).ok).toBe(true);
   });
 
-  it('keeps a fitting subset when even trimmed dimensions overflow a very small cap', () => {
-    // 9 trimmed dims cost ~80 bytes each in JSON + trim note, so 400 bytes
-    // cannot hold all of them even with empty content.
+  it('raises a sub-floor cap to the 1024-byte floor (#363 P3) and still sends a non-empty fitting payload', () => {
+    // Contract change (R2b): resolvePriorPayloadMaxBytes now floors at 1024,
+    // so a 400-byte request can no longer starve the payload; at the floor a
+    // full set of trimmed grounded dimensions fits.
     const fitted = fitPriorPayloadToCap(grounded(20_000), 400);
-    expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(400);
+    const size = new TextEncoder().encode(JSON.stringify(fitted)).length;
+    expect(size).toBeLessThanOrEqual(PRIOR_PAYLOAD_MAX_BYTES_FLOOR);
     expect(fitted.dimensions.length).toBeGreaterThan(0);
     expect(fitted.dimensions[0]!.number).toBe(1);
   });
@@ -205,6 +208,28 @@ describe('R1e explicitSpeakerResources in prior_payload', () => {
     const fitted = fitPriorPayloadToCap(bigDims, withoutBytes + 10, resources);
     expect(fitted.explicitSpeakerResources).toBeUndefined();
     expect(fitted.dimensions[0]!.content).toBe('d'.repeat(900)); // untrimmed
+  });
+});
+
+describe('R2b / #363 review hardening', () => {
+  it('resolvePriorPayloadMaxBytes floors fractional, tiny and non-numeric values at 1024', () => {
+    for (const value of [0.5, 1, 1023, 'abc', undefined]) {
+      expect(resolvePriorPayloadMaxBytes(value)).toBeGreaterThanOrEqual(PRIOR_PAYLOAD_MAX_BYTES_FLOOR);
+    }
+    expect(resolvePriorPayloadMaxBytes(1024)).toBe(1024);
+    expect(resolvePriorPayloadMaxBytes(4096)).toBe(4096);
+  });
+
+  it('schema rejects duplicate dimension numbers', () => {
+    const verdict = validatePriorPayload({ schemaVersion: '2.0', dimensions: [{ number: 2, content: 'a' }, { number: 2, content: 'b' }] }, { maxBytes: 65536, isProjective: true });
+    expect(verdict.ok).toBe(false);
+  });
+
+  it('schema rejects projective dimensions inside grounded evidence', () => {
+    for (const projective of [9, 11]) {
+      const verdict = validatePriorPayload({ schemaVersion: '2.0', dimensions: [{ number: 1, content: 'a' }, { number: projective, content: 'x' }] }, { maxBytes: 65536, isProjective: true });
+      expect(verdict.ok).toBe(false);
+    }
   });
 });
 

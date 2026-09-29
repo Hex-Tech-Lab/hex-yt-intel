@@ -17,6 +17,7 @@ import { hmacHex, secretFingerprint } from "../crypto";
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
+import { verifyProjectiveContextSig } from "../../../web/lib/config/projective-context";
 import { isProjectiveBundle } from "../../../web/lib/config/synthesis";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
@@ -128,6 +129,9 @@ interface StreamRequest {
   // forwarded per-request -- the worker has no DB access (ADR 005). Stale
   // clients (undefined) fall back to the same 65536 default.
   priorPayloadMaxBytes?: number;
+  /** R2b: Vercel signature over the server-loaded prior_payload (see web/lib/config/projective-context.ts). */
+  contextSig?: string;
+  contextExp?: number;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -1285,6 +1289,24 @@ analysis.post("/analyze-llm-stream", async (c) => {
   let priorPayload: Record<string, unknown> | undefined;
   if (req.prior_payload !== undefined) {
     const dims = req.dimensions ?? [];
+    // R2b: prior_payload is accepted ONLY when Vercel signed it (bound to this
+    // analysis, an expiry, THESE dimensions and the exact payload hash). The
+    // browser can no longer supply its own "grounded" evidence or flip a
+    // bundle's epistemic mode. Verified with the secret that validated the
+    // stream token, before any parsing of the payload's shape.
+    const contextOk = await verifyProjectiveContextSig({
+      secret: signingKey,
+      analysisId: req.analysisId,
+      dimensions: dims,
+      priorPayload: req.prior_payload,
+      contextSig: req.contextSig,
+      contextExp: req.contextExp,
+    });
+    if (!contextOk) {
+      console.warn("[analyze-llm-stream] prior_payload without a valid Vercel context signature; rejecting", { videoId: req.videoId, analysisId: req.analysisId, dimensions: dims });
+      Sentry.captureMessage("unsigned prior_payload rejected at boundary", { level: "warning", extra: { videoId: req.videoId, analysisId: req.analysisId } });
+      return c.json({ error: "invalid_prior_payload", reason: "unsigned_context" }, 400);
+    }
     const isProjective = isProjectiveBundle(dims);
     // Client-supplied (unsigned) -> clamped to a hard ceiling: the registry can
     // lower the cap, a forged request can never raise it.
