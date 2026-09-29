@@ -1,0 +1,65 @@
+web/lib/__tests__/jev-config.test.ts
+  s_cf6fc84d66405a::t_10f571d0bd1c7c 1-105
+.memory/AGENT_LEDGER.md
+  s_cf6fc84d66405a::t_162eef859f6b0d 1446
+  s_cf6fc84d66405a::t_c4eeb8788e0598 1447
+web/lib/__tests__/jev-boundary-engine.test.ts
+  s_cf6fc84d66405a::t_0f3e44c1911ae2 176-178
+  s_cf6fc84d66405a::t_c0a808c8ee9235 262
+  s_cf6fc84d66405a::t_8abd726d22ae6a 1-102,104-138,141-175,179-261,263-310
+  s_cf6fc84d66405a::t_ce77e570a4f35e 103
+  s_cf6fc84d66405a::t_ee061d56b29ec7 139-140
+  s_63d45d5652263a::t_83c1ff89b78419 311-372
+web/lib/config/jev.ts
+  s_cf6fc84d66405a::t_7e1e3834b38cb2 1-74,90-100,115-121
+  s_cf6fc84d66405a::t_16ad30656d3ee7 111-114
+  s_cf6fc84d66405a::t_aa5017c54e6b15 102-110
+  s_cf6fc84d66405a::t_04826dfcdca3be 101
+  s_cf6fc84d66405a::t_098cce645d1c2d 79-85
+  s_cf6fc84d66405a::t_5d23653708fcae 87
+  s_cf6fc84d66405a::t_a06855f23ae7e3 75-78,86,88-89
+web/lib/jev/lexicon.ts
+  s_cf6fc84d66405a::t_d8bf761582e408 1-39
+supabase/migrations/20260930120000_jev_engine_settings.sql
+  s_cf6fc84d66405a::t_753c0d392d6c7b 1-142
+web/lib/jev/boundary-engine.ts
+  s_cf6fc84d66405a::t_befb8f8afe8464 160-162
+  s_cf6fc84d66405a::t_770f865dab84e6 69
+  s_cf6fc84d66405a::t_5a1e0067b42755 94,97-98,180,200-201,207-209,243-244
+  s_cf6fc84d66405a::t_793b1855af4297 1-68,70-93,95-96,99-159,163-179,181-199,202-206,210-242,245-256,260
+  s_63d45d5652263a::t_16a6e22882abdf 257-259,261-264
+docs/agent-prompts/2026-09-30-oc-r3b-1-jev-engine.md
+  s_1d1bec99fd4ca5::t_1b78b379f53a13 1-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8524333189dd978489b97540e5c7d8802ce931f8",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_63d45d5652263a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f10e9d4b3ffevSXFUUs0Y0euO1",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cf6fc84d66405a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1102abf0ffeETP8eX4fkpDUra",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
