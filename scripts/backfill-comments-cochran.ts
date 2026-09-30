@@ -151,21 +151,21 @@ async function writeCommentCount(row: Row, count: number): Promise<void> {
   if (!res.ok) throw new Error(`validation_report update ${row.id}: ${res.status} ${await res.text()}`);
 }
 
-async function main() {
-  for (const [k, v] of Object.entries({ SUPABASE_URL, SERVICE_KEY, HMAC_SECRET, WORKER_URL })) {
-    if (!v) throw new Error(`missing env: ${k}`);
-  }
-  const sampling = await resolveSampling();
-  if (!sampling.ok) throw new Error(`invalid sampling config: ${sampling.errors.join('; ')}`);
+type Sampling = Extract<Awaited<ReturnType<typeof resolveSampling>>, { ok: true }>['config'];
 
-  let rows = await rest<Row[]>(
+async function loadCandidates(): Promise<Row[]> {
+  const rows = await rest<Row[]>(
     `analyses?select=id,user_id,video_id,validation_report&analysis_payload=not.is.null&analysis_payload->comments=is.null&video_id=not.like.${encodeURIComponent('*\\_archived\\_*')}`
   );
-  if (only) rows = rows.filter((row) => row.id === only);
+  return only ? rows.filter((row) => row.id === only) : rows;
+}
 
-  // Existing non-failed cochran runs, scoped to the candidates (batched, so no
-  // PostgREST row cap can hide one). A run stuck in 'pending' past
-  // STALE_PENDING_MS is marked failed (with --apply) so the row is retried.
+/**
+ * Analyses that already have a live cochran run, scoped to the candidates
+ * (batched, so no PostgREST row cap can hide one). A run stuck in 'pending'
+ * past STALE_PENDING_MS is marked failed (with --apply) so the row is retried.
+ */
+async function loadDoneSet(rows: Row[]): Promise<Set<string>> {
   const done = new Set<string>();
   for (let offset = 0; offset < rows.length; offset += 100) {
     const ids = rows.filter((_, index) => index >= offset && index < offset + 100).map((row) => row.id);
@@ -181,45 +181,67 @@ async function main() {
       }
     }
   }
+  return done;
+}
+
+/** Stored count, else the pre-flight lookup (written back with --apply); null when unknown. */
+async function resolveCount(row: Row): Promise<number | null> {
+  const stored = knownCount(row.validation_report?.metadata?.commentCount);
+  if (stored !== null) return stored;
+  const fetched = await fetchCommentCount(row.video_id);
+  if (fetched === null) return null;
+  console.log(`fetched commentCount ${row.id} ${row.video_id}: ${fetched}${apply ? ' (written)' : ''}`);
+  if (apply) await writeCommentCount(row, fetched);
+  return fetched;
+}
+
+/** Insert the system run, sign, enqueue. A definite worker rejection marks the run failed; an ambiguous error leaves it pending for the stale sweep. */
+async function enqueueRow(row: Row, count: number, sampling: Sampling): Promise<boolean> {
+  const [run] = await rest<Array<{ id: string }>>('comment_sample_runs', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      analysis_id: row.id, user_id: row.user_id, tier: 3, total_comment_count: count, requested_percent: 100, status: 'pending', mode: 'cochran',
+    }),
+  });
+  const exp = Date.now() + TOKEN_TTL_MS;
+  const sig = await hmacHex(`comments-tier3:${run.id}:${row.user_id}:${exp}`);
+  const res = await fetchWithTimeout(`${WORKER_URL}/comments/tier3/enqueue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sampleRunId: run.id, videoId: row.video_id, userId: row.user_id, totalCommentCount: count,
+      appUrl: APP_URL, mode: 'cochran', sampling, sig, exp,
+    }),
+  }, 15_000);
+  if (res.ok) {
+    console.log(`enqueued ${row.id} ${row.video_id} run=${run.id}`);
+    return true;
+  }
+  console.error(`FAIL ${row.id} ${row.video_id}: worker ${res.status} ${await res.text()}`);
+  await rest(`comment_sample_runs?id=eq.${run.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'failed' }) })
+    .catch((err) => console.error(`could not mark run ${run.id} failed`, err));
+  return false;
+}
+
+async function main() {
+  for (const [name, value] of Object.entries({ SUPABASE_URL, SERVICE_KEY, HMAC_SECRET, WORKER_URL })) {
+    if (!value) throw new Error(`missing env: ${name}`);
+  }
+  const sampling = await resolveSampling();
+  if (!sampling.ok) throw new Error(`invalid sampling config: ${sampling.errors.join('; ')}`);
+  const rows = await loadCandidates();
+  const done = await loadDoneSet(rows);
 
   let sent = 0;
   for (const row of rows) {
     if (sent >= limit) break;
     if (done.has(row.id)) { console.log(`skip ${row.id} ${row.video_id}: cochran run exists`); continue; }
-    let count = knownCount(row.validation_report?.metadata?.commentCount);
-    if (count === null) {
-      count = await fetchCommentCount(row.video_id);
-      if (count === null) { console.log(`skip ${row.id} ${row.video_id}: commentCount lookup failed`); continue; }
-      console.log(`fetched commentCount ${row.id} ${row.video_id}: ${count}${apply ? ' (written)' : ''}`);
-      if (apply) await writeCommentCount(row, count);
-    }
+    const count = await resolveCount(row);
+    if (count === null) { console.log(`skip ${row.id} ${row.video_id}: commentCount lookup failed`); continue; }
     if (count <= 0) { console.log(`skip ${row.id} ${row.video_id}: zero comments`); continue; }
     if (!apply) { console.log(`would enqueue ${row.id} ${row.video_id} (${count} comments)`); sent++; continue; }
-
-    const [run] = await rest<Array<{ id: string }>>('comment_sample_runs', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        analysis_id: row.id, user_id: row.user_id, tier: 3, total_comment_count: count, requested_percent: 100, status: 'pending', mode: 'cochran',
-      }),
-    });
-    const exp = Date.now() + TOKEN_TTL_MS;
-    const sig = await hmacHex(`comments-tier3:${run.id}:${row.user_id}:${exp}`);
-    const res = await fetchWithTimeout(`${WORKER_URL}/comments/tier3/enqueue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sampleRunId: run.id, videoId: row.video_id, userId: row.user_id, totalCommentCount: count,
-        appUrl: APP_URL, mode: 'cochran', sampling: sampling.config, sig, exp,
-      }),
-    }, 15_000);
-    if (!res.ok) {
-      console.error(`FAIL ${row.id} ${row.video_id}: worker ${res.status} ${await res.text()}`);
-      await rest(`comment_sample_runs?id=eq.${run.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'failed' }) }).catch((e) => console.error(`could not mark run ${run.id} failed`, e));
-      continue;
-    }
-    console.log(`enqueued ${row.id} ${row.video_id} run=${run.id}`);
-    sent++;
+    if (await enqueueRow(row, count, sampling.config)) sent++;
   }
   console.log(`${apply ? 'enqueued' : 'would enqueue'}: ${sent}`);
 }
