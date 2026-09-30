@@ -1,0 +1,19 @@
+supabase/migrations/20260930190000_drop_legacy_analysis_chunk_key.sql
+  s_36f875f11b73af::t_ee6a219b99869a 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2199e7984c2ac67db00e6b1a9daf409a17267654",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
