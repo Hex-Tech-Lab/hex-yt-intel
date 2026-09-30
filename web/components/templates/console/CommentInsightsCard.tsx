@@ -35,7 +35,7 @@ const CHIP_STYLE = {
 export function CommentInsightsCard({ insights }: { insights: CommentInsights }) {
   const total = insights.sentiment.positive + insights.sentiment.negative + insights.sentiment.neutral + insights.sentiment.mixed;
   const topTypes = Object.entries(insights.types)
-    .sort((a, b) => b[1] - a[1])
+    .sort((countA, countB) => countB[1] - countA[1])
     .slice(0, 3);
 
   return (
