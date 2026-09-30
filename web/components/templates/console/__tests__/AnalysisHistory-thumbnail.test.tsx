@@ -130,29 +130,24 @@ describe('AnalysisHistory thumbnail fade (mockup v2)', () => {
     expect(thumbLayer).not.toBeNull();
     expect(thumbLayer!.className).toContain('hx-thumb-layer');
 
-    // Layer 2: the divider sits AFTER the image layer in DOM order (and
-    // carries the higher z-index via .hx-thumb-divider).
-    const divider = row!.querySelector('[data-testid="hx-thumb-divider"]');
-    expect(divider).not.toBeNull();
-    expect(divider!.className).toContain('hx-thumb-divider');
-    expect(divider!.compareDocumentPosition(thumbLayer!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    // The vertical divider was removed (user decision 2026-09-30).
+    expect(row!.querySelector('[data-testid="hx-thumb-divider"]')).toBeNull();
 
     // Layer 3 (top): content column above everything. happy-dom doesn't
     // apply the Tailwind stylesheet, so assert the utility classes rather
     // than computed z-index values.
     expect(content!.className).toContain('z-10');
-    expect(divider!.className).toContain('hx-thumb-divider'); // z-index: 1 in globals.css
     expect(thumbLayer!.className).toContain('z-0');
   });
 
-  it('uses the CSS variable for the fade (no magic number in JSX) and the 2.5cm default in globals.css', () => {
+  it('uses the CSS variable for the fade (no magic number in JSX) and the 3cm default in globals.css', () => {
     const css = readFileSync(join(__dirname, '..', '..', '..', '..', 'app', 'globals.css'), 'utf-8');
-    expect(css).toMatch(/--hx-thumb-fade:\s*2\.5cm/);
-    expect(css).toMatch(/mask-image:\s*linear-gradient\(to left, #000 calc\(100% - var\(--hx-thumb-fade\)\), transparent 100%\)/);
+    expect(css).toMatch(/--hx-thumb-fade:\s*3cm/);
+    expect(css).toMatch(/mask-image:\s*linear-gradient\(to left, #000 calc\(100% - var\(--hx-thumb-fade\)\),[^;]*transparent 100%\)/);
     // The JSX applies the fade classes but never an inline fade length.
     const source = readFileSync(join(__dirname, '..', 'AnalysisHistory.tsx'), 'utf-8');
     expect(source).toContain('hx-thumb-layer');
-    expect(source).not.toMatch(/2\.5cm/);
+    expect(source).not.toMatch(/\b3cm\b/);
   });
 
   it('(#377 review) the text column reserves the sharp image width and the whole layer carries the shadow', () => {
@@ -160,8 +155,7 @@ describe('AnalysisHistory thumbnail fade (mockup v2)', () => {
     const block = css.match(/\.hx-thumb-content \{[^}]*\}/)?.[0] ?? '';
     expect(block).toMatch(/padding-right:\s*calc\(var\(--hx-thumb-sharp\)/);
     expect(block).toMatch(/text-shadow:/);
-    // The divider and the image width use the same sharp-width variable.
-    expect(css).toMatch(/\.hx-thumb-divider[\s\S]*?right:\s*calc\(4px \+ var\(--hx-thumb-sharp\)\)/);
+    expect(css).not.toMatch(/\.hx-thumb-divider/);
     expect(css).toMatch(/\.hx-thumb-layer[\s\S]*?width:\s*calc\(var\(--hx-thumb-sharp\) \+ var\(--hx-thumb-fade\)\)/);
   });
 });

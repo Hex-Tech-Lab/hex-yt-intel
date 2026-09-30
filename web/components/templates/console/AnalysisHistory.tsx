@@ -9,7 +9,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
-import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
+import { Icon, StatusBadge, ChapterChip, GlowBorder } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { showToast } from '@/lib/dashboard/export';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
@@ -134,10 +134,14 @@ function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }
  * insufficient-data" amber tier needs a per-dimension substantive signal from
  * the history-overview function — tracked separately.)
  */
-function DimensionDots({ present, totalDimensions, auxChips }: { present: number[]; totalDimensions: number; auxChips?: ReactNode }) {
+function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine }: { present: number[]; totalDimensions: number; auxChips?: ReactNode; auxChipsSecondLine?: ReactNode }) {
   const presentSet = new Set(present);
+  // Two FIXED lines (user decision 2026-09-30): dots + digest/description/
+  // channel meta on the first, comments/chapters/highlights always on the
+  // second -- the row height no longer depends on how the chips happen to wrap.
   return (
-    <div className="flex items-center gap-1.5 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
+    <div className="mt-3 pt-3 border-t border-[var(--line-faint)] flex flex-col gap-1.5">
+    <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden hx-chip-shadow">
       <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
       {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
         const isPresent = presentSet.has(n);
@@ -156,6 +160,8 @@ function DimensionDots({ present, totalDimensions, auxChips }: { present: number
         );
       })}
       {auxChips}
+    </div>
+    {auxChipsSecondLine && <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden hx-chip-shadow">{auxChipsSecondLine}</div>}
     </div>
   );
 }
@@ -779,7 +785,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
               const busy = loadingId === item.analysisId;
               const status = STATUS_STYLE[item.status as keyof typeof STATUS_STYLE] || STATUS_STYLE.complete;
               const itemNumber = currentPage * ITEMS_PER_PAGE + idx + 1;
-              return (
+              const row = (
                 <div
                   key={item.baseVideoId}
                   onClick={() => !busy && restoreAnalysis(item.analysisId)}
@@ -789,7 +795,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   className={`rounded-lg border border-[var(--line)] overflow-hidden transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] flex items-stretch relative hx-history-row ${
                     idx % 2 === 1 ? 'bg-[var(--card-quiet)]' : 'bg-[var(--card)]'
                   } ${
-                    busy ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
+                    busy ? 'cursor-wait' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                   }`}
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
@@ -806,7 +812,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
                           {itemNumber}
                         </span>
-                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate hx-thumb-shadow">{item.title || 'Untitled Analysis'}</h3>
+                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate hx-halo">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
                           <Tooltip content="Partial analysis: incomplete data from timeout">
                             <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
@@ -818,23 +824,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                           </Tooltip>
                         )}
                       </div>
-                      {item.channelTitle && (
-                        <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{item.channelTitle}</p>
-                      )}
                     </div>
-                    <PlatformChip platform={item.clientPlatform} />
-                    <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${status.cls}`}>
-                      {status.label}
-                    </span>
                   </div>
 
-                  {/* Metrics row — wraps on narrow screens (no horizontal overflow) */}
-                  <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
-                    {item.durationSeconds != null && (
-                      <MetricChip icon="solar:clock-circle-linear" title="Video length">
-                        {formatHistoryDuration(item.durationSeconds)}
-                      </MetricChip>
-                    )}
+                  {/* Row 2 — details. Fixed single line (no wrap); runs over the
+                      faded thumbnail with the hx-halo text shadow. */}
+                  <div className="flex items-center gap-x-4 flex-nowrap overflow-hidden mt-2 hx-halo">
                     <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced">
                       <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
                     </MetricChip>
@@ -861,6 +856,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     <MetricChip icon="solar:eye-linear" title="Times opened">
                       {item.views} views
                     </MetricChip>
+                  </div>
+
+                  {/* Row 3 — channel + date/time, fixed single line. */}
+                  <div className="flex items-center gap-x-4 flex-nowrap overflow-hidden mt-1.5 hx-halo">
+                    {item.channelTitle && (
+                      <span className="text-[11px] text-[var(--ink-muted)] truncate max-w-[40%]">{item.channelTitle}</span>
+                    )}
                     {/* Two timestamps only, each with a distinct icon-verb: magnifying-glass
                         for "analyzed" (per user's explicit Sherlock-Holmes-loupe request,
                         2026-08-02), eye for "viewed" (already used for the views-count chip
@@ -893,9 +895,6 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         })}
                       </MetricChip>
                     )}
-                    <span className="ml-auto inline-flex items-center text-[var(--ink-muted)]">
-                      <Icon icon={busy ? 'solar:refresh-linear' : 'solar:alt-arrow-right-linear'} size={16} className={busy ? 'hx-anispin text-[var(--accent)]' : ''} />
-                    </span>
                   </div>
 
                   {/* Per-dimension completeness map (green = generated, hollow = missing), aux-status
@@ -908,10 +907,16 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       totalDimensions={TOTAL_DIMENSIONS}
                       auxChips={
                         (item.status === 'complete' || item.status === 'partial') && (
-                           <span className="flex flex-wrap gap-1.5 ml-1" role="status" aria-live="polite" aria-label="Auxiliary data status">
+                           <span className="flex flex-nowrap gap-1.5 ml-1 hx-chip-shadow" role="status" aria-live="polite" aria-label="Auxiliary data status">
                             <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="Digest" />
                             <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="Description" />
                             <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
+                          </span>
+                        )
+                      }
+                      auxChipsSecondLine={
+                        (item.status === 'complete' || item.status === 'partial') && (
+                          <span className="flex flex-nowrap gap-1.5 hx-chip-shadow" role="status" aria-live="polite" aria-label="Comments, chapters and highlights status">
                             <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="Comments" />
                             <ChapterChip hasChapters={item.hasChapters} />
                             {item.hasHighlights !== null && (
@@ -951,10 +956,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       at 16:9; it keeps going left past the divider and fades out over
                       --hx-thumb-fade (length set in globals.css per the mockup, exposed as a
                       CSS custom property so it is tunable in CSS, not a JSX
-                      magic number). The
-                      divider is drawn ON TOP of the image (hx-thumb-divider); title/chips
-                      ride above everything (z-10) with a light text-shadow so they stay
-                      legible where they overlap the faded part.
+                      magic number). The vertical divider was removed (user decision
+                      2026-09-30); title/chips ride above everything (z-10) with a dark
+                      halo so they stay legible where they overlap the faded part.
                       object-cover (not the previous padded object-contain frame) because
                       the mockup's full-height 16:9 frame IS the crop — contain would
                       letterbox inside it. */}
@@ -970,24 +974,30 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       />
                     </div>
                   </div>
-                  <div
-                    aria-hidden
-                    data-testid="hx-thumb-divider"
-                    className="hx-thumb-divider pointer-events-none"
-                  />
                   {/* Duration badge — pinned bottom-right ON TOP of the faded part
                       (same text-shadow treatment as the title, per mockup v2). */}
-                  {item.durationSeconds != null && (
-                    <span
-                      data-testid="hx-thumb-duration"
-                      className="hx-thumb-overlay absolute bottom-2.5 right-2.5 z-10 font-mono text-[11px] px-1.5 py-0.5 rounded-[var(--radius-pill)] text-[var(--ink-secondary)] border border-[var(--line)]"
-                      style={{ background: 'rgb(11 14 20 / 0.65)', textShadow: '0 1px 2px rgb(0 0 0 / 0.65)' }}
-                    >
-                      {formatHistoryDuration(item.durationSeconds)}
+                  {/* Bottom-right cluster (user decision 2026-09-30): platform,
+                      status and duration together, each with a simple dark shadow. */}
+                  <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1.5 hx-chip-shadow">
+                    <PlatformChip platform={item.clientPlatform} />
+                    <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${status.cls}`} style={{ background: 'rgb(11 14 20 / 0.65)' }}>
+                      {status.label}
                     </span>
-                  )}
+                    {item.durationSeconds != null && (
+                      <span
+                        data-testid="hx-thumb-duration"
+                        className="hx-thumb-overlay font-mono text-[11px] px-1.5 py-0.5 rounded-[var(--radius-pill)] text-[var(--ink-secondary)] border border-[var(--line)]"
+                        style={{ background: 'rgb(11 14 20 / 0.65)', textShadow: '0 1px 2px rgb(0 0 0 / 0.65)' }}
+                      >
+                        {formatHistoryDuration(item.durationSeconds)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
+              // Loading: the system-wide edge spin (GlowBorder) around the whole
+              // card, replacing the old per-row spinner icon.
+              return busy ? <GlowBorder key={item.baseVideoId} active radius="card">{row}</GlowBorder> : row;
             })}
           </div>
 
