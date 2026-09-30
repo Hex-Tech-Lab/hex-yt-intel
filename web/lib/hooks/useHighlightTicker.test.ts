@@ -33,10 +33,26 @@ describe('useHighlightTicker', () => {
     expect(result.current.revealedText).toBe('one...');
   });
 
-  it('reveals proportionally to elapsed/duration ratio', () => {
-    // 4 words over 10s duration; at 5s elapsed (50%) -> ceil(0.5*4)=2 words
-    const { result } = renderHook(() => useHighlightTicker(0, 'one two three four', 10, 5));
-    expect(result.current.revealedText).toBe('one two...');
+  it('reveals words at the words-per-second pace, not a duration ratio', () => {
+    // default 2.5 w/s: at 5s elapsed -> 12.5 -> 13 words (w0..w12), truncated
+    const twentyWords = Array.from({ length: 20 }, (unused, wordIndex) => `w${wordIndex}`).join(' ');
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, twentyWords, 10, 5)
+    );
+    expect(result.current.revealedText.startsWith('w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12...')).toBe(true);
+  });
+
+  it('does not reveal faster than wordsPerSecond even when the excerpt outlasts the segment', () => {
+    // bug-2: long excerpt in a short segment must NOT scroll faster;
+    // at duration end it just hasn't finished revealing
+    const sixtyWords = Array.from({ length: 60 }, (unused, wordIndex) => `w${wordIndex}`).join(' ');
+    const { result } = renderHook(() =>
+      useHighlightTicker(0, sixtyWords, 4, 4)
+    );
+    // 4s * 2.5 w/s = 10 words
+    expect(result.current.revealedText.startsWith('w0 w1 ')).toBe(true);
+    expect(result.current.revealedText.includes('w10 ')).toBe(false);
+    expect(result.current.totalWords).toBe(60);
   });
 
   it('reveals all words with no trailing ellipsis once elapsed reaches duration', () => {
@@ -50,7 +66,7 @@ describe('useHighlightTicker', () => {
       { initialProps: { elapsed: 0 } }
     );
     expect(result.current.revealedText).toBe('one...');
-    rerender({ elapsed: 7.5 });
+    rerender({ elapsed: 1 });
     expect(result.current.revealedText).toBe('one two three...');
   });
 

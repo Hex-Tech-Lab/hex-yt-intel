@@ -61,6 +61,13 @@ export interface UseSegmentPlaybackOptions {
    *  value only if a caller has no shared store tick to piggyback on and
    *  must run its own setInterval (PublicHighlightsReel). */
   pollIntervalMs?: number;
+  /** Max time (ms) a pending seek may hold the poll loop's settlement
+   *  guard before it is force-cleared and playback proceeds from the
+   *  actual current time (bug-1 fix, 2026-09-30: a never-settling seek
+   *  used to freeze the reel forever). Wired from the Settings Registry
+   *  key `highlights.seekSettlementTimeoutMs` via the highlights API
+   *  response; falls back to the registry fallback value here. */
+  seekSettlementTimeoutMs?: number;
 }
 
 // Explicit list (2026-08-20 layout revision) rather than derived from
@@ -79,6 +86,14 @@ const ADVANCE_LEAD_SECONDS = 0.3;
  *  not a forward-only comparison -- see that file's own comment for the
  *  backward-seek bug a forward-only check reintroduces). */
 const SEEK_SETTLEMENT_TOLERANCE_SECONDS = 1;
+/** Fallback for the seek-settlement timeout when the registry key is
+ *  unavailable -- mirrors HIGHLIGHTS_REGISTRY_FALLBACK's value; the real
+ *  key flows through the highlights API response, see useSegmentPlayback
+ *  options below. */
+const DEFAULT_SEEK_SETTLEMENT_TIMEOUT_MS = 2000;
+/** Re-issues of a seek that timed out outside its segment before the hook
+ *  reconciles to the segment the player is actually in (#375 review P1). */
+const MAX_SEEK_RETRIES = 3;
 
 export interface UseSegmentPlaybackResult {
   /** Index of the currently-playing segment, or null when stopped. */
@@ -119,12 +134,60 @@ export interface UseSegmentPlaybackResult {
   resume: () => void;
 }
 
+function segmentWindow(
+  segment: { start: number; end: number },
+  contextLeadSeconds: number,
+  segmentDurationSeconds: number,
+): { leadIn: number; end: number } {
+  const leadIn = Math.max(0, segment.start - contextLeadSeconds);
+  const end = Number.isFinite(segment.end) && segment.end > segment.start ? segment.end : leadIn + segmentDurationSeconds;
+  return { leadIn, end };
+}
+
+export type TimedOutSeekRecovery =
+  | { type: 'proceed' }
+  | { type: 'retry' }
+  | { type: 'reconcile'; index: number }
+  | { type: 'stop' };
+
+/**
+ * What to do when a seek has not settled within the timeout (#375 review
+ * P1). Proceed only when the player really sits inside the selected
+ * segment; otherwise re-issue the seek up to MAX_SEEK_RETRIES times, then
+ * reconcile to the segment the player is actually in, or stop. Never lets
+ * stale player time drive the selected segment's advance logic.
+ */
+export function resolveTimedOutSeek(input: {
+  currentTime: number;
+  selectedIndex: number;
+  segments: ReadonlyArray<{ start: number; end: number }>;
+  contextLeadSeconds: number;
+  segmentDurationSeconds: number;
+  retriesSoFar: number;
+}): TimedOutSeekRecovery {
+  const { currentTime, selectedIndex, segments, contextLeadSeconds, segmentDurationSeconds, retriesSoFar } = input;
+  const selected = segments[selectedIndex];
+  if (selected) {
+    const { leadIn, end } = segmentWindow(selected, contextLeadSeconds, segmentDurationSeconds);
+    if (currentTime >= leadIn - SEEK_SETTLEMENT_TOLERANCE_SECONDS && currentTime < end - ADVANCE_LEAD_SECONDS) {
+      return { type: 'proceed' };
+    }
+  }
+  if (retriesSoFar < MAX_SEEK_RETRIES) return { type: 'retry' };
+  const actualIndex = segments.findIndex((candidate) => {
+    const { leadIn, end } = segmentWindow(candidate, contextLeadSeconds, segmentDurationSeconds);
+    return currentTime >= leadIn && currentTime < end;
+  });
+  return actualIndex === -1 ? { type: 'stop' } : { type: 'reconcile', index: actualIndex };
+}
+
 export function useSegmentPlayback({
   segments,
   contextLeadSeconds,
   segmentDurationSeconds,
   primitives,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+  seekSettlementTimeoutMs = DEFAULT_SEEK_SETTLEMENT_TIMEOUT_MS,
 }: UseSegmentPlaybackOptions): UseSegmentPlaybackResult {
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [speed, setSpeedState] = useState<number>(1);
@@ -133,6 +196,16 @@ export function useSegmentPlayback({
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(false);
   const pendingSeekTargetRef = useRef<number | null>(null);
+  /** Wall-clock ms (Date.now) when the current pending seek was issued --
+   *  drives the settlement timeout below; null when no seek is pending. */
+  const pendingSeekIssuedAtRef = useRef<number | null>(null);
+  /** True when the pending seek moves the player FORWARD (target > player
+   *  time at issue). Forward seeks can safely treat "reached/passed target"
+   *  as settled (YouTube keyframe snapping can overshoot by seconds);
+   *  backward seeks must rely on tolerance + timeout because the player
+   *  legitimately sits past the target until the seek takes effect. */
+  const pendingSeekForwardRef = useRef(false);
+  const seekRetryCountRef = useRef(0);
   // Real bug fix (post-merge review): `isReady` was computed and returned but
   // never actually consulted by `start`/`jumpTo` -- both called `seekTo`/
   // `play` unconditionally, so a caller invoking them before the primitive
@@ -154,12 +227,16 @@ export function useSegmentPlayback({
   contextLeadRef.current = contextLeadSeconds;
   const segmentDurationRef = useRef(segmentDurationSeconds);
   segmentDurationRef.current = segmentDurationSeconds;
+  const seekSettlementTimeoutRef = useRef(seekSettlementTimeoutMs);
+  seekSettlementTimeoutRef.current = seekSettlementTimeoutMs;
 
   const stop = useCallback(() => {
     stopRef.current = true;
     pausedRef.current = false;
     setIsPaused(false);
     pendingSeekTargetRef.current = null;
+    pendingSeekIssuedAtRef.current = null;
+    pendingSeekForwardRef.current = false;
     pendingStartIndexRef.current = null;
     setPlayingIdx(null);
     setElapsedInSegmentSeconds(null);
@@ -184,6 +261,8 @@ export function useSegmentPlayback({
     if (index >= currentSegments.length) {
       setPlayingIdx(null);
       pendingSeekTargetRef.current = null;
+      pendingSeekIssuedAtRef.current = null;
+      pendingSeekForwardRef.current = false;
       pendingStartIndexRef.current = null;
       setElapsedInSegmentSeconds(null);
       return;
@@ -198,6 +277,12 @@ export function useSegmentPlayback({
     const segment = currentSegments[index]!;
     const leadIn = Math.max(0, segment.start - contextLeadRef.current);
     pendingSeekTargetRef.current = leadIn;
+    pendingSeekIssuedAtRef.current = Date.now();
+    seekRetryCountRef.current = 0;
+    {
+      const now = primitivesRef.current.getCurrentTime();
+      pendingSeekForwardRef.current = now === null ? true : leadIn >= now;
+    }
     primitivesRef.current.seekTo(leadIn);
     primitivesRef.current.play?.();
     setPlayingIdx(index);
@@ -247,10 +332,76 @@ export function useSegmentPlayback({
 
       const pendingTarget = pendingSeekTargetRef.current;
       if (pendingTarget !== null) {
-        if (Math.abs(currentTime - pendingTarget) <= SEEK_SETTLEMENT_TOLERANCE_SECONDS) {
-          pendingSeekTargetRef.current = null;
+        const issuedAt = pendingSeekIssuedAtRef.current;
+        const timedOut =
+          issuedAt !== null &&
+          Date.now() - issuedAt > seekSettlementTimeoutRef.current;
+        // Settled when within tolerance, OR -- forward seeks only -- when
+        // the player has reached/passed the target (bug-3 fix 2026-09-30:
+        // YouTube keyframe seeking can land 1s+ PAST the requested time;
+        // |diff| <= tol never fires for those overshoots and holding the
+        // guard delayed elapsed updates by the full settlement timeout).
+        // Backward seeks must NOT use the pass-target rule: the player
+        // legitimately sits PAST the target until the seek takes effect
+        // (caught by regression: backward jump 20→8 would have "settled"
+        // instantly and skipped the seek).
+        const settled =
+          Math.abs(currentTime - pendingTarget) <= SEEK_SETTLEMENT_TOLERANCE_SECONDS ||
+          (pendingSeekForwardRef.current && currentTime >= pendingTarget);
+        if (settled || timedOut) {
+          if (timedOut) {
+            // Bug-1 fix (2026-09-30, live report): a seek that never lands
+            // within tolerance (stale store time while paused, YouTube
+            // seek snapping outside the ±1s window) used to hold this
+            // guard forever -- the reel froze with no elapsed updates and
+            // no advance. Force-clear and proceed from actual time.
+            // Breadcrumb (not captureException: this is a recoverable
+            // degradation, not an error) for diagnosis.
+            // eslint-disable-next-line no-console -- breadcrumb parity with Sentry's default breadcrumbs
+            console.info('[useSegmentPlayback] seek did not settle within timeout; proceeding from actual time', {
+              pendingTarget,
+              currentTime,
+              waitedMs: issuedAt !== null ? Date.now() - issuedAt : null,
+            });
+          }
+          if (!timedOut) {
+            pendingSeekTargetRef.current = null;
+            pendingSeekIssuedAtRef.current = null;
+            seekRetryCountRef.current = 0;
+          }
         }
-        return;
+        if (!timedOut) return;
+        // Timeout recovery (#375 review P1): never consume STALE player time
+        // for the selected segment -- see resolveTimedOutSeek.
+        const recovery = resolveTimedOutSeek({
+          currentTime,
+          selectedIndex: idx,
+          segments: segmentsRef.current,
+          contextLeadSeconds: contextLeadRef.current,
+          segmentDurationSeconds: segmentDurationRef.current,
+          retriesSoFar: seekRetryCountRef.current,
+        });
+        if (recovery.type === 'retry') {
+          seekRetryCountRef.current += 1;
+          pendingSeekIssuedAtRef.current = Date.now();
+          primitivesRef.current.seekTo(pendingTarget);
+          return;
+        }
+        if (recovery.type !== 'proceed') {
+          seekRetryCountRef.current = 0;
+          pendingSeekTargetRef.current = null;
+          pendingSeekIssuedAtRef.current = null;
+          if (recovery.type === 'stop') {
+            stop();
+          } else {
+            setPlayingIdx(recovery.index);
+            setElapsedInSegmentSeconds(0);
+          }
+          return;
+        }
+        seekRetryCountRef.current = 0;
+        pendingSeekTargetRef.current = null;
+        pendingSeekIssuedAtRef.current = null;
       }
 
       setElapsedInSegmentSeconds(Math.max(0, currentTime - leadIn));

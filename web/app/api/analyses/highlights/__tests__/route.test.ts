@@ -20,6 +20,7 @@
  */
 import { NextRequest } from 'next/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 
 const getSupabaseClientWithAuth = vi.hoisted(() => vi.fn());
 const getRegistrySettings = vi.hoisted(() => vi.fn());
@@ -133,5 +134,19 @@ describe('GET /api/analyses/highlights (camelCase wire contract)', () => {
 
     const res = await GET(getRequest());
     expect(res.status).toBe(401);
+  });
+
+  it('exposes the new playback tuning keys (seekSettlementTimeoutMs, tickerWordsPerSecond) in the response', async () => {
+    mockSupabaseChain(DB_ROWS);
+
+    const res = await GET(getRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.seekSettlementTimeoutMs).toBe(
+      HIGHLIGHTS_REGISTRY_FALLBACK['highlights.seekSettlementTimeoutMs']
+    );
+    expect(body.tickerWordsPerSecond).toBe(
+      HIGHLIGHTS_REGISTRY_FALLBACK['highlights.tickerWordsPerSecond']
+    );
   });
 });

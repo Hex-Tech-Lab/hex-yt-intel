@@ -75,6 +75,8 @@ export default async function SharePage(props: {
             segmentDurationSeconds={clampHighlightsSetting(registrySettings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30)}
             contextLeadSeconds={clampHighlightsSetting(registrySettings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10)}
             videoDurationSeconds={analysis.videoDurationSeconds}
+            tickerWordsPerSecond={clampHighlightsSetting(registrySettings['highlights.tickerWordsPerSecond'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.tickerWordsPerSecond'], 0.5, 10)}
+            seekSettlementTimeoutMs={clampHighlightsSetting(registrySettings['highlights.seekSettlementTimeoutMs'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.seekSettlementTimeoutMs'], 500, 10000)}
           />
         </div>
       )}
