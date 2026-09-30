@@ -278,12 +278,18 @@ export class MetadataScraper implements CommentIngestionPort {
    * pages themselves and can decide whether a failed page is worth retrying
    * or the run should stop with what it has so far.
    */
+  /**
+   * `order` (added 2026-09-30, Comments Dispatch A): YouTube commentThreads
+   * ordering — 'relevance' (default, existing callers unchanged) or 'time'
+   * (recency-ordered pool for the Cochran-mode stratified sampler).
+   */
   async fetchCommentsPage(
     videoId: string,
-    params: { pageToken?: string; maxResultsPerPage: number }
+    params: { pageToken?: string; maxResultsPerPage: number; order?: 'relevance' | 'time' }
   ): Promise<CommentPage> {
     const pageParam = params.pageToken ? `&pageToken=${encodeURIComponent(params.pageToken)}` : '';
-    const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=relevance&maxResults=${params.maxResultsPerPage}${pageParam}&key=${this.apiKey}`;
+    const order = params.order ?? 'relevance';
+    const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=${order}&maxResults=${params.maxResultsPerPage}${pageParam}&key=${this.apiKey}`;
 
     try {
       const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
@@ -305,8 +311,10 @@ export class MetadataScraper implements CommentIngestionPort {
 
       const data = (await response.json()) as {
         items?: Array<{
+          id?: string;
           snippet?: {
             topLevelComment?: {
+              id?: string;
               snippet?: {
                 authorDisplayName?: string;
                 textDisplay?: string;
@@ -326,6 +334,10 @@ export class MetadataScraper implements CommentIngestionPort {
           text: snippet.textDisplay ?? '',
           publishedAt: snippet.publishedAt ?? '',
           likeCount: snippet.likeCount ?? 0,
+          // The comment resource's own id (#378 review): identical to the
+          // thread id for top-level comments today, but the comment id is
+          // the documented identity of the comment itself.
+          externalId: item.snippet?.topLevelComment?.id ?? item.id,
         };
       });
 
