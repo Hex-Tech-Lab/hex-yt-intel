@@ -481,7 +481,7 @@ export function LogsViewerClient() {
               value={tabLogs[activeTab] || ''}
               onChange={(e) => handlePasteChange(activeTab, e.target.value)}
               placeholder={`Paste raw ${currentTabConfig.label} log export here…`}
-              className="w-full bg-[var(--bg)] border border-[var(--border-muted)] rounded p-3 text-xs font-mono text-[var(--ink-main)] focus:outline-none focus:border-[var(--accent)]"
+              className="w-full bg-[var(--bg)] border border-[var(--border-muted)] rounded p-3 text-xs font-mono text-[var(--ink-main)] focus:outline-none focus:border-[var(--focus-ring)]"
             />
           </div>
         ) : logRows.length === 0 ? (

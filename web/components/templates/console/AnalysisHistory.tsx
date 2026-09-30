@@ -115,7 +115,7 @@ function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }
       src={`https://i.ytimg.com/vi/${videoId}/${THUMBNAIL_TIERS[tier]}.jpg`}
       alt={title}
       loading="lazy"
-      className="w-full h-full object-contain select-none"
+      className="w-full h-full object-cover select-none"
       onError={() => {
         if (tier < THUMBNAIL_TIERS.length - 1) {
           setTier((t) => t + 1);
@@ -664,7 +664,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         <select
           value={sortBy}
           onChange={(e) => { setSortBy(e.target.value as SortOrder); setCurrentPage(0); }}
-          className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
+          className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
         >
           <option value="recent">Recently analyzed</option>
           <option value="oldest">Oldest first</option>
@@ -674,7 +674,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         <select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value as FilterStatus); setCurrentPage(0); }}
-          className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
+          className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
         >
           <option value="all">All status</option>
           <option value="complete">Complete</option>
@@ -786,15 +786,19 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); restoreAnalysis(item.analysisId); } }}
-                  className={`rounded-xl border border-[var(--line)] overflow-hidden transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] flex items-stretch ${
+                  className={`rounded-lg border border-[var(--line)] overflow-hidden transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] flex items-stretch relative hx-history-row ${
                     idx % 2 === 1 ? 'bg-[var(--card-quiet)]' : 'bg-[var(--card)]'
                   } ${
                     busy ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                   }`}
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
-                  {/* Card Content Column */}
-                  <div className="flex-1 min-w-0 p-4">
+                  {/* Card Content Column — relative z-10 so title/chips sit ABOVE the
+                      thumbnail layer (mockup v2), with a light text-shadow (via the
+                      hx-thumb-shadow class on the title below) for legibility over
+                      the faded part. pr accounts for the sharp thumbnail width so
+                      text never runs under its unfaded area. */}
+                  <div className="flex-1 min-w-0 p-4 relative z-10 hx-thumb-content">
                   {/* Title row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -802,7 +806,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
                           {itemNumber}
                         </span>
-                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
+                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate hx-thumb-shadow">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
                           <Tooltip content="Partial analysis: incomplete data from timeout">
                             <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
@@ -941,19 +945,47 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   )}
                   </div>
 
-                  {/* Video thumbnail: top-to-bottom, flush with right border, square-like aspect */}
-                  {/* Thumbnail polish (user feedback 2026-09-28): thin empty
-                       space around the image, zoomed out (object-contain within a
-                       padded frame) so the landscape thumbnail is not chopped at
-                       the left/right edges the way object-cover full-bleed was. */}
-                  <div className="relative shrink-0 w-28 sm:w-36 md:w-44 self-stretch border-l border-[var(--line)]/60 bg-[var(--surface-muted)] overflow-hidden p-1.5">
-                    <div className="w-full h-full rounded-md overflow-hidden bg-[var(--surface-muted)]">
+                  {/* Video thumbnail — mockup v2 (user decision 2026-09-30, docs/agent-prompts/
+                      2026-09-30-history-thumbnail-mockup-v2.html): the image sits ONE LAYER
+                      BELOW the row content, pinned right with a 4px margin, full row height
+                      at 16:9; it keeps going left past the divider and fades out over
+                      --hx-thumb-fade (length set in globals.css per the mockup, exposed as a
+                      CSS custom property so it is tunable in CSS, not a JSX
+                      magic number). The
+                      divider is drawn ON TOP of the image (hx-thumb-divider); title/chips
+                      ride above everything (z-10) with a light text-shadow so they stay
+                      legible where they overlap the faded part.
+                      object-cover (not the previous padded object-contain frame) because
+                      the mockup's full-height 16:9 frame IS the crop — contain would
+                      letterbox inside it. */}
+                  <div
+                    aria-hidden
+                    data-testid="hx-thumb-layer"
+                    className="hx-thumb-layer absolute top-1 bottom-1 right-1 z-0 overflow-hidden bg-[var(--surface-muted)] pointer-events-none"
+                  >
+                    <div className="h-full" style={{ aspectRatio: '16 / 9', width: '100%' }}>
                       <HistoryThumbnail
                         videoId={item.baseVideoId}
                         title={item.title || 'Video thumbnail'}
                       />
                     </div>
                   </div>
+                  <div
+                    aria-hidden
+                    data-testid="hx-thumb-divider"
+                    className="hx-thumb-divider pointer-events-none"
+                  />
+                  {/* Duration badge — pinned bottom-right ON TOP of the faded part
+                      (same text-shadow treatment as the title, per mockup v2). */}
+                  {item.durationSeconds != null && (
+                    <span
+                      data-testid="hx-thumb-duration"
+                      className="hx-thumb-overlay absolute bottom-2.5 right-2.5 z-10 font-mono text-[11px] px-1.5 py-0.5 rounded-[var(--radius-pill)] text-[var(--ink-secondary)] border border-[var(--line)]"
+                      style={{ background: 'rgb(11 14 20 / 0.65)', textShadow: '0 1px 2px rgb(0 0 0 / 0.65)' }}
+                    >
+                      {formatHistoryDuration(item.durationSeconds)}
+                    </span>
+                  )}
                 </div>
               );
             })}

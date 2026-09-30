@@ -79,7 +79,7 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
       onKeyDown={handleKeyDown}
       type="inherit"
       color="accent"
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors hover:bg-accent/20 active:bg-accent/30 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors hover:bg-accent/20 active:bg-accent/30 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] ${className}`}
       tooltip={`Seek to ${timestamp}`}
       label={`Seek to ${timestamp}`}
     >

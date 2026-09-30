@@ -50,8 +50,17 @@ const DimensionItem = memo(
           <button
             data-dimension-trigger="true"
             onClick={() => onSelect(d.key)}
-            className={`w-full text-left flex items-center justify-between p-3 px-4 rounded-lg border cursor-pointer transition-all duration-200 ${buttonClass}`}
-            style={{ boxSizing: 'border-box' }}
+            className={`w-full text-left flex items-center justify-between p-3 px-4 border cursor-pointer transition-all duration-200 ${buttonClass}`}
+            style={{
+              boxSizing: 'border-box',
+              /* Corner-cut fix (2026-09-30): this button sits inside GlowBorder's
+                 inner div (outer --radius-card 8px minus the 1px glow padding =
+                 7px). A plain rounded-lg (8px) was LARGER than its container, so
+                 overflow:hidden clipped the button's corners square — the
+                 reported "cut off" look. Nested radius must be outer minus
+                 border/padding. */
+              borderRadius: 'calc(var(--radius-card) - 2px)',
+            }}
           >
             <div className="flex items-center gap-2.5 min-w-0 pl-1">
               <span className={`font-mono text-xs font-bold ${isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}`}>

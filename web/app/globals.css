@@ -37,6 +37,22 @@
 @import "@astryxdesign/core/astryx.css";
 @import "@astryxdesign/theme-neutral/theme.css";
 
+/* Astryx radius bridge (user decision 2026-09-30): Astryx components (Button,
+   Field, ChatComposer, Card, dropdown/segmented controls...) do not consume
+   Tailwind's --radius-* scale — they resolve their own theme variables
+   (theme-neutral defaults: --radius-inner 6px, --radius-element 10px,
+   --radius-container 12px, --radius-chat 28px). Pointing those at the app's
+   8px/6px tokens keeps Astryx-rendered chrome on the same scale as everything
+   else. --radius-chat specifically shrinks the chat box, which the user called
+   out as "too much" rounding (target: 8px). Placed after the imports so the
+   :root values from theme.css are overridden in cascade order. */
+:root {
+  --radius-inner: var(--radius-pill);
+  --radius-element: var(--radius-control);
+  --radius-container: var(--radius-card);
+  --radius-chat: var(--radius-card);
+}
+
 @theme {
   --color-void: var(--void);
   --color-bg: var(--bg);
@@ -79,23 +95,30 @@
   --radius-3xl: 14px;
 }
 
-/* Sprint 1: override all radii to 0px for sharp industrial aesthetic.
-   Must be a separate @theme block AFTER the main one above — Tailwind v4
-   merges theme blocks in declaration order, so this wins. Each token
-   listed individually -- `--radius-*: 0px` is invalid Tailwind v4 syntax
-   (wildcard namespace values only accept `initial`, not a concrete value;
-   this broke the production build, caught in CI). */
+/* Radii: 8px/6px scale (user decision 2026-09-30). Single source of truth —
+   the "Sprint 1" all-zero override block was replaced with these values so
+   every panel/control rectangle gets 8px and chips/badges get 6px, while
+   rounded-full stays reserved for genuinely circular elements. Same-file
+   later @theme block still wins over the first one (Tailwind v4 merges
+   @theme blocks in declaration order; per-token lines, not a wildcard,
+   per the incident note in the first block below). */
 @theme {
-  --radius-control: 0px;
-  --radius-card: 0px;
-  --radius-pill: 0px;
-  --radius-xs: 0px;
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
+  --radius-control: 8px;
+  --radius-card: 8px;
+  --radius-pill: 6px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  /* Tailwind v4's bare `rounded` utility resolves from --radius (0.25rem
+     default in tailwindcss/theme.css), NOT from the xs..3xl scale above.
+     Pin it to the small-element tier so bare `rounded` usages (kbd hint,
+     tiny inline buttons) get 6px like every other chip. */
+  --radius: 6px;
 }
 
 /* Base reset lives in @layer base so Tailwind's utilities (a later layer) win.
@@ -172,14 +195,16 @@
   --platform-linux: #FBBF24;     /* amber-400  */
   --platform-web: var(--ink-muted);
 
-  /* --- Radii — one source of truth (see @theme). Sprint 1: zero everywhere,
-     sharp industrial aesthetic. Was drifted out of sync with @theme's
-     override until now -- direct `var(--radius-control)` usage (border-
-     radius on plain CSS rules, not Tailwind utility classes) reads this
-     :root value, not @theme's, so both had to change together. -------- */
-  --radius-control: 0px;
-  --radius-card: 0px;
-  --radius-pill: 0px;
+  /* --- Radii — one source of truth (see @theme). 8px/6px scale restored
+     2026-09-30 (user decision replacing Sprint 1's all-zero block):
+     8px on panel/card/control rectangles, 6px on small chips/badges. Kept
+     in sync with @theme's block on purpose -- direct
+     `var(--radius-control)` usage (border-radius on plain CSS rules, not
+     Tailwind utility classes) reads this :root value, not @theme's, so
+     both must change together. -------- */
+  --radius-control: 8px;
+  --radius-card: 8px;
+  --radius-pill: 6px;
 
   /* --- Type families ----------------------------------------------------- */
   --font-sans: var(--inter-font), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -470,10 +495,53 @@ div[data-chat-dock="true"] div[class*="content"] {
    (already correctly rounded via this app's own `!rounded-lg` className on
    <ChatComposer>, not the library's oversized default) -- moved back there,
    this time confirmed against the component's actual stylex source, not
-   assumed from the class name alone. */
+   assumed from the class name alone.
+
+   User decision 2026-09-30: the accent outline read as a cyan focus RING;
+   replaced with a quiet focus state -- same 8px shape, border brightened
+   slightly via the existing neutral --line-strong token, never a square
+   outline. Keeping a real `outline` (not box-shadow-only) preserves the
+   forced-colors accessibility fix documented above; the outline is drawn in
+   the surface color so it's invisible against the page while still satisfying
+   forced-colors rendering, and the visible signal is the border brightening. */
 [data-chat-dock="true"] .astryx-chat-composer:focus-within {
-  outline: 2px solid var(--accent) !important;
-  outline-offset: 1px !important;
+  outline: 2px solid var(--surface) !important;
+  outline-offset: -2px !important;
+  border-color: var(--focus-ring) !important;
+}
+
+/* History-row thumbnail fade (mockup v2, user decision 2026-09-30). The image
+   layer is one layer BELOW the row content (z-index 0), pinned right with a
+   4px margin, full row height at 16:9; it continues left past the divider and
+   fades out over --hx-thumb-fade via mask-image. The divider is drawn ON TOP
+   of the image (z-index 1); title/chips/duration sit above everything (z-10)
+   with a light text-shadow. --hx-thumb-fade is a tunable CSS custom property
+   (2.5cm per the mockup), deliberately NOT a magic number in JSX. */
+:root {
+  --hx-thumb-fade: 2.5cm;
+}
+
+.hx-thumb-layer {
+  /* Width: the sharp 16:9 area at the row's min-height (112px, minus the 4px
+     top/bottom margins) plus the fade extension to the left. */
+  width: calc((112px - 8px) * 16 / 9 + var(--hx-thumb-fade));
+  max-width: 85%;
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
+          mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+}
+
+.hx-thumb-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  right: calc(4px + (112px - 8px) * 16 / 9);
+  border-left: 1px solid var(--line);
+}
+
+.hx-thumb-shadow {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.65);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -484,17 +552,32 @@ div[data-chat-dock="true"] div[class*="content"] {
   }
 }
 
-/* Focus visibility (a11y): on-brand cyan ring for keyboard users. Inputs set
-   outline:none inline for aesthetics, so they opt in via .hx-field which uses a
-   box-shadow ring (not blocked by inline outline). Buttons/cards use outline. */
+/* Focus visibility (a11y), ONE universal style (user decision 2026-09-30):
+   no cyan ring anywhere. Every focusable element uses --focus-ring, a quiet
+   neutral that only brightens the edge; buttons (no border to brighten) keep
+   a thin outline in the same token so keyboard users still see focus (WCAG
+   2.4.7). Components reference var(--focus-ring), never the accent. */
+:root {
+  --focus-ring: var(--line-strong);
+}
+/* Astryx draws its focus outlines from --color-accent on the focused element
+   itself (compiled atomic classes, so no stable selector to target). Re-point
+   the variable only on a keyboard-focused element: its own outline turns
+   quiet, nothing else changes. Known residual: Astryx field WRAPPERS colour
+   their border via :focus-within on the parent, which this cannot reach
+   (the chat composer's is overridden above). */
+:focus-visible {
+  --color-accent: var(--focus-ring);
+}
 .hx-field:focus-visible {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--focus-ring) !important;
+  border-color: var(--focus-ring) !important;
   border-radius: var(--radius-control);
 }
 button:focus-visible,
 [role="button"]:focus-visible,
 .hx-navitem:focus-visible {
-  outline: 2px solid var(--accent-ink);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -583,7 +666,7 @@ ol.astryx-list > .astryx-list-item > span:first-child {
 }
 .btn-secondary:hover {
   background: var(--surface) !important;
-  border-color: var(--line-strong) !important;
+  border-color: var(--focus-ring) !important;
   transform: translateY(-1px);
 }
 

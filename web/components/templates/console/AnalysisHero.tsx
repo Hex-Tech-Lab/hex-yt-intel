@@ -149,7 +149,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                       isIconOnly
                       icon={<Icon icon="solar:stop-circle-linear" size={14} />}
                       onClick={onCancel}
-                      className="!rounded-none"
+                      className="rounded-lg"
                     />
                   )}
                   <Button
@@ -163,7 +163,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     isDisabled={disabled}
                     isLoading={streaming}
                     icon={!streaming ? <Icon icon="solar:bolt-linear" size={14} /> : undefined}
-                    className="!rounded-none font-mono font-semibold uppercase tracking-wider"
+                    className="rounded-lg font-mono font-semibold uppercase tracking-wider"
                   />
                 </div>
               </div>

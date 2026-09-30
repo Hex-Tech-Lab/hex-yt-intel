@@ -322,7 +322,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
                   onClick={() => onSelect(idx)}
                   style={{ left: `${leftPct}%` }}
                   aria-label={`Jump to highlight ${idx + 1}: ${highlight.label}`}
-                  className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto flex items-center justify-center w-6 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1"
+                  className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto flex items-center justify-center w-6 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1"
                 >
                   <span
                     aria-hidden="true"
