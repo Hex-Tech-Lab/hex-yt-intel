@@ -1,0 +1,24 @@
+web/components/templates/console/CommentInsightsCard.tsx
+  s_aee5fce115b5f1::t_50123283658482 37-44
+web/hooks/useCommentInsights.ts
+  s_aee5fce115b5f1::t_8f571f622dcda8 66-78,83-91
+web/app/api/comments/runs/[analysisId]/__tests__/route.test.ts
+  s_aee5fce115b5f1::t_7e70059d8055f4 22-27
+  s_aee5fce115b5f1::t_95c46db8d99ebc 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2007c64043b93c00f6280d2a3a8650f2a5df8560",
+  "prompts": {},
+  "sessions": {
+    "s_aee5fce115b5f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0dff2b81ffegvW4N7GGphvCsS",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
