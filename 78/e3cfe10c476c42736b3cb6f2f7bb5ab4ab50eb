@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_1d1bec99fd4ca5::t_7e86e0aed112af 1450
+worker/src/__tests__/upstash-set-envelope-regression.test.ts
+  s_1d1bec99fd4ca5::t_5ed1db25cd8a87 25,27,54,61-81
+worker/src/routes/analysis.ts
+  s_1d1bec99fd4ca5::t_c81ab5fcf7935e 505-507,509-514,517,519-523,636-638,640-645,648,650-654
+worker/src/services/UpstashCacheAdapter.ts
+  s_1d1bec99fd4ca5::t_80645f67723f10 15-32,64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "78e3cfe10c476c42736b3cb6f2f7bb5ab4ab50eb",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
