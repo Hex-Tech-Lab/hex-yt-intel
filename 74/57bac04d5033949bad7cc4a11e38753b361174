@@ -1,0 +1,19 @@
+web/hooks/useCommentInsights.ts
+  s_36f875f11b73af::t_83d1071b032863 31-42,45,55,61,81-103,113-122,128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7457bac04d5033949bad7cc4a11e38753b361174",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
