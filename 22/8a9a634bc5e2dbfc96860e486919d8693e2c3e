@@ -1,0 +1,29 @@
+docs/agent-prompts/2026-09-30-oc-r3b-2-1-matrix-types-upserts.md
+  s_36f875f11b73af::t_faffe023960690 1-91
+docs/agent-prompts/2026-09-30-oc-r3b-2-2-stream-token-v2.md
+  s_36f875f11b73af::t_ef2201669b762d 1-88
+docs/agent-prompts/2026-09-30-oc-r3b-2-3-plan-stream-count.md
+  s_36f875f11b73af::t_c143bd8f692c78 1-91
+docs/agent-prompts/2026-09-30-oc-r3b-2-4-deterministic-reduce.md
+  s_36f875f11b73af::t_4b70f5ba1e0968 1-92
+docs/agent-prompts/2026-09-30-oc-r3b-2-5-finalize-reaper-stream-count.md
+  s_36f875f11b73af::t_139b671c7a3415 1-86
+supabase/migrations/20260930180000_analyses_stream_count_and_chunk_matrix.sql
+  s_36f875f11b73af::t_111519002a377e 1-8,11-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "228a9a634bc5e2dbfc96860e486919d8693e2c3e",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+web/lib/__tests__/analysis-reaper.test.ts
+  s_36f875f11b73af::t_bd6902e1516918 204,362,431
+web/lib/services/analysis-reaper.ts
+  s_36f875f11b73af::t_6dfdf4cd0af575 200-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9d5f626dcc88875a7d151687038a3877962eb138",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
