@@ -38,6 +38,7 @@ export function PublicHighlightsReel({
   minSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'],
   maxSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'],
   tickerWordsPerSecond = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.tickerWordsPerSecond'],
+  seekSettlementTimeoutMs = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.seekSettlementTimeoutMs'],
 }: {
   videoId: string;
   highlights: Highlight[];
@@ -47,6 +48,8 @@ export function PublicHighlightsReel({
   minSegmentDurationSeconds?: number;
   maxSegmentDurationSeconds?: number;
   tickerWordsPerSecond?: number;
+  /** Registry `highlights.seekSettlementTimeoutMs` (clamped by the page). */
+  seekSettlementTimeoutMs?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerAdapter | null>(null);
@@ -102,6 +105,7 @@ export function PublicHighlightsReel({
     contextLeadSeconds,
     segmentDurationSeconds,
     primitives,
+    seekSettlementTimeoutMs,
   });
 
   // The shared hook's stop() only clears its own state (playingIdx/elapsed)

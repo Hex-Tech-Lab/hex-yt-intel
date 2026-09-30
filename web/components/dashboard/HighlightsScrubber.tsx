@@ -482,11 +482,23 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
                 const spokenPart = words.slice(0, revealedCount).join(' ');
                 const remainingPart = words.slice(revealedCount).join(' ');
                 return (
-                  <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
-                    <div className="whitespace-nowrap font-mono text-xs text-slate-200 inline-block truncate">
-                      <span className="text-slate-100 font-semibold">{spokenPart}</span>
-                      {remainingPart ? <span className="text-slate-400/80">{` ${remainingPart}`}</span> : null}
-                    </div>
+                  <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center font-mono text-xs whitespace-nowrap">
+                    {/* #375 review P1: the spoken part clips from its START
+                        (direction: rtl + an ltr bdi), so the newest revealed
+                        words always stay at the visible edge instead of being
+                        truncated off the end; the not-yet-spoken remainder
+                        takes whatever width is left and truncates. */}
+                    <span
+                      data-testid="caption-spoken"
+                      className="min-w-0 max-w-full overflow-hidden text-slate-100 font-semibold shrink"
+                      style={{ direction: 'rtl' }}
+                    >
+                      <bdi dir="ltr">{spokenPart}</bdi>
+                    </span>
+                    {remainingPart ? ' ' : null}
+                    {remainingPart ? (
+                      <span data-testid="caption-remaining" className="min-w-0 flex-1 truncate text-slate-400/80 pl-1">{remainingPart}</span>
+                    ) : null}
                   </div>
                 );
               })()}

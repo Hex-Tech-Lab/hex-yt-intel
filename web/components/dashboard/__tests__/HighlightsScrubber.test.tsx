@@ -452,4 +452,37 @@ describe('HighlightsScrubber', () => {
     expect(caption.textContent).toContain('exact transcript words spoken here');
     expect(screen.queryByText('summarized')).toBeNull();
   });
+
+  it('(#375 P1) the caption keeps the newest spoken words visible and follows playback time', async () => {
+    const excerpt = Array.from({ length: 40 }, (unused, position) => `word${position + 1}`).join(' ');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => ({
+          highlights: [{ idx: 0, start: 10, end: 30, label: 'Long moment', verbatimExcerpt: excerpt }],
+          segmentDurationSeconds: 20,
+          contextLeadSeconds: 2,
+        }),
+      })
+    );
+    render(<HighlightsScrubber analysisId="analysis-long-caption" videoDurationSeconds={60} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Play highlights' }));
+    await waitFor(() => expect(useVideoStore.getState().seekTo).toBe(8));
+
+    // 4 s into the segment at the default 2.5 words/s -> 10 words spoken.
+    useVideoStore.setState({ currentPlaybackSeconds: 12 });
+    await waitFor(() => {
+      const spoken = screen.getByTestId('caption-spoken');
+      expect(spoken.textContent?.trim().split(/\s+/).pop()).toBe('word10');
+    });
+    const spoken = screen.getByTestId('caption-spoken');
+    // Clips from the START (rtl container, ltr text) so the newest word is the visible edge.
+    expect(spoken.style.direction).toBe('rtl');
+    expect(screen.getByTestId('caption-remaining').textContent?.startsWith('word11')).toBe(true);
+
+    // Time does not move (paused): the reveal stays frozen, it never runs ahead on its own.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(screen.getByTestId('caption-spoken').textContent?.trim().split(/\s+/).pop()).toBe('word10');
+  });
 });
