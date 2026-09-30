@@ -1,0 +1,42 @@
+.memory/AGENT_LEDGER.md
+  s_6d5d9fa81807aa::t_bf7198363e316a 1452
+  s_6d5d9fa81807aa::t_ac3d5377b60cd4 1451
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_1d1bec99fd4ca5::t_819bb48441939b 41,51-52,108
+web/app/share/[token]/page.tsx
+  s_1d1bec99fd4ca5::t_573384de0db4a6 78-79
+web/components/dashboard/HighlightsScrubber.tsx
+  s_1d1bec99fd4ca5::t_d276008b559739 485-501
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_1d1bec99fd4ca5::t_c67bc1e716955f 455-487
+web/lib/hooks/useSegmentPlayback-jump.test.ts
+  s_1d1bec99fd4ca5::t_60f5965d4beff2 18,94,121-124,126,128-129,211-259
+web/lib/hooks/useSegmentPlayback.ts
+  s_1d1bec99fd4ca5::t_87c855f57b2309 94-96,137-183,208,281,367-391,394-400,402-404
+.qa-intel/baseline.json
+  s_1d1bec99fd4ca5::t_830b22a131bd0d 1079-1085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e421d57740c528990077634a3bab5e5a73ccc71d",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6d5d9fa81807aa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0edf85e5ffejBa5c3oS7pwurT",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
