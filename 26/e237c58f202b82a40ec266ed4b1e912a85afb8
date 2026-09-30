@@ -1,0 +1,62 @@
+web/vitest.config.ts
+  s_aee5fce115b5f1::t_08fed9578465eb 83-88
+web/app/api/comments/runs/[analysisId]/route.ts
+  s_aee5fce115b5f1::t_73d8bcdcd28281 1-35
+web/lib/adapters/SupabaseCommentSamplingAdapter.ts
+  s_aee5fce115b5f1::t_e185412441dfad 99-128
+  s_aee5fce115b5f1::t_b246b4b83a73d4 1
+web/components/containers/ProDashboardView.tsx
+  s_aee5fce115b5f1::t_f48f7de917178e 77
+  s_aee5fce115b5f1::t_8f15220e73029d 170-186,196-197
+  s_aee5fce115b5f1::t_d244a021b11010 19
+  s_aee5fce115b5f1::t_34c1fab39abf86 50
+  s_aee5fce115b5f1::t_76bed9ef930093 27
+  s_aee5fce115b5f1::t_dd1c38f6910071 198
+web/components/containers/DashboardContainer.tsx
+  s_aee5fce115b5f1::t_9c5c08899b2a94 749
+  s_aee5fce115b5f1::t_617d3f8ad17ad0 83
+  s_aee5fce115b5f1::t_ec077ffba03d19 1147
+web/hooks/useCommentInsights.ts
+  s_aee5fce115b5f1::t_617ccebcf7bb66 2-131
+  s_aee5fce115b5f1::t_433646b1535d53 1
+web/components/templates/console/CommentInsightsCard.tsx
+  s_aee5fce115b5f1::t_3c4016f8dce232 95-96
+  s_aee5fce115b5f1::t_858c45352557e5 1-94,97-100
+web/lib/types/comment-insights.ts
+  s_aee5fce115b5f1::t_72ae4fa6e21c72 1-42
+web/hooks/__tests__/useCommentInsights.test.tsx
+  s_aee5fce115b5f1::t_b9be40ab39afe1 96-97,102,108,124-126
+  s_aee5fce115b5f1::t_113f37bac0d516 128
+  s_aee5fce115b5f1::t_4b51fd242def22 1-95,98-101,103-107,109-117,119-123,127,129-181
+  s_aee5fce115b5f1::t_0fece7eb9e4cfa 118
+web/app/api/comments/runs/[analysisId]/__tests__/route.test.ts
+  s_aee5fce115b5f1::t_e82b8798f5c4ad 1-93
+web/components/templates/console/__tests__/CommentInsightsCard.test.tsx
+  s_aee5fce115b5f1::t_73002c55b4954e 1-65
+docs/agent-prompts/2026-09-30-oc-comments-dispatch-b.md
+  s_36f875f11b73af::t_c77f999bcb3f6a 1-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "26e237c58f202b82a40ec266ed4b1e912a85afb8",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_aee5fce115b5f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0dff2b81ffegvW4N7GGphvCsS",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
