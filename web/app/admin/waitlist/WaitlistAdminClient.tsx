@@ -96,14 +96,14 @@ export function WaitlistAdminClient() {
           value={search}
           onChange={(changeEvent) => setSearch(changeEvent.target.value)}
           placeholder="Search by email…"
-          className="flex-1 rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
+          className="flex-1 rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--focus-ring)]"
         />
         <label htmlFor="waitlist-admin-sort" className="sr-only">Sort signups</label>
         <select
           id="waitlist-admin-sort"
           value={sortKey}
           onChange={(changeEvent) => setSortKey(changeEvent.target.value as SortKey)}
-          className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--accent)]"
+          className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--focus-ring)]"
         >
           <option value="newest">Sort: newest signup</option>
           <option value="oldest">Sort: oldest signup</option>

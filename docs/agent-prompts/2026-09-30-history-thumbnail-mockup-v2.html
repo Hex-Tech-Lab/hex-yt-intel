@@ -1,0 +1,154 @@
+<title>History Row Thumbnail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: two stacked history rows (current vs proposed) in the app's own dark console palette, plus one control for the fade length. Single dark theme on purpose: it mirrors the real dashboard. */
+:root {
+  color-scheme: dark;
+  --void: #0B0E14;
+  --bg: #11141D;
+  --surface: #1A1F2B;
+  --surface-muted: #151a24;
+  --line: #1E293B;
+  --ink: #E2E8F0;
+  --ink-secondary: #94A3B8;
+  --ink-muted: #64748B;
+  --accent: #06B6D4;
+  --ok: #10B981;
+  --warn: #F59E0B;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --fade: 2.5cm;
+}
+body { background: var(--void); color: var(--ink); font-family: var(--font-body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 48px; display: grid; gap: 28px; }
+h1 { font-size: 1.25rem; font-weight: 600; margin: 0; text-wrap: balance; }
+.lede { color: var(--ink-secondary); margin: 6px 0 0; max-width: 62ch; line-height: 1.5; }
+.label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); margin: 0 0 8px; }
+.label b { color: var(--accent); font-weight: 500; }
+
+.row { position: relative; display: flex; min-height: 112px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.meta { flex: 1; min-width: 0; padding: 14px 16px; display: grid; gap: 8px; align-content: start; position: relative; z-index: 1; }
+.title { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 14px; }
+.num { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.title span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--font-mono); font-size: 11px; color: var(--ink-secondary); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; background: color-mix(in srgb, var(--surface) 80%, transparent); font-variant-numeric: tabular-nums; }
+.chip.ok { color: var(--ok); }
+.chip.warn { color: var(--warn); }
+
+/* The stand-in frame (YouTube images can't load here): a 16:9 scene. */
+.frame { background:
+  radial-gradient(60% 80% at 70% 40%, #f0b27a 0 12%, transparent 13%),
+  radial-gradient(40% 60% at 72% 95%, #3b4a6b 0 40%, transparent 41%),
+  linear-gradient(135deg, #1d3557 0%, #457b9d 45%, #e76f51 100%);
+  position: relative; }
+.frame::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: translate(-30%, -50%);
+  border-left: 16px solid rgb(255 255 255 / .85); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+
+/* Current: small padded box, image letterboxed inside. */
+.thumb-now { flex-shrink: 0; width: 176px; border-left: 1px solid var(--line); background: var(--surface-muted); padding: 6px; display: flex; align-items: center; }
+.thumb-now .frame { width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; }
+
+/* Proposed v2: the image sits one layer BELOW the row content. Its sharp
+   16:9 area is pinned right; it keeps going left past the divider and fades
+   out over --fade. The divider is drawn ON TOP of the image, the text and
+   chips on top of everything, with a light shadow over the faded part. */
+.row.new { isolation: isolate; }
+.thumb-new { position: absolute; top: 4px; bottom: 4px; right: 4px; z-index: 0;
+  width: calc((112px - 8px) * 16 / 9 + var(--fade)); max-width: 85%;
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--fade)), transparent 100%);
+          mask-image: linear-gradient(to left, #000 calc(100% - var(--fade)), transparent 100%);
+  border-radius: 0 6px 6px 0; overflow: hidden; }
+.thumb-new .frame { position: absolute; inset: 0; }
+.divider { position: absolute; top: 0; bottom: 0; z-index: 1; pointer-events: none;
+  right: calc(4px + (112px - 8px) * 16 / 9); border-left: 1px solid var(--line); }
+.row.new .meta { z-index: 2; padding-right: calc((112px - 8px) * 16 / 9 + 16px); }
+.row.new .meta.overlap { padding-right: 16px; }
+.row.new .title, .row.new .chip { text-shadow: 0 1px 2px rgb(0 0 0 / .65); }
+.row.new .chip { background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.layers { display: inline-flex; gap: 8px; }
+.layers button { font: inherit; font-size: 12px; color: var(--ink-secondary); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.layers button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+.layers button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row.new.divider-under .divider { z-index: -1; }
+.control { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; color: var(--ink-secondary); font-size: 13px; }
+.control input { accent-color: var(--accent); width: 200px; max-width: 100%; }
+.control output { font-family: var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.notes { margin: 0; padding-left: 18px; color: var(--ink-secondary); line-height: 1.6; max-width: 70ch; }
+.notes code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 520px) { .thumb-new { opacity: .35; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>History row thumbnail</h1>
+    <p class="lede">The same history row twice: the current thumbnail, then the proposal. The image runs behind the row: sharp on the right, fading out past the divider, with the text riding over it.</p>
+  </header>
+
+  <section>
+    <p class="label">Current</p>
+    <div class="row">
+      <div class="meta">
+        <div class="title"><span class="num">10</span><span>Sabrina Romanov on building calm, focused teams</span></div>
+        <div class="chips"><span class="chip">11/11 dims</span><span class="chip">64:12</span><span class="chip ok">Digest</span><span class="chip ok">Highlights</span><span class="chip warn">Comments</span></div>
+      </div>
+      <div class="thumb-now"><div class="frame" role="img" aria-label="Video thumbnail (stand-in)"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Proposed <b>· fade <span id="fadeLabel">2.5 cm</span></b></p>
+    <div class="row new" id="rowNew">
+      <div class="meta overlap">
+        <div class="title"><span class="num">10</span><span>Sabrina Romanov on building calm, focused teams — a long title that runs into the image</span></div>
+        <div class="chips"><span class="chip">11/11 dims</span><span class="chip">64:12</span><span class="chip ok">Digest</span><span class="chip ok">Highlights</span><span class="chip ok">Description</span><span class="chip ok">Channel</span><span class="chip warn">Comments</span></div>
+      </div>
+      <div class="thumb-new"><div class="frame" role="img" aria-label="Video thumbnail (stand-in)"></div></div>
+      <div class="divider" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <div class="control">
+    <span>Divider</span>
+    <span class="layers" role="group" aria-label="Divider layer">
+      <button type="button" id="divTop" aria-pressed="true">On top of image</button>
+      <button type="button" id="divUnder" aria-pressed="false">Behind image</button>
+    </span>
+    <label for="fade">Fade length</label>
+    <input id="fade" type="range" min="1" max="4" step="0.5" value="2.5">
+    <output id="fadeOut" for="fade">2.5 cm</output>
+  </div>
+
+  <ul class="notes">
+    <li>Three layers: the image at the bottom, the divider above it, the title and chips on top.</li>
+    <li>The sharp 16:9 part of the image sits right of the divider. To the left of the divider the image keeps going and fades out over the length set above (a CSS <code>mask-image</code> fade).</li>
+    <li>The title and chips run over the faded part, with a light shadow so they stay readable. The example row uses a long title and extra chips on purpose, to show the overlap.</li>
+    <li>Use the Divider buttons to compare the divider on top of the image with the divider behind it.</li>
+    <li>On phones the image drops to a faint background so the title keeps the full width.</li>
+    <li>The frame here is a drawn stand-in: this page can't load YouTube images.</li>
+  </ul>
+</div>
+
+<script>
+  const fade = document.getElementById('fade');
+  const out = document.getElementById('fadeOut');
+  const label = document.getElementById('fadeLabel');
+  const row = document.getElementById('rowNew');
+  const top = document.getElementById('divTop');
+  const under = document.getElementById('divUnder');
+  function setLayer(isTop) {
+    row.classList.toggle('divider-under', !isTop);
+    top.setAttribute('aria-pressed', String(isTop));
+    under.setAttribute('aria-pressed', String(!isTop));
+  }
+  top.addEventListener('click', () => setLayer(true));
+  under.addEventListener('click', () => setLayer(false));
+  fade.addEventListener('input', () => {
+    const cm = fade.value + ' cm';
+    document.documentElement.style.setProperty('--fade', fade.value + 'cm');
+    out.textContent = cm;
+    label.textContent = cm;
+  });
+</script>

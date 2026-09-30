@@ -102,14 +102,14 @@ const SearchFilters: React.FC<FiltersProps> = ({
                 type="date"
                 value={filters.dateFrom || ''}
                 onChange={(e) => handleDateChange('from', e.target.value)}
-                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-accent"
+                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-[var(--focus-ring)]"
                 placeholder="From"
               />
               <input
                 type="date"
                 value={filters.dateTo || ''}
                 onChange={(e) => handleDateChange('to', e.target.value)}
-                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-accent"
+                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-[var(--focus-ring)]"
                 placeholder="To"
               />
             </div>
@@ -131,7 +131,7 @@ const SearchFilters: React.FC<FiltersProps> = ({
                       type="checkbox"
                       checked={selectedChannels.has(channel)}
                       onChange={() => toggleChannel(channel)}
-                      className="rounded border-line bg-void text-accent focus:ring-accent/20"
+                      className="rounded border-line bg-void text-accent focus:ring-[var(--focus-ring)]"
                     />
                     <span className="text-xs text-ink-secondary group-hover:text-ink transition-colors">{channel}</span>
                   </label>
@@ -161,7 +161,7 @@ const SearchFilters: React.FC<FiltersProps> = ({
                     name="engagement"
                     checked={filters.minEngagement === value}
                     onChange={() => handleEngagementChange(value)}
-                    className="rounded-full border-line bg-void text-accent focus:ring-accent/20"
+                    className="rounded-full border-line bg-void text-accent focus:ring-[var(--focus-ring)]"
                   />
                   <span className="text-xs text-ink-secondary group-hover:text-ink transition-colors">{label}</span>
                 </label>

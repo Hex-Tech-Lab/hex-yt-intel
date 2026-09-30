@@ -121,7 +121,7 @@ export default function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search semantically... (e.g., 'video production tips', 'marketing trends')"
-              className="w-full pl-12 pr-12 py-4 bg-surface border-2 border-line rounded-lg focus:outline-none focus:border-accent transition-all text-ink"
+              className="w-full pl-12 pr-12 py-4 bg-surface border-2 border-line rounded-lg focus:outline-none focus:border-[var(--focus-ring)] transition-all text-ink"
               autoFocus
             />
 

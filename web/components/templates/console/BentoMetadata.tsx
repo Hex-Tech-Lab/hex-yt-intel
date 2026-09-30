@@ -170,7 +170,7 @@ export function BentoMetadata({
                   onClick={() => setDescriptionExpanded((prev) => !prev)}
                   aria-expanded={descriptionExpanded}
                   aria-controls={descriptionId}
-                  className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+                  className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
                 >
                   <span>{descriptionExpanded ? 'Show less' : 'Show more'}</span>
                   <Icon icon={descriptionExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} size={12} />

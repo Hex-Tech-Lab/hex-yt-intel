@@ -56,7 +56,10 @@ export interface GlowBorderProps {
 }
 
 export function GlowBorder({ children, active = false, radius = "card", className = "", style = {} }: GlowBorderProps) {
-  const computedRadius = radius === "card" ? 8 : 6;
+  // Resolve from the app's radius tokens (globals.css @theme/:root) instead of
+  // hardcoded px — the 8px/6px scale (user decision 2026-09-30) must flow
+  // through this primitive without JSX-level magic numbers.
+  const computedRadius = radius === "card" ? "var(--radius-card)" : "var(--radius-pill)";
   return (
     <div
       className={`hx-glow ${className}`}
@@ -71,7 +74,7 @@ export function GlowBorder({ children, active = false, radius = "card", classNam
       }}
     >
       {active && <span className="hx-spin" aria-hidden />}
-      <div style={{ position: "relative", borderRadius: computedRadius - 1, height: "100%", width: "100%", overflow: "hidden" }}>
+      <div style={{ position: "relative", borderRadius: "calc(var(--radius-card) - 1px)", height: "100%", width: "100%", overflow: "hidden" }}>
         {children}
       </div>
     </div>
@@ -153,7 +156,7 @@ export function StatusBadge({ status, label, tooltip, style = {} }: StatusBadgeP
         display: "inline-flex",
         alignItems: "center",
         gap: 7,
-        borderRadius: 6,
+        borderRadius: "var(--radius-pill)",
         border: "1px solid var(--line)",
         background: "rgb(26 31 43 / 0.6)",
         padding: "4px 10px",

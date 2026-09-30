@@ -197,7 +197,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
                 ref={closeBtnRef}
                 onClick={handleClose}
                 aria-label="Close dimension details"
-                className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               >
                 <Icon icon="solar:close-circle-linear" size={16} />
               </button>

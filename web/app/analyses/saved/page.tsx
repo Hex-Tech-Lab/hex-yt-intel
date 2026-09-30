@@ -119,7 +119,7 @@ export default function SavedSearchesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search your library..."
-                className="w-full pl-12 pr-4 py-4 bg-[#1A1F2B66] border border-[#1E293B] rounded-xl focus:outline-none focus:border-[#06B6D440] focus:ring-1 focus:ring-[#06B6D440] text-[#E2E8F0] transition-all placeholder:text-[#475569] font-sans"
+                className="w-full pl-12 pr-4 py-4 bg-[#1A1F2B66] border border-[#1E293B] rounded-xl focus:outline-none focus:border-[var(--focus-ring)] focus:ring-1 focus:ring-[var(--focus-ring)] text-[#E2E8F0] transition-all placeholder:text-[#475569] font-sans"
               />
             </div>
           </div>

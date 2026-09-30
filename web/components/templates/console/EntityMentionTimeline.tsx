@@ -198,7 +198,7 @@ export function EntityMentionTimeline({
               type="checkbox"
               checked={autoAdvance}
               onChange={(changeEvent) => setAutoAdvance(changeEvent.target.checked)}
-              className="w-3.5 h-3.5 rounded border-[var(--line)] text-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] cursor-pointer"
+              className="w-3.5 h-3.5 rounded border-[var(--line)] text-[var(--accent)] focus:ring-1 focus:ring-[var(--focus-ring)] cursor-pointer"
             />
             Auto-advance segments
           </label>
@@ -275,7 +275,7 @@ export function EntityMentionTimeline({
                 style={{ left: `${leftPct}%` }}
                 title={`${mention.timestamp} (Rank #${originalRank}, ${mention.significance}% significance) · Dim. ${mention.dimensionNumber}`}
                 aria-label={`Jump to mention at ${mention.timestamp}`}
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 ${
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 ${
                   isActive
                     ? 'w-4 h-4 rounded-full bg-[var(--accent)] shadow-[0_0_10px_rgba(59,130,246,0.8)] border-2 border-white z-10 scale-110'
                     : 'w-2.5 h-2.5 rounded-full bg-[var(--ink-muted)] hover:bg-[var(--accent)]'

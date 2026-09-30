@@ -50,7 +50,12 @@ function TopBarImpl({
         ring/padding) clashes with this field's kbd-shortcut affordance and
         icon-inline layout, and there's no lighter-weight text-field primitive.
       */}
-      <label className="flex min-w-0 flex-1 items-center gap-2 max-w-[460px] rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-2 px-3">
+      {/* Height alignment (user decision 2026-09-30): the search control was
+          taller than the Simple/Pro selector (ViewModeToggle). py-1.5 makes
+          both ~34px (13.5px/1.5 line + 2×6px padding + 2px border = search;
+          16px line + 2×6px + 2×2px + 2px border = toggle). The selector was
+          already the shorter of the two, so the search field moves to it. */}
+      <label className="flex min-w-0 flex-1 items-center gap-2 max-w-[460px] rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-1.5 px-3">
         <Icon
           icon="solar:magnifer-linear"
           size={16}

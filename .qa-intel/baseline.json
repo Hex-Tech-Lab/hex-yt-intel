@@ -1097,5 +1097,334 @@
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'q'",
+    "why": "Single-letter variable 'q' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'u'",
+    "why": "Single-letter variable 'u' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'u' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'u'",
+    "why": "Single-letter variable 'u' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'u' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'd'",
+    "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/app/admin/users/UsersAdminClient.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/app/analyses/saved/page.tsx",
+    "severity": "medium",
+    "title": "Code Quality: Redundant 'async' keyword (no await found)",
+    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
+    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
+  },
+  {
+    "file": "web/app/analyses/saved/page.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/analyses/saved/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/analyses/saved/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name '_'",
+    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "medium",
+    "title": "Code Quality: Redundant 'async' keyword (no await found)",
+    "why": "Function 'anonymous' is marked async but contains no await expressions. This may indicate copy-paste or incomplete refactoring.",
+    "fix": "Remove the 'async' keyword or add 'await' expression. If function returns a Promise, return it directly without 'async'."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import 'next/navigation' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "medium",
+    "title": "Accessibility: Toast notification missing role/aria-live",
+    "why": "showToast() renders a notification but the container lacks role='alert' or aria-live='polite'. Screen readers won't announce the toast.",
+    "fix": "Add role='alert' aria-live='assertive' (for errors) or role='status' aria-live='polite' (for info) to the toast container element."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'q'",
+    "why": "Single-letter variable 'q' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name '_'",
+    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (626 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Cross-Platform: LF-only string splitting",
+    "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
+    "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@astryxdesign/core' (thirdparty) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Promise: Unhandled clipboard promise rejection",
+    "why": "navigator.clipboard returns a Promise. Without catch, permission denial causes unhandled rejection in console.",
+    "fix": "Wrap in try/catch or add .catch(() => {}): await navigator.clipboard.writeText(text).catch(() => {})"
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Promise: Unhandled clipboard promise rejection",
+    "why": "navigator.clipboard returns a Promise. Without catch, permission denial causes unhandled rejection in console.",
+    "fix": "Wrap in try/catch or add .catch(() => {}): await navigator.clipboard.writeText(text).catch(() => {})"
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'd'",
+    "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/settings/logs/LogsViewerClient.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/TimestampLink.tsx",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import 'react' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/components/search/filters.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/search/filters.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/search/filters.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/search/filters.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/AnalysisHero.tsx",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/components/templates/console/AnalysisHero.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/AnalysisHero.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/DimensionDrawer.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/DimensionDrawer.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/TopBar.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/components/templates/console/TopBar.tsx",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
   }
 ]
