@@ -33,7 +33,9 @@ const CHIP_STYLE = {
 } as const;
 
 export function CommentInsightsCard({ insights }: { insights: CommentInsights }) {
-  const total = insights.sentiment.positive + insights.sentiment.negative + insights.sentiment.neutral + insights.sentiment.mixed;
+  // Percentages are of `classified` (the Dispatch B contract), not of the
+  // bucket sum -- the two differ when some classified comments land in no bucket.
+  const total = insights.classified;
   // Top-3 entry selection over Object.entries (not string truncation) --
   // written as a bounded loop so the qa-intel truncation heuristic doesn't
   // misread `.slice(0, N)` as lossy display truncation.

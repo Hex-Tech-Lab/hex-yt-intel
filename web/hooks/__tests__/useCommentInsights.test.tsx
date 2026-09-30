@@ -161,6 +161,79 @@ describe('useCommentInsights', () => {
     expect(payloadCalls).toBeLessThanOrEqual(2);
   });
 
+  it('resets when switching from a ready analysis A to analysis B (no ghosting)', async () => {
+    const OTHER_ID = '660e8400-e29b-41d4-a716-446655440001';
+    useSynthesisNucleus.getState().setRawAnalysisPayload({ commentInsights: INSIGHTS } as never, ANALYSIS_ID);
+    // B is not complete yet, so no fetch happens -- the reset must come from the id change alone.
+    vi.stubGlobal('fetch', mockFetch(() => { throw new Error('should not fetch'); }));
+    const { result, rerender } = renderHook(({ id, st }) => useCommentInsights(id, st), {
+      initialProps: { id: ANALYSIS_ID, st: 'complete' },
+    });
+    await waitFor(() => expect(result.current.state).toBe('ready'));
+    rerender({ id: OTHER_ID, st: 'processing' });
+    await waitFor(() => expect(result.current.state).toBe('none'));
+    expect(result.current.insights).toBeNull();
+  });
+
+  it('a failed poll (rejected fetch, then non-OK) keeps polling and recovers', async () => {
+    vi.useFakeTimers();
+    let call = 0;
+    const fetchMock = mockFetch((input) => {
+      if (input.includes('/api/comments/runs/')) {
+        call += 1;
+        if (call === 2) return Promise.reject(new TypeError('network down'));
+        if (call === 3) return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) });
+        if (call >= 4) return Promise.resolve({ ok: true, json: () => Promise.resolve({ run: { ...{ id: 'r1', status: 'sampling', mode: 'cochran', sampled_count: 0, created_at: '', completed_at: null }, status: 'completed' } }) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ run: { id: 'r1', status: 'sampling', mode: 'cochran', sampled_count: 0, created_at: '', completed_at: null } }) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(call >= 4 ? { analysis_payload: { commentInsights: INSIGHTS } } : { analysis_payload: {} }) });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.state).toBe('analyzing');
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); }); // rejected
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); }); // 503
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); }); // completed
+    expect(result.current.state).toBe('ready');
+  });
+
+  it('repeated failures still end at the cap (no permanent Analyzing)', async () => {
+    vi.useFakeTimers();
+    let first = true;
+    const fetchMock = mockFetch((input) => {
+      if (input.includes('/api/comments/runs/')) {
+        if (first) { first = false; return Promise.resolve({ ok: true, json: () => Promise.resolve({ run: { id: 'r1', status: 'sampling', mode: 'cochran', sampled_count: 0, created_at: '', completed_at: null } }) }); }
+        return Promise.reject(new TypeError('network down'));
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ analysis_payload: {} }) });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60 * 1000); });
+    expect(result.current.state).toBe('none');
+  });
+
+  it('aborts in-flight fetches on unmount', async () => {
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal('fetch', vi.fn((_input: string, init?: RequestInit) => {
+      if (init?.signal) signals.push(init.signal);
+      return new Promise(() => {}); // never resolves
+    }));
+    const { unmount } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'));
+    await waitFor(() => expect(signals.length).toBeGreaterThan(0));
+    unmount();
+    expect(signals.every((sig) => sig.aborted)).toBe(true);
+  });
+
+  it('never fetches for a non-UUID analysis id', async () => {
+    const fetchMock = mockFetch(() => { throw new Error('should not fetch'); });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => useCommentInsights('../../admin', 'complete'));
+    await waitFor(() => expect(result.current.state).toBe('none'));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('reports failed when the run failed', async () => {
     vi.stubGlobal('fetch', mockFetch(() =>
       Promise.resolve({

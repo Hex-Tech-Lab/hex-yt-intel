@@ -77,7 +77,7 @@ PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-
 - `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
 - `analysis_payload.comments` (sampled comments) only if absent.
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT touch that file at all.
 
 ---
 
@@ -176,7 +176,7 @@ Out of scope: worker code, migrations, persist-sample-run route, the backfill sc
   - `planetscale-postgres-safety-review` is **NOT applicable to this repo** (wrong DB platform — Supabase Postgres, not PlanetScale). Do not invoke.
 
 - **IF `scripts/**` | `.memory/**` | `*.config.*` | `.*ignore` (Monorepo / CI)**:
-  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run in `--full` mode per the ALWAYS rule above).
+  - `qa-intel` — `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare` (also run with `--mode full` per the ALWAYS rule above).
   - pr-review-toolkit plugin: `comment-analyzer` + `pr-test-analyzer` — PR description/test-coverage sanity.
 
 - **High-stakes / genuinely contested decisions ONLY (not a per-PR gate)**:
@@ -238,3 +238,7 @@ catch. Do not merge on a missing required gate without an explicit, logged waive
 ## 6. Report Format — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
 
 > RCA → Contract → Fix → E2E proof (with actual test output) → Tangents found → Deviations flagged → Skills Run + Findings → Gates → Files changed.
+
+---
+
+> **Post-dispatch note (CC, 2026-09-30, #383 review):** This prompt bundled investigation, implementation and delivery in one dispatch. The template's Model-tuning rule says to split that into sequential prompts. It was kept as one dispatch because the task's contract was fully specified up front (route, hook, card and exact wording), leaving nothing to investigate. OC delivered it, and CC applied a gate pass afterwards. Future dispatches of this shape should still be split.
