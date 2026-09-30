@@ -12,6 +12,24 @@ const rawFetch = fetch;
 
 const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
+/**
+ * Entries written before the 2026-09-30 SET fix hold the literal request
+ * envelope {"value":"<real json>","ex":N,"get":false,"xx":false} instead of
+ * the value (see set() below). The real value is intact inside it, so a GET
+ * unwraps it: every poisoned key (comments-sampled:*, channel-meta:*) is
+ * readable again without a production purge, and they age out on their TTL.
+ */
+export function unwrapLegacySetEnvelope(raw: string | null): string | null {
+  if (raw === null || !raw.startsWith('{"value":')) return raw;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.value === 'string' && 'ex' in parsed) return parsed.value;
+  } catch {
+    console.debug('[UpstashCacheAdapter] value starts like a legacy SET envelope but is not JSON; returning it unchanged');
+  }
+  return raw;
+}
+
 export class UpstashCacheAdapter implements PersistenceRepositoryPort {
   private url: string;
   private token: string;
@@ -43,7 +61,7 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       });
       if (!response.ok) return null;
       const data = (await response.json()) as { result: string | null };
-      return data.result;
+      return unwrapLegacySetEnvelope(data.result);
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash GET failed, proceeding without cache hit');
       return null;
@@ -52,13 +70,21 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
 
   async set(key: string, value: string, ttlSeconds: number = DEFAULT_TTL_SECONDS): Promise<void> {
     try {
-      await rawFetch(`${this.url}/set/${key}`, {
+      // RCA (2026-09-30): Upstash REST's POST /set/{key} treats the ENTIRE
+      // raw request body as the value — options like `ex`/`xx` belong in
+      // query params. The previous JSON body {value, ex, get, xx} made
+      // Upstash store the whole envelope as the value, so every worker
+      // cache entry was unreadable garbage on the next cache hit: comments
+      // normalized to null (silent comment loss, post-2026-09-27) and
+      // channelMeta persisted as the literal envelope. Options moved to
+      // the URL, matching the documented REST contract.
+      const params = new URLSearchParams({ ex: String(ttlSeconds) });
+      await rawFetch(`${this.url}/set/${key}?${params.toString()}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ value, ex: ttlSeconds, get: false, xx: false }),
+        body: value,
       });
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash SET failed, analysis succeeded but not cached');

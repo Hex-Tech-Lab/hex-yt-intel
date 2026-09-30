@@ -489,13 +489,38 @@ async function fetchCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return normalizeVideoComments(JSON.parse(cached));
+          const parsed: unknown = JSON.parse(cached);
+          const normalized = normalizeVideoComments(parsed);
+          // RCA (2026-09-30): a parse-succeeds-but-normalize-nulls cache hit
+          // was previously silent — the exact mechanism that hid the
+          // Upstash SET-envelope poisoning (every repeat analysis lost its
+          // comments with zero telemetry). Make it loud.
+          if (parsed !== null && normalized === null) {
+            Sentry.captureMessage('comments cache hit degraded to null: unexpected shape', {
+              level: 'warning',
+              tags: { operation: 'comments-cache-degraded' },
+              extra: { videoId, cacheKey, shape: Array.isArray(parsed) ? 'array' : typeof parsed },
+            });
+          }
+          // A degraded hit is a MISS: fall through to a fresh fetch instead
+          // of persisting null (the silent-loss mechanism itself).
+          if (normalized !== null) return normalized;
         } catch {
-          console.debug(`[analyze-llm-stream] comments cache entry for ${videoId} is not JSON, ignoring`);
+          // Same loud-failure rule: a non-JSON cache hit is a degraded hit too.
+          Sentry.captureMessage('comments cache hit is not JSON; refetching', {
+            level: 'warning',
+            tags: { operation: 'comments-cache-degraded' },
+            extra: { videoId, cacheKey },
+          });
         }
       }
-    } catch {
+    } catch (error) {
       console.warn(`[analyze-llm-stream] comments cache GET failed for ${videoId}, proceeding with fetch`);
+      Sentry.captureMessage('comments cache GET failed; proceeding with fetch', {
+        level: 'warning',
+        tags: { operation: 'comments-cache-get' },
+        extra: { videoId, error: error instanceof Error ? error.message : String(error) },
+      });
     }
   }
 
@@ -597,13 +622,36 @@ async function fetchSampledCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return normalizeVideoComments(JSON.parse(cached));
+          const parsed: unknown = JSON.parse(cached);
+          const normalized = normalizeVideoComments(parsed);
+          // Same loud-failure rationale as fetchCommentsCached above: a
+          // poisoned/degraded cache hit must never disappear silently again.
+          if (parsed !== null && normalized === null) {
+            Sentry.captureMessage('sampled-comments cache hit degraded to null: unexpected shape', {
+              level: 'warning',
+              tags: { operation: 'comments-cache-degraded' },
+              extra: { videoId, cacheKey, shape: Array.isArray(parsed) ? 'array' : typeof parsed },
+            });
+          }
+          // A degraded hit is a MISS: fall through to a fresh fetch instead
+          // of persisting null (the silent-loss mechanism itself).
+          if (normalized !== null) return normalized;
         } catch {
-          console.debug(`[analyze-llm-stream] sampled-comments cache entry for ${videoId} is not JSON, ignoring`);
+          // Same loud-failure rule: a non-JSON cache hit is a degraded hit too.
+          Sentry.captureMessage('sampled-comments cache hit is not JSON; refetching', {
+            level: 'warning',
+            tags: { operation: 'comments-cache-degraded' },
+            extra: { videoId, cacheKey },
+          });
         }
       }
-    } catch {
+    } catch (error) {
       console.warn(`[analyze-llm-stream] sampled-comments cache GET failed for ${videoId}, proceeding with fetch`);
+      Sentry.captureMessage('sampled-comments cache GET failed; proceeding with fetch', {
+        level: 'warning',
+        tags: { operation: 'comments-cache-get' },
+        extra: { videoId, error: error instanceof Error ? error.message : String(error) },
+      });
     }
   }
 
