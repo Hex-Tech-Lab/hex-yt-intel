@@ -1,0 +1,19 @@
+docs/agent-prompts/2026-09-30-oc-comments-tier3-jev-backend.md
+  s_1d1bec99fd4ca5::t_b8cdd3e34844d4 1-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "861d895103f7e489c8dfd637c4f22d5aceffe3bc",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
