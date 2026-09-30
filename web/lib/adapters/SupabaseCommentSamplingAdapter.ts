@@ -1,3 +1,4 @@
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { SupabaseSettingsAdapter } from './SupabaseSettingsAdapter';
 import {
   resolveTierSampleCount,
@@ -93,5 +94,35 @@ export class SupabaseCommentSamplingAdapter implements CommentSamplingPort {
       estimatedCostUsd,
       estimateParamsVersion,
     };
+  }
+}
+
+export interface CommentRunStatusRow {
+  id: string;
+  status: 'pending' | 'sampling' | 'completed' | 'failed';
+  mode: 'uncapped' | 'cochran';
+  sampled_count: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export class SupabaseCommentRunReaderAdapter {
+  /**
+   * Latest comment_sample_runs row for an analysis owned by the caller, or
+   * null when the caller owns no such row (run absent OR analysis not
+   * owned — both indistinguishable to the caller, fail-closed by design).
+   */
+  static async findLatestRunForAnalysis(analysisId: string, userId: string): Promise<CommentRunStatusRow | null> {
+    const client = await getSupabaseClientWithAuth();
+    const { data, error } = await client
+      .from('comment_sample_runs')
+      .select('id, status, mode, sampled_count, created_at, completed_at')
+      .eq('analysis_id', analysisId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as CommentRunStatusRow | null) ?? null;
   }
 }

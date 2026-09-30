@@ -16,6 +16,7 @@ import {
   PartialAnalysisWarning,
   type PartialAnalysisInfo,
 } from "@/components/dashboard/PartialAnalysisWarning";
+import { CommentInsightsCard } from "@/components/templates/console/CommentInsightsCard";
 import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
@@ -23,6 +24,7 @@ import type { VideoMetadata } from "@/lib/types";
 import type { StoredExecutiveDigest } from "@/lib/ports/ExecutiveDigestPorts";
 import type { ExecutiveSummaryData } from "@/components/organisms/ExecutiveSummary";
 import type { AuxElementStatus } from "@/hooks/useAuxElementStatus";
+import type { CommentInsightsResult } from "@/hooks/useCommentInsights";
 import type { ChapterEntry } from "@/store/useChaptersStore";
 import type { RankedEntityMention } from "@/lib/utils/entity-time-seek";
 
@@ -45,6 +47,7 @@ interface ProDashboardViewProps {
   partialInfo: PartialAnalysisInfo | null;
   TOTAL_DIMENSIONS: number;
   auxStatus: AuxElementStatus | null;
+  commentInsights: CommentInsightsResult;
   chaptersStatus: string;
   chapters: ChapterEntry[];
   dimensions: Dimension[];
@@ -71,6 +74,7 @@ export function ProDashboardView({
   partialInfo,
   TOTAL_DIMENSIONS,
   auxStatus,
+  commentInsights,
   chaptersStatus,
   chapters,
   dimensions,
@@ -163,9 +167,23 @@ export function ProDashboardView({
                     tooltip="Channel metadata and statistics enriched"
                   />
                   <StatusBadge
-                    status={auxStatus.comments ? "done" : "idle"}
-                    label="Comments"
-                    tooltip="Top audience comments sampled and analyzed"
+                    status={
+                      commentInsights.state === 'analyzing'
+                        ? 'streaming'
+                        : auxStatus.comments
+                          ? 'done'
+                          : 'idle'
+                    }
+                    label={
+                      commentInsights.state === 'analyzing'
+                        ? 'Analyzing sentiment…'
+                        : 'Comments'
+                    }
+                    tooltip={
+                      commentInsights.state === 'analyzing'
+                        ? 'Cochran sentiment sampling run in progress'
+                        : 'Top audience comments sampled and analyzed'
+                    }
                   />
                   <ChapterChip
                     hasChapters={
@@ -174,6 +192,9 @@ export function ProDashboardView({
                   />
                   <HighlightsChip hasHighlights={hasHighlights} count={highlightsCount} />
                 </div>
+              )}
+              {commentInsights.state === 'ready' && commentInsights.insights && (
+                <CommentInsightsCard insights={commentInsights.insights} />
               )}
               <DimensionAccordion
                 dimensions={dimensions}
