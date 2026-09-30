@@ -1,0 +1,19 @@
+supabase/migrations/20260930150000_highlights_seek_and_ticker_settings.sql
+  s_1d1bec99fd4ca5::t_1e4b427b15b9a0 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "75b11a31de85f76297fa94ab2cdf48c642706489",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
