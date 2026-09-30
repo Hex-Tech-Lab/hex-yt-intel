@@ -11,7 +11,7 @@ export interface CommentInsightsResult {
 
 /** Poll interval while a run is pending/sampling. */
 const POLL_INTERVAL_MS = 5000;
-/** Hard cap on total polling time; after this the hook stops polling (state stays 'analyzing'). */
+/** Hard cap on total polling time; after this the hook stops polling and drops back to 'none' (never a permanent "Analyzing…" label). */
 const POLL_CAP_MS = 3 * 60 * 1000;
 
 function readInsightsFromPayload(payload: unknown): CommentInsights | null {
@@ -91,9 +91,11 @@ export function useCommentInsights(analysisId: string | null, status: string): C
       }
     };
 
-    const tick = async (): Promise<void> => {
+    // The full persisted payload is read once up front and once on
+    // completion; poll ticks only hit the small run-status route.
+    const tick = async (checkPayloadFirst: boolean): Promise<void> => {
       if (cancelled) return;
-      if (await fetchInsightsFromPersistedPayload()) return;
+      if (checkPayloadFirst && await fetchInsightsFromPersistedPayload()) return;
       if (cancelled) return;
       const run = await fetchRunStatus();
       if (cancelled) return;
@@ -113,18 +115,21 @@ export function useCommentInsights(analysisId: string | null, status: string): C
         return;
       }
       if (run.status === 'pending' || run.status === 'sampling') {
+        if (Date.now() + POLL_INTERVAL_MS > deadline) {
+          setResult({ state: 'none', insights: null });
+          return;
+        }
         setResult({ state: 'analyzing', insights: null });
-        if (Date.now() + POLL_INTERVAL_MS > deadline) return;
         pollTimer = setTimeout(() => {
           pollTimer = null;
-          tick().catch((err: unknown) => console.debug('[useCommentInsights] poll failed:', err));
+          tick(false).catch((err: unknown) => console.debug('[useCommentInsights] poll failed:', err));
         }, POLL_INTERVAL_MS);
         return;
       }
       setResult({ state: 'none', insights: null });
     };
 
-    tick().catch((err: unknown) => console.debug('[useCommentInsights] failed:', err));
+    tick(true).catch((err: unknown) => console.debug('[useCommentInsights] failed:', err));
 
     return () => {
       cancelled = true;

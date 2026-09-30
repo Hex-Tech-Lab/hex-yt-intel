@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { StrictMode } from 'react';
-import { renderHook, waitFor, cleanup } from '@testing-library/react';
+import { renderHook, waitFor, cleanup, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useCommentInsights } from '@/hooks/useCommentInsights';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -139,16 +139,26 @@ describe('useCommentInsights', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'), { wrapper: StrictMode });
+    const { result } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'), { wrapper: StrictMode });
 
     // Well past the 180s cap: the run-status fetch stops being called again.
-    await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    });
     const runCalls = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(
       (c: unknown[]) => String(c[0]).includes('/api/comments/runs/')
     ).length;
     // initial + ~36 polls within cap (180s / 5s), well below an unbounded count
     expect(runCalls).toBeLessThanOrEqual(40);
     expect(runCalls).toBeGreaterThan(0);
+    // The cap never leaves a permanent "Analyzing sentiment…" label.
+    expect(result.current.state).toBe('none');
+    // Poll ticks only hit the run-status route; the full payload is read up
+    // front (once per effect run; StrictMode double-invokes) -- not per tick.
+    const payloadCalls = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('/api/analyses/')
+    ).length;
+    expect(payloadCalls).toBeLessThanOrEqual(2);
   });
 
   it('reports failed when the run failed', async () => {

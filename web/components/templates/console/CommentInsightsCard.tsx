@@ -14,7 +14,7 @@ export function formatScopeLine(insights: CommentInsights): string {
 }
 
 const PANEL_STYLE = {
-  borderRadius: 8,
+  borderRadius: 'var(--radius-card)',
   border: '1px solid var(--line)',
   background: 'rgb(26 31 43 / 0.6)',
   padding: 16,
@@ -24,7 +24,7 @@ const CHIP_STYLE = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 6,
-  borderRadius: 6,
+  borderRadius: 'var(--radius-pill)',
   border: '1px solid var(--line)',
   padding: '3px 8px',
   fontFamily: 'var(--font-mono)',
