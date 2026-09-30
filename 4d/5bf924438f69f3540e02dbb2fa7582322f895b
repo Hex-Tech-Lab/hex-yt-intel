@@ -1,0 +1,19 @@
+docs/agent-prompts/2026-09-30-oc-r3b-2-1-review-patch.md
+  s_36f875f11b73af::t_ae57a00ed9a962 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4d5bf924438f69f3540e02dbb2fa7582322f895b",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
