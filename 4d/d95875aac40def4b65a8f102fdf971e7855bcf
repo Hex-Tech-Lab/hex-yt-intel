@@ -1,0 +1,21 @@
+supabase/migrations/20261001090000_jev_max_cost_per_video_setting.sql
+  s_36f875f11b73af::t_2856e35c51ec13 1-27
+supabase/migrations/20261001100000_analyses_jev_plan.sql
+  s_36f875f11b73af::t_342c564951d11f 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4dd95875aac40def4b65a8f102fdf971e7855bcf",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
