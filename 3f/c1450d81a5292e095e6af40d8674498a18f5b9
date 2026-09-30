@@ -1,0 +1,84 @@
+web/components/templates/console/TopBar.tsx
+  s_af97658c57b9e9::t_b3fd0b6dc22879 53-58
+web/components/templates/console/AnalysisHero.tsx
+  s_af97658c57b9e9::t_798c5da7ed97fd 152,166
+web/components/templates/_shared/primitives.tsx
+  s_af97658c57b9e9::t_b48c57765d81fb 77
+  s_af97658c57b9e9::t_902fbb3104bfe4 59-62
+  s_af97658c57b9e9::t_e7dc491f934da2 159
+web/components/templates/console/__tests__/AnalysisHistory-thumbnail.test.tsx
+  s_af97658c57b9e9::t_d5fa7912498e09 144
+  s_af97658c57b9e9::t_b46160165e7a4b 1-139,146-157
+  s_af97658c57b9e9::t_324c6c4731bb2e 140-143,145
+web/app/globals.css
+  s_af97658c57b9e9::t_2f523dc6f58e91 198-207
+  s_af97658c57b9e9::t_067f29da39b891 498-506
+  s_af97658c57b9e9::t_43688bf78b7322 40-55
+  s_af97658c57b9e9::t_4201af5b8bf485 116-121
+  s_af97658c57b9e9::t_f433540fb69e15 511,513-542,561,567
+  s_af97658c57b9e9::t_785c243be0796c 98-104,106-115
+  s_af97658c57b9e9::t_a59d8501e2b2f0 508-510
+  s_768059c0b6e1e9::t_8f134782943dcb 512,543-544,555-560,562-566,568-571,573-574,580,669
+web/components/templates/console/AnalysisHistory.tsx
+  s_af97658c57b9e9::t_5635a59051da2f 118
+  s_af97658c57b9e9::t_bdc22c8e42189d 667,677
+  s_af97658c57b9e9::t_801a6b615d1522 789
+  s_af97658c57b9e9::t_0be18e15bbee88 796-801
+  s_af97658c57b9e9::t_15235200b761a4 809
+  s_af97658c57b9e9::t_19706532e06d36 948-951,955-966,973-988
+  s_af97658c57b9e9::t_021a73959e77b3 952-954
+web/lib/__tests__/radius-tokens.test.ts
+  s_af97658c57b9e9::t_279dbd43912070 1-74
+web/components/templates/console/DimensionAccordion.tsx
+  s_af97658c57b9e9::t_3f09d5877ab418 53-63
+.qa-intel/baseline.json
+  s_768059c0b6e1e9::t_db528cc37a59f5 1100-1428
+web/app/admin/users/UsersAdminClient.tsx
+  s_768059c0b6e1e9::t_4bcd5f3d22c232 218,225
+web/app/admin/waitlist/WaitlistAdminClient.tsx
+  s_768059c0b6e1e9::t_d9e0798e3ddf46 99,106
+web/app/analyses/saved/page.tsx
+  s_768059c0b6e1e9::t_e1eb9f790eec55 122
+web/app/search/page.tsx
+  s_768059c0b6e1e9::t_f58eb98e883d85 124
+web/app/settings/logs/LogsViewerClient.tsx
+  s_768059c0b6e1e9::t_6ab5b9a6928f84 484
+web/components/TimestampLink.tsx
+  s_768059c0b6e1e9::t_ac473ab9ad619b 82
+web/components/dashboard/HighlightsTrack.tsx
+  s_768059c0b6e1e9::t_e4539a0c0647de 325
+web/components/search/filters.tsx
+  s_768059c0b6e1e9::t_dd04eac8266c41 105,112,134,164
+web/components/templates/console/BentoMetadata.tsx
+  s_768059c0b6e1e9::t_6434e136d9723d 173
+web/components/templates/console/DimensionDrawer.tsx
+  s_768059c0b6e1e9::t_d1b8c3f6ac860f 200
+web/components/templates/console/EntityMentionTimeline.tsx
+  s_768059c0b6e1e9::t_c84fa4cf267eb0 201,278
+.memory/AGENT_LEDGER.md
+  s_768059c0b6e1e9::t_efbf10cf72e4ba 1453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3fc1450d81a5292e095e6af40d8674498a18f5b9",
+  "prompts": {},
+  "sessions": {
+    "s_768059c0b6e1e9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0e6d424affe0Ob52pmUhM39UX",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_af97658c57b9e9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0e9a9430ffeYJqzAplVLrXqbc",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
