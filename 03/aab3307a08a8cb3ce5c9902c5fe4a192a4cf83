@@ -1,0 +1,44 @@
+worker/src/crypto.ts
+  s_7abb67d0e6cdb1::t_4ada068988c90b 34
+web/lib/types/contracts.ts
+  s_7abb67d0e6cdb1::t_7a020e74bd7c37 288-293
+web/lib/__tests__/stream-token-v2.test.ts
+  s_52d8644278ac3e::t_b608ddd0be2e15 67-68,72,79
+  s_52d8644278ac3e::t_3ece86eb38fa0b 75-78
+  s_7abb67d0e6cdb1::t_dd451373436b22 1-66,69-71,73-74,80-121
+web/lib/stream-token.ts
+  s_7abb67d0e6cdb1::t_e174892a126edf 126
+  s_7abb67d0e6cdb1::t_ed17664b483117 40-79
+worker/src/routes/analysis.ts
+  s_52d8644278ac3e::t_31b7723fdcbab4 219-238
+  s_52d8644278ac3e::t_990f71c3127aa9 137-152,194-195,205-211,252-254,263-265,1353-1359,1511
+worker/src/__tests__/stream-token-dual-verify.test.ts
+  s_52d8644278ac3e::t_7373afd50090c3 49,55,65,72,105,113,122,134,144
+  s_7abb67d0e6cdb1::t_6f293d420c6d73 1-37,40-48,50-51,53-54,56,58-63,66-71,73-104,106-112,114-121,123-133,135-143,145-155
+  s_52d8644278ac3e::t_1c959a76ca9ae5 52,57
+  s_52d8644278ac3e::t_8d65211d3602d8 38-39,64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "03aab3307a08a8cb3ce5c9902c5fe4a192a4cf83",
+  "prompts": {},
+  "sessions": {
+    "s_52d8644278ac3e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0bc6df9effeMRMjV3XJXORwXo",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_7abb67d0e6cdb1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0bd49e6cffe9g0ZtS05Svu7q9",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
