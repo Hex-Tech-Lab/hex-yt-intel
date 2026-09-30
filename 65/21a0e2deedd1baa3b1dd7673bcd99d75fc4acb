@@ -1,0 +1,38 @@
+worker/src/services/UpstashCacheAdapter.ts
+  s_f8d2976b833b8d::t_3932c7e76e22e9 55-64,69
+worker/src/__tests__/upstash-set-envelope-regression.test.ts
+  s_f8d2976b833b8d::t_eda6a00e818cc3 1-22,25-32,34-36,38-43,47-61
+  s_f8d2976b833b8d::t_26ac99f9c24647 23-24,33,37
+  s_f8d2976b833b8d::t_1c72f752db592a 44-46
+.memory/AGENT_LEDGER.md
+  s_f8d2976b833b8d::t_bf011e2702a2cf 1448
+worker/src/routes/analysis.ts
+  s_f8d2976b833b8d::t_928af7aae0513e 492-505
+  s_f8d2976b833b8d::t_bbbd12fe96326e 613-624
+docs/agent-prompts/2026-09-30-oc-comments-silent-loss.md
+  s_1d1bec99fd4ca5::t_f1b9c7a25c6e7a 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6521a0e2deedd1baa3b1dd7673bcd99d75fc4acb",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f8d2976b833b8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0f436743ffem6RFxAZP4Imb5e",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
