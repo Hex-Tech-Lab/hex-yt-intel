@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — R3b 2.3: compute K + stream_count + cost cap and dispatch the matrix — BLOCKED on a design decision (see §1)
+# Agent Dispatch Prompt — R3b 2.3: plan endpoint (P1) — compute K, stream_count, cost cap, pre-signed cell list
 
 **Target Agent**: OC (`glm-preset/@preset/glm-53-flash-on-cheap`, CLAUDE.md "OC model standard")
 **Effort Level**: medium
@@ -40,18 +40,19 @@
 
 ## 1. Context & Problem Statement
 
-> **CC GATE — DO NOT DISPATCH UNTIL THE USER CHOOSES AN OPTION BELOW.**
-> Addendum A2 says `stream_count` is written "once, at job creation". Verified 2026-09-30: `web/lib/usecases/CreateAnalysisUseCase.ts` only sometimes has the transcript (`ingestionResult.transcript`, ~L253/L393); otherwise the Edge Worker fetches it during the SSE stream (~L150 comment, `worker/src/routes/analysis.ts` `fetchTranscriptIfMissing` ~L648). K needs the transcript, so it cannot always be computed at job creation.
-> - **Option P1 (recommended): plan endpoint.** New `POST /api/analyses/[id]/plan` (Vercel, S2S-HMAC like `/persist`). Called by the worker right after the transcript is known (or by job creation when it already has it). It runs `chunkTranscript` + the A6 cost cap, writes `analyses.stream_count` once (conditional update `where stream_count = 5 and <no plan yet>`, idempotent), and returns the cell list with per-cell v2 tokens (2.2) and slice signatures. The first bundle stream stays as today; the client then opens the remaining cells from the plan.
-> - **Option P2: fetch the transcript on Vercel before job creation** (move/duplicate `TranscriptExtractor` logic to Vercel). Simplest contract, but duplicates the provider chain and adds latency before the first byte (ADR 005/032 trade-off).
-> - **Option P3: K = 1 whenever the transcript isn't known at job creation**, Jev only for cached transcripts. No new endpoint, but map-reduce silently never runs for fresh videos.
+**Decision (user, 2026-09-30): Option P1, the plan endpoint.** The map-reduce boundaries are computed server-side BEFORE any grounded cell streams, and the client receives a deterministic array of pre-signed cells (v2 token from 2.2 + slice signature) and iterates it.
 
-## 2. Contract & Implementation Directives (written for Option P1; CC rewrites this section if another option is chosen)
+**Timing constraint (verified 2026-09-30, do not skip):** `web/lib/usecases/CreateAnalysisUseCase.ts` only sometimes has the transcript at job creation (`ingestionResult.transcript` ~L253/L393; otherwise the Edge Worker fetches it during the stream, `worker/src/routes/analysis.ts` `fetchTranscriptIfMissing` ~L648). Therefore:
+- **Transcript known at job creation** → plan INLINE in `POST /api/analyses`; the job response carries the full cell list.
+- **Transcript not known** → the worker fetches it exactly as today, then calls `POST /api/analyses/[id]/plan` (S2S HMAC, same verification as `/persist`) BEFORE starting any grounded LLM call; the plan response (cell list) is streamed to the client as one SSE event (`plan`), and the client dispatches the remaining cells from it. No grounded cell may start before a plan exists.
+
+## 2. Contract & Implementation Directives
 
 1. Ledger `[IN_PROGRESS]`. `build-graph`; map `CreateAnalysisUseCase` → client `useSSEStream` stream dispatch → worker.
 2. `web/lib/usecases/PlanAnalysisUseCase.ts` (pure core + ports): input `{ analysisId, transcript, bundles, jevConfig, costCap, priceTable }` → output `{ K, streamCount, cells: {jevChunkIndex, chunkIndex, startWord, endWord, sha256}[], estimateCents, truncatedFallback: boolean }`. `analysis.jev.enabled = false` ⇒ K = 1. Cost cap A6: merge smallest adjacent chunks until the estimate fits; if K = 1 still exceeds the cap ⇒ `truncatedFallback = true` (today's budget path).
 3. Registry key `analysis.jev.maxCostUsdCentsPerVideo` (new migration file, not applied; default = the value that yields K = 1 for a 48,000-char transcript at current prices, computed and shown in the report).
-4. Route `web/app/api/analyses/[id]/plan/route.ts`: thin; S2S HMAC verify (same as persist); idempotent write of `stream_count` (second call returns the stored plan, never re-chunks).
+4. Route `web/app/api/analyses/[id]/plan/route.ts`: thin; S2S HMAC verify (same as persist); idempotent: the plan is persisted once (conditional update, the row must not already have a plan) and a second call returns the STORED plan, never re-chunks. `CreateAnalysisUseCase` calls the same `PlanAnalysisUseCase` inline when it already has the transcript.
+4b. Worker: after `fetchTranscriptIfMissing`, call `/plan` and emit an SSE `plan` event before any grounded LLM call; on `/plan` failure, fall back to K = 1 (today's behaviour) and capture to Sentry — never block the analysis.
 5. Client (`web/hooks/useSSEStream.ts`): when a plan with K > 1 arrives, dispatch the grounded cells with v2 tokens; K = 1 ⇒ exactly today's 5 streams (regression test).
 6. Tests: pure plan (K=1 when disabled; cost-cap merging; fallback); route idempotence; client K=1 path unchanged.
 7. Gates, commit, ledger.
