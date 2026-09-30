@@ -107,6 +107,14 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.saveExecutiveDigest(params);
   }
 
+  persistJevPlan(params: { analysisId: string; plan: unknown }): Promise<{ plan: unknown; stored: boolean }> {
+    return SupabaseAnalysisAdapter.persistJevPlan(params);
+  }
+
+  findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
+    return SupabaseAnalysisAdapter.findJevPlan(params);
+  }
+
   getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
     return SupabaseAnalysisAdapter.getTranscriptSegments(videoId);
   }

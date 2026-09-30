@@ -87,6 +87,12 @@ export default defineConfig({
       // micromatch reads it as a character class and matches nothing.
       'app/api/comments/runs/\\[analysisId\\]/**/*.test.ts',
       'app/api/analyses/\\[id\\]/export/**/*.test.ts',
+      // R3b 2.3 (2026-10-01): /plan route gained an authorization-relevant
+      // sibling test (HMAC gate + idempotence regression). Named explicitly,
+      // same rationale as the app/api globs above. The [id] directory is
+      // bracket-ESCAPED -- unescaped, micromatch reads it as a character
+      // class and matches nothing.
+      'app/api/analyses/\\[id\\]/plan/**/*.test.ts',
       'app/billing/**/*.test.tsx',
       // PR #326's pricing page gained a copy-contract sibling test
       // (qa-intel high finding: authorization-relevant file with no
