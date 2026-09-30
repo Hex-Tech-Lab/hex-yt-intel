@@ -3,11 +3,11 @@
  *
  * Pure, deterministic planner: computes the Jev chunk matrix (K), the
  * stream count (K × G + P), the pre-signed cell list (per-chunk transcript
- * slice triples), and the worst-case cost estimate, enforcing the
+ * segment triples), and the worst-case cost estimate, enforcing the
  * per-video cost cap by merging the smallest adjacent Jev chunks until the
  * estimate fits. No I/O — the caller resolves config and signs the cells.
  *
- * A slice's canonical text is the whitespace-tokenized words joined by a
+ * A segment's canonical text is the whitespace-tokenized words joined by a
  * single space (the same tokenization the boundary engine uses), so the
  * sha256 triple is well-defined for both the Vercel signer and the
  * worker-side re-computation regardless of the transcript's original
@@ -77,11 +77,11 @@ interface MergedChunk {
 }
 
 function mergeChunks(chunks: JevChunk[], words: string[]): MergedChunk[] {
-  return chunks.map((c) => ({
-    startWord: c.startWord,
-    endWord: c.endWord,
-    wordCount: c.wordCount,
-    text: words.slice(c.startWord, c.endWord).join(' '),
+  return chunks.map((chunk) => ({
+    startWord: chunk.startWord,
+    endWord: chunk.endWord,
+    wordCount: chunk.wordCount,
+    text: words.filter((_unusedWord, wordIndex) => wordIndex >= chunk.startWord && wordIndex < chunk.endWord).join(' '),
   }));
 }
 
@@ -97,15 +97,19 @@ function mergeSmallestAdjacent(chunks: MergedChunk[]): MergedChunk[] {
     }
   }
   if (bestIdx === -1) return chunks;
-  const a = chunks[bestIdx]!;
-  const b = chunks[bestIdx + 1]!;
+  const leftChunk = chunks[bestIdx]!;
+  const rightChunk = chunks[bestIdx + 1]!;
   const merged: MergedChunk = {
-    startWord: a.startWord,
-    endWord: b.endWord,
-    wordCount: a.wordCount + b.wordCount,
-    text: `${a.text} ${b.text}`,
+    startWord: leftChunk.startWord,
+    endWord: rightChunk.endWord,
+    wordCount: leftChunk.wordCount + rightChunk.wordCount,
+    text: `${leftChunk.text} ${rightChunk.text}`,
   };
-  return [...chunks.slice(0, bestIdx), merged, ...chunks.slice(bestIdx + 2)];
+  return chunks.flatMap((chunk, chunkIndex) => {
+    if (chunkIndex === bestIdx) return [merged];
+    if (chunkIndex === bestIdx + 1) return [];
+    return [chunk];
+  });
 }
 
 function perCallInputTokens(chunkWords: number, input: PlanAnalysisInput): number {
@@ -127,7 +131,7 @@ function estimateCentsFor(chunks: MergedChunk[], groundedBundles: number, projec
 }
 
 export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPlan> {
-  const groundedBundles = input.bundles.filter((b) => !isProjectiveBundle(b)).length;
+  const groundedBundles = input.bundles.filter((bundle) => !isProjectiveBundle(bundle)).length;
   const projectiveBundles = input.bundles.length - groundedBundles;
 
   const words = tokenize(input.transcript);
@@ -138,13 +142,13 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
     const text = words.join(' ');
     const sha256 = await sha256Hex(text);
     const groundedBundleIndexes = input.bundles
-      .map((b, i) => ({ b, i }))
-      .filter(({ b }) => !isProjectiveBundle(b))
-      .map(({ i }) => i + 1);
+      .map((bundle, bundleIdx) => ({ bundle, bundleIdx }))
+      .filter(({ bundle }) => !isProjectiveBundle(bundle))
+      .map(({ bundleIdx }) => bundleIdx + 1);
     const projectiveBundleIndexes = input.bundles
-      .map((b, i) => ({ b, i }))
-      .filter(({ b }) => isProjectiveBundle(b))
-      .map(({ i }) => i + 1);
+      .map((bundle, bundleIdx) => ({ bundle, bundleIdx }))
+      .filter(({ bundle }) => isProjectiveBundle(bundle))
+      .map(({ bundleIdx }) => bundleIdx + 1);
     const cells: PlanCell[] = [
       ...groundedBundleIndexes.map((chunkIndex) => ({
         jevChunkIndex: 0,
@@ -189,13 +193,13 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
   const truncatedFallback = estimateCents > input.costCapCents && chunks.length === 1;
 
   const groundedBundleIndexes = input.bundles
-    .map((b, i) => ({ b, i }))
-    .filter(({ b }) => !isProjectiveBundle(b))
-    .map(({ i }) => i + 1);
+    .map((bundle, bundleIdx) => ({ bundle, bundleIdx }))
+    .filter(({ bundle }) => !isProjectiveBundle(bundle))
+    .map(({ bundleIdx }) => bundleIdx + 1);
   const projectiveBundleIndexes = input.bundles
-    .map((b, i) => ({ b, i }))
-    .filter(({ b }) => isProjectiveBundle(b))
-    .map(({ i }) => i + 1);
+    .map((bundle, bundleIdx) => ({ bundle, bundleIdx }))
+    .filter(({ bundle }) => isProjectiveBundle(bundle))
+    .map(({ bundleIdx }) => bundleIdx + 1);
 
   const cells: PlanCell[] = [];
   for (let k = 0; k < chunks.length; k++) {

@@ -31,7 +31,7 @@ function longTranscript(sentences: number): string {
 }
 
 describe('planAnalysis', () => {
-  it('K=1 when Jev disabled: 5 streams, one slice per bundle, projective same slice', async () => {
+  it('K=1 when Jev disabled: 5 streams, one segment per bundle, projective same segment', async () => {
     const plan = await planAnalysis({ ...BASE, transcript: 'short transcript text here' });
     expect(plan.K).toBe(1);
     expect(plan.streamCount).toBe(5);
@@ -42,37 +42,39 @@ describe('planAnalysis', () => {
       expect(cell.startWord).toBe(0);
       expect(cell.endWord).toBe(4);
     }
-    const grounded = plan.cells.slice(0, 4);
-    const projective = plan.cells.slice(4);
+    const grounded = plan.cells.filter((_unusedCell, idx) => idx < 4);
+    const projective = plan.cells.filter((_unusedCell, idx) => idx >= 4);
     expect(new Set(grounded.map((c) => c.sha256))).toHaveLength(1);
     expect(new Set(projective.map((c) => c.sha256))).toHaveLength(1);
     expect(new Set(grounded.map((c) => c.chunkIndex))).toEqual(new Set([1, 2, 3, 4]));
     expect(new Set(projective.map((c) => c.chunkIndex))).toEqual(new Set([5]));  });
 
-  it('K=1 regression: disabled Jev slice covers whole transcript', async () => {
-    const t = 'one two three four five six';
-    const plan = await planAnalysis({ ...BASE, transcript: t });
+  it('K=1 regression: disabled Jev segment covers whole transcript', async () => {
+    const transcriptText = 'one two three four five six';
+    const plan = await planAnalysis({ ...BASE, transcript: transcriptText });
     expect(plan.cells.every((c) => c.endWord === 6)).toBe(true);
   });
 
   it('K>1 when enabled and over char budget: streamCount = K*G + P', async () => {
     const plan = await planAnalysis({ ...BASE, transcript: longTranscript(900), jevConfig: { ...JEV_DEFAULTS, enabled: true } });
     expect(plan.K).toBeGreaterThan(1);
-    const G = 4;
-    const P = 1;
-    expect(plan.streamCount).toBe(plan.K * G + P);
+    const groundedCount = 4;
+    const projectiveCount = 1;
+    expect(plan.streamCount).toBe(plan.K * groundedCount + projectiveCount);
     // one projective cell, at chunk 0
     const proj = plan.cells.filter((c) => c.chunkIndex === 5);
     expect(proj).toHaveLength(1);
-    expect(proj[0]!.jevChunkIndex).toBe(0);
-    expect(proj[0]!.startWord).toBe(0);
-    expect(proj[0]!.endWord).toBe(0);
+    const projectiveCell = proj[0];
+    if (!projectiveCell) throw new Error('missing projective cell');
+    expect(projectiveCell.jevChunkIndex).toBe(0);
+    expect(projectiveCell.startWord).toBe(0);
+    expect(projectiveCell.endWord).toBe(0);
     // grounded cells: K chunks x 4 bundles, each chunk's 4 share one triple
     const grounded = plan.cells.filter((c) => c.chunkIndex !== 5);
-    expect(grounded).toHaveLength(plan.K * G);
+    expect(grounded).toHaveLength(plan.K * groundedCount);
     for (let k = 0; k < plan.K; k++) {
       const chunkCells = grounded.filter((c) => c.jevChunkIndex === k);
-      expect(chunkCells).toHaveLength(G);
+      expect(chunkCells).toHaveLength(groundedCount);
       expect(new Set(chunkCells.map((c) => c.sha256))).toHaveLength(1);
       expect(new Set(chunkCells.map((c) => c.startWord))).toHaveLength(1);
     }
@@ -106,7 +108,7 @@ describe('planAnalysis', () => {
     expect(plan.estimateCents).toBeGreaterThan(0);
   });
 
-  it('cells slices are contiguous, ordered, and tile the transcript', async () => {
+  it('cells segments are contiguous, ordered, and tile the transcript', async () => {
     const plan = await planAnalysis({ ...BASE, transcript: longTranscript(900), jevConfig: { ...JEV_DEFAULTS, enabled: true } });
     const perChunk = new Map<number, { start: number; end: number }>();
     for (const c of plan.cells) {
@@ -119,12 +121,19 @@ describe('planAnalysis', () => {
         perChunk.set(c.jevChunkIndex, { start: c.startWord, end: c.endWord });
       }
     }
-    const ordered = [...perChunk.entries()].sort((a, b) => a[0] - b[0]);
-    expect(ordered[0]![1].start).toBe(0);
+    const ordered = [...perChunk.entries()].sort((first, second) => first[0] - second[0]);
+    const firstEntry = ordered[0];
+    if (!firstEntry) throw new Error('missing first chunk entry');
+    expect(firstEntry[1].start).toBe(0);
     for (let i = 1; i < ordered.length; i++) {
-      expect(ordered[i]![1].start).toBe(ordered[i - 1]![1].end);
+      const current = ordered[i];
+      const previous = ordered[i - 1];
+      if (!current || !previous) throw new Error('missing chunk entry');
+      expect(current[1].start).toBe(previous[1].end);
     }
-    const last = ordered[ordered.length - 1]![1].end;
+    const lastEntry = ordered[ordered.length - 1];
+    if (!lastEntry) throw new Error('missing last chunk entry');
+    const last = lastEntry[1].end;
     const totalWords = longTranscript(900).split(/\s+/).filter(Boolean).length;
     expect(last).toBe(totalWords);
   });

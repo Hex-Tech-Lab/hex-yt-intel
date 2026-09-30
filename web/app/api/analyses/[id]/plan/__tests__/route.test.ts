@@ -25,7 +25,7 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
 }));
 vi.mock('@/lib/usecases/PlanAnalysisUseCase', () => ({ planAnalysis }));
 vi.mock('@/lib/config/cascade', () => ({
-  resolveAnalysisCascade: async () => [{ model: 'x', name: 'x', cost: 0.003 }],
+  resolveAnalysisCascade: () => Promise.resolve([{ model: 'x', name: 'x', cost: 0.003 }]),
 }));
 
 import { POST } from '@/app/api/analyses/[id]/plan/route';
@@ -34,26 +34,26 @@ function makeService() {
   const state = { writes: 0, reads: 0 };
   let storedPlanValue: unknown = null;
   const builder = () => {
-    const b: Record<string, unknown> = {};
-    b.select = () => b;
-    b.eq = () => b;
-    b.is = () => b;
-    b.update = (patch: { jev_plan?: unknown }) => {
+    const builderChain: Record<string, unknown> = {};
+    builderChain.select = () => builderChain;
+    builderChain.eq = () => builderChain;
+    builderChain.is = () => builderChain;
+    builderChain.update = (patch: { jev_plan?: unknown }) => {
       state.writes += 1;
       // Simulate the conditional update landing: the row now holds the plan.
       if (patch && 'jev_plan' in patch) storedPlanValue = patch.jev_plan;
-      return b;
+      return builderChain;
     };
-    b.maybeSingle = () => {
+    builderChain.maybeSingle = () => {
       state.reads += 1;
       return Promise.resolve({ data: { jev_plan: storedPlanValue ?? null }, error: null });
     };
-    return b;
+    return builderChain;
   };
   const service = {
     __state: state,
-    __setStoredPlan: (v: unknown) => {
-      storedPlanValue = v;
+    __setStoredPlan: (storedValue: unknown) => {
+      storedPlanValue = storedValue;
     },
     from(_table: string) {
       return builder();

@@ -25,7 +25,7 @@ import { JEV_DEFAULTS, resolveJevConfig } from '@/lib/config/jev';
 // Registry returns jev defaults verbatim with `enabled: false` (the absent/
 // disabled case). All other registry reads fall back to the same numbers the
 // use case itself uses.
-vi.mocked(getRegistrySettings).mockImplementation(async (keys: string[], fallback: Record<string, unknown>) => {
+vi.mocked(getRegistrySettings).mockImplementation((keys: string[], fallback: Record<string, unknown>) => {
   void keys;
   return {
     ...fallback,
@@ -47,35 +47,35 @@ function metadata() {
 
 function buildUseCase() {
   const metadataIngestion = {
-    fetch: async () => ({
+    fetch: () => Promise.resolve({
       metadata: metadata(),
       transcript: TRANSCRIPT,
       transcriptAvailable: true,
     }),
-    fetchOnlyMetadata: async () => metadata(),
+    fetchOnlyMetadata: () => Promise.resolve(metadata()),
     detectPersona: () => 'general' as never,
     buildJobMetadata: () => metadata() as never,
   };
   const persistence = {
-    findCachedAnalysis: async () => null,
-    upsertProcessingStub: async () => ({ id: 'an-1', status: 'processing' }),
+    findCachedAnalysis: () => Promise.resolve(null),
+    upsertProcessingStub: () => Promise.resolve({ id: 'an-1', status: 'processing' }),
     persistJevPlan,
-    findJevPlan: async () => null,
+    findJevPlan: () => Promise.resolve(null),
     persist: vi.fn(),
   };
   const billingQuota = {
-    checkGate: async () => ({ allowed: true, remaining: 10 }),
-    consume: async () => ({ ok: true }),
+    checkGate: () => Promise.resolve({ allowed: true, remaining: 10 }),
+    consume: () => Promise.resolve({ ok: true }),
   };
   const modelResolution = {
-    resolveModels: async () => ['m-1'],
+    resolveModels: () => Promise.resolve(['m-1']),
   };
   const tokenCrypto = {
-    signAnalysisToken: async () => 'tok',
+    signAnalysisToken: () => Promise.resolve('tok'),
   };
   const commentSampling = {
-    planSample: async () => ({ comments: [] }),
-    estimateCreditCost: async () => ({ credits: 0 }),
+    planSample: () => Promise.resolve({ comments: [] }),
+    estimateCreditCost: () => Promise.resolve({ credits: 0 }),
   };
   return new CreateAnalysisUseCase(
     metadataIngestion as never,
