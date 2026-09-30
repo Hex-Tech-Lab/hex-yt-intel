@@ -1,0 +1,75 @@
+web/app/api/analyses/highlights/route.ts
+  s_6d5d9fa81807aa::t_a2e96652d47eb6 75-76
+web/lib/utils/highlights-settings.ts
+  s_6d5d9fa81807aa::t_a9ef95e2cf9ef5 38-56
+web/app/api/analyses/highlights/__tests__/route.test.ts
+  s_6d5d9fa81807aa::t_1d28934f03af9b 23
+  s_6d5d9fa81807aa::t_13a82fdea3658c 138-151
+web/lib/hooks/useSegmentPlayback.ts
+  s_6d5d9fa81807aa::t_b84b986d9c63a1 283-284,300-314,316,318
+  s_6d5d9fa81807aa::t_03abbcd306b915 188
+  s_6d5d9fa81807aa::t_a4c7ccaed7595b 296-297,299
+  s_6d5d9fa81807aa::t_2c92737ebd77dd 229
+  s_6d5d9fa81807aa::t_6950b037c9bbc6 64-70
+  s_6d5d9fa81807aa::t_d5a3fab75ba476 285-286
+  s_6d5d9fa81807aa::t_6b883178fe48a7 179-180
+  s_6d5d9fa81807aa::t_89c5bb2973bfce 214
+  s_6d5d9fa81807aa::t_9cf0b02447addf 149-151
+  s_6d5d9fa81807aa::t_34c329430bfeca 152-157
+  s_6d5d9fa81807aa::t_bd14c44cdd902d 230-233
+  s_6d5d9fa81807aa::t_5c3aa8badc703b 213
+  s_6d5d9fa81807aa::t_65fa20aefc00e8 140
+  s_6d5d9fa81807aa::t_ef59c23595ead3 287-295,298
+  s_6d5d9fa81807aa::t_423be40136eb2e 187
+  s_6d5d9fa81807aa::t_9fbffd2ece7097 89-93
+web/components/dashboard/HighlightsScrubber.tsx
+  s_6d5d9fa81807aa::t_81eceac9dc6830 456-465
+  s_6d5d9fa81807aa::t_cf82acb3fb952e 30-31
+  s_6d5d9fa81807aa::t_f09798079eedd3 176
+  s_6d5d9fa81807aa::t_eb4ae9b98524d2 302-303
+  s_6d5d9fa81807aa::t_cbee9c4ef9fce5 117
+  s_6d5d9fa81807aa::t_689af0d60c0bff 486
+web/lib/hooks/useSegmentPlayback-jump.test.ts
+  s_6d5d9fa81807aa::t_1e1658168460ce 1-214
+web/lib/hooks/useHighlightTicker.test.ts
+  s_6d5d9fa81807aa::t_1e2d4d6f158eea 36,39,41,43-47,49,51-55
+  s_6d5d9fa81807aa::t_717b1b5d79b58c 37,42
+  s_6d5d9fa81807aa::t_56371354c912b9 38,40,48,50
+  s_6d5d9fa81807aa::t_19a6cd539ec1a5 69
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_6d5d9fa81807aa::t_70d425d1845fbf 4
+  s_6d5d9fa81807aa::t_7d87885531cd85 40,49
+  s_6d5d9fa81807aa::t_9520c50b3e2d7e 136
+web/lib/hooks/useHighlightTicker.ts
+  s_6d5d9fa81807aa::t_94f1d9e393f2f2 93-94
+  s_6d5d9fa81807aa::t_3c9c1878bde1de 42-53
+  s_6d5d9fa81807aa::t_73446e7e05ca6d 64
+  s_6d5d9fa81807aa::t_1bc5fdbf36c2db 58-61
+  s_6d5d9fa81807aa::t_4e8ae580e9cdb0 87-92,95-98
+docs/agent-prompts/2026-09-30-oc-highlights-jump-and-ticker.md
+  s_1d1bec99fd4ca5::t_d22ad36b597393 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "273ef9b7c6e816299fd33d65cd17f40b229883aa",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6d5d9fa81807aa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0edf85e5ffejBa5c3oS7pwurT",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
