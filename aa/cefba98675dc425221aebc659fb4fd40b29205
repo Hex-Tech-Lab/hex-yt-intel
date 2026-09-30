@@ -1,0 +1,77 @@
+worker/src/ports/CommentIngestionPort.ts
+  s_9ecf3a86314327::t_bab76b7a15079a 22-23
+web/vitest.config.ts
+  s_768059c0b6e1e9::t_10b1dee90ea77a 78-82
+worker/src/routes/comments.ts
+  s_9ecf3a86314327::t_29d44ea7d78a58 141-142
+  s_9ecf3a86314327::t_d33a82c4e2e61d 33-55,64-65
+web/lib/services/aux-remediation.ts
+  s_9ecf3a86314327::t_3a7db481e9fc3c 62
+  s_9ecf3a86314327::t_97fd1e3e020ec0 267-288,291-300,311-325
+  s_9ecf3a86314327::t_929cc8d99b7c58 289-290
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_9ecf3a86314327::t_14d6d1f2320aa2 62-71,74-99,101-149
+  s_768059c0b6e1e9::t_fc46f58003ad00 150-183
+  s_9ecf3a86314327::t_240482e23133ad 100
+  s_9ecf3a86314327::t_ea683bfac6b951 72-73
+worker/src/__tests__/cochran-mode-engine.test.ts
+  s_768059c0b6e1e9::t_9e9e3c52062c6c 1-204
+web/lib/__tests__/persist-sample-run-cochran.test.ts
+  s_768059c0b6e1e9::t_e7c65ea44de99d 209-211,213-214,220-228
+  s_768059c0b6e1e9::t_09156d5b597eef 1-66,68-208,212,215-219,229-248
+  s_768059c0b6e1e9::t_be895f284a213f 67
+worker/src/services/cochran-mode-engine.ts
+  s_9ecf3a86314327::t_32e92cce9472f1 13
+  s_9ecf3a86314327::t_ebd91049b80113 1-12,14-148
+worker/src/services/MetadataScraper.ts
+  s_9ecf3a86314327::t_22bba36ae13e45 281-285,288,291-292
+  s_9ecf3a86314327::t_6e825271c9b806 314,336
+worker/src/queue-consumers/comments-tier3.ts
+  s_768059c0b6e1e9::t_ffe5ec1eec57b3 261-266
+  s_9ecf3a86314327::t_229f4937305091 4-11,15,17-28,33,45-71,73-76,82,85-90,102,124-253,259-260,267-283
+  s_768059c0b6e1e9::t_a2422323ef8aa6 72
+web/app/api/comments/persist-sample-run/route.ts
+  s_768059c0b6e1e9::t_727affcd6a424a 72
+  s_768059c0b6e1e9::t_ad1335140a7d48 198-214
+  s_9ecf3a86314327::t_a277794c36aae5 8,11-67,73-75,82-101,108,132-160,215-220
+worker/src/__tests__/comments-tier3-cochran.test.ts
+  s_768059c0b6e1e9::t_755d50dd25bb2d 32-34,36-38
+  s_768059c0b6e1e9::t_6e4e86c2f4d147 158-159
+  s_768059c0b6e1e9::t_cf321eb2c04805 28-29,35,103,113-114,134-135,163-164,184-185
+  s_768059c0b6e1e9::t_8b2002600cf546 1-13,19-27,30-31,39-41,43-102,104-105,109-112,115-116,118-133,136-146,148-157,160-162,165-170,175,177-183,186,188-194,197-199
+  s_768059c0b6e1e9::t_4f4603865099a5 176
+  s_768059c0b6e1e9::t_8cd7b48196cfb1 14-18,42,106-108,117,147,171-174,187,195-196
+web/app/api/comments/persist-sample-run/__tests__/route.test.ts
+  s_768059c0b6e1e9::t_488b5f0377e39b 1-42,45-83,101-140
+  s_768059c0b6e1e9::t_ecc4f9c2267396 43-44
+  s_768059c0b6e1e9::t_098bb5cd6c09c5 84-100
+supabase/migrations/20260930170000_comment_classifications_typed.sql
+  s_9ecf3a86314327::t_38d95f20d0a3f4 34-42
+  s_9ecf3a86314327::t_5b938c1ea72732 1-33,43-72
+.qa-intel/baseline.json
+  s_768059c0b6e1e9::t_6d7d4c2125037a 3,6,10-14,17-21,24,31,38,41,45,48,52,56,59,63,66,68-70,73,76,80,87,94,101,103-105,108,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "aacefba98675dc425221aebc659fb4fd40b29205",
+  "prompts": {},
+  "sessions": {
+    "s_768059c0b6e1e9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0e6d424affe0Ob52pmUhM39UX",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9ecf3a86314327": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0e781c59ffelloaPgvFcXrkJU",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
