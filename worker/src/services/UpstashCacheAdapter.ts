@@ -52,13 +52,21 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
 
   async set(key: string, value: string, ttlSeconds: number = DEFAULT_TTL_SECONDS): Promise<void> {
     try {
-      await rawFetch(`${this.url}/set/${key}`, {
+      // RCA (2026-09-30): Upstash REST's POST /set/{key} treats the ENTIRE
+      // raw request body as the value — options like `ex`/`xx` belong in
+      // query params. The previous JSON body {value, ex, get, xx} made
+      // Upstash store the whole envelope as the value, so every worker
+      // cache entry was unreadable garbage on the next cache hit: comments
+      // normalized to null (silent comment loss, post-2026-09-27) and
+      // channelMeta persisted as the literal envelope. Options moved to
+      // the URL, matching the documented REST contract.
+      const params = new URLSearchParams({ ex: String(ttlSeconds) });
+      await rawFetch(`${this.url}/set/${key}?${params.toString()}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ value, ex: ttlSeconds, get: false, xx: false }),
+        body: value,
       });
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash SET failed, analysis succeeded but not cached');

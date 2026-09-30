@@ -489,7 +489,20 @@ async function fetchCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return normalizeVideoComments(JSON.parse(cached));
+          const parsed: unknown = JSON.parse(cached);
+          const normalized = normalizeVideoComments(parsed);
+          // RCA (2026-09-30): a parse-succeeds-but-normalize-nulls cache hit
+          // was previously silent — the exact mechanism that hid the
+          // Upstash SET-envelope poisoning (every repeat analysis lost its
+          // comments with zero telemetry). Make it loud.
+          if (parsed !== null && normalized === null) {
+            Sentry.captureMessage('comments cache hit degraded to null: unexpected shape', {
+              level: 'warning',
+              tags: { operation: 'comments-cache-degraded' },
+              extra: { videoId, cacheKey, shape: Array.isArray(parsed) ? 'array' : typeof parsed },
+            });
+          }
+          return normalized;
         } catch {
           console.debug(`[analyze-llm-stream] comments cache entry for ${videoId} is not JSON, ignoring`);
         }
@@ -597,7 +610,18 @@ async function fetchSampledCommentsCached(
       const cached = await cache.get(cacheKey);
       if (cached) {
         try {
-          return normalizeVideoComments(JSON.parse(cached));
+          const parsed: unknown = JSON.parse(cached);
+          const normalized = normalizeVideoComments(parsed);
+          // Same loud-failure rationale as fetchCommentsCached above: a
+          // poisoned/degraded cache hit must never disappear silently again.
+          if (parsed !== null && normalized === null) {
+            Sentry.captureMessage('sampled-comments cache hit degraded to null: unexpected shape', {
+              level: 'warning',
+              tags: { operation: 'comments-cache-degraded' },
+              extra: { videoId, cacheKey, shape: Array.isArray(parsed) ? 'array' : typeof parsed },
+            });
+          }
+          return normalized;
         } catch {
           console.debug(`[analyze-llm-stream] sampled-comments cache entry for ${videoId} is not JSON, ignoring`);
         }
