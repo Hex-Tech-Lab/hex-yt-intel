@@ -80,6 +80,12 @@ export default defineConfig({
       // signature gate needs a regression test colocated with the route).
       // Named explicitly, same rationale as the app/api globs above.
       'app/api/comments/persist-sample-run/**/*.test.ts',
+      // 2026-09-30 Comments Dispatch B: runs/[analysisId] route gained an
+      // authorization-relevant sibling test (ownership-scoped run status
+      // read). Named explicitly, same rationale as the app/api globs above.
+      // The [analysisId] directory is bracket-ESCAPED -- unescaped,
+      // micromatch reads it as a character class and matches nothing.
+      'app/api/comments/runs/\\[analysisId\\]/**/*.test.ts',
       'app/api/analyses/\\[id\\]/export/**/*.test.ts',
       'app/billing/**/*.test.tsx',
       // PR #326's pricing page gained a copy-contract sibling test

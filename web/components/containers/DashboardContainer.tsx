@@ -80,6 +80,7 @@ import { useAutoRestoreAnalysis } from "@/hooks/useAutoRestoreAnalysis";
 import { useExecutiveDigest } from "@/hooks/useExecutiveDigest";
 import { useChapters } from "@/hooks/useChapters";
 import { useAuxElementStatus } from "@/hooks/useAuxElementStatus";
+import { useCommentInsights } from "@/hooks/useCommentInsights";
 import { extractVideoId } from "@/lib/youtube";
 import { useExistingAnalysisCheck } from "@/hooks/useExistingAnalysisCheck";
 import { UsageTab } from "@/components/templates/console/UsageTab";
@@ -745,6 +746,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     status,
   );
   const auxStatus = useAuxElementStatus(analysisId, status);
+  const commentInsights = useCommentInsights(analysisId, status);
 
   const getUserTimezone = (): string => {
     try {
@@ -1142,6 +1144,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     partialInfo={partialInfo}
                     TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
                     auxStatus={auxStatus}
+                    commentInsights={commentInsights}
                     chaptersStatus={chaptersStatus}
                     chapters={chapters}
                     dimensions={dimensions}
