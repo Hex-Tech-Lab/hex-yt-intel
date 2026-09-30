@@ -51,6 +51,11 @@ function isValidType(value: unknown): value is CommentType {
  * Batched cheap-tier comment classifier (Phase 5). Rides CHAT_CASCADE
  * (Groq GPT-OSS-120b first) deliberately, not ANALYSIS_CASCADE/LLMCascadePort
  * -- see CommentClassificationPort's docstring for why.
+ *
+ * @deprecated 2026-09-30 (user policy): classification/decisions must use
+ * Jev (TypeSafe System One, `~typesafe/jev-latest` via the OpenRouter
+ * Decisions API), never a chat LLM. Use JevCommentClassifier instead.
+ * Kept temporarily; has no production callers. Do not delete without user sign-off.
  */
 export class CommentClassifier implements CommentClassificationPort {
   constructor(private apiKey: string) {}
@@ -114,6 +119,11 @@ export class CommentClassifier implements CommentClassificationPort {
             sentiment: isValidSentiment(p?.sentiment) ? p.sentiment : "neutral",
             commentType: isValidType(p?.type) ? p.type : "off_topic",
             topic: typeof p?.topic === "string" && p.topic.trim().length > 0 ? p.topic.trim().slice(0, 100) : "unclassified",
+            painPoint: 0,
+            questionAsked: 0,
+            intensity: 0,
+            sentimentConfidence: 0,
+            lowConfidence: true, // untrusted: the deprecated chat classifier has no Jev confidence
             modelUsed: entry.name,
           };
         });
@@ -136,6 +146,11 @@ export class CommentClassifier implements CommentClassificationPort {
       sentiment: "neutral" as const,
       commentType: "off_topic" as const,
       topic: "unclassified",
+      painPoint: 0,
+      questionAsked: 0,
+      intensity: 0,
+      sentimentConfidence: 1,
+      lowConfidence: false,
       modelUsed: "none",
     }));
   }

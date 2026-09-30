@@ -1083,5 +1083,19 @@
     "title": "Code Quality: Import ordering violated",
     "why": "Import 'next/navigation' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
     "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "worker/src/services/CommentClassifier.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/services/CommentClassifier.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   }
 ]
