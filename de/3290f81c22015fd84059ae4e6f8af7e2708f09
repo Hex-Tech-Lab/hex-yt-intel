@@ -1,0 +1,37 @@
+web/lib/__tests__/create-analysis-jev-plan.test.ts
+  s_e0b27a2d63c3fd::t_49c6b4e6d5e33a 28,50,55,60-61,63,67-68,71,74,77-78
+web/lib/__tests__/plan-analysis-usecase.test.ts
+  s_e0b27a2d63c3fd::t_5c34abfb1844b9 34,52,111
+  s_e0b27a2d63c3fd::t_016f65db256ab2 53-54,61-63,67-71,74,77,124-127,129-132,134-136
+  s_e0b27a2d63c3fd::t_3bcd5db14e4941 45-46
+web/lib/usecases/PlanAnalysisUseCase.ts
+  s_e0b27a2d63c3fd::t_3bcd5db14e4941 84
+  s_e0b27a2d63c3fd::t_9a5ef6335b6b39 134,145-147,149-151,196-198,200-202
+  s_e0b27a2d63c3fd::t_bec73ef1554599 81-83
+  s_e0b27a2d63c3fd::t_5c34abfb1844b9 6,10
+  s_e0b27a2d63c3fd::t_0f595017e54498 80
+  s_e0b27a2d63c3fd::t_860f784aaca506 100-101,103-106,108-112
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_e0b27a2d63c3fd::t_a4978b14aca6d0 116-164
+  s_e0b27a2d63c3fd::t_1bfbec9ea8849d 11-12,18-19,28-29
+web/app/api/analyses/[id]/plan/__tests__/route.test.ts
+  s_e0b27a2d63c3fd::t_49c6b4e6d5e33a 28
+  s_e0b27a2d63c3fd::t_3bcd5db14e4941 55-56
+  s_e0b27a2d63c3fd::t_a54fee4e3fc7b2 37-41,45,47,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "de3290f81c22015fd84059ae4e6f8af7e2708f09",
+  "prompts": {},
+  "sessions": {
+    "s_e0b27a2d63c3fd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0b567018ffeYle4OT01EaxEFm",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}

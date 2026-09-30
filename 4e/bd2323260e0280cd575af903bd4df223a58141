@@ -1,0 +1,30 @@
+web/lib/adapters/__tests__/supabase-analysis-adapter-jev-plan.test.ts
+  s_9def5dfed9a847::t_4b66192871a064 18-23
+  s_9def5dfed9a847::t_0d98db6cfbc1e7 1-17,24-75
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_36f875f11b73af::t_c29ca13ed89539 2,4-10,12-19,21-25,27,29-37,40-65,68-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4ebd2323260e0280cd575af903bd4df223a58141",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9def5dfed9a847": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0b956edbffeAB60mo79GH6pMQ",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
