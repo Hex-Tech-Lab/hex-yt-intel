@@ -285,6 +285,12 @@ export interface WorkerStreamRequest {
   contextExp?: number;
   sig: string;
   exp: number;
+  /** R3b 2.2: v2 token cells + bundle partition for the worker's dual-verify (absent = v1). */
+  tokenVersion?: 1 | 2;
+  streamCount?: number;
+  jevChunkIndex?: number;
+  jevChunkCount?: number;
+  bundleList?: number[][];
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;

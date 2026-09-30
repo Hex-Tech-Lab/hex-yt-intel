@@ -37,6 +37,46 @@ export async function signStreamToken(videoId: string, analysisId: string, model
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
 }
 
+/**
+ * R3b 2.2 (ADR 037 Addendum A3): v2 stream token binds the map-reduce cell —
+ * streamCount, jevChunkIndex and jevChunkCount are part of the signed message,
+ * so a signature minted for one cell can never be replayed into another. The
+ * worker verifies BOTH formats during the dual-verify rollout window; the web
+ * side keeps emitting v1 until v2 emission is wired (R3b 2.3+).
+ */
+export interface StreamTokenV2Params {
+  videoId: string;
+  analysisId: string;
+  models?: string[];
+  streamCount: number;
+  jevChunkIndex: number;
+  jevChunkCount: number;
+}
+
+export async function signStreamTokenV2(params: StreamTokenV2Params): Promise<{ sig: string; exp: number }> {
+  const exp = Date.now() + TOKEN_TTL_MS;
+  const modelStr = [...(params.models ?? [])].sort().join(',');
+  const msg = `v2:${params.videoId}:${params.analysisId}:${exp}:${modelStr}:${params.streamCount}:${params.jevChunkIndex}:${params.jevChunkCount}`;
+  return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
+}
+
+/**
+ * R3b 2.2 (ADR 037 Addendum A3): signs a Vercel-side transcript-slice triple
+ * (startWord, endWord, sha256(text)) with the shared bound-content layout so
+ * the slice is tamper-evident and cannot be replayed cross-flow or against a
+ * different analysis. Uses the SAME exp the v2 stream token carries so the
+ * two signatures share one replay window.
+ */
+export async function signTranscriptSlice(
+  analysisId: string,
+  exp: number,
+  slice: { startWord: number; endWord: number; sha256: string },
+): Promise<{ sig: string }> {
+  const content = `${slice.sha256}:${slice.startWord}:${slice.endWord}`;
+  const msg = boundContentMessage('transcript-slice', analysisId, exp, content);
+  return { sig: await hmacHex(env.streamHmacSecret, msg) };
+}
+
 export async function signChatToken(conversationId: string, userId: string, models: string[] = []): Promise<{ sig: string; exp: number }> {
   const exp = Date.now() + TOKEN_TTL_MS;
   const modelStr = [...models].sort().join(',');
@@ -83,7 +123,7 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
  * secret. The purpose tag is part of the signed message, so a signature minted
  * for one flow can never be replayed into the other.
  */
-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'transcript-slice';
 
 /**
  * The canonical message for a bound, time-limited S2S content signature. MUST be
