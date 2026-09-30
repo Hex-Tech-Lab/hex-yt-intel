@@ -1,0 +1,23 @@
+web/components/templates/console/CommentInsightsCard.tsx
+  s_36f875f11b73af::t_4950fc2a8a0c6d 17,27
+web/hooks/__tests__/useCommentInsights.test.tsx
+  s_36f875f11b73af::t_5283cb549e99c8 3,142,145-147,154-161
+web/hooks/useCommentInsights.ts
+  s_36f875f11b73af::t_202ba046640b5c 14,94-96,98,118-121,125,132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "76a1a8f1aed784e753b4318e0df3ee7e700c98df",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
