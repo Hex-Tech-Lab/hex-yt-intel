@@ -1,0 +1,21 @@
+docs/agent-prompts/2026-09-30-history-thumbnail-mockup-v2.html
+  s_1d1bec99fd4ca5::t_7199e67d41fe1d 1-154
+docs/agent-prompts/2026-09-30-oc-ui-radius-and-thumbnail.md
+  s_1d1bec99fd4ca5::t_bcf85e998e8914 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e9fbb984fcfde9f08c3ff2fac7d127e71866cd5c",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
