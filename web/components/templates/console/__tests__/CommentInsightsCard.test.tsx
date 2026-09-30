@@ -63,7 +63,7 @@ describe('CommentInsightsCard', () => {
     // Buckets sum to 200 but 400 comments were classified: positive 100 -> 25%, not 50%.
     render(<CommentInsightsCard insights={{ ...INSIGHTS, classified: 400, sentiment: { positive: 100, negative: 50, neutral: 30, mixed: 20 } }} />);
     const [positive] = screen.getAllByRole('meter');
-    expect(positive?.getAttribute('aria-valuenow')).toBe('25');
+    expect(positive?.getAttribute('value')).toBe('25');
   });
 
   it('formatScopeLine rounds margin to 1dp and confidence to integer', () => {

@@ -46,7 +46,7 @@ export function CommentInsightsCard({ insights }: { insights: CommentInsights })
   }
 
   return (
-    <div style={PANEL_STYLE} aria-label="Comment insights">
+    <section style={PANEL_STYLE} aria-label="Comment insights">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {SENTIMENT_ROWS.map(({ key, label, color }) => {
           const count = insights.sentiment[key];
@@ -56,7 +56,10 @@ export function CommentInsightsCard({ insights }: { insights: CommentInsights })
               <span style={{ width: 64, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-secondary)' }}>
                 {label}
               </span>
+              {/* Native <meter> carries the semantics; the bar is decorative. */}
+              <meter className="sr-only" min={0} max={100} value={Math.round(pct)} aria-label={`${label} sentiment share`} />
               <div
+                aria-hidden
                 style={{
                   flex: 1,
                   height: 6,
@@ -64,11 +67,6 @@ export function CommentInsightsCard({ insights }: { insights: CommentInsights })
                   background: 'var(--line)',
                   overflow: 'hidden',
                 }}
-                role="meter"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(pct)}
-                aria-label={`${label} sentiment share`}
               >
                 <div style={{ width: `${pct}%`, height: '100%', background: color }} />
               </div>
@@ -102,6 +100,6 @@ export function CommentInsightsCard({ insights }: { insights: CommentInsights })
         <span>{formatScopeLine(insights)}</span>
         {insights.lowConfidence > 0 && <span> · {insights.lowConfidence} low-confidence classifications excluded</span>}
       </p>
-    </div>
+    </section>
   );
 }

@@ -25,6 +25,100 @@ function readInsightsFromPayload(payload: unknown): CommentInsights | null {
   return parsed.success ? parsed.data : null;
 }
 
+type RunLookup = CommentRunStatus | null | 'error';
+type SetResult = (next: CommentInsightsResult) => void;
+
+/** Single I/O point: JSON body, or null on a non-OK response (whose unread body is released). */
+async function getJson(path: string, signal: AbortSignal): Promise<Record<string, unknown> | null> {
+  let res: Response | null = null;
+  try {
+    res = await fetch(path, { signal });
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } finally {
+    if (res && !res.bodyUsed) void res.body?.cancel().catch(() => undefined);
+  }
+}
+
+/** 'ready' + insights, 'absent' when the persisted payload has none, 'error' on a transient failure. */
+async function readPersistedInsights(analysisId: string, signal: AbortSignal): Promise<CommentInsights | 'absent' | 'error'> {
+  const data = await getJson(`/api/analyses/${encodeURIComponent(analysisId)}`, signal);
+  if (!data) return 'error';
+  return readInsightsFromPayload(data.analysis_payload) ?? 'absent';
+}
+
+async function readRunStatus(analysisId: string, signal: AbortSignal): Promise<RunLookup> {
+  const data = await getJson(`/api/comments/runs/${encodeURIComponent(analysisId)}`, signal);
+  if (!data) return 'error';
+  return (data.run as CommentRunStatus | null) ?? null;
+}
+
+/** Abortable delay: resolves after `ms`, or immediately once `signal` aborts. */
+async function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve) => {
+    function onAbort(): void {
+      clearTimeout(timer);
+      resolve();
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/**
+ * The run-status state machine as one sequential loop (no timer recursion).
+ * The persisted payload is read once up front and once on completion; each
+ * iteration otherwise only hits the small run-status route. A network error
+ * or non-OK response is logged and retried on the next iteration. At the
+ * cap the state drops to 'none' -- never a permanent "Analyzing…".
+ */
+async function pollCommentInsights(analysisId: string, signal: AbortSignal, setResult: SetResult): Promise<void> {
+  const deadline = Date.now() + POLL_CAP_MS;
+  let first = true;
+  while (!signal.aborted) {
+    let outcome: 'done' | 'retry' = 'retry';
+    try {
+      if (first) {
+        first = false;
+        const persisted = await readPersistedInsights(analysisId, signal);
+        if (typeof persisted === 'object') { setResult({ state: 'ready', insights: persisted }); return; }
+      }
+      const run = await readRunStatus(analysisId, signal);
+      if (signal.aborted) return;
+      if (run === 'error') {
+        console.warn('[useCommentInsights] run-status poll returned non-OK; retrying');
+      } else if (!run) {
+        setResult({ state: 'none', insights: null });
+        outcome = 'done';
+      } else if (run.status === 'completed') {
+        const persisted = await readPersistedInsights(analysisId, signal);
+        if (typeof persisted === 'object') { setResult({ state: 'ready', insights: persisted }); outcome = 'done'; }
+        else if (persisted === 'absent') { setResult({ state: 'failed', insights: null }); outcome = 'done'; }
+      } else if (run.status === 'failed') {
+        setResult({ state: 'failed', insights: null });
+        outcome = 'done';
+      } else if (run.status === 'pending' || run.status === 'sampling') {
+        setResult({ state: 'analyzing', insights: null });
+      } else {
+        setResult({ state: 'none', insights: null });
+        outcome = 'done';
+      }
+    } catch (err: unknown) {
+      if (signal.aborted) return; // cancellation, not an error
+      console.warn('[useCommentInsights] poll failed; retrying', err);
+    }
+    if (outcome === 'done' || signal.aborted) return;
+    if (Date.now() + POLL_INTERVAL_MS > deadline) {
+      setResult({ state: 'none', insights: null });
+      return;
+    }
+    await sleep(POLL_INTERVAL_MS, signal);
+  }
+}
+
 /**
  * Comments Dispatch B: sentiment-run status + Sampled-pool insights state.
  *
@@ -55,110 +149,11 @@ export function useCommentInsights(analysisId: string | null, status: string): C
 
   // Run-status fetch + bounded poll when insights aren't in memory yet.
   useEffect(() => {
-    if (!validId || status !== 'complete') return;
-    if (readInsightsFromPayload(payloadForThisAnalysis)) return;
-
+    if (!validId || status !== 'complete') return undefined;
+    if (readInsightsFromPayload(payloadForThisAnalysis)) return undefined;
     const controller = new AbortController();
-    const { signal } = controller;
-    let pollTimer: ReturnType<typeof setTimeout> | null = null;
-    const deadline = Date.now() + POLL_CAP_MS;
-    const analysisPath = `/api/analyses/${encodeURIComponent(validId)}`;
-    const runPath = `/api/comments/runs/${encodeURIComponent(validId)}`;
-
-    /** Single I/O point: JSON body, or null on a non-OK response. A request
-     *  that finishes after cancellation also clears any stray poll timer. */
-    const getJson = async (path: string): Promise<Record<string, unknown> | null> => {
-      try {
-        const res = await fetch(path, { signal });
-        return res.ok ? ((await res.json()) as Record<string, unknown>) : null;
-      } finally {
-        if (signal.aborted && pollTimer !== null) {
-          clearTimeout(pollTimer);
-          pollTimer = null;
-        }
-      }
-    };
-
-    /** 'ready' when insights landed, 'absent' when the payload has none, 'error' on a transient failure. */
-    const fetchInsightsFromPersistedPayload = async (): Promise<'ready' | 'absent' | 'error'> => {
-      const data = await getJson(analysisPath);
-      if (!data) return 'error';
-      const insights = readInsightsFromPayload(data.analysis_payload);
-      if (!insights) return 'absent';
-      if (!signal.aborted) setResult({ state: 'ready', insights });
-      return 'ready';
-    };
-
-    /** The run row, null when none exists, 'error' on a transient failure. */
-    const fetchRunStatus = async (): Promise<CommentRunStatus | null | 'error'> => {
-      const data = await getJson(runPath);
-      if (!data) return 'error';
-      return (data.run as CommentRunStatus | null) ?? null;
-    };
-
-    const scheduleNext = (): void => {
-      if (signal.aborted) return;
-      if (Date.now() + POLL_INTERVAL_MS > deadline) {
-        // Cap reached: never leave a permanent "Analyzing…" label.
-        setResult({ state: 'none', insights: null });
-        return;
-      }
-      pollTimer = setTimeout(() => {
-        pollTimer = null;
-        void tick(false);
-      }, POLL_INTERVAL_MS);
-    };
-
-    // The full persisted payload is read once up front and once on
-    // completion; poll ticks only hit the small run-status route.
-    const tick = async (checkPayloadFirst: boolean): Promise<void> => {
-      try {
-        if (checkPayloadFirst && (await fetchInsightsFromPersistedPayload()) === 'ready') return;
-        const run = await fetchRunStatus();
-        if (signal.aborted) return;
-        if (run === 'error') {
-          console.warn('[useCommentInsights] run-status poll returned non-OK; retrying');
-          scheduleNext();
-          return;
-        }
-        if (!run) {
-          setResult({ state: 'none', insights: null });
-          return;
-        }
-        if (run.status === 'completed') {
-          // Insights should have been persisted with the run; if the refetch
-          // fails transiently keep polling, if they are truly absent report failed.
-          const outcome = await fetchInsightsFromPersistedPayload();
-          if (outcome === 'error') { scheduleNext(); return; }
-          if (outcome === 'absent' && !signal.aborted) setResult({ state: 'failed', insights: null });
-          return;
-        }
-        if (run.status === 'failed') {
-          setResult({ state: 'failed', insights: null });
-          return;
-        }
-        if (run.status === 'pending' || run.status === 'sampling') {
-          setResult({ state: 'analyzing', insights: null });
-          scheduleNext();
-          return;
-        }
-        setResult({ state: 'none', insights: null });
-      } catch (err: unknown) {
-        if (signal.aborted) return; // cancellation, not an error
-        console.warn('[useCommentInsights] poll failed; retrying', err);
-        scheduleNext();
-      }
-    };
-
-    void tick(true);
-
-    return () => {
-      controller.abort();
-      if (pollTimer !== null) {
-        clearTimeout(pollTimer);
-        pollTimer = null;
-      }
-    };
+    void pollCommentInsights(validId, controller.signal, setResult);
+    return () => controller.abort();
   }, [validId, status, payloadForThisAnalysis]);
 
   return result;
