@@ -1,0 +1,27 @@
+docs/agent-prompts/2026-09-30-oc-comments-dispatch-b.md
+  s_36f875f11b73af::t_e6285ea9a228e7 80,179,241-244
+web/components/templates/console/CommentInsightsCard.tsx
+  s_36f875f11b73af::t_e5208e6f0d3f8f 36-38
+web/components/templates/console/__tests__/CommentInsightsCard.test.tsx
+  s_36f875f11b73af::t_216cfa3a177761 62-68
+web/hooks/__tests__/useCommentInsights.test.tsx
+  s_36f875f11b73af::t_c8bedbacf9fc88 164-236
+web/hooks/useCommentInsights.ts
+  s_36f875f11b73af::t_c3a4a91a3d0038 17-19,37-40,47,49-50,52-54,58,61-62,65-66,68-70,72-73,75-78,82-104,106-109,115-124,128-149,153,156,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5653f952d1e674451ff928b12cd787d8d1f74a04",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
