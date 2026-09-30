@@ -99,11 +99,15 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
 
   private async healIfUnchanged(key: string, expected: string, value: string, ttlSeconds: number): Promise<void> {
     try {
-      await rawFetch(this.url, {
+      const response = await rawFetch(this.url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(['EVAL', HEAL_IF_UNCHANGED_LUA, '1', key, expected, value, String(ttlSeconds)]),
       });
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok || body?.error) {
+        console.warn('[UpstashCacheAdapter] legacy envelope heal rejected; key left unchanged', { status: response.status, error: body?.error });
+      }
     } catch {
       console.warn('[UpstashCacheAdapter] legacy envelope heal failed; key left unchanged');
     }

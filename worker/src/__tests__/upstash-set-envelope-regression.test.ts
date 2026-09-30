@@ -107,6 +107,43 @@ describe('UpstashCacheAdapter.set — envelope regression (2026-09-30)', () => {
     expect(ttl).toBe('3600');
   });
 
+  it('CAS: a newer value written between GET and the heal survives (Lua semantics modelled)', async () => {
+    const real = JSON.stringify({ subscriberCount: 1 });
+    const envelope = JSON.stringify({ value: real, ex: 3600, get: false, xx: false });
+    const newer = JSON.stringify({ subscriberCount: 2 });
+    const store = new Map<string, string>([['channel-meta:x', envelope]]);
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/get/')) {
+        const result = store.get('channel-meta:x') ?? null;
+        store.set('channel-meta:x', newer); // concurrent writer lands right after our GET
+        return Promise.resolve(new Response(JSON.stringify({ result }), { status: 200 }));
+      }
+      const [, , , key, expected, value] = JSON.parse(String(init?.body)) as string[];
+      if (store.get(key as string) === expected) store.set(key as string, value as string);
+      return Promise.resolve(new Response(JSON.stringify({ result: 0 }), { status: 200 }));
+    }) as unknown as typeof fetch;
+    const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
+    const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
+    expect(await adapter.get('channel-meta:x')).toBe(real);
+    expect(store.get('channel-meta:x')).toBe(newer);
+  });
+
+  it('a rejected heal EVAL is logged, not silent', async () => {
+    const envelope = JSON.stringify({ value: 'v', ex: 60, get: false, xx: false });
+    globalThis.fetch = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(String(input).includes('/get/')
+        ? new Response(JSON.stringify({ result: envelope }), { status: 200 })
+        : new Response(JSON.stringify({ error: 'ERR unknown command' }), { status: 400 })),
+    ) as unknown as typeof fetch;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
+    const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
+    expect(await adapter.get('k')).toBe('v');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('heal rejected'), expect.objectContaining({ status: 400 }));
+    warn.mockRestore();
+  });
+
   it('envelope recognition requires a positive-integer ex', async () => {
     const { parseLegacySetEnvelope } = await import('../services/UpstashCacheAdapter');
     for (const ex of [0, -5, 1.5, '3600', null]) {

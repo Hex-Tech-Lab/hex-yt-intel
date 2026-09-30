@@ -36,6 +36,8 @@ const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL ?? process.env.NEXT_PUBLIC_
 const APP_URL = 'https://getvintel.com';
 const TOKEN_TTL_MS = 300_000;
 const METADATA_THROTTLE_MS = 500;
+/** A run still 'pending' after this long was never picked up (e.g. the enqueue call died mid-flight). */
+const STALE_PENDING_MS = 60 * 60 * 1000;
 
 const [, , ...args] = process.argv;
 const apply = args.includes('--apply');
@@ -120,13 +122,10 @@ interface Row {
   validation_report: { metadata?: { commentCount?: unknown } & Record<string, unknown> } & Record<string, unknown> | null;
 }
 
+/** Strict: a non-negative safe integer, or a string that is exactly one ("12junk" is rejected). */
 function knownCount(raw: unknown): number | null {
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-  if (typeof raw === 'string' && raw.trim() !== '') {
-    const parsed = parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
+  const parsed = typeof raw === 'number' ? raw : typeof raw === 'string' && /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : NaN;
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
 /** Pre-flight: current commentCount from the worker's YouTube metadata route. */
@@ -160,12 +159,28 @@ async function main() {
   if (!sampling.ok) throw new Error(`invalid sampling config: ${sampling.errors.join('; ')}`);
 
   let rows = await rest<Row[]>(
-    'analyses?select=id,user_id,video_id,validation_report&analysis_payload=not.is.null&analysis_payload->comments=is.null&video_id=not.like.*_archived_*'
+    `analyses?select=id,user_id,video_id,validation_report&analysis_payload=not.is.null&analysis_payload->comments=is.null&video_id=not.like.${encodeURIComponent('*\\_archived\\_*')}`
   );
   if (only) rows = rows.filter((row) => row.id === only);
 
-  const existing = await rest<Array<{ analysis_id: string }>>('comment_sample_runs?select=analysis_id&mode=eq.cochran&status=neq.failed');
-  const done = new Set(existing.map((e) => e.analysis_id));
+  // Existing non-failed cochran runs, scoped to the candidates (batched, so no
+  // PostgREST row cap can hide one). A run stuck in 'pending' past
+  // STALE_PENDING_MS is marked failed (with --apply) so the row is retried.
+  const done = new Set<string>();
+  for (let offset = 0; offset < rows.length; offset += 100) {
+    const ids = rows.filter((_, index) => index >= offset && index < offset + 100).map((row) => row.id);
+    const runs = await rest<Array<{ id: string; analysis_id: string; status: string; created_at: string }>>(
+      `comment_sample_runs?select=id,analysis_id,status,created_at&mode=eq.cochran&status=neq.failed&analysis_id=in.(${ids.join(',')})`
+    );
+    for (const run of runs) {
+      const stale = run.status === 'pending' && Date.now() - Date.parse(run.created_at) > STALE_PENDING_MS;
+      if (!stale) { done.add(run.analysis_id); continue; }
+      console.log(`stale pending run ${run.id} for ${run.analysis_id}${apply ? ': marking failed' : ': would mark failed'}`);
+      if (apply) {
+        await rest(`comment_sample_runs?id=eq.${run.id}&status=eq.pending`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'failed' }) });
+      }
+    }
+  }
 
   let sent = 0;
   for (const row of rows) {
@@ -185,7 +200,7 @@ async function main() {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
-        analysis_id: row.id, user_id: row.user_id, tier: 3, total_comment_count: count, requested_percent: 100, status: 'pending',
+        analysis_id: row.id, user_id: row.user_id, tier: 3, total_comment_count: count, requested_percent: 100, status: 'pending', mode: 'cochran',
       }),
     });
     const exp = Date.now() + TOKEN_TTL_MS;
