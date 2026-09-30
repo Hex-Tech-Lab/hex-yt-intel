@@ -63,24 +63,32 @@ export function useCommentInsights(analysisId: string | null, status: string): C
     const deadline = Date.now() + POLL_CAP_MS;
 
     const fetchInsightsFromPersistedPayload = async (): Promise<boolean> => {
-      const res = await fetch(`/api/analyses/${analysisId}`);
-      if (!res.ok) return false;
-      const data = await res.json();
-      if (cancelled) return true;
-      const insights = readInsightsFromPayload(data.analysis_payload);
-      if (insights) {
-        setResult({ state: 'ready', insights });
-        return true;
+      try {
+        const res = await fetch(`/api/analyses/${analysisId}`);
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (cancelled) return true;
+        const insights = readInsightsFromPayload(data.analysis_payload);
+        if (insights) {
+          setResult({ state: 'ready', insights });
+          return true;
+        }
+        return false;
+      } finally {
+        if (cancelled && pollTimer) clearTimeout(pollTimer);
       }
-      return false;
     };
 
     const fetchRunStatus = async (): Promise<CommentRunStatus | null> => {
-      const res = await fetch(`/api/comments/runs/${analysisId}`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (cancelled) return null;
-      return (data.run as CommentRunStatus | null) ?? null;
+      try {
+        const res = await fetch(`/api/comments/runs/${analysisId}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (cancelled) return null;
+        return (data.run as CommentRunStatus | null) ?? null;
+      } finally {
+        if (cancelled && pollTimer) clearTimeout(pollTimer);
+      }
     };
 
     const tick = async (): Promise<void> => {

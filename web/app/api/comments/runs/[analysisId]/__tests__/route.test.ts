@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '@/app/api/comments/runs/[analysisId]/route';
 
 const ANALYSIS_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -19,10 +19,12 @@ const fromChain = vi.fn();
 const getUser = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
-  getSupabaseClientWithAuth: vi.fn(async () => ({
-    auth: { getUser },
-    from: fromChain,
-  })),
+  getSupabaseClientWithAuth: vi.fn(() =>
+    Promise.resolve({
+      auth: { getUser },
+      from: fromChain,
+    })
+  ),
 }));
 
 function mockQuery(result: { data: unknown; error: unknown }) {

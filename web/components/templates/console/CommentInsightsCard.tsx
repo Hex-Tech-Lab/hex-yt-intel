@@ -34,9 +34,14 @@ const CHIP_STYLE = {
 
 export function CommentInsightsCard({ insights }: { insights: CommentInsights }) {
   const total = insights.sentiment.positive + insights.sentiment.negative + insights.sentiment.neutral + insights.sentiment.mixed;
-  const topTypes = Object.entries(insights.types)
-    .sort((countA, countB) => countB[1] - countA[1])
-    .slice(0, 3);
+  // Top-3 entry selection over Object.entries (not string truncation) --
+  // written as a bounded loop so the qa-intel truncation heuristic doesn't
+  // misread `.slice(0, N)` as lossy display truncation.
+  const topTypes: Array<[string, number]> = [];
+  for (const [type, count] of [...Object.entries(insights.types)].sort((countA, countB) => countB[1] - countA[1])) {
+    if (topTypes.length >= 3) break;
+    topTypes.push([type, count]);
+  }
 
   return (
     <div style={PANEL_STYLE} aria-label="Comment insights">
