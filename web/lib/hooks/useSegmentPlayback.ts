@@ -61,6 +61,13 @@ export interface UseSegmentPlaybackOptions {
    *  value only if a caller has no shared store tick to piggyback on and
    *  must run its own setInterval (PublicHighlightsReel). */
   pollIntervalMs?: number;
+  /** Max time (ms) a pending seek may hold the poll loop's settlement
+   *  guard before it is force-cleared and playback proceeds from the
+   *  actual current time (bug-1 fix, 2026-09-30: a never-settling seek
+   *  used to freeze the reel forever). Wired from the Settings Registry
+   *  key `highlights.seekSettlementTimeoutMs` via the highlights API
+   *  response; falls back to the registry fallback value here. */
+  seekSettlementTimeoutMs?: number;
 }
 
 // Explicit list (2026-08-20 layout revision) rather than derived from
@@ -79,6 +86,11 @@ const ADVANCE_LEAD_SECONDS = 0.3;
  *  not a forward-only comparison -- see that file's own comment for the
  *  backward-seek bug a forward-only check reintroduces). */
 const SEEK_SETTLEMENT_TOLERANCE_SECONDS = 1;
+/** Fallback for the seek-settlement timeout when the registry key is
+ *  unavailable -- mirrors HIGHLIGHTS_REGISTRY_FALLBACK's value; the real
+ *  key flows through the highlights API response, see useSegmentPlayback
+ *  options below. */
+const DEFAULT_SEEK_SETTLEMENT_TIMEOUT_MS = 2000;
 
 export interface UseSegmentPlaybackResult {
   /** Index of the currently-playing segment, or null when stopped. */
@@ -125,6 +137,7 @@ export function useSegmentPlayback({
   segmentDurationSeconds,
   primitives,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+  seekSettlementTimeoutMs = DEFAULT_SEEK_SETTLEMENT_TIMEOUT_MS,
 }: UseSegmentPlaybackOptions): UseSegmentPlaybackResult {
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [speed, setSpeedState] = useState<number>(1);
@@ -133,6 +146,15 @@ export function useSegmentPlayback({
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(false);
   const pendingSeekTargetRef = useRef<number | null>(null);
+  /** Wall-clock ms (Date.now) when the current pending seek was issued --
+   *  drives the settlement timeout below; null when no seek is pending. */
+  const pendingSeekIssuedAtRef = useRef<number | null>(null);
+  /** True when the pending seek moves the player FORWARD (target > player
+   *  time at issue). Forward seeks can safely treat "reached/passed target"
+   *  as settled (YouTube keyframe snapping can overshoot by seconds);
+   *  backward seeks must rely on tolerance + timeout because the player
+   *  legitimately sits past the target until the seek takes effect. */
+  const pendingSeekForwardRef = useRef(false);
   // Real bug fix (post-merge review): `isReady` was computed and returned but
   // never actually consulted by `start`/`jumpTo` -- both called `seekTo`/
   // `play` unconditionally, so a caller invoking them before the primitive
@@ -154,12 +176,16 @@ export function useSegmentPlayback({
   contextLeadRef.current = contextLeadSeconds;
   const segmentDurationRef = useRef(segmentDurationSeconds);
   segmentDurationRef.current = segmentDurationSeconds;
+  const seekSettlementTimeoutRef = useRef(seekSettlementTimeoutMs);
+  seekSettlementTimeoutRef.current = seekSettlementTimeoutMs;
 
   const stop = useCallback(() => {
     stopRef.current = true;
     pausedRef.current = false;
     setIsPaused(false);
     pendingSeekTargetRef.current = null;
+    pendingSeekIssuedAtRef.current = null;
+    pendingSeekForwardRef.current = false;
     pendingStartIndexRef.current = null;
     setPlayingIdx(null);
     setElapsedInSegmentSeconds(null);
@@ -184,6 +210,8 @@ export function useSegmentPlayback({
     if (index >= currentSegments.length) {
       setPlayingIdx(null);
       pendingSeekTargetRef.current = null;
+      pendingSeekIssuedAtRef.current = null;
+      pendingSeekForwardRef.current = false;
       pendingStartIndexRef.current = null;
       setElapsedInSegmentSeconds(null);
       return;
@@ -198,6 +226,11 @@ export function useSegmentPlayback({
     const segment = currentSegments[index]!;
     const leadIn = Math.max(0, segment.start - contextLeadRef.current);
     pendingSeekTargetRef.current = leadIn;
+    pendingSeekIssuedAtRef.current = Date.now();
+    {
+      const now = primitivesRef.current.getCurrentTime();
+      pendingSeekForwardRef.current = now === null ? true : leadIn >= now;
+    }
     primitivesRef.current.seekTo(leadIn);
     primitivesRef.current.play?.();
     setPlayingIdx(index);
@@ -247,10 +280,42 @@ export function useSegmentPlayback({
 
       const pendingTarget = pendingSeekTargetRef.current;
       if (pendingTarget !== null) {
-        if (Math.abs(currentTime - pendingTarget) <= SEEK_SETTLEMENT_TOLERANCE_SECONDS) {
+        const issuedAt = pendingSeekIssuedAtRef.current;
+        const timedOut =
+          issuedAt !== null &&
+          Date.now() - issuedAt > seekSettlementTimeoutRef.current;
+        // Settled when within tolerance, OR -- forward seeks only -- when
+        // the player has reached/passed the target (bug-3 fix 2026-09-30:
+        // YouTube keyframe seeking can land 1s+ PAST the requested time;
+        // |diff| <= tol never fires for those overshoots and holding the
+        // guard delayed elapsed updates by the full settlement timeout).
+        // Backward seeks must NOT use the pass-target rule: the player
+        // legitimately sits PAST the target until the seek takes effect
+        // (caught by regression: backward jump 20→8 would have "settled"
+        // instantly and skipped the seek).
+        const settled =
+          Math.abs(currentTime - pendingTarget) <= SEEK_SETTLEMENT_TOLERANCE_SECONDS ||
+          (pendingSeekForwardRef.current && currentTime >= pendingTarget);
+        if (settled || timedOut) {
+          if (timedOut) {
+            // Bug-1 fix (2026-09-30, live report): a seek that never lands
+            // within tolerance (stale store time while paused, YouTube
+            // seek snapping outside the ±1s window) used to hold this
+            // guard forever -- the reel froze with no elapsed updates and
+            // no advance. Force-clear and proceed from actual time.
+            // Breadcrumb (not captureException: this is a recoverable
+            // degradation, not an error) for diagnosis.
+            // eslint-disable-next-line no-console -- breadcrumb parity with Sentry's default breadcrumbs
+            console.info('[useSegmentPlayback] seek did not settle within timeout; proceeding from actual time', {
+              pendingTarget,
+              currentTime,
+              waitedMs: issuedAt !== null ? Date.now() - issuedAt : null,
+            });
+          }
           pendingSeekTargetRef.current = null;
+          pendingSeekIssuedAtRef.current = null;
         }
-        return;
+        if (!timedOut) return;
       }
 
       setElapsedInSegmentSeconds(Math.max(0, currentTime - leadIn));

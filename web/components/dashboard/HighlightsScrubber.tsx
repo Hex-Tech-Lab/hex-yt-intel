@@ -27,6 +27,8 @@ interface HighlightsResponse {
   contextLeadSeconds: number;
   minSegmentDurationSeconds?: number;
   maxSegmentDurationSeconds?: number;
+  seekSettlementTimeoutMs?: number;
+  tickerWordsPerSecond?: number;
 }
 
 /**
@@ -112,6 +114,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     contextLeadSeconds: data?.contextLeadSeconds ?? 0,
     segmentDurationSeconds: segDurFallback,
     primitives,
+    seekSettlementTimeoutMs: data?.seekSettlementTimeoutMs,
   });
 
   useEffect(() => {
@@ -170,6 +173,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
             // continue; the finally still guards staleness via the aborted
             // check below.
             if (!controller.signal.aborted && err instanceof DOMException && err.name === 'AbortError') {
+              console.debug('[HighlightsScrubber] inherited dedupe abort, retrying with backoff', { analysisId: id, attempt });
               lastJson = lastJson; // no state change; fall through to backoff
               if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
                 await new Promise<void>((resolve) => {
@@ -295,7 +299,8 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     activeHighlight?.label ?? null,
     activeDuration,
     elapsedInSegmentSeconds,
-    activeHighlight?.verbatimExcerpt ?? null
+    activeHighlight?.verbatimExcerpt ?? null,
+    data?.tickerWordsPerSecond
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
@@ -448,21 +453,16 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
         );
       })()}
 
-      {/* Embedded CSS for right-to-left transcript ticker */}
-      <style>{`
-        @keyframes tickerRTL {
-          0% {
-            transform: translateX(100%);
-          }
-          100% {
-            transform: translateX(-100%);
-          }
-        }
-      `}</style>
-
-
-      {/* Footer row: live transcript ticker (left, scrolls RTL, fixed-size container) +
-          Speed cycle-pill + relocated moment stepper (right). */}
+      {/* Footer row: live transcript ticker (left, playback-time-driven word
+          reveal -- bug-2 fix 2026-09-30; the old fixed-rate `tickerRTL`
+          linear-infinite CSS scroll had no link to playback time, so the
+          caption ran at its own speed and looped regardless of pause. The
+          reveal position now comes from useHighlightTicker's
+          elapsedSeconds-driven word mapping (registry key
+          `highlights.tickerWordsPerSecond`), which is derived from the
+          media-time poll: it advances with speech, freezes when playback
+          pauses, never loops, and is static text under
+          prefers-reduced-motion by construction (no animation at all). */}
       <div className="flex items-center justify-between gap-2 mt-2">
         <div
           className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
@@ -483,14 +483,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
                 const remainingPart = words.slice(revealedCount).join(' ');
                 return (
                   <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
-                    <div
-                      key={playingIdx}
-                      className="whitespace-nowrap font-mono text-xs text-slate-200 inline-block"
-                      style={{
-                        animation: `tickerRTL ${Math.max(6, activeDuration)}s linear infinite`,
-                        animationPlayState: isPaused ? 'paused' : 'running',
-                      }}
-                    >
+                    <div className="whitespace-nowrap font-mono text-xs text-slate-200 inline-block truncate">
                       <span className="text-slate-100 font-semibold">{spokenPart}</span>
                       {remainingPart ? <span className="text-slate-400/80">{` ${remainingPart}`}</span> : null}
                     </div>

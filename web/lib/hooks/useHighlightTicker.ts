@@ -39,13 +39,29 @@
  * timer of its own means no timer to leak/desync from the real playback
  * clock -- `elapsedSeconds` already comes from `useSegmentPlayback`'s
  * media-time poll, which is itself clamped to the real player/store time.
+ *
+ * 2026-09-30 (bug-2, live report "caption too fast / out of sync"): the
+ * reveal mapping changed from elapsed/duration-ratio to an explicit
+ * reading pace (`wordsPerSecond`, Settings Registry
+ * `highlights.tickerWordsPerSecond`, default 2.5 words/s). Because
+ * `elapsedSeconds` comes from the media-time poll, the reveal is
+ * automatically in lockstep with the actual speech: it pauses when
+ * playback pauses (the store-backed path stops updating elapsed) and
+ * there is no looping -- a longer-than-readable excerpt simply doesn't
+ * finish within the segment. `durationSeconds` is now only a floor for
+ * the legacy ratio path's test compatibility and is no longer used by
+ * the pace mapping.
  */
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
-  segmentDurationSeconds: number,
+  // Positionally-kept for API compatibility (all callers pass it; it drove
+  // the old duration-ratio mapping). No longer read since the bug-2 fix
+  // (2026-09-30) moved the reveal to a words-per-second pace.
+  _segmentDurationSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
+  wordsPerSecond = 2.5,
 ): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
   // Trim before checking truthiness: a whitespace-only verbatimExcerpt (a
   // real DB row shape a corrupt/poorly-normalized transcript can produce)
@@ -68,11 +84,18 @@ export function useHighlightTicker(
     return { revealedText: '', totalWords, usingVerbatim: false };
   }
 
-  const durationSeconds = Math.max(1, segmentDurationSeconds);
-  const revealedWordCount = Math.min(
-    totalWords,
-    Math.max(1, Math.ceil((elapsedSeconds / durationSeconds) * totalWords))
-  );
+  // Bug-2 fix (2026-09-30, live report: caption "at least 50% too fast",
+  // out of sync with speech): the reveal is driven by a words-per-second
+  // reading pace (Settings Registry `highlights.tickerWordsPerSecond`)
+  // instead of spreading all words uniformly across the segment duration.
+  // A long excerpt in a short segment now simply doesn't finish revealing
+  // (it keeps the last readable position) instead of scrolling faster.
+  // floor + fraction keeps steady word pacing even for long texts (the
+  // old ceil-on-ratio rushed early words when totalWords >> duration).
+  const revealedFloat = Math.min(totalWords, Math.max(1, elapsedSeconds * wordsPerSecond));
+  const baseCount = Math.floor(revealedFloat);
+  const fraction = revealedFloat - baseCount;
+  const revealedWordCount = Math.min(totalWords, baseCount + (fraction > 0 ? 1 : 0));
 
   const revealedText =
     words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');

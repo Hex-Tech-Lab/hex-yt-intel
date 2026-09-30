@@ -1,8 +1,7 @@
 'use client';
-import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Tooltip } from '@astryxdesign/core';
+import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
 import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
@@ -38,6 +37,7 @@ export function PublicHighlightsReel({
   videoDurationSeconds,
   minSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'],
   maxSegmentDurationSeconds = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'],
+  tickerWordsPerSecond = HIGHLIGHTS_REGISTRY_FALLBACK['highlights.tickerWordsPerSecond'],
 }: {
   videoId: string;
   highlights: Highlight[];
@@ -46,6 +46,7 @@ export function PublicHighlightsReel({
   videoDurationSeconds: number | null;
   minSegmentDurationSeconds?: number;
   maxSegmentDurationSeconds?: number;
+  tickerWordsPerSecond?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerAdapter | null>(null);
@@ -132,7 +133,7 @@ export function PublicHighlightsReel({
   const activeDuration = activeHighlight
     ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur) + contextLeadSeconds
     : segmentDurationSeconds + contextLeadSeconds;
-  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null);
+  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond);
 
   if (highlights.length === 0) return null;
 

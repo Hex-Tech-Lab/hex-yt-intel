@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
     contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
     minSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.minSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.minSegmentDurationSeconds'], 2, 15),
     maxSegmentDurationSeconds: clampHighlightsSetting(settings['highlights.maxSegmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.maxSegmentDurationSeconds'], 30, 300),
+    seekSettlementTimeoutMs: clampHighlightsSetting(settings['highlights.seekSettlementTimeoutMs'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.seekSettlementTimeoutMs'], 500, 10000),
+    tickerWordsPerSecond: clampHighlightsSetting(settings['highlights.tickerWordsPerSecond'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.tickerWordsPerSecond'], 0.5, 10),
   };
 
   const rows = (data ?? []) as HighlightRow[];

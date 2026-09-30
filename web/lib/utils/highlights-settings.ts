@@ -35,6 +35,25 @@ export const HIGHLIGHTS_REGISTRY_FALLBACK = {
   // topic boundaries anchored to transcript timestamps, distinct per takeaway.
   'highlights.minSegmentDurationSeconds': 15,
   'highlights.maxSegmentDurationSeconds': 60,
+  // Seek-settlement timeout (2026-09-30, bug-1 fix -- manual jump didn't
+  // play). The poll loop's seek-settlement guard used to hold indefinitely
+  // when a manual seek never landed within SEEK_SETTLEMENT_TOLERANCE_SECONDS
+  // of its target (stale store time because the player was paused, or a
+  // YouTube seek that snapped outside the tolerance window) -- the reel
+  // froze with no advance and no ticker. After this timeout the guard
+  // clears and playback proceeds from the actual current time, with a
+  // Sentry breadcrumb for diagnosis. Value is the max observed real seek
+  // latency (YouTube iframe seekTo round-trip, ~0.3-1.2s) plus headroom;
+  // bounds clamped in the highlights API route like every other key.
+  'highlights.seekSettlementTimeoutMs': 2000,
+  // Ticker readability cap (2026-09-30, bug-2 fix -- caption out of sync
+  // with speech). Max words per second the caption reveals; the reveal
+  // mapping is min(wordsPerSecond * elapsed, totalWords), so text longer
+  // than can be read in the segment's duration simply doesn't finish
+  // rather than scrolling faster. 2.5 w/s ≈ comfortable silent-reading
+  // pace for caption-style display (academic range 1.8-2.6 w/s for
+  // subtitling; BBC subtitle guidance tops out near 2.5-3).
+  'highlights.tickerWordsPerSecond': 2.5,
 } as const;
 
 /**
