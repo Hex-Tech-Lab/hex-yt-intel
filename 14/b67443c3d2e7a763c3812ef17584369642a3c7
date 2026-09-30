@@ -1,0 +1,23 @@
+.qa-intel/baseline.json
+  s_36f875f11b73af::t_82ceac3e12b63f 1534-1561
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_36f875f11b73af::t_b1a20ab15b73c0 230,469,493,583,619,659,692
+web/lib/services/analysis-reaper.ts
+  s_36f875f11b73af::t_8c12c69598e66c 201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "14b67443c3d2e7a763c3812ef17584369642a3c7",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
