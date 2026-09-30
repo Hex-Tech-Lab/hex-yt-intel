@@ -20,6 +20,18 @@ export interface GroundedCell {
   dimensions: UCISDimension[];
 }
 
+/**
+ * ADR 037 Addendum A: one persisted `analysis_chunks` row as the stitch-map
+ * builder sees it (structural subset — `chunk_index`/`jev_chunk_index` plus
+ * the payload; shape-compatible with both adapter read projections).
+ */
+export interface StitchSourceRow {
+  jev_chunk_index: number;
+  chunk_index: number;
+  status: string;
+  payload: Record<string, unknown> | null;
+}
+
 export interface ReducedGroundedResult {
   dimensions: UCISDimension[];
   /** Dimension numbers missing from SOME chunks (present in at least one). Ascending. */
@@ -173,4 +185,79 @@ export function reduceGroundedChunks(cells: readonly GroundedCell[]): ReducedGro
   }
 
   return { dimensions, partial };
+}
+
+/**
+ * ADR 037 Addendum A: build the stitcher's (chunk_index → payload) map from
+ * the persisted matrix rows.
+ *
+ * K = 1 (or rows that predate jev_chunk_index, all carrying 0): the map is the
+ * LEGACY shape — last completed row per chunk_index wins, K>1 rows would
+ * collide, so callers must only pass jev-chunk-0 rows on this path. This keeps
+ * the K=1 stitch byte-identical to pre-matrix behavior (reduceGroundedChunks
+ * is NOT invoked — a K=1 reduce is a faithful passthrough, but not going
+ * through it at all guarantees zero drift).
+ *
+ * K > 1: grounded bundles' cells are reduced per bundle via reduceGroundedChunks
+ * (one synthetic payload per grounded bundle_index carrying the reduced
+ * dimensions; wordCount 0 → the weighted-mean path degrades to the unweighted
+ * mean deterministically); projective bundles run once on the reduced grounded
+ * result and their cell (0, idx) payload passes through unchanged.
+ *
+ * PURE. Rows with status !== 'completed' or a non-dimensions payload are
+ * excluded exactly like the legacy completed-row filters — the CALLER owns
+ * completeness (this function never throws on gaps; it simply maps what is
+ * usable).
+ */
+export function buildStitchChunkMap(
+  rows: readonly StitchSourceRow[],
+  matrix: { k: number; groundedBundleIndices: number[]; projectiveBundleIndices: number[] },
+): Map<number, Record<string, unknown>> {
+  const completed = rows.filter(
+    (row) => row.status === "completed" && row.payload !== null && typeof row.payload === "object",
+  );
+
+  if (matrix.k <= 1) {
+    const chunkMap = new Map<number, Record<string, unknown>>();
+    for (const row of completed) {
+      if (row.jev_chunk_index !== 0) continue;
+      chunkMap.set(row.chunk_index, row.payload as Record<string, unknown>);
+    }
+    return chunkMap;
+  }
+
+  const chunkMap = new Map<number, Record<string, unknown>>();
+
+  // Projective bundles: single cell (0, idx), passthrough.
+  for (const bundleIndex of matrix.projectiveBundleIndices) {
+    const row = completed.find((candidate) => candidate.jev_chunk_index === 0 && candidate.chunk_index === bundleIndex);
+    if (row) chunkMap.set(bundleIndex, row.payload as Record<string, unknown>);
+  }
+
+  // Grounded bundles: reduce the K per-Jev-chunk dimension lists into one
+  // synthetic payload per bundle index. A missing chunk contributes nothing
+  // (reduceGroundedChunks marks surviving dimensions partial).
+  for (const bundleIndex of matrix.groundedBundleIndices) {
+    const cells = completed
+      .filter((row) => row.jev_chunk_index >= 0 && row.chunk_index === bundleIndex)
+      .sort((first, second) => first.jev_chunk_index - second.jev_chunk_index)
+      .map((row) => {
+        const payload = row.payload as Record<string, unknown>;
+        const dims = Array.isArray(payload.dimensions) ? (payload.dimensions as UCISDimension[]) : [];
+        const wordCount =
+          payload.metadata && typeof payload.metadata === "object" && payload.metadata !== null
+            ? (payload.metadata as Record<string, unknown>).wordCount
+            : undefined;
+        return {
+          jevChunkIndex: row.jev_chunk_index,
+          wordCount: typeof wordCount === "number" && wordCount > 0 ? wordCount : 0,
+          dimensions: dims,
+        };
+      });
+    if (cells.length === 0) continue;
+    const reduced = reduceGroundedChunks(cells);
+    chunkMap.set(bundleIndex, { dimensions: reduced.dimensions });
+  }
+
+  return chunkMap;
 }

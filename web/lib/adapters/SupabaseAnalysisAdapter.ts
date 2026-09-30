@@ -505,12 +505,14 @@ export class SupabaseAnalysisAdapter {
     analysisPayload?: unknown;
     createdAt: string;
     channelTitle?: string | null;
+    /** ADR 037 Addendum A: number of parallel bundle streams dispatched (null = legacy row, pre-column). */
+    streamCount?: number | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
       const columns = params.includeTranscript
-        ? 'id, user_id, title, transcript_hash, transcript, validation_report, analysis_payload, created_at, channel_title'
-        : 'id, user_id, title, transcript_hash, validation_report, analysis_payload, created_at, channel_title';
+        ? 'id, user_id, title, transcript_hash, transcript, validation_report, analysis_payload, created_at, channel_title, stream_count'
+        : 'id, user_id, title, transcript_hash, validation_report, analysis_payload, created_at, channel_title, stream_count';
       const { data, error } = await service
         .from('analyses')
         .select(columns)
@@ -535,12 +537,34 @@ export class SupabaseAnalysisAdapter {
         analysisPayload: row.analysis_payload,
         createdAt: row.created_at,
         channelTitle: row.channel_title,
+        streamCount: typeof row.stream_count === 'number' ? row.stream_count : null,
       };
     } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisForPersist' },
         extra: { analysisId: params.analysisId, videoId: params.videoId },
       });
+      throw error;
+    }
+  }
+
+  /**
+   * ADR 037 Addendum A: the persisted stream_count for one analysis
+   * (null when the row doesn't exist or predates the column).
+   */
+  static async getStreamCount(analysisId: string): Promise<number | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('stream_count')
+        .eq('id', analysisId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return typeof (data as any).stream_count === 'number' ? (data as any).stream_count : null;
+    } catch (error: unknown) {
+      Sentry.captureException(error, { tags: { method: 'getStreamCount' }, extra: { analysisId } });
       throw error;
     }
   }

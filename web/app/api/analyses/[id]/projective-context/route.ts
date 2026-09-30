@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseAuthAdapter } from '@/lib/adapters/SupabaseAuthAdapter';
+import { SupabaseAnalysisAdapter } from '@/lib/adapters/SupabaseAnalysisAdapter';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { StreamTokenAdapter } from '@/lib/adapters/StreamTokenAdapter';
@@ -39,6 +40,9 @@ export async function POST(
         return !error && !!data && data.user_id === userId;
       },
       findChunks: (analysisId) => persistence.findAnalysisChunks({ analysisId }),
+      // ADR 037 Addendum A: stream_count from the persisted row (null =
+      // legacy → TOTAL_STREAMS fallback inside the use case).
+      resolveStreamCount: (analysisId) => SupabaseAnalysisAdapter.getStreamCount(analysisId),
       resolveSettings: async () => {
         const fallback = {
           'analysis.streamBundles': STREAM_BUNDLES as unknown,

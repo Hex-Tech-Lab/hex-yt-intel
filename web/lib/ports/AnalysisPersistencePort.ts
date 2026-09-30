@@ -157,6 +157,8 @@ export interface AnalysisPersistencePort {
     validationReport: unknown;
     createdAt: string;
     channelTitle?: string | null;
+    /** ADR 037 Addendum A: number of parallel bundle streams dispatched (null = legacy row, pre-column). */
+    streamCount?: number | null;
   } | null>;
 
   /**
@@ -265,12 +267,14 @@ export interface AnalysisPersistencePort {
   markChunkFailed(params: {
     analysisId: string;
     chunkIndex: number;
+    /** ADR 037 Addendum A: Jev chunk the cell belongs to (K=1 rows default to 0). */
+    jevChunkIndex?: number;
     observedUpdatedAt: string | null;
   }): Promise<boolean>;
 
   findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 
   /**
    * Narrow projection of findAnalysisChunks for presence-check-only callers
@@ -286,7 +290,7 @@ export interface AnalysisPersistencePort {
    */
   findAnalysisChunkCoverage(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null>;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null>;
 
   /**
    * Find analysis by share token for public view.

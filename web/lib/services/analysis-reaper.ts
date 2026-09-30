@@ -16,8 +16,9 @@
  */
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, TOTAL_STREAMS, STREAM_BUNDLES, resolveJevMatrix, type JevMatrix } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { buildStitchChunkMap } from '@/lib/services/reduce-grounded-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
@@ -100,6 +101,8 @@ interface StuckRow {
   validation_report: Record<string, unknown> | null;
   created_at?: string;
   updated_at?: string | null;
+  // ADR 037 Addendum A: null for legacy rows → TOTAL_STREAMS fallback.
+  stream_count?: number | null;
 }
 
 /**
@@ -191,20 +194,24 @@ async function publishEmbeddingForRecoveredRow(
 export async function tryChunkRecovery(  analysisId: string,
   existingReport: unknown,
   persistenceAdapter: SupabasePersistenceAdapter,
-  userId: string | null = null
+  userId: string | null = null,
+  jevMatrix?: JevMatrix
 ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
   const service = getSupabaseServiceClient();
   const { data, error } = await service
     .from('analysis_chunks')
-    .select('chunk_index, payload, status')
-    .eq('analysis_id', analysisId)
-    // R3b: Jev chunk 0 only (K=1) -- the salvage stitch keys rows by
-    // chunk_index, so other Jev chunks must not be mixed in.
-    .eq('jev_chunk_index', 0);
+    .select('chunk_index, jev_chunk_index, payload, status')
+    .eq('analysis_id', analysisId);
   if (error) throw error;
 
   const chunkRows = (data ?? []) as ChunkRow[];
-  const isFullSet = chunksAreFullyComplete(chunkRows);
+  // ADR 037 Addendum A: the expected cell set is the stream_count-driven
+  // matrix, resolved by the caller (sweepStuckAnalyses) from the row's
+  // persisted stream_count. Legacy rows carry jev_chunk_index 0 and a null
+  // stream_count, so the fallback matrix is the legacy 1..TOTAL_STREAMS set —
+  // the K=1 behavior is byte-identical.
+  const matrix = jevMatrix ?? resolveJevMatrix(null, STREAM_BUNDLES);
+  const isFullSet = chunksAreFullyComplete(chunkRows, matrix);
 
   // Partial set: only feed chunks that individually completed with a valid
   // dimensions array into the stitch -- a chunk row that exists but never
@@ -217,8 +224,20 @@ export async function tryChunkRecovery(  analysisId: string,
       );
   if (usableRows.length === 0) return null;
 
-  const chunkMap = new Map<number, any>(usableRows.map(c => [c.chunk_index, c.payload]));
-  const stitchResult = stitchChunksIntoPayload(chunkMap, TOTAL_STREAMS);
+  // ADR 037 Addendum A: K>1 reduces the grounded bundles' Jev slices before
+  // the stitcher sees them (same helper as the persist route); K=1 keeps the
+  // legacy chunk_index-keyed map (byte-identical). The stitcher's expected
+  // count stays the matrix-implied stream count.
+  const stitchMap = buildStitchChunkMap(
+    usableRows.map(c => ({
+      jev_chunk_index: c.jev_chunk_index ?? 0,
+      chunk_index: c.chunk_index,
+      status: c.status,
+      payload: c.payload,
+    })),
+    matrix,
+  );
+  const stitchResult = stitchChunksIntoPayload(stitchMap as Map<number, any>, matrix.k > 1 ? matrix.cells.length : TOTAL_STREAMS);
   if (!stitchResult.payload) return null;
 
   const dimensionCount = stitchResult.payload.dimensions?.length ?? 0;
@@ -312,7 +331,13 @@ async function attemptChunkRecovery(
   persistenceAdapter: SupabasePersistenceAdapter
 ): Promise<{ status: 'recovered'; outcome: Exclude<ReapOutcome, 'requeue-partial'> } | { status: 'not_eligible' } | { status: 'error' }> {
   try {
-    const res = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter, row.user_id);
+    // ADR 037 Addendum A: resolve the matrix from the row's persisted
+    // stream_count (null = legacy → TOTAL_STREAMS fallback). An invalid
+    // stream_count/bundle pairing is an observable error (caught below →
+    // 'error' → the sweep falls through to the markdown path), never a
+    // silently narrowed expected set.
+    const jevMatrix = resolveJevMatrix(row.stream_count, STREAM_BUNDLES);
+    const res = await tryChunkRecovery(row.id, row.validation_report, persistenceAdapter, row.user_id, jevMatrix);
     if (res) return { status: 'recovered', outcome: res.outcome };
     return { status: 'not_eligible' };
   } catch (chunkErr) {
@@ -428,7 +453,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
 
   const { data, error } = await service
     .from('analyses')
-    .select('id, user_id, analysis_markdown, validation_report, created_at, updated_at')
+    .select('id, user_id, analysis_markdown, validation_report, created_at, updated_at, stream_count')
     .eq('billing_status', 'processing')
     .or(`updated_at.lt.${cutoffIso},and(updated_at.is.null,created_at.lt.${cutoffIso})`)
     .limit(limit);

@@ -32,6 +32,91 @@ export const STREAM_BUNDLES: number[][] = [
 ];
 
 /**
+ * ADR 037 Addendum A: the Jev chunk-matrix completeness model.
+ *
+ * Bundle A (grounded bundles) maps over EVERY Jev semantic chunk
+ * (jev_chunk_index 0..K-1); the projective bundle(s) run ONCE on the reduced
+ * grounded result. Given the stream count S (the number of parallel bundle
+ * streams actually dispatched for the analysis, persisted as
+ * `analyses.stream_count`) and the active bundle partition, the matrix is:
+ *
+ *   K = (S - P) / G
+ *
+ * where G = grounded bundle count and P = projective bundle count. Every
+ * completeness check in the pipeline (persist route, reaper, R2b gate) must
+ * derive its expected cell set from THIS function — never from a hardcoded
+ * TOTAL_STREAMS loop.
+ */
+export interface JevMatrixCell {
+  jevChunkIndex: number;
+  /** 1-based bundle index within the partition (matches chunk_index). */
+  chunkIndex: number;
+}
+
+export interface JevMatrix {
+  /** Jev chunk count. */
+  k: number;
+  /** The full expected (jev_chunk_index, chunk_index) cell set. */
+  cells: JevMatrixCell[];
+  /** Bundle indices (1-based) that map over every Jev chunk. */
+  groundedBundleIndices: number[];
+  /** Bundle indices (1-based) that run once, on the reduced grounded result. */
+  projectiveBundleIndices: number[];
+}
+
+/**
+ * Pure. Throws on a non-integer K (an impossible partition/stream-count
+ * pairing must fail loudly, never silently truncate the expected set).
+ * streamCount <= 0 or an empty partition also throw.
+ */
+export function expectedCells(streamCount: number, bundles: number[][]): JevMatrix {
+  if (!Number.isInteger(streamCount) || streamCount <= 0) {
+    throw new Error(`expectedCells: streamCount must be a positive integer, got ${streamCount}`);
+  }
+  if (!Array.isArray(bundles) || bundles.length === 0 || !bundles.every(Array.isArray)) {
+    throw new Error('expectedCells: expected a non-empty array of dimension arrays');
+  }
+  const groundedBundleIndices: number[] = [];
+  const projectiveBundleIndices: number[] = [];
+  bundles.forEach((bundle, i) => {
+    (isProjectiveBundle(bundle) ? projectiveBundleIndices : groundedBundleIndices).push(i + 1);
+  });
+  const g = groundedBundleIndices.length;
+  const p = projectiveBundleIndices.length;
+  if (g === 0) {
+    throw new Error('expectedCells: partition has no grounded bundles');
+  }
+  const k = (streamCount - p) / g;
+  if (!Number.isInteger(k) || k <= 0) {
+    throw new Error(
+      `expectedCells: non-integer Jev chunk count K = (${streamCount} - ${p}) / ${g} = ${k}`
+    );
+  }
+  const cells: JevMatrixCell[] = [];
+  for (let jevChunkIndex = 0; jevChunkIndex < k; jevChunkIndex++) {
+    for (const chunkIndex of groundedBundleIndices) {
+      cells.push({ jevChunkIndex, chunkIndex });
+    }
+  }
+  // Projective bundles run ONCE (on the reduced grounded result) — cell (0, idx).
+  for (const chunkIndex of projectiveBundleIndices) {
+    cells.push({ jevChunkIndex: 0, chunkIndex });
+  }
+  return { k, cells, groundedBundleIndices, projectiveBundleIndices };
+}
+
+/**
+ * ADR 037 Addendum A: resolve the analysis's stream count from its persisted
+ * row value, falling back to the legacy default ONLY when the column is null
+ * (rows written before the column existed). A persisted stream_count that
+ * fails the partition math throws via expectedCells — fail loudly, never
+ * silently narrow the expected cell set.
+ */
+export function resolveJevMatrix(streamCount: number | null | undefined, bundles: number[][]): JevMatrix {
+  return expectedCells(streamCount ?? TOTAL_STREAMS, bundles);
+}
+
+/**
  * R1b (2026-09-29) — Layer 2 epistemic split at SUB-DIMENSION level.
  * Dimensions whose UCIS definitions are PROJECTIVE (external knowledge
  * allowed) rather than GROUNDED ("Universe of 1", transcript-only). A bundle

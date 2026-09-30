@@ -15,13 +15,14 @@ import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdap
 import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { z } from 'zod';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, resolveJevMatrix, STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
 import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
 import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS } from '@/lib/services/stitch-analysis-chunks';
+import { buildStitchChunkMap } from '@/lib/services/reduce-grounded-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
 
@@ -208,9 +209,16 @@ export async function POST(request: NextRequest) {
       // lockstep with PersistService.ts's signer (same hazard as
       // tokensUsed/costUsd -- see canonical construction below).
       generationId: z.string().optional(),
-      chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
-      totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
-        message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
+      // ADR 037 Addendum A: the Jev chunk coordinate (0..K-1). Upper bound is
+      // a generous schema-level guard only — the authoritative bound (K from
+      // the server-loaded stream_count) is enforced after matrix resolution
+      // below. 0 is allowed here so an out-of-range value fails the
+      // route-level 400 (with a precise message) instead of falling through
+      // to the chunk path with a cell the expected set can never contain.
+      chunkIndex: z.number().int().min(1).max(64).optional(),
+      jevChunkIndex: z.number().int().min(0).max(63).optional(),
+      totalChunks: z.number().int().refine((val) => val >= 1 && val <= 64, {
+        message: 'totalChunks must be between 1 and 64',
       }).optional(),
       segments: z.array(z.object({
         start: z.number(),
@@ -300,6 +308,7 @@ export async function POST(request: NextRequest) {
         cachedTokens,
         generationId,
         chunkIndex,
+        jevChunkIndex: rawJevChunkIndex,
         totalChunks,
         segments,
         transcript,
@@ -412,8 +421,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
-
       // R1b (2026-09-29): registry-resolved cap for the crossDomainBridges
       // field (UCIS sub-dimension 8.3) consumed by stitchChunksIntoPayload.
       // Code fallback mirrors the registry key's default (4000).
@@ -503,6 +510,58 @@ export async function POST(request: NextRequest) {
       const priorPayload = (row.analysisPayload as Record<string, any>) || {};
       const isInterrupted = status === 'interrupted';
 
+      // ADR 037 Addendum A: the expected (jev_chunk_index, chunk_index) cell
+      // set is derived HERE, once, from the server-loaded stream_count and the
+      // registry bundle partition — never from the request body. row.streamCount
+      // is null for legacy rows (pre-column) → TOTAL_STREAMS fallback via
+      // resolveJevMatrix.
+      const registryBundlesSetting = await SupabaseSettingsAdapter.getRegistrySettings(
+        ['analysis.streamBundles'],
+        { 'analysis.streamBundles': STREAM_BUNDLES as unknown }
+      );
+      const registryBundles = registryBundlesSetting['analysis.streamBundles'];
+      let bundles: number[][] = STREAM_BUNDLES;
+      try {
+        assertBundlePartition(registryBundles as number[][]);
+        bundles = registryBundles as number[][];
+      } catch (partitionErr) {
+        console.warn('[analyses/persist] invalid analysis.streamBundles, using STREAM_BUNDLES:', partitionErr instanceof Error ? partitionErr.message : String(partitionErr));
+      }
+      let jevMatrix: ReturnType<typeof resolveJevMatrix>;
+      try {
+        jevMatrix = resolveJevMatrix(row.streamCount, bundles);
+      } catch (matrixErr) {
+        const msg = matrixErr instanceof Error ? matrixErr.message : String(matrixErr);
+        Sentry.captureException(matrixErr, { contexts: { persist: { phase: 'resolve_jev_matrix', analysisId } } });
+        console.error('[analyses/persist] stream_count incompatible with bundle partition', { analysisId, streamCount: row.streamCount, message: msg });
+        return { type: 'error' as const, error: 'Stream count incompatible with bundle partition', status: 500 };
+      }
+      // Number of parallel bundle streams the matrix implies (grounded K + projective).
+      const impliedStreamCount = jevMatrix.k > 1 ? jevMatrix.cells.length : bundles.length;
+      const resolvedTotal = totalChunks ?? impliedStreamCount;
+      const jevChunkIndex = rawJevChunkIndex ?? 0;
+
+      // Chunk requests must name a cell inside the expected matrix. totalChunks,
+      // when present, must equal the server-derived stream count — never trusted
+      // over it.
+      if (chunkIndex !== undefined) {
+        const isKnownCell = jevMatrix.cells.some(
+          (cell) => cell.jevChunkIndex === jevChunkIndex && cell.chunkIndex === chunkIndex
+        );
+        if (!isKnownCell) {
+          console.warn('[analyses/persist] chunk persist names a cell outside the expected matrix', {
+            analysisId, jevChunkIndex, chunkIndex, k: jevMatrix.k, streamCount: row.streamCount,
+          });
+          return { type: 'error' as const, error: 'Chunk coordinates outside expected matrix', status: 400 };
+        }
+        if (totalChunks !== undefined && totalChunks !== impliedStreamCount) {
+          console.warn('[analyses/persist] totalChunks disagrees with server-derived stream count', {
+            analysisId, totalChunks, impliedStreamCount,
+          });
+          return { type: 'error' as const, error: 'totalChunks disagrees with server-derived stream count', status: 400 };
+        }
+      }
+
       // RCA (2026-09-13, live video gKgWYFOhZx0, analysis cc71afb9): a chunk
       // persist whose structured payload extraction failed (the bundle's LLM
       // output had no parseable JSON envelope and no BracketBuffer captures
@@ -584,6 +643,7 @@ export async function POST(request: NextRequest) {
           () => persistenceAdapter.persistAnalysisChunk({
             analysisId,
             chunkIndex,
+            jevChunkIndex,
             dimensionsCovered,
             payload,
             // A payload-less or malformed chunk never produced trustworthy
@@ -665,15 +725,18 @@ export async function POST(request: NextRequest) {
         const FINAL_CHUNK_STATUS = 'completed';
         const finalChunks = chunks ? chunks.filter(c => c.status === FINAL_CHUNK_STATUS) : [];
 
-        const receivedIndexSet = new Set(finalChunks.map(c => c.chunk_index));
-        let isFullyReceived = true;
-        const unreceived: number[] = [];
-        for (let i = 1; i <= resolvedTotal; i++) {
-          if (!receivedIndexSet.has(i)) {
-            isFullyReceived = false;
-            unreceived.push(i);
-          }
-        }
+        // ADR 037 Addendum A: completeness over the expected (jev_chunk_index,
+        // chunk_index) CELL set — a K=2+ stream needs every Jev slice of every
+        // grounded bundle, not merely one row per bundle index. Projective
+        // bundles contribute their single cell (0, bundleIndex).
+        const expectedCellKey = (jev: number, idx: number) => `${jev}:${idx}`;
+        const receivedCellSet = new Set(
+          finalChunks.map(c => expectedCellKey(c.jev_chunk_index ?? 0, c.chunk_index))
+        );
+        const missingCells = jevMatrix.cells.filter(c => !receivedCellSet.has(expectedCellKey(c.jevChunkIndex, c.chunkIndex)));
+        const missingCellLabels = missingCells.map(c => `${c.jevChunkIndex}:${c.chunkIndex}`);
+        const unreceived = missingCells.map(c => c.chunkIndex);
+        const isFullyReceived = missingCells.length === 0;
 
         // Set-closed finalize (same RCA as the isPayloadlessChunk comment
         // above): once EVERY chunk index has a TERMINAL row — 'completed'
@@ -684,15 +747,12 @@ export async function POST(request: NextRequest) {
         // deliberately NOT terminal (a retry may still complete them).
         let isFullySettled = !isFullyReceived && !isInterrupted;
         if (isFullySettled) {
-          const settledIndexSet = new Set(
-            (chunks ?? []).filter(c => c.status === 'completed' || c.status === 'failed').map(c => c.chunk_index)
+          const settledCellSet = new Set(
+            (chunks ?? [])
+              .filter(c => c.status === 'completed' || c.status === 'failed')
+              .map(c => expectedCellKey(c.jev_chunk_index ?? 0, c.chunk_index))
           );
-          for (let i = 1; i <= resolvedTotal; i++) {
-            if (!settledIndexSet.has(i)) {
-              isFullySettled = false;
-              break;
-            }
-          }
+          isFullySettled = jevMatrix.cells.every(c => settledCellSet.has(expectedCellKey(c.jevChunkIndex, c.chunkIndex)));
         }
 
         // Check if we've exceeded the timeout window while waiting for chunks
@@ -717,6 +777,7 @@ export async function POST(request: NextRequest) {
                   videoId,
                   receivedCount: finalChunks.length,
                   expectedTotal: resolvedTotal,
+                  missingCells: missingCellLabels,
                   unreceived,
                   elapsedMs
                 });
@@ -754,9 +815,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (isFullyReceived || isFullySettled) {
-          const chunkMap = new Map<number, any>();
+          // ADR 037 Addendum A: K>1 keys the map by cell ("jev:idx") so
+          // grounded bundles' multiple Jev slices don't collide on
+          // chunk_index; K=1 keeps the legacy chunk_index key (byte-identical
+          // map shape for the legacy stitcher path).
+          const multiJev = jevMatrix.k > 1;
+          const mapKeyOf = (row: { jev_chunk_index?: number | null; chunk_index: number }) =>
+            multiJev ? `${row.jev_chunk_index ?? 0}:${row.chunk_index}` : row.chunk_index;
+          const chunkMap = new Map<number | string, any>();
           finalChunks.forEach(c => {
-            chunkMap.set(c.chunk_index, c.payload);
+            chunkMap.set(mapKeyOf(c), c.payload);
           });
 
           // P1a (PR #312 post-merge review): a chunk row can be nominally
@@ -784,15 +852,17 @@ export async function POST(request: NextRequest) {
               !hasUsableDimensionsPayload(chunk.payload)
             );
             for (const malformedChunk of malformedCompletedChunks) {
+              const malformedKey = mapKeyOf(malformedChunk);
               console.error('[analyses/persist] Completed chunk has malformed payload (no usable dimensions shape) — reclassifying to failed before stitch', {
                 analysisId,
                 videoId,
+                jevChunkIndex: malformedChunk.jev_chunk_index ?? 0,
                 chunkIndex: malformedChunk.chunk_index
               });
               Sentry.captureMessage('analyses/persist: completed chunk had malformed payload, reclassified to failed', {
                 level: 'warning',
                 tags: { operation: 'analysis-persist', phase: 'settled_stitch' },
-                extra: { analysisId, videoId, chunkIndex: malformedChunk.chunk_index },
+                extra: { analysisId, videoId, jevChunkIndex: malformedChunk.jev_chunk_index ?? 0, chunkIndex: malformedChunk.chunk_index },
               });
               // P0 (PR #314 second review round): the demotion is now a
               // scoped CAS on (analysis_id, chunk_index, status='completed',
@@ -818,12 +888,13 @@ export async function POST(request: NextRequest) {
                   () => persistenceAdapter.markChunkFailed({
                     analysisId,
                     chunkIndex: malformedChunk.chunk_index,
+                    jevChunkIndex: malformedChunk.jev_chunk_index ?? 0,
                     observedUpdatedAt: malformedChunk.updated_at,
                   }),
                   2
                 );
                 if (demoted) {
-                  chunkMap.delete(malformedChunk.chunk_index);
+                  chunkMap.delete(malformedKey);
                 } else {
                   // CAS miss — a concurrent writer changed the row. Refetch
                   // to determine whether it's now valid (restore) or already
@@ -834,16 +905,19 @@ export async function POST(request: NextRequest) {
                     () => persistenceAdapter.findAnalysisChunks({ analysisId }),
                     2
                   );
-                  const current = refetched?.find(c => c.chunk_index === malformedChunk.chunk_index);
+                  const current = refetched?.find(c =>
+                    (c.jev_chunk_index ?? 0) === (malformedChunk.jev_chunk_index ?? 0) &&
+                    c.chunk_index === malformedChunk.chunk_index
+                  );
                   if (current && current.status === 'completed' && hasUsableDimensionsPayload(current.payload)) {
                     // Concurrent writer replaced the malformed row with a
                     // VALID completed payload — restore it into the stitch.
-                    chunkMap.set(malformedChunk.chunk_index, current.payload);
+                    chunkMap.set(malformedKey, current.payload);
                   } else {
                     // Row is now failed/interrupted/still-malformed — exclude
                     // from stitch (the entry that was in chunkMap had the
                     // malformed payload; deleting is correct either way).
-                    chunkMap.delete(malformedChunk.chunk_index);
+                    chunkMap.delete(malformedKey);
                   }
                 }
               } catch (e) {
@@ -864,6 +938,7 @@ export async function POST(request: NextRequest) {
                 Sentry.captureException(e, { contexts: { persist: { phase: 'reclassify_malformed_chunk', analysisId } } });
                 console.error('[analyses/persist] Chunk demotion failed after bounded retries — aborting finalize so it is not silently committed without the chunk', {
                   analysisId,
+                  jevChunkIndex: malformedChunk.jev_chunk_index ?? 0,
                   chunkIndex: malformedChunk.chunk_index,
                   message: demotionErr.message
                 });
@@ -875,15 +950,18 @@ export async function POST(request: NextRequest) {
           // CONTRACT VALIDATION: Verify all chunks have required payload structure
           // Each chunk MUST have a dimensions field (can be empty array, but field must exist)
           // This ensures consistent payload structure across all 5 streams
-          const invalidChunks = [];
+          const invalidChunks: Array<number | string> = [];
           for (let i = 1; i <= resolvedTotal; i++) {
-            const chunkPayload = chunkMap.get(i);
+            const key = multiJev ? jevMatrix.cells.find(c => c.chunkIndex === i) : undefined;
+            const lookupKeys = key
+              ? jevMatrix.cells.filter(c => c.chunkIndex === i).map(c => `${c.jevChunkIndex}:${c.chunkIndex}`)
+              : [i];
             // P1: use the shared predicate — `'dimensions' in chunkPayload`
             // throws TypeError on a primitive payload from the DB's JSONB
             // column. (empty dimensions arrays ARE acceptable — stream may
             // generate no content for its slice)
-            if (!hasUsableDimensionsPayload(chunkPayload)) {
-              invalidChunks.push(i);
+            if (!lookupKeys.some(k => hasUsableDimensionsPayload(chunkMap.get(k)))) {
+              invalidChunks.push(key ? `${key.jevChunkIndex}:${key.chunkIndex}` : i);
             }
           }
 
@@ -966,7 +1044,24 @@ export async function POST(request: NextRequest) {
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
             stance_relations: priorPayload?.stance_relations ?? null,
           };
-          const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
+          // ADR 037 Addendum A: K=1 keeps the legacy chunk_index-keyed map
+          // (byte-identical stitch). K>1 reduces the grounded bundles' Jev
+          // slices into one synthetic payload per bundle before the stitcher
+          // sees it. Note the malformed-demotion pass above ran on the raw
+          // rows via `chunks`/`finalChunks`, so its demotions still apply to
+          // the rebuilt map (a demoted cell no longer counts as completed).
+          const stitchMap = multiJev
+            ? buildStitchChunkMap(
+                (chunks ?? []).map(c => ({
+                  jev_chunk_index: c.jev_chunk_index ?? 0,
+                  chunk_index: c.chunk_index,
+                  status: c.status,
+                  payload: c.payload,
+                })),
+                jevMatrix,
+              )
+            : chunkMap;
+          const stitchResult = stitchChunksIntoPayload(stitchMap as Map<number, any>, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
           const stitchedPayload = stitchResult.payload ?? null;
           const stitchedMarkdown = stitchResult.markdown;
           const isStitchedValid = stitchResult.validationPassed;
@@ -1204,16 +1299,17 @@ export async function POST(request: NextRequest) {
         );
         const FINAL_STATUS = 'completed';
         finalizedChunks = storedChunks ? storedChunks.filter(c => c.status === FINAL_STATUS) : [];
-        const receivedIndices = new Set(finalizedChunks.map(c => c.chunk_index));
+        // ADR 037 Addendum A: completeness over the expected cell set, same
+        // as the chunk path above — jev_chunk_index participates from here on.
+        const interruptedCellSet = new Set(
+          finalizedChunks.map(c => `${c.jev_chunk_index ?? 0}:${c.chunk_index}`)
+        );
+        const missingCellsInterrupted = jevMatrix.cells.filter(
+          c => !interruptedCellSet.has(`${c.jevChunkIndex}:${c.chunkIndex}`)
+        );
 
-        allReceived = true;
-        const missing: number[] = [];
-        for (let i = 1; i <= resolvedTotal; i++) {
-          if (!receivedIndices.has(i)) {
-            allReceived = false;
-            missing.push(i);
-          }
-        }
+        allReceived = missingCellsInterrupted.length === 0;
+        const missing = missingCellsInterrupted.map(c => c.chunkIndex);
 
         // Only mark as 'done' if ALL chunks have been persisted,
         // OR if minimum threshold (60%) reached and has exceeded 30s timeout window
@@ -1270,18 +1366,25 @@ export async function POST(request: NextRequest) {
       let stitchedMarkdown = markdown;
       if (finalStatus === 'partial' && finalizedChunks.length > 0) {
         try {
-          const partialChunkMap = new Map<number, any>();
-          finalizedChunks.forEach(c => {
-            partialChunkMap.set(c.chunk_index, c.payload);
-          });
-
+          // ADR 037 Addendum A: same K-aware map as the finalize path above.
+          const interruptedStitchMap = jevMatrix.k > 1
+            ? buildStitchChunkMap(
+                finalizedChunks.map(c => ({
+                  jev_chunk_index: c.jev_chunk_index ?? 0,
+                  chunk_index: c.chunk_index,
+                  status: c.status,
+                  payload: c.payload,
+                })),
+                jevMatrix,
+              )
+            : new Map<number, any>(finalizedChunks.map(c => [c.chunk_index, c.payload]));
           const extraMetadata = {
             videoMetadata: priorPayload?.videoMetadata ?? (priorReport as any)?.metadata ?? null,
             channelMeta: channelMeta ?? priorPayload?.channelMeta ?? (priorReport as any)?.channelMeta ?? null,
             comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
             stance_relations: priorPayload?.stance_relations ?? null,
           };
-          const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
+          const stitchResult = stitchChunksIntoPayload(interruptedStitchMap as Map<number, any>, resolvedTotal, extraMetadata, crossDomainBridgesMaxChars);
           if (stitchResult.payload !== undefined) {
             stitchedPayload = stitchResult.payload;
             stitchedMarkdown = stitchResult.markdown;

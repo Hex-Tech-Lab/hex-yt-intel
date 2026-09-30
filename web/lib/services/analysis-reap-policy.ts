@@ -6,7 +6,7 @@
  * dimension-remediation.ts already document).
  */
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import type { ReapOutcome, SettlePatch } from '@/lib/services/analysis-requeue';
 
 /**
@@ -106,30 +106,41 @@ export function buildSettlePatch(
 
 export interface ChunkRow {
   chunk_index: number;
+  // ADR 037 Addendum A: Jev chunk coordinate; 0 for all legacy rows.
+  jev_chunk_index?: number | null;
   payload: Record<string, unknown> | null;
   status: string;
 }
 
 /**
- * Checks whether every expected bundle-stream chunk (1..TOTAL_STREAMS) is
+ * Checks whether every expected (jev_chunk_index, chunk_index) cell is
  * present, `status === 'completed'`, and carries a `dimensions` array --
  * mirroring persist/route.ts's own "CONTRACT VALIDATION" check, so the
  * reaper never treats a genuinely partial/interrupted set as recoverable.
- * Exported for unit testing.
+ *
+ * ADR 037 Addendum A: the expected set comes from the cell matrix
+ * (streamCount + bundles), not a hardcoded 1..TOTAL_STREAMS loop. Legacy
+ * rows with no jev_chunk_index count as jev chunk 0. Extra completed rows
+ * beyond the expected set do not fail the check (a stale/over-persisted
+ * cell is not a gap). Exported for unit testing.
  */
 // skipcq: JS-R1005 -- complexity inherent to the full-chunk-set validation contract, pre-existing shape
 // skipcq: JS-0057 -- TS ES module (has imports/exports), not a browser script; module scope, not global
-export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
-  if (chunkRows.length !== TOTAL_STREAMS) return false;
-  const byIndex = new Map(chunkRows.map((chunkRow) => [chunkRow.chunk_index, chunkRow]));
-  for (let i = 1; i <= TOTAL_STREAMS; i++) {
-    const chunkRow = byIndex.get(i);
+export function chunksAreFullyComplete(
+  chunkRows: ChunkRow[],
+  matrix: { cells: ReadonlyArray<{ jevChunkIndex: number; chunkIndex: number }> }
+): boolean {
+  const byCell = new Map(
+    chunkRows.map((chunkRow) => [`${chunkRow.jev_chunk_index ?? 0}:${chunkRow.chunk_index}`, chunkRow])
+  );
+  return matrix.cells.every((cell) => {
+    const chunkRow = byCell.get(`${cell.jevChunkIndex}:${cell.chunkIndex}`);
     if (!chunkRow || chunkRow.status !== 'completed') return false;
     if (
       !chunkRow.payload ||
       !Array.isArray((chunkRow.payload as { dimensions?: unknown }).dimensions)
     )
       return false;
-  }
-  return true;
+    return true;
+  });
 }

@@ -10,8 +10,10 @@
  * same fitter the worker guard accepts, and signs the result bound to the
  * analysis, an expiry, the projective dimensions and the payload hash.
  */
-import { isProjectiveBundle, STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
+import { isProjectiveBundle, STREAM_BUNDLES, assertBundlePartition, resolveJevMatrix } from '@/lib/config/synthesis';
 import { fitPriorPayloadToCap, PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
+import { reduceGroundedChunks } from '@/lib/services/reduce-grounded-chunks';
+import type { UCISDimension } from '@/lib/types/dimension';
 import type { StreamToken } from '@/lib/types/stream-token';
 
 export const PROJECTIVE_CONTEXT_REGISTRY_FALLBACK = {
@@ -21,6 +23,8 @@ export const PROJECTIVE_CONTEXT_REGISTRY_FALLBACK = {
 
 export interface PersistedChunk {
   chunk_index: number;
+  // ADR 037 Addendum A: Jev chunk coordinate; 0/undefined for legacy rows.
+  jev_chunk_index?: number | null;
   dimensions_covered: number[];
   payload: Record<string, unknown>;
   status: 'completed' | 'failed' | 'interrupted';
@@ -42,6 +46,8 @@ export interface ProjectiveContextDeps {
   /** Owner-checked existence of the analysis (null = not found / not owned). */
   ownsAnalysis: (analysisId: string, userId: string) => Promise<boolean>;
   findChunks: (analysisId: string) => Promise<PersistedChunk[] | null>;
+  /** ADR 037 Addendum A: the analysis row's persisted stream_count (null = legacy row). */
+  resolveStreamCount: (analysisId: string) => Promise<number | null>;
   /** Registry values (analysis.streamBundles, priorPayloadMaxBytes, the two wait keys). */
   resolveSettings: () => Promise<{
     streamBundles: unknown;
@@ -88,22 +94,56 @@ export class ProjectiveContextUseCase {
     if (!projectiveBundle) return { type: 'no_projective_bundle' };
 
     const chunks = (await this.deps.findChunks(analysisId)) ?? [];
-    const byIndex = new Map(chunks.map((chunk) => [chunk.chunk_index, chunk]));
+    // ADR 037 Addendum A: gate completeness over the expected (jev_chunk_index,
+    // chunk_index) CELL set. streamCount comes from the persisted row (null =
+    // legacy → TOTAL_STREAMS fallback); a K>1 stream requires EVERY Jev slice
+    // of every grounded bundle before the projective bundle may start. The
+    // projective bundles' reduced grounded context is built from the REDUCED
+    // grounded dimensions (reduceGroundedChunks), not from one arbitrary Jev
+    // slice.
+    const ownsStreamCount = await this.deps.resolveStreamCount(analysisId);
+    let jevMatrix: ReturnType<typeof resolveJevMatrix>;
+    try {
+      jevMatrix = resolveJevMatrix(ownsStreamCount, bundles);
+    } catch (matrixErr) {
+      console.error('[ProjectiveContextUseCase] stream_count incompatible with bundle partition:', matrixErr instanceof Error ? matrixErr.message : String(matrixErr));
+      return { type: 'grounded_not_persisted', retryAfterMs: settings.retryAfterMs, maxWaitMs: settings.maxWaitMs };
+    }
+    const multiJev = jevMatrix.k > 1;
 
-    // Race closure: every grounded bundle must have a PERSISTED chunk row
-    // (chunk_index = bundle index + 1). A terminally failed/interrupted chunk
-    // counts as settled (degraded case); a missing row means "not yet".
+    // Race closure: every expected grounded CELL must have a PERSISTED chunk
+    // row. A terminally failed/interrupted cell counts as settled (degraded
+    // case); a missing row means "not yet".
     const groundedChunks: PersistedChunk[] = [];
-    for (const [index, bundle] of bundles.entries()) {
-      if (isProjectiveBundle(bundle)) continue;
-      const chunk = byIndex.get(index + 1);
+    const byCell = new Map(chunks.map((chunk) => [`${chunk.jev_chunk_index ?? 0}:${chunk.chunk_index}`, chunk]));
+    for (const cell of jevMatrix.cells) {
+      if (jevMatrix.projectiveBundleIndices.includes(cell.chunkIndex)) continue;
+      const chunk = byCell.get(`${cell.jevChunkIndex}:${cell.chunkIndex}`);
       if (!chunk) {
         return { type: 'grounded_not_persisted', retryAfterMs: settings.retryAfterMs, maxWaitMs: settings.maxWaitMs };
       }
       if (chunk.status === 'completed') groundedChunks.push(chunk);
     }
 
-    const dimensions = groundedChunks.flatMap((chunk) => groundedDimensionsOf(chunk.payload));
+    // K>1: reduce the per-Jev-chunk grounded outputs deterministically (raw
+    // payload dims fed as UCISDimension[], narrowed afterwards the same way
+    // the legacy path narrows them). K=1: legacy flatMap — byte-identical.
+    const groundedDimensions: unknown[] = multiJev
+      ? reduceGroundedChunks(
+          groundedChunks
+            .map((chunk) => {
+              const dims = Array.isArray(chunk.payload.dimensions) ? (chunk.payload.dimensions as UCISDimension[]) : [];
+              const metadata = chunk.payload.metadata as { wordCount?: unknown } | undefined;
+              const wordCount = typeof metadata?.wordCount === 'number' && metadata.wordCount > 0 ? metadata.wordCount : 0;
+              return { jevChunkIndex: chunk.jev_chunk_index ?? 0, wordCount, dimensions: dims };
+            }),
+        ).dimensions
+      : groundedChunks.flatMap((chunk) => groundedDimensionsOf(chunk.payload));
+    const dimensions = groundedDimensions.filter(
+      (dim): dim is GroundedDimension =>
+        !!dim && typeof dim === 'object'
+        && typeof (dim as GroundedDimension).number === 'number' && typeof (dim as GroundedDimension).content === 'string'
+    );
     const resources = groundedChunks.flatMap((chunk) =>
       Array.isArray(chunk.payload.explicitSpeakerResources)
         ? chunk.payload.explicitSpeakerResources.filter((resource): resource is string => typeof resource === 'string')

@@ -138,6 +138,8 @@ interface StreamRequest {
   dimensions?: number[];
   chunkIndex?: number;
   totalChunks?: number;
+  /** ADR 037 Addendum A: Jev chunk coordinate (0..K-1); legacy clients omit → 0. */
+  jevChunkIndex?: number;
   // Resolved server-side (Vercel has the DB access this worker doesn't, see
   // ADR 005) from the settings registry's chat.comments.* keys and forwarded
   // per-request -- never hardcode these worker-side, see fetchCommentsCached.
@@ -918,6 +920,7 @@ function buildStreamResponse(
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
+        jevChunkIndex: req.jevChunkIndex,
         segments: resolvedSegments,
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,

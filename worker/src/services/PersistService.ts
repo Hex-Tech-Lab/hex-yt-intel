@@ -46,6 +46,8 @@ export interface PersistOptions {
   validate12D: (text: string) => boolean;
   chunkIndex?: number;
   totalChunks?: number;
+  /** ADR 037 Addendum A: Jev chunk coordinate (0..K-1); legacy clients omit → 0. */
+  jevChunkIndex?: number;
   segments?: Array<{ start: number; duration: number; text: string }>;
   transcript?: string;
   channelMeta?: Record<string, unknown> | null;
@@ -258,6 +260,7 @@ export class PersistService {
     exp: number;
     chunkIndex?: number;
     totalChunks?: number;
+    jevChunkIndex?: number;
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
@@ -288,6 +291,7 @@ export class PersistService {
             generationId: params.generationId,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
+            jevChunkIndex: params.jevChunkIndex,
             segments: params.segments,
             transcript: params.transcript,
             channelMeta: params.channelMeta,

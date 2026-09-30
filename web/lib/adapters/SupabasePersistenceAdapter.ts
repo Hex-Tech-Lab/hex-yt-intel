@@ -79,7 +79,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findAnalysisById(params);
   }
 
-  findAnalysisForPersist(params: { analysisId: string; videoId: string }): Promise<{ id: string; userId: string; title: string; transcriptHash?: string | null; transcript?: string | null; validationReport: unknown; analysisPayload?: unknown; createdAt: string; channelTitle?: string | null } | null> {
+  findAnalysisForPersist(params: { analysisId: string; videoId: string }): Promise<{ id: string; userId: string; title: string; transcriptHash?: string | null; transcript?: string | null; validationReport: unknown; analysisPayload?: unknown; createdAt: string; channelTitle?: string | null; streamCount?: number | null } | null> {
     return SupabaseAnalysisAdapter.findAnalysisForPersist(params);
   }
 
@@ -571,6 +571,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   async markChunkFailed(params: {
     analysisId: string;
     chunkIndex: number;
+    /** ADR 037 Addendum A: Jev chunk the cell belongs to (K=1 rows default to 0). */
+    jevChunkIndex?: number;
     observedUpdatedAt: string | null;
   }): Promise<boolean> {
     try {
@@ -580,8 +582,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .update({ status: 'failed', updated_at: new Date().toISOString() }, { count: 'exact' })
         .eq('analysis_id', params.analysisId)
         .eq('chunk_index', params.chunkIndex)
-        // R3b: Jev chunk 0 only (K=1).
-        .eq('jev_chunk_index', 0)
+        .eq('jev_chunk_index', params.jevChunkIndex ?? 0)
         .eq('status', 'completed');
       // P0 (PR #314 second review round): narrow the CAS to the EXACT row
       // revision the caller observed, so a concurrent writer that replaced
@@ -609,16 +610,15 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   async findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analysis_chunks')
-        .select('chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
+        .select('jev_chunk_index, chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
         .eq('analysis_id', params.analysisId)
-        // R3b: Jev chunk 0 only (K=1) — stitchers consume one Jev chunk's
-        // bundles per call today.
-        .eq('jev_chunk_index', 0);
+        // ADR 037 Addendum A: ALL Jev chunks — callers derive the expected
+        // cell set from the analysis's stream_count and match on the pair.
 
       if (error) {
         console.error('[SupabasePersistenceAdapter] findAnalysisChunks failed:', error.message);
@@ -649,14 +649,14 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   // as a NEW class-methods-use-this violation just because it's new code.
   async findAnalysisChunkCoverage(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null> {
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; status: 'completed' | 'failed' | 'interrupted' }> | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analysis_chunks')
-        .select('chunk_index, dimensions_covered, status')
+        .select('jev_chunk_index, chunk_index, dimensions_covered, status')
         .eq('analysis_id', params.analysisId)
-        // R3b: Jev chunk 0 only (K=1).
+        // ADR 037 Addendum A: ALL Jev chunks (presence checks match on the pair).
         .eq('jev_chunk_index', 0)
         .abortSignal(AbortSignal.timeout(3000));
 
