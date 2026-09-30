@@ -518,7 +518,7 @@ div[data-chat-dock="true"] div[class*="content"] {
    with a light text-shadow. --hx-thumb-fade is a tunable CSS custom property
    (2.5cm per the mockup), deliberately NOT a magic number in JSX. */
 :root {
-  --hx-thumb-fade: 2.5cm;
+  --hx-thumb-fade: 3cm;
   /* Width of the sharp (unfaded) 16:9 area at the row's 112px min-height. */
   --hx-thumb-sharp: calc((112px - 8px) * 16 / 9);
 }
@@ -536,22 +536,24 @@ div[data-chat-dock="true"] div[class*="content"] {
      top/bottom margins) plus the fade extension to the left. */
   width: calc(var(--hx-thumb-sharp) + var(--hx-thumb-fade));
   max-width: 85%;
-  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
-          mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
+  /* Softer edge (2026-09-30): eased multi-stop fade instead of a linear ramp. */
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), rgb(0 0 0 / 0.7) calc(100% - var(--hx-thumb-fade) * 0.7), rgb(0 0 0 / 0.3) calc(100% - var(--hx-thumb-fade) * 0.35), transparent 100%);
+          mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), rgb(0 0 0 / 0.7) calc(100% - var(--hx-thumb-fade) * 0.7), rgb(0 0 0 / 0.3) calc(100% - var(--hx-thumb-fade) * 0.35), transparent 100%);
   border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
-}
-
-.hx-thumb-divider {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 1;
-  right: calc(4px + var(--hx-thumb-sharp));
-  border-left: 1px solid var(--line);
 }
 
 .hx-thumb-shadow {
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.65);
+}
+
+/* History rows (2026-09-30): a dark halo on every text row so the lines that
+   run over the faded thumbnail stay legible, and a simple dark drop shadow on
+   chips. */
+.hx-halo, .hx-halo * {
+  text-shadow: 0 0 4px rgb(0 0 0 / 0.85), 0 1px 2px rgb(0 0 0 / 0.9);
+}
+.hx-chip-shadow > * {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {
