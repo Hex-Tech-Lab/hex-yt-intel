@@ -1,0 +1,19 @@
+docs/agent-prompts/2026-09-30-oc-r3b-2-3-plan-stream-count.md
+  s_1d1bec99fd4ca5::t_82d4394e27398d 1,43,45-49,54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "53c1bedac1638c65ce80d2a6fafcef67d60d012c",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
