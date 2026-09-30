@@ -1,0 +1,23 @@
+web/app/globals.css
+  s_36f875f11b73af::t_3c6acbcf25534e 521,539-541,549-558
+web/components/templates/console/AnalysisHistory.tsx
+  s_36f875f11b73af::t_c46add29392e67 12,137,139-141,143-144,164-165,788,798,815,830-832,859-865,910,914-919,959-961,979-984,986-995,998-1000
+web/components/templates/console/__tests__/AnalysisHistory-thumbnail.test.tsx
+  s_36f875f11b73af::t_80c5665654db53 133-134,143,145-146,150,158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ed34a797b9ddc1e09fa5207c4ee93208f14acc70",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
