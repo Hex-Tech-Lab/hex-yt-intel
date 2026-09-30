@@ -1,0 +1,83 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_1597f2f3cc8d9c::t_646d058c964dcf 508-509,514-515
+  s_1597f2f3cc8d9c::t_2f70608eb2cf9d 540
+  s_1597f2f3cc8d9c::t_289d3722192cc3 551-571
+web/app/api/analyses/persist/route.ts
+  s_1597f2f3cc8d9c::t_f6b5fb70c55426 891,897
+  s_1597f2f3cc8d9c::t_e1302818256ad7 1302-1312
+  s_1597f2f3cc8d9c::t_04d2acca031e40 1369-1380
+  s_1597f2f3cc8d9c::t_c3cdf67d547a46 212-221
+  s_1597f2f3cc8d9c::t_82ebc98571956d 1047-1064
+  s_1597f2f3cc8d9c::t_2ce9c6df23effa 311
+  s_1597f2f3cc8d9c::t_11e773a9c35299 646
+  s_1597f2f3cc8d9c::t_035ce3106efce2 18
+  s_1597f2f3cc8d9c::t_0fe74832c67b53 737
+  s_1597f2f3cc8d9c::t_fdb5485ef472f3 513-564
+  s_1597f2f3cc8d9c::t_068e160416ac94 818-825,827
+  s_1597f2f3cc8d9c::t_4f9b56157f2977 855,859,865
+  s_1597f2f3cc8d9c::t_faa254418fe001 25
+  s_1597f2f3cc8d9c::t_9cf00bd0c2e641 908-911,915,920
+  s_1597f2f3cc8d9c::t_1deb33ff55eb80 953,955-958,963-964
+  s_1597f2f3cc8d9c::t_fc37fa0442ef2b 1387
+  s_1597f2f3cc8d9c::t_419fb09b210097 780
+  s_1597f2f3cc8d9c::t_5d340cf91ab5e8 728-736,738-739
+  s_1597f2f3cc8d9c::t_25621d5b5d4402 750-753,755
+  s_1597f2f3cc8d9c::t_ab8368891e9fbf 941
+web/lib/usecases/ProjectiveContextUseCase.ts
+  s_1597f2f3cc8d9c::t_733eb2f72afebf 16
+  s_1597f2f3cc8d9c::t_a902f9408f0973 49-50
+  s_1597f2f3cc8d9c::t_4dc8bd59f3a6a4 13,15
+  s_1597f2f3cc8d9c::t_663d81208a8de1 97-112,114-116,118-121,132-134,136-138,140-143,146
+  s_1597f2f3cc8d9c::t_9e0cb9e264e843 26-27
+  s_1597f2f3cc8d9c::t_174cc8f32c0a03 128-131,135,139,144-145
+web/lib/services/analysis-reap-policy.ts
+  s_1597f2f3cc8d9c::t_b124b2a6e64a01 9
+  s_1597f2f3cc8d9c::t_1ee238b8e28061 109-110,116,120-125,129-137,144-145
+worker/src/routes/analysis.ts
+  s_1597f2f3cc8d9c::t_53e8dadf8ae02f 141-142
+  s_1597f2f3cc8d9c::t_fc639c9517d082 923
+web/lib/config/synthesis.ts
+  s_1597f2f3cc8d9c::t_73e5eab1001b29 34-118
+worker/src/services/PersistService.ts
+  s_1597f2f3cc8d9c::t_e1140b064f2794 49-50
+  s_1597f2f3cc8d9c::t_54a09f9663a039 263
+  s_1597f2f3cc8d9c::t_d214762a726e74 294
+web/app/api/analyses/[id]/projective-context/route.ts
+  s_1597f2f3cc8d9c::t_da86a0519d9af8 7
+  s_1597f2f3cc8d9c::t_78c1a7be8f3aff 43-44
+  s_1597f2f3cc8d9c::t_6ff28630d2fda6 45
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_1597f2f3cc8d9c::t_8ad1bc978ced1b 82
+  s_1597f2f3cc8d9c::t_20800283933e5e 574-575,585
+  s_1597f2f3cc8d9c::t_076261530a80ec 613,618,620-621
+  s_1597f2f3cc8d9c::t_6549bbf9a771a3 652,657,659
+web/lib/services/reduce-grounded-chunks.ts
+  s_1597f2f3cc8d9c::t_82d89f699aa2a5 189-263
+  s_1597f2f3cc8d9c::t_9f7b13260604b8 23-34
+web/lib/ports/AnalysisPersistencePort.ts
+  s_1597f2f3cc8d9c::t_ac6bbb2faa9550 160-161
+  s_1597f2f3cc8d9c::t_5a9ba962932fd2 270-271,277
+  s_1597f2f3cc8d9c::t_40ccb908ecc94e 293
+web/lib/services/analysis-reaper.ts
+  s_1597f2f3cc8d9c::t_04f82aedfdfc08 19,21
+  s_1597f2f3cc8d9c::t_da1a72c6cdd4fe 456
+  s_1597f2f3cc8d9c::t_a7d174fe83c4e9 197-198,203-204,208-214,227-240
+  s_1597f2f3cc8d9c::t_612858c3027242 104-105
+  s_1597f2f3cc8d9c::t_8f547b6cc893ad 334-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0b102617cf826b1a3baef506ad49610fae95e045",
+  "prompts": {},
+  "sessions": {
+    "s_1597f2f3cc8d9c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0bb3b3fdfferyqU7v2NZMrRH7",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
