@@ -1426,5 +1426,110 @@
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/comments/persist-sample-run/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/nextjs' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/app/api/comments/persist-sample-run/route.ts",
+    "severity": "medium",
+    "title": "Validation: Manual range check duplicates Zod schema",
+    "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
+    "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/queue-consumers/comments-tier3.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/routes/comments.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/cloudflare' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "worker/src/routes/comments.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/routes/comments.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/routes/comments.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import './user-agent' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   }
 ]

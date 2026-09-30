@@ -19,6 +19,8 @@ export interface VideoComment {
   text: string;
   publishedAt: string;
   likeCount: number;
+  /** YouTube comment id (Dispatch A 2026-09-30): Cochran-mode dedupe across the relevance/time pools + comment_classifications.comment_external_id. Optional for backwards compatibility. */
+  externalId?: string;
 }
 
 export interface CommentPage {

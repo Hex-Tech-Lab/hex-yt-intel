@@ -30,6 +30,29 @@ export interface CommentsTier3QueueMessage {
   userId: string;
   totalCommentCount: number;
   appUrl: string;
+  /**
+   * Comments Dispatch A (2026-09-30): 'uncapped' (default, legacy fetch-and-
+   * count path) or 'cochran' (stratified sample -> Jev classification ->
+   * typed persist). Optional so in-flight messages produced before this
+   * change remain valid.
+   */
+  mode?: 'uncapped' | 'cochran';
+  /**
+   * Sampling parameters resolved on Vercel from the Settings Registry and
+   * carried in the signed message — the consumer must NOT invent defaults
+   * silently (logs + Sentry + fails the run when missing in cochran mode).
+   * Required when mode='cochran'.
+   */
+  sampling?: {
+    syncPoolMaxPages: number;
+    recencyPoolMaxPages: number;
+    likeBucketCount: number;
+    recencyBucketCount: number;
+    cochran: { zScore: number; marginOfError: number; pEstimate: number };
+    minConfidence: number;
+    classifierConcurrency: number;
+    classifierRequestTimeoutMs: number;
+  };
 }
 
 interface EnqueueRequest {
@@ -38,6 +61,8 @@ interface EnqueueRequest {
   userId: string;
   totalCommentCount: number;
   appUrl: string;
+  mode?: 'uncapped' | 'cochran';
+  sampling?: CommentsTier3QueueMessage['sampling'];
   sig: string;
   exp: number;
 }
@@ -113,6 +138,8 @@ export async function handleCommentsTier3Enqueue(c: Context<{ Bindings: Comments
       userId: req.userId,
       totalCommentCount: req.totalCommentCount,
       appUrl: req.appUrl,
+      mode: req.mode,
+      sampling: req.sampling,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

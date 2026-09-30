@@ -59,6 +59,8 @@ import { signChannelMetaToken, signCommentsTier3Token } from '@/lib/stream-token
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseAuxRemediationAdapter } from '@/lib/adapters/SupabaseAuxRemediationAdapter';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { validateCochranSamplingConfig } from '@/lib/config/comments-sampling-config';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { auxStatusFromAnalysisPayload, type AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
@@ -263,6 +265,64 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
   }
 
   const token = await signCommentsTier3Token(runRow.id, gap.userId);
+
+  // Cochran-mode sampling config (Comments Dispatch A, 2026-09-30): all
+  // values are registry-driven, resolved HERE (Vercel) and carried inside
+  // the signed queue message — the worker consumer never invents defaults
+  // silently; a missing value fails the run loudly. Fallbacks mirror the
+  // registry seeds in migrations 20260930160000/20260930170000.
+  const registry = await SupabaseSettingsAdapter.getRegistrySettings(
+    [
+      'comments.sampling.syncPoolMaxPages',
+      'comments.sampling.recencyPoolMaxPages',
+      'comments.sampling.likeBucketCount',
+      'comments.sampling.recencyBucketCount',
+      'comments.cochran.zScore',
+      'comments.cochran.marginOfError',
+      'comments.cochran.pEstimate',
+      'comments.jev.minConfidence',
+      'comments.jev.concurrency',
+      'comments.jev.requestTimeoutMs',
+    ],
+    {
+      'comments.sampling.syncPoolMaxPages': 10,
+      'comments.sampling.recencyPoolMaxPages': 10,
+      'comments.sampling.likeBucketCount': 3,
+      'comments.sampling.recencyBucketCount': 3,
+      'comments.cochran.zScore': 1.96,
+      'comments.cochran.marginOfError': 0.05,
+      'comments.cochran.pEstimate': 0.5,
+      'comments.jev.minConfidence': 0.5,
+      'comments.jev.concurrency': 8,
+      'comments.jev.requestTimeoutMs': 15000,
+    }
+  );
+  const setting = registry as Record<string, unknown>;
+  const sampling = {
+    syncPoolMaxPages: Number(setting['comments.sampling.syncPoolMaxPages']),
+    recencyPoolMaxPages: Number(setting['comments.sampling.recencyPoolMaxPages']),
+    likeBucketCount: Number(setting['comments.sampling.likeBucketCount']),
+    recencyBucketCount: Number(setting['comments.sampling.recencyBucketCount']),
+    cochran: {
+      zScore: Number(setting['comments.cochran.zScore']),
+      marginOfError: Number(setting['comments.cochran.marginOfError']),
+      pEstimate: Number(setting['comments.cochran.pEstimate']),
+    },
+    minConfidence: Number(setting['comments.jev.minConfidence']),
+    classifierConcurrency: Number(setting['comments.jev.concurrency']),
+    classifierRequestTimeoutMs: Number(setting['comments.jev.requestTimeoutMs']),
+  };
+  // #378 review P2: never coerce a bad registry value to 0 and enqueue it.
+  const validation = validateCochranSamplingConfig(sampling);
+  if (!validation.ok) {
+    console.error('[aux-remediation] invalid comments sampling settings, not enqueueing', { analysisId: gap.id, errors: validation.errors });
+    Sentry.captureMessage('comments cochran backfill not enqueued: invalid sampling settings', {
+      level: 'error',
+      extra: { analysisId: gap.id, errors: validation.errors },
+    });
+    return false;
+  }
+
   try {
     const res = await fetch(`${env.cloudflareWorkerUrl}/comments/tier3/enqueue`, {
       method: 'POST',
@@ -273,6 +333,8 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
         userId: gap.userId,
         totalCommentCount,
         appUrl: env.appUrl || 'https://getvintel.com',
+        mode: 'cochran',
+        sampling: validation.config,
         sig: token.sig,
         exp: token.exp,
       }),
