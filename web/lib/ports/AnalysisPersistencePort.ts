@@ -217,6 +217,11 @@ export interface AnalysisPersistencePort {
   persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
+    // R3b 2-D chunk matrix (ADR 037 Addendum A): 0-based Jev conceptual-chunk
+    // slice this bundle belongs to. K=1 today, so every caller passes the
+    // default 0 (the legacy slice); the column participates in the new
+    // unique_analysis_chunk_cell key.
+    jevChunkIndex?: number;
     dimensionsCovered: number[];
     payload: any;
     status: 'completed' | 'failed' | 'interrupted';
