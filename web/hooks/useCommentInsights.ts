@@ -28,11 +28,21 @@ function readInsightsFromPayload(payload: unknown): CommentInsights | null {
 type RunLookup = CommentRunStatus | null | 'error';
 type SetResult = (next: CommentInsightsResult) => void;
 
-/** Single I/O point: JSON body, or null on a non-OK response (whose unread body is released). */
-async function getJson(path: string, signal: AbortSignal): Promise<Record<string, unknown> | null> {
+const API_PREFIX = { analysis: '/api/analyses/', run: '/api/comments/runs/' } as const;
+
+/**
+ * Single I/O point: JSON body, or null on a non-OK response (whose unread
+ * body is released). The request URL is built here from a fixed same-origin
+ * prefix plus a UUID-checked id, and rejected unless it resolves to this
+ * origin -- no caller-supplied URL ever reaches fetch.
+ */
+async function getJson(endpoint: keyof typeof API_PREFIX, analysisId: string, signal: AbortSignal): Promise<Record<string, unknown> | null> {
+  if (!UUID_RE.test(analysisId)) return null;
+  const url = new URL(API_PREFIX[endpoint] + encodeURIComponent(analysisId), window.location.origin);
+  if (url.origin !== window.location.origin) return null;
   let res: Response | null = null;
   try {
-    res = await fetch(path, { signal });
+    res = await fetch(url.pathname, { signal });
     if (!res.ok) return null;
     return (await res.json()) as Record<string, unknown>;
   } finally {
@@ -42,13 +52,13 @@ async function getJson(path: string, signal: AbortSignal): Promise<Record<string
 
 /** 'ready' + insights, 'absent' when the persisted payload has none, 'error' on a transient failure. */
 async function readPersistedInsights(analysisId: string, signal: AbortSignal): Promise<CommentInsights | 'absent' | 'error'> {
-  const data = await getJson(`/api/analyses/${encodeURIComponent(analysisId)}`, signal);
+  const data = await getJson('analysis', analysisId, signal);
   if (!data) return 'error';
   return readInsightsFromPayload(data.analysis_payload) ?? 'absent';
 }
 
 async function readRunStatus(analysisId: string, signal: AbortSignal): Promise<RunLookup> {
-  const data = await getJson(`/api/comments/runs/${encodeURIComponent(analysisId)}`, signal);
+  const data = await getJson('run', analysisId, signal);
   if (!data) return 'error';
   return (data.run as CommentRunStatus | null) ?? null;
 }
@@ -69,6 +79,29 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
+ * One run-status observation -> the next state. 'retry' keeps polling
+ * (transient failure or still pending/sampling); 'done' stops.
+ */
+async function applyRunStatus(run: RunLookup, analysisId: string, signal: AbortSignal, setResult: SetResult): Promise<'done' | 'retry'> {
+  if (run === 'error') {
+    console.warn('[useCommentInsights] run-status poll returned non-OK; retrying');
+    return 'retry';
+  }
+  if (run?.status === 'pending' || run?.status === 'sampling') {
+    setResult({ state: 'analyzing', insights: null });
+    return 'retry';
+  }
+  if (run?.status === 'completed') {
+    const persisted = await readPersistedInsights(analysisId, signal);
+    if (persisted === 'error') return 'retry';
+    setResult(persisted === 'absent' ? { state: 'failed', insights: null } : { state: 'ready', insights: persisted });
+    return 'done';
+  }
+  setResult({ state: run?.status === 'failed' ? 'failed' : 'none', insights: null });
+  return 'done';
+}
+
+/**
  * The run-status state machine as one sequential loop (no timer recursion).
  * The persisted payload is read once up front and once on completion; each
  * iteration otherwise only hits the small run-status route. A network error
@@ -77,35 +110,22 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
  */
 async function pollCommentInsights(analysisId: string, signal: AbortSignal, setResult: SetResult): Promise<void> {
   const deadline = Date.now() + POLL_CAP_MS;
-  let first = true;
+  try {
+    const persisted = await readPersistedInsights(analysisId, signal);
+    if (typeof persisted === 'object') {
+      setResult({ state: 'ready', insights: persisted });
+      return;
+    }
+  } catch (err: unknown) {
+    if (signal.aborted) return;
+    console.warn('[useCommentInsights] initial payload read failed; polling', err);
+  }
   while (!signal.aborted) {
     let outcome: 'done' | 'retry' = 'retry';
     try {
-      if (first) {
-        first = false;
-        const persisted = await readPersistedInsights(analysisId, signal);
-        if (typeof persisted === 'object') { setResult({ state: 'ready', insights: persisted }); return; }
-      }
       const run = await readRunStatus(analysisId, signal);
       if (signal.aborted) return;
-      if (run === 'error') {
-        console.warn('[useCommentInsights] run-status poll returned non-OK; retrying');
-      } else if (!run) {
-        setResult({ state: 'none', insights: null });
-        outcome = 'done';
-      } else if (run.status === 'completed') {
-        const persisted = await readPersistedInsights(analysisId, signal);
-        if (typeof persisted === 'object') { setResult({ state: 'ready', insights: persisted }); outcome = 'done'; }
-        else if (persisted === 'absent') { setResult({ state: 'failed', insights: null }); outcome = 'done'; }
-      } else if (run.status === 'failed') {
-        setResult({ state: 'failed', insights: null });
-        outcome = 'done';
-      } else if (run.status === 'pending' || run.status === 'sampling') {
-        setResult({ state: 'analyzing', insights: null });
-      } else {
-        setResult({ state: 'none', insights: null });
-        outcome = 'done';
-      }
+      outcome = await applyRunStatus(run, analysisId, signal, setResult);
     } catch (err: unknown) {
       if (signal.aborted) return; // cancellation, not an error
       console.warn('[useCommentInsights] poll failed; retrying', err);
