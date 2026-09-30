@@ -201,7 +201,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
       getSupabaseServiceClient: () => ({
         from: (_table: string) => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+            eq: () => ({ eq: (col: string, val: unknown) => Promise.resolve(col === 'jev_chunk_index' && val === 0 ? { data: chunkRows, error: null } : { data: null, error: new Error(`unexpected filter ${col}=${String(val)}`) }) }),
           }),
         }),
       }),
@@ -359,7 +359,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
       getSupabaseServiceClient: () => ({
         from: () => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: null, error: new Error('chunk select failed') }),
+            eq: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('chunk select failed') }) }),
           }),
         }),
       }),
@@ -428,7 +428,7 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
       getSupabaseServiceClient: () => ({
         from: (_table: string) => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+            eq: () => ({ eq: (col: string, val: unknown) => Promise.resolve(col === 'jev_chunk_index' && val === 0 ? { data: chunkRows, error: null } : { data: null, error: new Error(`unexpected filter ${col}=${String(val)}`) }) }),
           }),
         }),
       }),
