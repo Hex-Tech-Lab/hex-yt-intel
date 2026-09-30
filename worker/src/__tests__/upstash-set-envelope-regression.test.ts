@@ -79,4 +79,33 @@ describe('UpstashCacheAdapter.set — envelope regression (2026-09-30)', () => {
     const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
     expect(await adapter.get('channel-meta:x')).toBe(real);
   });
+
+  it('GET heals a legacy envelope key: re-SETs the bare value with a native TTL from its inner ex', async () => {
+    const real = JSON.stringify([{ author: 'a', text: 't', publishedAt: 'p', likeCount: 1 }]);
+    const calls: Array<{ url: string; body: string }> = [];
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, body: typeof init?.body === 'string' ? init.body : '' });
+      const result = url.includes('/get/') ? JSON.stringify({ value: real, ex: 3600, get: false, xx: false }) : 'OK';
+      return Promise.resolve(new Response(JSON.stringify({ result }), { status: 200 }));
+    }) as unknown as typeof fetch;
+    const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
+    const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
+    expect(await adapter.get('comments-sampled:vid')).toBe(real);
+    const heal = calls.find((call) => call.url.includes('/set/comments-sampled:vid'));
+    expect(heal?.url).toContain('?ex=3600');
+    expect(heal?.body).toBe(real);
+  });
+
+  it('GET of a clean value never writes', async () => {
+    const calls: string[] = [];
+    globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return Promise.resolve(new Response(JSON.stringify({ result: '[1]' }), { status: 200 }));
+    }) as unknown as typeof fetch;
+    const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
+    const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
+    expect(await adapter.get('comments-sampled:vid')).toBe('[1]');
+    expect(calls.some((url) => url.includes('/set/'))).toBe(false);
+  });
 });

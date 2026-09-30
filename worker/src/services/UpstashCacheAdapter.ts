@@ -20,14 +20,26 @@ const DEFAULT_TTL_SECONDS = 604800; // 7 days
  * readable again without a production purge, and they age out on their TTL.
  */
 export function unwrapLegacySetEnvelope(raw: string | null): string | null {
-  if (raw === null || !raw.startsWith('{"value":')) return raw;
+  return parseLegacySetEnvelope(raw)?.value ?? raw;
+}
+
+/**
+ * Returns the envelope's inner value and its intended TTL (seconds), or null
+ * when `raw` is not a legacy envelope. The legacy SET put `ex` in the value,
+ * not on the key, so poisoned keys have NO native Redis TTL (verified
+ * 2026-09-30: TTL -1) -- the caller re-applies it (see get()).
+ */
+export function parseLegacySetEnvelope(raw: string | null): { value: string; ttlSeconds: number } | null {
+  if (raw === null || !raw.startsWith('{"value":')) return null;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.value === 'string' && 'ex' in parsed) return parsed.value;
+    if (typeof parsed.value !== 'string' || !('ex' in parsed)) return null;
+    const ex = Number(parsed.ex);
+    return { value: parsed.value, ttlSeconds: Number.isFinite(ex) && ex > 0 ? Math.floor(ex) : DEFAULT_TTL_SECONDS };
   } catch {
     console.debug('[UpstashCacheAdapter] value starts like a legacy SET envelope but is not JSON; returning it unchanged');
+    return null;
   }
-  return raw;
 }
 
 export class UpstashCacheAdapter implements PersistenceRepositoryPort {
@@ -61,7 +73,13 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       });
       if (!response.ok) return null;
       const data = (await response.json()) as { result: string | null };
-      return unwrapLegacySetEnvelope(data.result);
+      const legacy = parseLegacySetEnvelope(data.result);
+      if (!legacy) return data.result;
+      // Heal the key: store the bare value with a native TTL, so it is both
+      // readable by any reader and expires like every other entry. Awaited so
+      // the Worker does not drop it; a failure only leaves the key as it was.
+      await this.set(key, legacy.value, legacy.ttlSeconds);
+      return legacy.value;
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash GET failed, proceeding without cache hit');
       return null;
