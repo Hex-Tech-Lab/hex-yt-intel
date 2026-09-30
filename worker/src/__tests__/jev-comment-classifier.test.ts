@@ -8,6 +8,7 @@
  * sums usage.cost. Negative controls: entity-decode and omit-on-failure
  * tests are proven to fail against the unfixed behavior.
  */
+import * as Sentry from '@sentry/cloudflare';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { JevCommentClassifier, JEV_CLASSIFIER_CONFIG_DEFAULTS, JEV_COMMENT_QUESTIONS, decodeHtmlEntities } from '../services/JevCommentClassifier';
 
@@ -42,14 +43,17 @@ function okFetch(overrides?: Record<string, unknown>, cost = 0.000028182) {
 }
 
 describe('JevCommentClassifier', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.mocked(Sentry.captureMessage).mockClear();
+  });
 
   it('maps every field of the verified Jev response shape', async () => {
     const fetchMock = okFetch();
     vi.stubGlobal('fetch', fetchMock);
 
     const classifier = new JevCommentClassifier('test-key');
-    const result = await classifier.classifyBatch([comment('great video!')]);
+    const { results: result, costUsd } = await classifier.classifyBatchWithCost([comment('great video!')]);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -74,7 +78,7 @@ describe('JevCommentClassifier', () => {
     expect(first.sentimentConfidence).toBeCloseTo(0.6);
     expect(first.lowConfidence).toBe(false);
     expect(first.modelUsed).toBe('typesafe/jev-1.13-20260917');
-    expect(classifier.getLastBatchCostUsd()).toBeCloseTo(0.000028182);
+    expect(costUsd).toBeCloseTo(0.000028182);
   });
 
   it('decodes HTML entities before sending (&quot; → ")', async () => {
@@ -131,6 +135,22 @@ describe('JevCommentClassifier', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]!.comment.author).toBe('c2');
+    expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(Sentry.captureMessage).mock.calls[0]![1]).toMatchObject({
+      level: 'warning',
+      tags: { operation: 'jev-comment-classify-batch' },
+      extra: { batchSize: 2, failedCount: 1, invalidResponseCount: 0 },
+    });
+  });
+
+  it('all-failed batch: nothing returned, one Sentry event with the full count', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 } as Response));
+    const classifier = new JevCommentClassifier('test-key');
+    const outcome = await classifier.classifyBatchWithCost([comment('a', 'c1'), comment('b', 'c2'), comment('c', 'c3')]);
+    expect(outcome.results).toEqual([]);
+    expect(outcome.failedCount).toBe(3);
+    expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(Sentry.captureMessage).mock.calls[0]![1]).toMatchObject({ extra: { batchSize: 3, failedCount: 3 } });
   });
 
   it('network throw → comment omitted', async () => {
@@ -190,8 +210,44 @@ describe('JevCommentClassifier', () => {
   it('cost sums across multiple calls', async () => {
     vi.stubGlobal('fetch', okFetch(undefined, 0.00003));
     const classifier = new JevCommentClassifier('test-key');
-    await classifier.classifyBatch([comment('a', 'c1'), comment('b', 'c2')]);
-    expect(classifier.getLastBatchCostUsd()).toBeCloseTo(0.00006, 8);
+    const { costUsd } = await classifier.classifyBatchWithCost([comment('a', 'c1'), comment('b', 'c2')]);
+    expect(costUsd).toBeCloseTo(0.00006, 8);
+  });
+
+  it('cost is per invocation: a reused instance and overlapping batches never mix totals (#376 P2)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 3));
+      return { ok: true, json: () => jevResponse({}, 0.00001) } as Response;
+    }));
+    const classifier = new JevCommentClassifier('test-key');
+    const first = await classifier.classifyBatchWithCost([comment('a', 'c1')]);
+    const second = await classifier.classifyBatchWithCost([comment('b', 'c2'), comment('c', 'c3')]);
+    expect(first.costUsd).toBeCloseTo(0.00001, 10);
+    expect(second.costUsd).toBeCloseTo(0.00002, 10);
+    const [left, right] = await Promise.all([
+      classifier.classifyBatchWithCost([comment('d', 'c4')]),
+      classifier.classifyBatchWithCost([comment('e', 'c5'), comment('f', 'c6'), comment('g', 'c7')]),
+    ]);
+    expect(left.costUsd).toBeCloseTo(0.00001, 10);
+    expect(right.costUsd).toBeCloseTo(0.00003, 10);
+  });
+
+  it.each([
+    ['answers missing', { answers: undefined }],
+    ['sentiment choice not in the set', { answers: { sentiment: { type: 'choice', choice: 'happy', confidence: 0.9 } } }],
+    ['pain_point out of range', { answers: { pain_point: { type: 'noul', noul: 1.4 } } }],
+    ['intensity wrong type', { answers: { intensity: { type: 'choice', choice: 'Strong' } } }],
+    ['sentiment confidence missing', { answers: { sentiment: { type: 'choice', choice: 'positive' } } }],
+  ])('malformed 200 response (%s) is omitted and counted, never defaulted (#376 P1)', async (_label, broken) => {
+    const valid = jevResponse();
+    const answers = broken.answers === undefined ? undefined : { ...valid.answers, ...broken.answers };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => ({ ...valid, answers }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: () => valid } as Response));
+    const classifier = new JevCommentClassifier('test-key');
+    const outcome = await classifier.classifyBatchWithCost([comment('broken', 'c1'), comment('fine', 'c2')]);
+    expect(outcome.results.map((classified) => classified.comment.author)).toEqual(['c2']);
+    expect(outcome.failedCount).toBe(1);
   });
 
   // ─── Negative controls ────────────────────────────────────────────────────

@@ -156,18 +156,24 @@ function sanitizeCommentText(raw: string): string {
 }
 
 export class JevCommentClassifier implements CommentClassificationPort {
-  private lastBatchCostUsd = 0;
-
   constructor(
     private apiKey: string,
     private config: JevClassifierConfig = JEV_CLASSIFIER_CONFIG_DEFAULTS,
   ) {}
 
   async classifyBatch(comments: VideoComment[]): Promise<ClassifiedComment[]> {
-    if (comments.length === 0) {
-      this.lastBatchCostUsd = 0;
-      return [];
-    }
+    return (await this.classifyBatchWithCost(comments)).results;
+  }
+
+  /**
+   * Same as classifyBatch, plus THIS invocation's own cost and failure count.
+   * Everything is local to the call, so a reused instance or overlapping
+   * batches (concurrent queue messages) never mix their totals.
+   */
+  async classifyBatchWithCost(
+    comments: VideoComment[],
+  ): Promise<{ results: ClassifiedComment[]; costUsd: number; failedCount: number }> {
+    if (comments.length === 0) return { results: [], costUsd: 0, failedCount: 0 };
 
     const prepared: DecodedComment[] = comments.map((comment) => ({
       comment,
@@ -175,6 +181,8 @@ export class JevCommentClassifier implements CommentClassificationPort {
     }));
 
     let failedCount = 0;
+    let invalidResponseCount = 0;
+    let costUsd = 0;
     const results: (ClassifiedComment | undefined)[] = new Array(prepared.length);
     let nextIndex = 0;
     let inFlight = 0;
@@ -192,9 +200,12 @@ export class JevCommentClassifier implements CommentClassificationPort {
           try {
             const entry = prepared[i];
             if (!entry) return;
-            results[i] = await this.classifyOne(entry);
+            const outcome = await this.classifyOne(entry);
+            results[i] = outcome.classified;
+            costUsd += outcome.costUsd;
           } catch (error) {
             failedCount += 1;
+            if (error instanceof JevResponseError) invalidResponseCount += 1;
             console.warn('[JevCommentClassifier] Decisions call failed', error instanceof Error ? error.message : String(error));
             // Deliberately leave results[i] undefined: a failed call yields NO
             // entry for that comment — never a fabricated default.
@@ -211,61 +222,31 @@ export class JevCommentClassifier implements CommentClassificationPort {
       Sentry.captureMessage('JevCommentClassifier: some Decisions calls failed for batch', {
         level: 'warning',
         tags: { operation: 'jev-comment-classify-batch' },
-        extra: { batchSize: comments.length, failedCount },
+        extra: { batchSize: comments.length, failedCount, invalidResponseCount },
       });
     }
 
-    return results.filter((classified): classified is ClassifiedComment => classified !== undefined);
+    return {
+      results: results.filter((classified): classified is ClassifiedComment => classified !== undefined),
+      costUsd,
+      failedCount,
+    };
   }
 
   /** Cost summed from `usage.cost` across the last classifyBatch's successful calls. */
-  getLastBatchCostUsd(): number {
-    return this.lastBatchCostUsd;
-  }
 
-  private async classifyOne(entry: DecodedComment): Promise<ClassifiedComment> {
+  private async classifyOne(entry: DecodedComment): Promise<{ classified: ClassifiedComment; costUsd: number }> {
     const response = await this.callDecisions({ comment: entry.text });
-
-    const sentimentAnswer = response.answers?.sentiment;
-    const typeAnswer = response.answers?.comment_type;
-    const painAnswer = response.answers?.pain_point;
-    const questionAnswer = response.answers?.question_asked;
-    const intensityAnswer = response.answers?.intensity;
-
-    const sentiment: CommentSentiment =
-      typeof sentimentAnswer?.choice === 'string' &&
-      (VALID_SENTIMENTS as readonly string[]).includes(sentimentAnswer.choice)
-        ? (sentimentAnswer.choice as CommentSentiment)
-        : 'neutral';
-    const commentType: CommentType =
-      typeof typeAnswer?.choice === 'string' &&
-      (VALID_TYPES as readonly string[]).includes(typeAnswer.choice)
-        ? (typeAnswer.choice as CommentType)
-        : 'off_topic';
-
-    // noul answers: 0 = no, 1 = yes; 0.05 sentinel ≈ effectively no.
-    const painPoint = painAnswer?.type === 'noul' ? clamp0to1(painAnswer.noul ?? 0) : 0;
-    const questionAsked = questionAnswer?.type === 'noul' ? clamp0to1(questionAnswer.noul ?? 0) : 0;
-    const intensity = intensityAnswer?.type === 'score' ? clamp0to2(intensityAnswer.score ?? 0) : 0;
-
-    const sentimentConfidence = clamp0to1(sentimentAnswer?.confidence ?? 0);
-    const lowConfidence = sentimentConfidence < this.config.minConfidence;
-
+    const answers = parseJevAnswers(response);
     const cost = response.usage?.cost;
-    if (typeof cost === 'number' && Number.isFinite(cost)) {
-      this.lastBatchCostUsd += cost;
-    }
-
     return {
-      comment: entry.comment,
-      sentiment,
-      commentType,
-      painPoint,
-      questionAsked,
-      intensity,
-      sentimentConfidence,
-      lowConfidence,
-      modelUsed: typeof response.model === 'string' && response.model ? response.model : JEV_MODEL,
+      classified: {
+        comment: entry.comment,
+        ...answers,
+        lowConfidence: answers.sentimentConfidence < this.config.minConfidence,
+        modelUsed: typeof response.model === 'string' && response.model ? response.model : JEV_MODEL,
+      },
+      costUsd: typeof cost === 'number' && Number.isFinite(cost) && cost >= 0 ? cost : 0,
     };
   }
 
@@ -294,13 +275,49 @@ export class JevCommentClassifier implements CommentClassificationPort {
   }
 }
 
-function clamp0to2(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(2, Math.max(0, value));
+/** A 200 response whose answers are missing, mistyped or out of range. */
+export class JevResponseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'JevResponseError';
+  }
 }
 
-function clamp0to1(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
+function requireUnit(value: unknown, field: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
+    throw new JevResponseError(`${field} must be a number in [${min}, ${max}]`);
+  }
+  return value;
 }
+
+/**
+ * Strict runtime validation of a Decisions response (#376 review P1): a
+ * malformed or changed 200 response must NEVER be mapped to plausible
+ * defaults (neutral / off_topic / 0). Anything missing, mistyped or out of
+ * range throws JevResponseError, so the comment is omitted and counted.
+ */
+export function parseJevAnswers(response: JevResponse): Omit<ClassifiedComment, 'comment' | 'lowConfidence' | 'modelUsed'> {
+  const answers = response.answers;
+  if (!answers || typeof answers !== 'object') throw new JevResponseError('answers missing');
+  const { sentiment, comment_type: commentTypeAnswer, pain_point: pain, question_asked: question, intensity } = answers;
+  if (sentiment?.type !== 'choice' || !(VALID_SENTIMENTS as readonly string[]).includes(String(sentiment.choice))) {
+    throw new JevResponseError('sentiment choice invalid');
+  }
+  if (commentTypeAnswer?.type !== 'choice' || !(VALID_TYPES as readonly string[]).includes(String(commentTypeAnswer.choice))) {
+    throw new JevResponseError('comment_type choice invalid');
+  }
+  if (pain?.type !== 'noul') throw new JevResponseError('pain_point is not a noul answer');
+  if (question?.type !== 'noul') throw new JevResponseError('question_asked is not a noul answer');
+  if (intensity?.type !== 'score') throw new JevResponseError('intensity is not a score answer');
+  return {
+    sentiment: sentiment.choice as CommentSentiment,
+    commentType: commentTypeAnswer.choice as CommentType,
+    painPoint: requireUnit(pain.noul, 'pain_point.noul', 0, 1),
+    questionAsked: requireUnit(question.noul, 'question_asked.noul', 0, 1),
+    intensity: requireUnit(intensity.score, 'intensity.score', 0, 2),
+    sentimentConfidence: requireUnit(sentiment.confidence, 'sentiment.confidence', 0, 1),
+  };
+}
+
+
 

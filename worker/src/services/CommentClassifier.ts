@@ -122,8 +122,8 @@ export class CommentClassifier implements CommentClassificationPort {
             painPoint: 0,
             questionAsked: 0,
             intensity: 0,
-            sentimentConfidence: 1,
-            lowConfidence: false,
+            sentimentConfidence: 0,
+            lowConfidence: true, // untrusted: the deprecated chat classifier has no Jev confidence
             modelUsed: entry.name,
           };
         });
