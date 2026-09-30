@@ -37,7 +37,7 @@ const APP_URL = 'https://getvintel.com';
 const TOKEN_TTL_MS = 300_000;
 const METADATA_THROTTLE_MS = 500;
 
-const args = process.argv.slice(2);
+const [, , ...args] = process.argv;
 const apply = args.includes('--apply');
 const only = args.find((a) => a.startsWith('--only='))?.split('=')[1];
 const limit = Number(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? Infinity);
@@ -55,8 +55,19 @@ const REGISTRY_DEFAULTS: Record<string, number> = {
   'comments.jev.requestTimeoutMs': 15000,
 };
 
+/** Every network call goes through here: timeout via AbortController, timer always cleared. */
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
     headers: {
       apikey: SERVICE_KEY,
@@ -64,8 +75,7 @@ async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
       'Content-Type': 'application/json',
       ...(init.headers ?? {}),
     },
-    signal: AbortSignal.timeout(15_000),
-  });
+  }, 15_000);
   if (!res.ok) throw new Error(`Supabase ${path.split('?')[0]} ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
 }
@@ -84,22 +94,22 @@ async function resolveSampling() {
   const vals = await rest<Array<{ setting_key: string; value: unknown }>>(
     `setting_values?select=setting_key,value&scope_type=eq.system&scope_id=is.null&setting_key=${encodeURIComponent(inList)}`
   );
-  const s: Record<string, unknown> = { ...REGISTRY_DEFAULTS };
-  for (const d of defs) s[d.key] = d.default_value;
-  for (const v of vals) s[v.setting_key] = v.value;
+  const settings: Record<string, unknown> = { ...REGISTRY_DEFAULTS };
+  for (const def of defs) settings[def.key] = def.default_value;
+  for (const val of vals) settings[val.setting_key] = val.value;
   return validateCochranSamplingConfig({
-    syncPoolMaxPages: Number(s['comments.sampling.syncPoolMaxPages']),
-    recencyPoolMaxPages: Number(s['comments.sampling.recencyPoolMaxPages']),
-    likeBucketCount: Number(s['comments.sampling.likeBucketCount']),
-    recencyBucketCount: Number(s['comments.sampling.recencyBucketCount']),
+    syncPoolMaxPages: Number(settings['comments.sampling.syncPoolMaxPages']),
+    recencyPoolMaxPages: Number(settings['comments.sampling.recencyPoolMaxPages']),
+    likeBucketCount: Number(settings['comments.sampling.likeBucketCount']),
+    recencyBucketCount: Number(settings['comments.sampling.recencyBucketCount']),
     cochran: {
-      zScore: Number(s['comments.cochran.zScore']),
-      marginOfError: Number(s['comments.cochran.marginOfError']),
-      pEstimate: Number(s['comments.cochran.pEstimate']),
+      zScore: Number(settings['comments.cochran.zScore']),
+      marginOfError: Number(settings['comments.cochran.marginOfError']),
+      pEstimate: Number(settings['comments.cochran.pEstimate']),
     },
-    minConfidence: Number(s['comments.jev.minConfidence']),
-    classifierConcurrency: Number(s['comments.jev.concurrency']),
-    classifierRequestTimeoutMs: Number(s['comments.jev.requestTimeoutMs']),
+    minConfidence: Number(settings['comments.jev.minConfidence']),
+    classifierConcurrency: Number(settings['comments.jev.concurrency']),
+    classifierRequestTimeoutMs: Number(settings['comments.jev.requestTimeoutMs']),
   });
 }
 
@@ -113,16 +123,16 @@ interface Row {
 function knownCount(raw: unknown): number | null {
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   if (typeof raw === 'string' && raw.trim() !== '') {
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) ? n : null;
+    const parsed = parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }
 
 /** Pre-flight: current commentCount from the worker's YouTube metadata route. */
 async function fetchCommentCount(videoId: string): Promise<number | null> {
-  await new Promise((r) => setTimeout(r, METADATA_THROTTLE_MS));
-  const res = await fetch(`${WORKER_URL}/fetch-metadata?video_id=${encodeURIComponent(videoId)}`, { signal: AbortSignal.timeout(20_000) });
+  await new Promise((resolve) => setTimeout(resolve, METADATA_THROTTLE_MS));
+  const res = await fetchWithTimeout(`${WORKER_URL}/fetch-metadata?video_id=${encodeURIComponent(videoId)}`, {}, 20_000);
   if (!res.ok) {
     console.error(`metadata ${videoId}: worker ${res.status}`);
     return null;
@@ -134,12 +144,11 @@ async function fetchCommentCount(videoId: string): Promise<number | null> {
 async function writeCommentCount(row: Row, count: number): Promise<void> {
   const report = row.validation_report ?? {};
   const next = { ...report, metadata: { ...(report.metadata ?? {}), commentCount: count } };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/analyses?id=eq.${row.id}`, {
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/analyses?id=eq.${row.id}`, {
     method: 'PATCH',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
     body: JSON.stringify({ validation_report: next }),
-    signal: AbortSignal.timeout(15_000),
-  });
+  }, 15_000);
   if (!res.ok) throw new Error(`validation_report update ${row.id}: ${res.status} ${await res.text()}`);
 }
 
@@ -153,7 +162,7 @@ async function main() {
   let rows = await rest<Row[]>(
     'analyses?select=id,user_id,video_id,validation_report&analysis_payload=not.is.null&analysis_payload->comments=is.null&video_id=not.like.*_archived_*'
   );
-  if (only) rows = rows.filter((r) => r.id === only);
+  if (only) rows = rows.filter((row) => row.id === only);
 
   const existing = await rest<Array<{ analysis_id: string }>>('comment_sample_runs?select=analysis_id&mode=eq.cochran&status=neq.failed');
   const done = new Set(existing.map((e) => e.analysis_id));
@@ -181,15 +190,14 @@ async function main() {
     });
     const exp = Date.now() + TOKEN_TTL_MS;
     const sig = await hmacHex(`comments-tier3:${run.id}:${row.user_id}:${exp}`);
-    const res = await fetch(`${WORKER_URL}/comments/tier3/enqueue`, {
+    const res = await fetchWithTimeout(`${WORKER_URL}/comments/tier3/enqueue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sampleRunId: run.id, videoId: row.video_id, userId: row.user_id, totalCommentCount: count,
         appUrl: APP_URL, mode: 'cochran', sampling: sampling.config, sig, exp,
       }),
-      signal: AbortSignal.timeout(15_000),
-    });
+    }, 15_000);
     if (!res.ok) {
       console.error(`FAIL ${row.id} ${row.video_id}: worker ${res.status} ${await res.text()}`);
       await rest(`comment_sample_runs?id=eq.${run.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'failed' }) }).catch((e) => console.error(`could not mark run ${run.id} failed`, e));
