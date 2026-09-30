@@ -1,0 +1,34 @@
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_36fb8c22e5363e::t_3f6e1492b9f9a3 618-621
+  s_36fb8c22e5363e::t_51bf540985d6ee 230-231
+  s_36fb8c22e5363e::t_2587c534f44cca 510,530
+  s_36fb8c22e5363e::t_d340b245a2f525 469-470
+  s_36fb8c22e5363e::t_eea0f08b6af989 449
+  s_36fb8c22e5363e::t_bf401adb5f01b1 583-584
+  s_36fb8c22e5363e::t_6e6b248fe6622b 240
+  s_36fb8c22e5363e::t_d0c3ac86db338c 493-494
+  s_36fb8c22e5363e::t_096b9f3f82a7a5 659-660
+  s_36fb8c22e5363e::t_59d647b3aecf45 692-693
+web/lib/__tests__/analysis-chunk-matrix-key.test.ts
+  s_36fb8c22e5363e::t_38c5ebed2dcc01 1-194
+web/lib/ports/AnalysisPersistencePort.ts
+  s_36fb8c22e5363e::t_51124acc731d68 220-224
+supabase/migrations/20260930190000_drop_legacy_analysis_chunk_key.sql
+  s_36fb8c22e5363e::t_24adda6b78d302 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "89581eb97f008da0be867aee4ce2066ec1eae152",
+  "prompts": {},
+  "sessions": {
+    "s_36fb8c22e5363e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0c4ef5fbffeCHa4XMOB1v6qVK",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
