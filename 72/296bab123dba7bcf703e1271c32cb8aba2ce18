@@ -1,0 +1,21 @@
+worker/src/__tests__/upstash-set-envelope-regression.test.ts
+  s_1d1bec99fd4ca5::t_6b10b24b804e3e 82-110
+worker/src/services/UpstashCacheAdapter.ts
+  s_1d1bec99fd4ca5::t_d557eaf2f0619a 23-33,36-38,41,76-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "72296bab123dba7bcf703e1271c32cb8aba2ce18",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
