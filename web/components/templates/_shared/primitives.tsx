@@ -74,7 +74,7 @@ export function GlowBorder({ children, active = false, radius = "card", classNam
       }}
     >
       {active && <span className="hx-spin" aria-hidden />}
-      <div style={{ position: "relative", borderRadius: "calc(var(--radius-card) - 1px)", height: "100%", width: "100%", overflow: "hidden" }}>
+      <div style={{ position: "relative", borderRadius: `calc(${computedRadius} - 1px)`, height: "100%", width: "100%", overflow: "hidden" }}>
         {children}
       </div>
     </div>
