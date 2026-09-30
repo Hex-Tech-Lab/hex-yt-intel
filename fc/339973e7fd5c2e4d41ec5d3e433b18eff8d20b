@@ -1,0 +1,19 @@
+web/components/templates/console/CommentInsightsCard.tsx
+  s_aee5fce115b5f1::t_6b293b7447d188 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fc339973e7fd5c2e4d41ec5d3e433b18eff8d20b",
+  "prompts": {},
+  "sessions": {
+    "s_aee5fce115b5f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0dff2b81ffegvW4N7GGphvCsS",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
