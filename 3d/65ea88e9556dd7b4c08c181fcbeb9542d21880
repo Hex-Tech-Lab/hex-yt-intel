@@ -1,0 +1,33 @@
+web/app/api/comments/persist-sample-run/__tests__/route.test.ts
+  s_1d1bec99fd4ca5::t_2dfe0c3b9086ae 109,113
+web/lib/__tests__/persist-sample-run-cochran.test.ts
+  s_1d1bec99fd4ca5::t_74d451de233706 63
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_1d1bec99fd4ca5::t_0872099ddc292a 141-144
+worker/src/__tests__/cochran-mode-engine.test.ts
+  s_1d1bec99fd4ca5::t_2d8737a7cf47ca 60-64,75,115,134,192
+worker/src/__tests__/comments-tier3-cochran.test.ts
+  s_1d1bec99fd4ca5::t_fa3be1c992c1bd 126,136,139-142,146,165-166,171,173,193
+worker/src/services/cochran-mode-engine.ts
+  s_1d1bec99fd4ca5::t_3b91c3f84dfb76 65,68,86-89
+.memory/AGENT_LEDGER.md
+  s_1d1bec99fd4ca5::t_8b9249478cc770 1455
+.qa-intel/baseline.json
+  s_1d1bec99fd4ca5::t_52ffeb64e93fdc 2-1100,1206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3d65ea88e9556dd7b4c08c181fcbeb9542d21880",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
