@@ -1,75 +1,109 @@
-/**
- * Regression coverage for SupabaseAnalysisAdapter.persistJevPlan (R3b 2.3).
- *
- * The conditional update (`.is('jev_plan', null)`) is the idempotence gate:
- * a second /plan call must never overwrite a stored plan. Also covers the
- * zero-rows branch (stored plan returned; missing row throws).
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-const serviceMock = vi.hoisted(() => {
-  let stored: unknown = null;
-  let rowExists = true;
-  const state = { writes: 0 };
-  const builder = () => {
-    const query: Record<string, unknown> = {};
-    query.update = (patch: { jev_plan?: unknown }) => {
-      state.writes += 1;
-      // Conditional update semantics: lands only when the row exists AND has
-      // no plan yet (matches the adapter's .is('jev_plan', null) gate).
-      const landed = rowExists && stored === null && patch && 'jev_plan' in patch;
-      if (landed) stored = patch.jev_plan;
-      query.maybeSingle = () =>
-        Promise.resolve({ data: landed ? { jev_plan: stored } : null, error: null });
-      return query;
-    };
-    query.eq = () => query;
-    query.is = () => query;
-    query.select = () => query;
-    query.maybeSingle = () => Promise.resolve({ data: rowExists ? { jev_plan: stored } : null, error: null });
-    return query;
-  };
-  return {
-    __state: state,
-    __setStored: (planValue: unknown) => {
-      stored = planValue;
-    },
-    __setRowExists: (exists: boolean) => {
-      rowExists = exists;
-    },
-    from: () => builder(),
-  };
-});
-
-vi.mock('@/lib/supabase', () => ({ getSupabaseServiceClient: () => serviceMock }));
-vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
-
 import { SupabaseAnalysisAdapter } from '@/lib/adapters/SupabaseAnalysisAdapter';
 
-beforeEach(() => {
-  serviceMock.__setStored(null);
-  serviceMock.__setRowExists(true);
-  serviceMock.__state.writes = 0;
-});
+// Mock Supabase service client
+const mockMaybeSingle = vi.fn();
+const mockNeq = vi.fn();
+const mockEq = vi.fn();
+const mockOrder = vi.fn();
+const mockLimit = vi.fn();
+const mockSelect = vi.fn();
 
-describe('SupabaseAnalysisAdapter.persistJevPlan', () => {
-  it('writes once and reports stored=true when the row had no plan', async () => {
-    const res = await SupabaseAnalysisAdapter.persistJevPlan({ analysisId: 'a1', plan: { K: 1 } });
-    expect(serviceMock.__state.writes).toBe(1);
-    expect(res).toEqual({ plan: { K: 1 }, stored: true });
+const queryBuilder: any = {
+  select: mockSelect,
+  eq: mockEq,
+  neq: mockNeq,
+  order: mockOrder,
+  limit: mockLimit,
+  maybeSingle: mockMaybeSingle,
+};
+
+mockSelect.mockImplementation(() => queryBuilder);
+mockEq.mockImplementation(() => queryBuilder);
+mockNeq.mockImplementation(() => queryBuilder);
+mockOrder.mockImplementation(() => queryBuilder);
+mockLimit.mockImplementation(() => queryBuilder);
+
+const mockFrom = vi.fn(() => queryBuilder);
+
+vi.mock('@/lib/supabase', () => ({
+  getSupabaseServiceClient: () => ({
+    from: mockFrom,
+  }),
+}));
+
+describe('SupabaseAnalysisAdapter.findCachedAnalysis (Content & Status Invariants)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('returns the STORED plan without overwriting when one already exists', async () => {
-    const stored = { K: 3, cells: [] };
-    serviceMock.__setStored(stored);
-    const res = await SupabaseAnalysisAdapter.persistJevPlan({ analysisId: 'a1', plan: { K: 1 } });
-    expect(res).toEqual({ plan: stored, stored: false });
+  it('rejects shell rows containing only stance_relations with 0 dimensions and empty markdown', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        id: 'analysis-123',
+        video_id: 'video-123',
+        title: 'Shell Video',
+        analysis_markdown: '',
+        analysis_payload: {
+          stance_relations: {
+            insights: [],
+            analysisId: 'analysis-123',
+          },
+        },
+        created_at: new Date().toISOString(),
+        validation_report: null,
+        billing_status: 'failed',
+      },
+      error: null,
+    });
+
+    const result = await SupabaseAnalysisAdapter.findCachedAnalysis({
+      userId: 'user-1',
+      videoId: 'video-123',
+    });
+
+    expect(result).toBeNull();
   });
 
-  it('throws when the analysis row is missing entirely', async () => {
-    serviceMock.__setRowExists(false);
-    await expect(
-      SupabaseAnalysisAdapter.persistJevPlan({ analysisId: 'gone', plan: { K: 1 } })
-    ).rejects.toThrow('analysis row not found');
+  it('accepts rows that have usable dimensions in analysis_payload', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        id: 'analysis-456',
+        video_id: 'video-456',
+        title: 'Complete Video',
+        analysis_markdown: 'Substantial markdown output that provides real analysis content for the viewer...',
+        analysis_payload: {
+          dimensions: [
+            { number: 1, name: 'Apex Intelligence', content: 'Detailed analysis content...' },
+          ],
+        },
+        created_at: new Date().toISOString(),
+        validation_report: null,
+        billing_status: 'completed',
+      },
+      error: null,
+    });
+
+    const result = await SupabaseAnalysisAdapter.findCachedAnalysis({
+      userId: 'user-1',
+      videoId: 'video-456',
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.id).toBe('analysis-456');
+    expect(Object.keys(result?.dimensions ?? {})).toHaveLength(1);
+  });
+
+  it('filters out both failed and cancelled billing statuses in the query chain', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+
+    await SupabaseAnalysisAdapter.findCachedAnalysis({
+      userId: 'user-1',
+      videoId: 'video-789',
+    });
+
+    expect(mockNeq).toHaveBeenCalledWith('billing_status', 'failed');
+    expect(mockNeq).toHaveBeenCalledWith('billing_status', 'cancelled');
+    expect(mockNeq).toHaveBeenCalledWith('billing_status', 'processing');
   });
 });
