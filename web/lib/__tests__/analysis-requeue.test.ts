@@ -268,7 +268,7 @@ describe('sweepStuckAnalyses — requeue-partial wiring (ADR 021 Phase 3)', () =
     const fromMock = vi.fn((table: string) => {
       if (table === 'analysis_chunks') {
         return {
-          select: () => ({ eq: () => Promise.resolve({ data: opts.tryRecoveryChunkRows, error: null }) }),
+          select: () => ({ eq: () => ({ eq: (col: string, val: unknown) => Promise.resolve(col === 'jev_chunk_index' && val === 0 ? { data: opts.tryRecoveryChunkRows, error: null } : { data: null, error: new Error(`unexpected filter ${col}=${String(val)}`) }) }) }),
         };
       }
       return {

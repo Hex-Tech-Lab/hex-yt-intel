@@ -197,7 +197,10 @@ export async function tryChunkRecovery(  analysisId: string,
   const { data, error } = await service
     .from('analysis_chunks')
     .select('chunk_index, payload, status')
-    .eq('analysis_id', analysisId);
+    .eq('analysis_id', analysisId)
+    // R3b: Jev chunk 0 only (K=1) -- the salvage stitch keys rows by
+    // chunk_index, so other Jev chunks must not be mixed in.
+    .eq('jev_chunk_index', 0);
   if (error) throw error;
 
   const chunkRows = (data ?? []) as ChunkRow[];
