@@ -12,6 +12,24 @@ const rawFetch = fetch;
 
 const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
+/**
+ * Entries written before the 2026-09-30 SET fix hold the literal request
+ * envelope {"value":"<real json>","ex":N,"get":false,"xx":false} instead of
+ * the value (see set() below). The real value is intact inside it, so a GET
+ * unwraps it: every poisoned key (comments-sampled:*, channel-meta:*) is
+ * readable again without a production purge, and they age out on their TTL.
+ */
+export function unwrapLegacySetEnvelope(raw: string | null): string | null {
+  if (raw === null || !raw.startsWith('{"value":')) return raw;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.value === 'string' && 'ex' in parsed) return parsed.value;
+  } catch {
+    console.debug('[UpstashCacheAdapter] value starts like a legacy SET envelope but is not JSON; returning it unchanged');
+  }
+  return raw;
+}
+
 export class UpstashCacheAdapter implements PersistenceRepositoryPort {
   private url: string;
   private token: string;
@@ -43,7 +61,7 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       });
       if (!response.ok) return null;
       const data = (await response.json()) as { result: string | null };
-      return data.result;
+      return unwrapLegacySetEnvelope(data.result);
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash GET failed, proceeding without cache hit');
       return null;

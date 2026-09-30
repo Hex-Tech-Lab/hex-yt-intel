@@ -22,9 +22,9 @@ describe('UpstashCacheAdapter.set — envelope regression (2026-09-30)', () => {
     captured.length = 0;
     // rawFetch is bound at module load, so the stub must be installed
     // BEFORE the module under test is imported.
-    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       captured.push({ url: String(input), body: typeof init?.body === 'string' ? init.body : '' });
-      return new Response(JSON.stringify({ result: 'OK' }), { status: 200 });
+      return Promise.resolve(new Response(JSON.stringify({ result: 'OK' }), { status: 200 }));
     }) as unknown as typeof fetch;
   });
 
@@ -51,11 +51,32 @@ describe('UpstashCacheAdapter.set — envelope regression (2026-09-30)', () => {
     expect(url).toContain('ex=604800');
   });
 
-  it('negative control: the pre-fix envelope body is exactly what poisoned Redis', async () => {
+  it('negative control: the pre-fix envelope body is exactly what poisoned Redis', () => {
     // Reproduces the old behavior to prove the test above catches it.
     const value = 'HELLO';
     const oldBody = JSON.stringify({ value, ex: 604800, get: false, xx: false });
     expect(oldBody).not.toBe(value);
     expect(JSON.parse(oldBody)).toEqual({ value: 'HELLO', ex: 604800, get: false, xx: false });
+  });
+
+  it('GET unwraps a legacy SET envelope written before the fix (poisoned keys recover)', async () => {
+    const { unwrapLegacySetEnvelope } = await import('../services/UpstashCacheAdapter');
+    const real = JSON.stringify([{ author: 'a', text: 't', publishedAt: 'p', likeCount: 1 }]);
+    const envelope = JSON.stringify({ value: real, ex: 604800, get: false, xx: false });
+    expect(unwrapLegacySetEnvelope(envelope)).toBe(real);
+    expect(unwrapLegacySetEnvelope(real)).toBe(real);
+    expect(unwrapLegacySetEnvelope(null)).toBeNull();
+    const lookalike = JSON.stringify({ value: 'x', other: 1 });
+    expect(unwrapLegacySetEnvelope(lookalike)).toBe(lookalike);
+  });
+
+  it('GET returns the unwrapped value end-to-end through the adapter', async () => {
+    const real = JSON.stringify({ subscriberCount: 10 });
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ result: JSON.stringify({ value: real, ex: 604800, get: false, xx: false }) }), { status: 200 })),
+    ) as unknown as typeof fetch;
+    const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
+    const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
+    expect(await adapter.get('channel-meta:x')).toBe(real);
   });
 });
