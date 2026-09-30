@@ -1,0 +1,23 @@
+scripts/backfill-comments-cochran.ts
+  s_36f875f11b73af::t_cbf8ad03c1c9ac 39-40,125,127-128,162,166-183,203
+worker/src/__tests__/upstash-set-envelope-regression.test.ts
+  s_36f875f11b73af::t_620a7e7dd69e8d 110-146
+worker/src/services/UpstashCacheAdapter.ts
+  s_36f875f11b73af::t_2a051436fd8354 102,107-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b1e747d06571415c9b353f907db14c28e3403a4",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
