@@ -154,4 +154,14 @@ describe('AnalysisHistory thumbnail fade (mockup v2)', () => {
     expect(source).toContain('hx-thumb-layer');
     expect(source).not.toMatch(/2\.5cm/);
   });
+
+  it('(#377 review) the text column reserves the sharp image width and the whole layer carries the shadow', () => {
+    const css = readFileSync(join(__dirname, '..', '..', '..', '..', 'app', 'globals.css'), 'utf-8');
+    const block = css.match(/\.hx-thumb-content \{[^}]*\}/)?.[0] ?? '';
+    expect(block).toMatch(/padding-right:\s*calc\(var\(--hx-thumb-sharp\)/);
+    expect(block).toMatch(/text-shadow:/);
+    // The divider and the image width use the same sharp-width variable.
+    expect(css).toMatch(/\.hx-thumb-divider[\s\S]*?right:\s*calc\(4px \+ var\(--hx-thumb-sharp\)\)/);
+    expect(css).toMatch(/\.hx-thumb-layer[\s\S]*?width:\s*calc\(var\(--hx-thumb-sharp\) \+ var\(--hx-thumb-fade\)\)/);
+  });
 });

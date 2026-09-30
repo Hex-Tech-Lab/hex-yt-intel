@@ -519,12 +519,22 @@ div[data-chat-dock="true"] div[class*="content"] {
    (2.5cm per the mockup), deliberately NOT a magic number in JSX. */
 :root {
   --hx-thumb-fade: 2.5cm;
+  /* Width of the sharp (unfaded) 16:9 area at the row's 112px min-height. */
+  --hx-thumb-sharp: calc((112px - 8px) * 16 / 9);
+}
+
+/* The text column reserves the SHARP image area (#377 review): title and chips
+   may run over the faded part, never over the unfaded thumbnail. The shadow
+   is on the whole layer so chips get it too, not only the title. */
+.hx-thumb-content {
+  padding-right: calc(var(--hx-thumb-sharp) + 12px) !important;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.65);
 }
 
 .hx-thumb-layer {
   /* Width: the sharp 16:9 area at the row's min-height (112px, minus the 4px
      top/bottom margins) plus the fade extension to the left. */
-  width: calc((112px - 8px) * 16 / 9 + var(--hx-thumb-fade));
+  width: calc(var(--hx-thumb-sharp) + var(--hx-thumb-fade));
   max-width: 85%;
   -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
           mask-image: linear-gradient(to left, #000 calc(100% - var(--hx-thumb-fade)), transparent 100%);
@@ -536,7 +546,7 @@ div[data-chat-dock="true"] div[class*="content"] {
   top: 0;
   bottom: 0;
   z-index: 1;
-  right: calc(4px + (112px - 8px) * 16 / 9);
+  right: calc(4px + var(--hx-thumb-sharp));
   border-left: 1px solid var(--line);
 }
 
