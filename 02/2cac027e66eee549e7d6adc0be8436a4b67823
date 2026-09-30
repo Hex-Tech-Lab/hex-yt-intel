@@ -1,0 +1,27 @@
+docs/agent-prompts/2026-09-30-oc-r3b-2-1-matrix-types-upserts.md
+  s_1d1bec99fd4ca5::t_e6dd2980b434d0 1-89
+docs/agent-prompts/2026-09-30-oc-r3b-2-2-stream-token-v2.md
+  s_1d1bec99fd4ca5::t_f7fcc287b0348c 1-88
+docs/agent-prompts/2026-09-30-oc-r3b-2-3-plan-stream-count.md
+  s_1d1bec99fd4ca5::t_a3fb5a0bbff2f2 1-90
+docs/agent-prompts/2026-09-30-oc-r3b-2-4-deterministic-reduce.md
+  s_1d1bec99fd4ca5::t_a0ab49d820b67c 1-92
+docs/agent-prompts/2026-09-30-oc-r3b-2-5-finalize-reaper-stream-count.md
+  s_1d1bec99fd4ca5::t_ebafcdc8f6db9c 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "022cac027e66eee549e7d6adc0be8436a4b67823",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
