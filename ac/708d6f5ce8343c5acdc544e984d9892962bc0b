@@ -1,0 +1,25 @@
+web/app/globals.css
+  s_1d1bec99fd4ca5::t_129936f6937616 522-531,537,549
+web/components/templates/_shared/primitives.tsx
+  s_1d1bec99fd4ca5::t_1b2886aec50a03 77
+web/components/templates/console/__tests__/AnalysisHistory-thumbnail.test.tsx
+  s_1d1bec99fd4ca5::t_1ff1186653fb9e 157-166
+web/lib/__tests__/glow-border-radius.test.tsx
+  s_1d1bec99fd4ca5::t_9ac1746231c2f6 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ac708d6f5ce8343c5acdc544e984d9892962bc0b",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
