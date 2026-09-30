@@ -50,7 +50,7 @@ Migration `supabase/migrations/20260930180000_analyses_stream_count_and_chunk_ma
 4. Every `analysis_chunks` insert/upsert writes `jev_chunk_index` explicitly (value from the caller; today always `0`) and uses `onConflict: 'analysis_id,jev_chunk_index,chunk_index'`. Add an optional `jevChunkIndex?: number` (default 0) to the port method(s) — no caller passes anything else yet.
 5. Every `analysis_chunks` read that keys rows by `chunk_index` alone must also filter/key by `jev_chunk_index` (for now: `= 0`) — list each one you changed, and each one you checked and left, with the reason.
 6. Tests in `web/lib/__tests__/`: adapter test asserting the upsert payload carries `jev_chunk_index` and the 3-column `onConflict`; reader test that a row with `jev_chunk_index = 1` is NOT returned where the code expects the K = 1 slice.
-7. Write (do NOT apply) `supabase/migrations/20260930190000_drop_legacy_analysis_chunk_key.sql` containing only `alter table public.analysis_chunks drop constraint if exists unique_analysis_chunk;` with a header comment: apply only AFTER this PR's code is deployed.
+7. Do NOT include the DROP migration in this PR. It will be scheduled in a separate PR only after this code is deployed, because CI auto-applies migrations on merge.
 8. Gates (§4a), qa-intel after `git add`, commit `feat(chunks): 2-D (jev_chunk_index × bundle) persist key`, ledger `[DONE]`.
 
 Out of scope: token, job creation, reduce, finalize/reaper logic (2.2–2.5).
