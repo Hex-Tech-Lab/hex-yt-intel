@@ -1,0 +1,19 @@
+scripts/backfill-comments-cochran.ts
+  s_36f875f11b73af::t_bc0b5601b1b6f2 154,156-157,160-161,163-168,184-234,240-241,244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "64fe2dc7bcdc9acc1fc8cf31b9d4c290dfcc958c",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
