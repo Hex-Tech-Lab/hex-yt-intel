@@ -13,6 +13,14 @@ const rawFetch = fetch;
 const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
 /**
+ * Compare-and-set heal (#374 review): rewrite the key only if it still holds
+ * the exact legacy envelope we read. A concurrent SET of a newer value between
+ * our GET and the heal therefore wins -- the stale inner value never clobbers it.
+ */
+const HEAL_IF_UNCHANGED_LUA =
+  "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3]) end return 0";
+
+/**
  * Entries written before the 2026-09-30 SET fix hold the literal request
  * envelope {"value":"<real json>","ex":N,"get":false,"xx":false} instead of
  * the value (see set() below). The real value is intact inside it, so a GET
@@ -25,7 +33,9 @@ export function unwrapLegacySetEnvelope(raw: string | null): string | null {
 
 /**
  * Returns the envelope's inner value and its intended TTL (seconds), or null
- * when `raw` is not a legacy envelope. The legacy SET put `ex` in the value,
+ * when `raw` is not a legacy envelope. Only a positive-integer `ex` counts as
+ * an envelope (the legacy writer always sent one); anything else is treated
+ * as an ordinary value (#374 review). The legacy SET put `ex` in the value,
  * not on the key, so poisoned keys have NO native Redis TTL (verified
  * 2026-09-30: TTL -1) -- the caller re-applies it (see get()).
  */
@@ -33,9 +43,9 @@ export function parseLegacySetEnvelope(raw: string | null): { value: string; ttl
   if (raw === null || !raw.startsWith('{"value":')) return null;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.value !== 'string' || !('ex' in parsed)) return null;
-    const ex = Number(parsed.ex);
-    return { value: parsed.value, ttlSeconds: Number.isFinite(ex) && ex > 0 ? Math.floor(ex) : DEFAULT_TTL_SECONDS };
+    const ex = parsed.ex;
+    if (typeof parsed.value !== 'string' || typeof ex !== 'number' || !Number.isSafeInteger(ex) || ex <= 0) return null;
+    return { value: parsed.value, ttlSeconds: ex };
   } catch {
     console.debug('[UpstashCacheAdapter] value starts like a legacy SET envelope but is not JSON; returning it unchanged');
     return null;
@@ -76,13 +86,26 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       const legacy = parseLegacySetEnvelope(data.result);
       if (!legacy) return data.result;
       // Heal the key: store the bare value with a native TTL, so it is both
-      // readable by any reader and expires like every other entry. Awaited so
-      // the Worker does not drop it; a failure only leaves the key as it was.
-      await this.set(key, legacy.value, legacy.ttlSeconds);
+      // readable by any reader and expires like every other entry -- but only
+      // if the key still holds this envelope (compare-and-set). Awaited so the
+      // Worker does not drop it; a failure only leaves the key as it was.
+      await this.healIfUnchanged(key, data.result as string, legacy.value, legacy.ttlSeconds);
       return legacy.value;
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash GET failed, proceeding without cache hit');
       return null;
+    }
+  }
+
+  private async healIfUnchanged(key: string, expected: string, value: string, ttlSeconds: number): Promise<void> {
+    try {
+      await rawFetch(this.url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(['EVAL', HEAL_IF_UNCHANGED_LUA, '1', key, expected, value, String(ttlSeconds)]),
+      });
+    } catch {
+      console.warn('[UpstashCacheAdapter] legacy envelope heal failed; key left unchanged');
     }
   }
 

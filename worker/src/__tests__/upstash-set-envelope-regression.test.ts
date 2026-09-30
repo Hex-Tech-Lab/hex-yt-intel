@@ -80,21 +80,39 @@ describe('UpstashCacheAdapter.set — envelope regression (2026-09-30)', () => {
     expect(await adapter.get('channel-meta:x')).toBe(real);
   });
 
-  it('GET heals a legacy envelope key: re-SETs the bare value with a native TTL from its inner ex', async () => {
+  it('GET heals a legacy envelope key with a compare-and-set EVAL (bare value, native TTL from inner ex)', async () => {
     const real = JSON.stringify([{ author: 'a', text: 't', publishedAt: 'p', likeCount: 1 }]);
+    const envelope = JSON.stringify({ value: real, ex: 3600, get: false, xx: false });
     const calls: Array<{ url: string; body: string }> = [];
     globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, body: typeof init?.body === 'string' ? init.body : '' });
-      const result = url.includes('/get/') ? JSON.stringify({ value: real, ex: 3600, get: false, xx: false }) : 'OK';
+      const result = url.includes('/get/') ? envelope : 'OK';
       return Promise.resolve(new Response(JSON.stringify({ result }), { status: 200 }));
     }) as unknown as typeof fetch;
     const { UpstashCacheAdapter } = await import('../services/UpstashCacheAdapter');
     const adapter = new UpstashCacheAdapter({ url: 'https://example.upstash.io', token: 't' });
     expect(await adapter.get('comments-sampled:vid')).toBe(real);
-    const heal = calls.find((call) => call.url.includes('/set/comments-sampled:vid'));
-    expect(heal?.url).toContain('?ex=3600');
-    expect(heal?.body).toBe(real);
+    // Never an unconditional SET: a newer concurrent write must not be clobbered.
+    expect(calls.some((call) => call.url.includes('/set/'))).toBe(false);
+    const heal = calls.find((call) => call.url === 'https://example.upstash.io');
+    if (!heal) throw new Error('heal EVAL was not sent');
+    const [cmd, script, numKeys, key, expected, value, ttl] = JSON.parse(heal.body) as string[];
+    expect(cmd).toBe('EVAL');
+    expect(script).toContain("redis.call('GET', KEYS[1]) == ARGV[1]");
+    expect(numKeys).toBe('1');
+    expect(key).toBe('comments-sampled:vid');
+    expect(expected).toBe(envelope);
+    expect(value).toBe(real);
+    expect(ttl).toBe('3600');
+  });
+
+  it('envelope recognition requires a positive-integer ex', async () => {
+    const { parseLegacySetEnvelope } = await import('../services/UpstashCacheAdapter');
+    for (const ex of [0, -5, 1.5, '3600', null]) {
+      expect(parseLegacySetEnvelope(JSON.stringify({ value: 'v', ex }))).toBeNull();
+    }
+    expect(parseLegacySetEnvelope(JSON.stringify({ value: 'v', ex: 60 }))).toEqual({ value: 'v', ttlSeconds: 60 });
   });
 
   it('GET of a clean value never writes', async () => {
