@@ -227,7 +227,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const chunkRows = anyPayload.chunks.map((c: any, idx: number) => ({
         analysis_id: params.analysisId,
         chunk_index: idx,
-        // R3b: legacy slice (K=1); column is part of unique_analysis_chunk_cell.
+        // R3b: Jev chunk 0 (K=1); column is part of unique_analysis_chunk_cell.
         jev_chunk_index: 0,
         payload: { text: c.text ?? String(c), metadata: c.metadata ?? {} },
         dimensions_covered: c.dimensionsCovered ?? [],
@@ -466,7 +466,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const rowData = {
         analysis_id: params.analysisId,
         chunk_index: params.chunkIndex,
-        // R3b: legacy slice (K=1); column is part of unique_analysis_chunk_cell.
+        // R3b: Jev chunk 0 (K=1); column is part of unique_analysis_chunk_cell.
         jev_chunk_index: params.jevChunkIndex ?? 0,
         dimensions_covered: params.dimensionsCovered,
         payload: params.payload ?? {},
@@ -490,7 +490,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
           .update(rowData, { count: 'exact' })
           .eq('analysis_id', params.analysisId)
           .eq('chunk_index', params.chunkIndex)
-          // R3b: legacy slice only (K=1) — other Jev chunks are separate rows.
+          // R3b: Jev chunk 0 only (K=1) — other Jev chunks are separate rows.
           .eq('jev_chunk_index', params.jevChunkIndex ?? 0)
           .neq('status', 'completed');
 
@@ -580,7 +580,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .update({ status: 'failed', updated_at: new Date().toISOString() }, { count: 'exact' })
         .eq('analysis_id', params.analysisId)
         .eq('chunk_index', params.chunkIndex)
-        // R3b: legacy slice only (K=1).
+        // R3b: Jev chunk 0 only (K=1).
         .eq('jev_chunk_index', 0)
         .eq('status', 'completed');
       // P0 (PR #314 second review round): narrow the CAS to the EXACT row
@@ -616,7 +616,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .from('analysis_chunks')
         .select('chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
         .eq('analysis_id', params.analysisId)
-        // R3b: legacy slice only (K=1) — stitchers consume one Jev chunk's
+        // R3b: Jev chunk 0 only (K=1) — stitchers consume one Jev chunk's
         // bundles per call today.
         .eq('jev_chunk_index', 0);
 
@@ -656,7 +656,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .from('analysis_chunks')
         .select('chunk_index, dimensions_covered, status')
         .eq('analysis_id', params.analysisId)
-        // R3b: legacy slice only (K=1).
+        // R3b: Jev chunk 0 only (K=1).
         .eq('jev_chunk_index', 0)
         .abortSignal(AbortSignal.timeout(3000));
 
@@ -689,7 +689,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .select('chunk_index, status')
         .eq('analysis_id', analysisId)
         .eq('chunk_index', chunkIndex)
-        // R3b: legacy slice only (K=1).
+        // R3b: Jev chunk 0 only (K=1).
         .eq('jev_chunk_index', 0)
         .single();
 

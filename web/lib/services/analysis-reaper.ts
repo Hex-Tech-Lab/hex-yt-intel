@@ -198,7 +198,7 @@ export async function tryChunkRecovery(  analysisId: string,
     .from('analysis_chunks')
     .select('chunk_index, payload, status')
     .eq('analysis_id', analysisId)
-    // R3b: legacy slice only (K=1) -- the salvage stitch keys rows by
+    // R3b: Jev chunk 0 only (K=1) -- the salvage stitch keys rows by
     // chunk_index, so other Jev chunks must not be mixed in.
     .eq('jev_chunk_index', 0);
   if (error) throw error;
