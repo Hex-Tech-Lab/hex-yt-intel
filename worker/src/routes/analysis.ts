@@ -134,6 +134,22 @@ interface StreamRequest {
   contextExp?: number;
   sig: string;
   exp: number;
+  // R3b 2.2 (ADR 037 Addendum A3): token-format selector for the dual-verify
+  // rollout. Absent/1 -> legacy v1 message; 2 -> the v2 message additionally
+  // binds streamCount/jevChunkIndex/jevChunkCount and carries the range +
+  // stream-partition guards below. The web side keeps emitting v1 until the
+  // v2 emission wave lands.
+  tokenVersion?: 1 | 2;
+  jevChunkIndex?: number;
+  jevChunkCount?: number;
+  streamCount?: number;
+  // R3b 2.2: the resolved bundle partition (job.streamBundles) forwarded on
+  // v2 requests ONLY, so the worker can count grounded (G) and projective (P)
+  // bundles and enforce streamCount === jevChunkCount*G + P. The worker has
+  // no DB access (ADR 005) and sees only its own bundle's dimensions today;
+  // a v2 request without a well-formed bundleList is rejected (fail closed),
+  // never guessed from STREAM_BUNDLES.
+  bundleList?: number[][];
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
@@ -175,6 +191,8 @@ interface TokenVerificationResult {
 }
 
 /** Verify HMAC signature of stream request token using stored secret. Returns validation result and secret. */
+// Exported for the R3b 2.2 dual-verify regression tests only (module-scope
+// helper, not part of the route surface).
 // skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic in this module (DS "wrap in IIFE" is a false positive);
 // complexity 9 is pre-existing and a refactor is out of this PR's blast radius (untouched lines, chronic finding).
 async function verifyStreamToken(
@@ -184,11 +202,38 @@ async function verifyStreamToken(
   sig: string,
   models: string[] | undefined,
   env: AnalysisEnv,
+  opts?: {
+    tokenVersion?: 1 | 2;
+    streamCount?: number;
+    jevChunkIndex?: number;
+    jevChunkCount?: number;
+    bundleList?: number[][];
+  },
 ): Promise<TokenVerificationResult> {
   const secret = env.STREAM_HMAC_SECRET;
 
   if (Date.now() > exp) {
     return { isValid: false, secret: "", msg: "" };
+  }
+
+  // R3b 2.2: v2 cells must be structurally sane BEFORE any HMAC work so a
+  // forged/unset cell list can never reach the signature compare with a
+  // message the signer would never have produced.
+  const isV2 = opts?.tokenVersion === 2;
+  if (isV2) {
+    const { streamCount, jevChunkIndex, jevChunkCount, bundleList } = opts ?? {};
+    const cellsInteger = Number.isInteger(streamCount) && Number.isInteger(jevChunkIndex) && Number.isInteger(jevChunkCount);
+    if (!cellsInteger || (jevChunkCount as number) < 1 || (jevChunkIndex as number) < 0 || (jevChunkIndex as number) >= (jevChunkCount as number)) {
+      return { isValid: false, secret, msg: "v2_invalid_cells" };
+    }
+    if (!Array.isArray(bundleList) || bundleList.length === 0 || !bundleList.every((b) => Array.isArray(b) && b.length > 0)) {
+      return { isValid: false, secret, msg: "v2_missing_bundle_list" };
+    }
+    const groundedBundles = bundleList.filter((b) => !isProjectiveBundle(b)).length;
+    const projectiveBundles = bundleList.length - groundedBundles;
+    if ((streamCount as number) !== (jevChunkCount as number) * groundedBundles + projectiveBundles) {
+      return { isValid: false, secret, msg: "v2_stream_count_mismatch" };
+    }
   }
 
   const activeSecret = secret;
@@ -204,7 +249,9 @@ async function verifyStreamToken(
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(models ?? [])].sort().join(",");
-    const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+    const msg = isV2
+      ? `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}`
+      : `${videoId}:${analysisId}:${exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
 
     if (timingSafeEqualHex(expected, sig)) {
@@ -213,7 +260,9 @@ async function verifyStreamToken(
   }
 
   const modelStr = [...(models ?? [])].sort().join(",");
-  const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+  const msg = isV2
+    ? `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}`
+    : `${videoId}:${analysisId}:${exp}:${modelStr}`;
   return { isValid: false, secret: activeSecret, msg };
 }
 
@@ -1301,7 +1350,13 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Server misconfigured" }, 500);
   }
 
-  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
+  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env, {
+    tokenVersion: req.tokenVersion,
+    streamCount: req.streamCount,
+    jevChunkIndex: req.jevChunkIndex,
+    jevChunkCount: req.jevChunkCount,
+    bundleList: req.bundleList,
+  });
 
   if (!isTokenValid) {
     // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
@@ -1453,3 +1508,4 @@ analysis.post("/analyze-llm-stream", async (c) => {
 });
 
 export default analysis;
+export { verifyStreamToken };
