@@ -1,0 +1,27 @@
+.memory/AGENT_LEDGER.md
+  s_f3ff2b1a7e1cbf::t_9cb53fb2d54227 1460
+web/lib/services/reduce-grounded-chunks.ts
+  s_f3ff2b1a7e1cbf::t_25ff9ca306480a 115
+  s_f3ff2b1a7e1cbf::t_bf60b7e472df9f 107-108,111
+  s_f3ff2b1a7e1cbf::t_c85708543e3149 1-106,109-110,112-114,116-146,148-161,166,168,170-176
+  s_f3ff2b1a7e1cbf::t_c07392ba03847c 162-165,167,169
+  s_f3ff2b1a7e1cbf::t_da60f10411c11d 147
+web/lib/__tests__/reduce-grounded-chunks.test.ts
+  s_f3ff2b1a7e1cbf::t_bd61ba59494196 1-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "16374d1f5536b45597430c36c5792b524f7f528a",
+  "prompts": {},
+  "sessions": {
+    "s_f3ff2b1a7e1cbf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0bd484ccffee4WAfkWZKFwGNp",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
