@@ -144,6 +144,30 @@ describe('AnalysisHistory restore flow (real component, real click)', () => {
     vi.unstubAllGlobals();
   });
 
+  it('(#382 a11y) the card is a focusable button: Enter and Space open it, and it reports aria-busy while opening', async () => {
+    for (const key of ['Enter', ' ']) {
+      const fetchMock = mockFetchRouter();
+      vi.stubGlobal('fetch', fetchMock);
+      render(createElement(AnalysisHistory));
+      // After the first iteration the restored analysis also shows in the
+      // "Last Analyzed" card, so pick the history-list row specifically.
+      const titles = await screen.findAllByText('Restore Flow Test Video');
+      const card = titles.map((el) => el.closest('.hx-history-row')).find(Boolean) as HTMLElement;
+      expect(card).not.toBeNull();
+      expect(card.tabIndex).toBe(0);
+      expect(card.getAttribute('aria-label')).toContain('Restore Flow Test Video');
+      expect(card.getAttribute('aria-busy')).toBe('false');
+      card.focus();
+      expect(document.activeElement).toBe(card);
+      fireEvent.keyDown(card, { key });
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`/api/analyses/${HISTORY_ITEM.analysisId}`));
+      });
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('clicking a history row hydrates rawAnalysis + synthesis nucleus, and sets persona/KG/classification/monetization exactly once', async () => {
     const fetchMock = mockFetchRouter();
     vi.stubGlobal('fetch', fetchMock);

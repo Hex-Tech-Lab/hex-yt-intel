@@ -791,6 +791,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   onClick={() => !busy && restoreAnalysis(item.analysisId)}
                   role="button"
                   tabIndex={0}
+                  aria-busy={busy}
+                  aria-label={busy ? `Opening ${item.title || 'analysis'}…` : `Open analysis: ${item.title || 'Untitled Analysis'}`}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); restoreAnalysis(item.analysisId); } }}
                   className={`rounded-lg border border-[var(--line)] overflow-hidden transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] flex items-stretch relative hx-history-row ${
                     idx % 2 === 1 ? 'bg-[var(--card-quiet)]' : 'bg-[var(--card)]'
