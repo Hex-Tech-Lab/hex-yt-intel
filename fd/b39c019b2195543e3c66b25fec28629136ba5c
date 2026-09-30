@@ -1,0 +1,23 @@
+worker/src/__tests__/jev-comment-classifier.test.ts
+  s_1d1bec99fd4ca5::t_b1ea4e32d34ae9 11,46-49,56,81,138-153,213-250
+worker/src/services/CommentClassifier.ts
+  s_1d1bec99fd4ca5::t_5945ca49ddd140 125-126
+worker/src/services/JevCommentClassifier.ts
+  s_1d1bec99fd4ca5::t_3fb91f24fbc0b4 165-176,184-185,203-205,208,225,229-233,238,240,243-249,278-283,286-290,293-323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fdb39c019b2195543e3c66b25fec28629136ba5c",
+  "prompts": {},
+  "sessions": {
+    "s_1d1bec99fd4ca5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90acb5dd-0b8e-4bca-97b7-835043739dc0",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
