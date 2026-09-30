@@ -1,0 +1,19 @@
+docs/agent-prompts/2026-09-30-oc-r3b-2-1-matrix-types-upserts.md
+  s_a4088d2665cfa3::t_4ef202c64457ed 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c6079939773b8a829c152cc624326380aa0c1a2d",
+  "prompts": {},
+  "sessions": {
+    "s_a4088d2665cfa3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f0c235782ffeu71X7g7tRVEoBo",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
