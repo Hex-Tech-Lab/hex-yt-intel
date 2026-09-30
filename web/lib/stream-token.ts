@@ -123,7 +123,7 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
  * secret. The purpose tag is part of the signed message, so a signature minted
  * for one flow can never be replayed into the other.
  */
-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'transcript-slice';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'transcript-slice' | 'plan';
 
 /**
  * The canonical message for a bound, time-limited S2S content signature. MUST be

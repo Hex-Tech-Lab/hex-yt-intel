@@ -947,6 +947,71 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /**
+   * R3b 2.3 (ADR 037 Addendum A, Option P1): persist the computed Jev plan
+   * idempotently — the update is conditional on the row having no stored
+   * plan, so a concurrent/second /plan call can never overwrite or
+   * re-chunk. Returns the now-authoritative plan plus whether the caller's
+   * write landed (false ⇒ the previously stored plan was returned).
+   */
+  static async persistJevPlan(params: {
+    analysisId: string;
+    plan: unknown;
+  }): Promise<{ plan: unknown; stored: boolean }> {
+    try {
+      const service = getSupabaseServiceClient();
+      // Conditional update: only a plan-less row accepts a new plan.
+      const { data, error } = await service
+        .from('analyses')
+        .update({ jev_plan: params.plan })
+        .eq('id', params.analysisId)
+        .is('jev_plan', null)
+        .select('jev_plan')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] persistJevPlan failed:', error.message);
+        throw error;
+      }
+      if (data) return { plan: data.jev_plan, stored: true };
+
+      // Update landed on zero rows: either the plan already exists (normal
+      // second call — return it) or the analysis row itself is gone (error).
+      const { data: existing, error: fetchError } = await service
+        .from('analyses')
+        .select('jev_plan')
+        .eq('id', params.analysisId)
+        .maybeSingle();
+      if (fetchError) throw fetchError;
+      if (existing?.jev_plan != null) return { plan: existing.jev_plan, stored: false };
+      throw new Error(`persistJevPlan: analysis row not found: ${params.analysisId}`);
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'persistJevPlan' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+  }
+
+  /** R3b 2.3: read the stored Jev plan for an analysis, null when absent. */
+  static async findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('analyses')
+      .select('jev_plan')
+      .eq('id', params.analysisId)
+      .maybeSingle();
+    if (error) {
+      Sentry.captureException(error, {
+        tags: { method: 'findJevPlan' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+    return data?.jev_plan ?? null;
+  }
+
   /** Real segment timing for the source video, if still within the 72h
    *  retention window (ADR 012). Null once the transcript is purged. */
   static async getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {

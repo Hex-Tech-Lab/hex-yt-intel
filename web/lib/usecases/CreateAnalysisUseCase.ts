@@ -20,7 +20,12 @@ import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
+import { resolveJevConfig } from '@/lib/config/jev';
+import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
+
+/** A6 input estimate — same value as the /plan route's PROMPT_PREFIX_TOKENS_ESTIMATE. */
+const PROMPT_PREFIX_TOKENS_ESTIMATE = 1000;
 
 // Must match the registry's seeded defaults (20260725110000_comments_sync_pool_fetch_settings.sql).
 const SYNC_POOL_CONFIG_FALLBACK: CommentsSyncPoolConfig = {
@@ -85,6 +90,14 @@ export interface UseCaseSuccess {
   commentsSyncPoolConfig: CommentsSyncPoolConfig;
   /** R1d: byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */
   priorPayloadMaxBytes: number;
+  /** R3b 2.3 (P1): server-computed Jev plan when the transcript was known at job creation; null otherwise (worker calls /plan S2S). */
+  jevPlan: {
+    K: number;
+    streamCount: number;
+    cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
+    estimateCents: number;
+    truncatedFallback: boolean;
+  } | null;
   stream: {
     url: string;
     sig: string;
@@ -353,6 +366,71 @@ export class CreateAnalysisUseCase {
       ? priorPayloadMaxBytesRaw
       : PRIOR_PAYLOAD_MAX_BYTES_FALLBACK;
 
+    // R3b 2.3 (ADR 037 Addendum A, Option P1): transcript known at job
+    // creation ⇒ plan INLINE; job response carries the full cell list.
+    // `analysis.jev.enabled` false/absent ⇒ K = 1 (pre-Jev behaviour).
+    // Transcript missing ⇒ worker fetches it and calls /plan (S2S).
+    let jevPlan: Awaited<ReturnType<typeof planAnalysis>> | null = null;
+    if (ingestionResult.transcript) {
+      try {
+        const rawJevRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+          [
+            'analysis.jev.enabled',
+            'analysis.jev.windowWords',
+            'analysis.jev.windowStrideWords',
+            'analysis.jev.deltaCdiThreshold',
+            'analysis.jev.fluffCdiThreshold',
+            'analysis.jev.minChunkTokens',
+            'analysis.jev.maxChunkTokens',
+            'analysis.jev.maxChunks',
+            'analysis.jev.acronymMinLength',
+            'analysis.jev.contentWordMinLength',
+            'analysis.jev.countAcronyms',
+            'analysis.jev.countProperNouns',
+            'analysis.jev.countNumbers',
+            'analysis.jev.countContentWords',
+            'analysis.jev.maxCostUsdCentsPerVideo',
+          ],
+          {} as Record<string, unknown>
+        );
+        const jevConfig = resolveJevConfig(rawJevRegistry);
+        const costCapCents = Number(rawJevRegistry['analysis.jev.maxCostUsdCentsPerVideo']);
+        // Worst-case pricing: the most expensive resolved cascade item
+        // (CascadeItem cost is USD per 1K tokens → ×1000 for per-million).
+        const worstCost = analysisCascade.reduce((max, item) => Math.max(max, item.cost ?? 0), 0);
+        const usdPerMTok = worstCost * 1000;
+        jevPlan = await planAnalysis({
+          transcript: ingestionResult.transcript,
+          jevConfig,
+          bundles: streamBundles,
+          transcriptBudgetChars,
+          costCapCents: Number.isFinite(costCapCents) ? costCapCents : 100,
+          inputUsdPerMTok: usdPerMTok,
+          outputUsdPerMTok: usdPerMTok,
+          promptPrefixTokens: PROMPT_PREFIX_TOKENS_ESTIMATE,
+          maxOutputTokens: Math.max(maxOutputTokens.haiku, maxOutputTokens.default),
+        });
+        // Persist once (conditional update on the stub's plan-less row).
+        try {
+          const { plan: storedPlan } = await this.persistence.persistJevPlan({
+            analysisId: stub.id,
+            plan: jevPlan,
+          });
+          jevPlan = storedPlan as typeof jevPlan;
+        } catch (persistError) {
+          // Non-fatal: the worker's /plan call can still persist it.
+          console.error('[CreateAnalysisUseCase] persistJevPlan failed:', persistError instanceof Error ? persistError.message : String(persistError));
+        }
+      } catch (error) {
+        // Never block the analysis on planning failure — K = 1 fallback.
+        Sentry.captureException(error, {
+          tags: { component: 'CreateAnalysisUseCase', phase: 'jev-plan' },
+          extra: { videoId },
+        });
+        console.error('[CreateAnalysisUseCase] planAnalysis failed, K=1 fallback:', error instanceof Error ? error.message : String(error));
+      }
+    }
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -408,6 +486,7 @@ export class CreateAnalysisUseCase {
         commentsSamplePlan,
         commentsSyncPoolConfig,
         priorPayloadMaxBytes,
+        jevPlan,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

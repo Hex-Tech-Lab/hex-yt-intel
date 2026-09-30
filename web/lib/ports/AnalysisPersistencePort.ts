@@ -341,5 +341,21 @@ export interface AnalysisPersistencePort {
     userId: string;
     digest: unknown;
   }): Promise<boolean>;
+
+  /**
+   * Persist the computed Jev plan (ADR 037 Addendum A, R3b 2.3 Option P1)
+   * idempotently: the write is conditional on the row having no stored plan,
+   * so a concurrent/second caller can never re-chunk. Returns the plan that
+   * is now authoritative for the row — the caller's plan when the write
+   * landed, or the previously stored plan when it did not (second call
+   * returns STORED plan, never re-chunks).
+   */
+  persistJevPlan(params: {
+    analysisId: string;
+    plan: unknown;
+  }): Promise<{ plan: unknown; stored: boolean }>;
+
+  /** Read the stored Jev plan for an analysis, or null when none is stored. */
+  findJevPlan(params: { analysisId: string }): Promise<unknown | null>;
 }
 
