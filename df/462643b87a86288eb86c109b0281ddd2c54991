@@ -1,0 +1,47 @@
+web/lib/jev/transcript-slice.ts
+  s_57b314814e2be6::t_7824d9c30ecb80 22
+  s_57b314814e2be6::t_ea1684e2458189 1-21,23-68
+worker/src/services/TranscriptSlice.ts
+  s_57b314814e2be6::t_1a8830ae0227f3 1-17
+web/lib/__tests__/transcript-slice.test.ts
+  s_57b314814e2be6::t_06260b115eed17 26
+  s_57b314814e2be6::t_ceb2a2b7887a01 1-25,27-134,150-180
+  s_57b314814e2be6::t_585b81cd4e247e 145
+  s_57b314814e2be6::t_8cb7db5853280b 135-144,146-149
+web/lib/jev/boundary-engine.ts
+  s_57b314814e2be6::t_f2127e55550922 14
+  s_57b314814e2be6::t_8eec3a30ffdca3 36,38
+web/lib/usecases/PlanAnalysisUseCase.ts
+  s_57b314814e2be6::t_4796040f38b295 213
+  s_57b314814e2be6::t_3276a5ae016a69 84
+  s_57b314814e2be6::t_edf3ec28562a43 143
+  s_57b314814e2be6::t_4b19e22d370ce5 19
+  s_57b314814e2be6::t_6ecb0bba8936d6 142
+  s_57b314814e2be6::t_84b4a0911d5304 207
+web/lib/config/projective-context.ts
+  s_d84474d7509dd0::t_b8f20eff9f1da9 23-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "df462643b87a86288eb86c109b0281ddd2c54991",
+  "prompts": {},
+  "sessions": {
+    "s_57b314814e2be6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f08b9deb8ffeT6M0CkhhfLei5t",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
