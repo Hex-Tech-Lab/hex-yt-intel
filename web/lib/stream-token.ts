@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import { canonicalJson } from '@/lib/utils/canonical-json';
 
 /**
  * Shared-secret HMAC for the direct browser->worker streaming flow.
@@ -38,11 +39,15 @@ export async function signStreamToken(videoId: string, analysisId: string, model
 }
 
 /**
- * R3b 2.2 (ADR 037 Addendum A3): v2 stream token binds the map-reduce cell —
- * streamCount, jevChunkIndex and jevChunkCount are part of the signed message,
- * so a signature minted for one cell can never be replayed into another. The
- * worker verifies BOTH formats during the dual-verify rollout window; the web
- * side keeps emitting v1 until v2 emission is wired (R3b 2.3+).
+ * R3b 2.3.5a (ADR 037 Addendum A): v2 stream token binds the map-reduce cell
+ * AND its bundle partition AND the transcript slice. One canonical v2
+ * signature per map-reduce cell:
+ * `v2:{videoId}:{analysisId}:{exp}:{models}:{streamCount}:{jevChunkIndex}:{jevChunkCount}:{chunkIndex}:{partitionDigest}:{sliceSha256}:{startWord}:{endWord}`
+ * where partitionDigest = lowercase hex sha256 of canonicalJson(bundleList)
+ * (array order is meaningful — a reordered partition is a different one).
+ * signTranscriptSlice is retired: the slice triple is folded into this token.
+ * Nothing emits v2 in production yet (web still signs v1 only), so the v2
+ * message format may change without a dual-verify window.
  */
 export interface StreamTokenV2Params {
   videoId: string;
@@ -51,30 +56,39 @@ export interface StreamTokenV2Params {
   streamCount: number;
   jevChunkIndex: number;
   jevChunkCount: number;
+  chunkIndex: number;
+  bundleList: number[][];
+  slice: { sha256: string; startWord: number; endWord: number };
+}
+
+export async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Exported for tests only: the canonical v2 message template. Byte-identical
+ * to the worker's rebuild (worker/src/routes/analysis.ts#verifyStreamToken).
+ */
+export function streamTokenV2Message(
+  params: Omit<StreamTokenV2Params, 'models' | 'streamCount' | 'jevChunkIndex' | 'jevChunkCount'> & {
+    models?: string[];
+    streamCount: number;
+    jevChunkIndex: number;
+    jevChunkCount: number;
+  },
+  exp: number,
+  partitionDigest: string,
+): string {
+  const modelStr = [...(params.models ?? [])].sort().join(',');
+  return `v2:${params.videoId}:${params.analysisId}:${exp}:${modelStr}:${params.streamCount}:${params.jevChunkIndex}:${params.jevChunkCount}:${params.chunkIndex}:${partitionDigest}:${params.slice.sha256}:${params.slice.startWord}:${params.slice.endWord}`;
 }
 
 export async function signStreamTokenV2(params: StreamTokenV2Params): Promise<{ sig: string; exp: number }> {
   const exp = Date.now() + TOKEN_TTL_MS;
-  const modelStr = [...(params.models ?? [])].sort().join(',');
-  const msg = `v2:${params.videoId}:${params.analysisId}:${exp}:${modelStr}:${params.streamCount}:${params.jevChunkIndex}:${params.jevChunkCount}`;
+  const partitionDigest = await sha256Hex(canonicalJson(params.bundleList));
+  const msg = streamTokenV2Message(params, exp, partitionDigest);
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
-}
-
-/**
- * R3b 2.2 (ADR 037 Addendum A3): signs a Vercel-side transcript-slice triple
- * (startWord, endWord, sha256(text)) with the shared bound-content layout so
- * the slice is tamper-evident and cannot be replayed cross-flow or against a
- * different analysis. Uses the SAME exp the v2 stream token carries so the
- * two signatures share one replay window.
- */
-export async function signTranscriptSlice(
-  analysisId: string,
-  exp: number,
-  slice: { startWord: number; endWord: number; sha256: string },
-): Promise<{ sig: string }> {
-  const content = `${slice.sha256}:${slice.startWord}:${slice.endWord}`;
-  const msg = boundContentMessage('transcript-slice', analysisId, exp, content);
-  return { sig: await hmacHex(env.streamHmacSecret, msg) };
 }
 
 export async function signChatToken(conversationId: string, userId: string, models: string[] = []): Promise<{ sig: string; exp: number }> {
@@ -123,7 +137,7 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
  * secret. The purpose tag is part of the signed message, so a signature minted
  * for one flow can never be replayed into the other.
  */
-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'transcript-slice' | 'plan';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'plan';
 
 /**
  * The canonical message for a bound, time-limited S2S content signature. MUST be
