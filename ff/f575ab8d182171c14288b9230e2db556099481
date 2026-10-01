@@ -1,0 +1,45 @@
+worker/src/__tests__/stream-token-dual-verify.test.ts
+  s_aa862b80a996ac::t_013b44a8445dba 13,74,85,88,96
+  s_aa862b80a996ac::t_ded6105d1ab56c 75-78,80,82,87,98-106
+  s_aa862b80a996ac::t_257024cfedcb23 242,245,247-249
+  s_aa862b80a996ac::t_c5af7910247280 125,135-136,250-251
+  s_aa862b80a996ac::t_3249552fe36f5d 2-3,5-12,14-16,18-24,29,49-59,64,67-73,79,81,91,93-94,97,107,111-116,118-124,126-134,138,141-144,146-159,161-163,165-174,178-222,226-228,234,236,243-244,254-256,258-259
+  s_aa862b80a996ac::t_ee3f2c248d1870 66,235
+  s_aa862b80a996ac::t_9acb00943a2e36 95
+worker/src/crypto.ts
+  s_aa862b80a996ac::t_d6cadb3e05ab95 34
+web/lib/stream-token.ts
+  s_aa862b80a996ac::t_671f648875b7d1 140
+  s_aa862b80a996ac::t_9994bbc78f810d 64
+  s_aa862b80a996ac::t_ba06ee0538711b 2
+  s_aa862b80a996ac::t_9273b0f97eab75 42-50,59-61,65-66,70-71,73-79,81-91
+worker/src/routes/analysis.ts
+  s_aa862b80a996ac::t_d114db9ff41ba2 232,237-240,254,267-282
+  s_aa862b80a996ac::t_d2e0c1e171dfc7 149,153-159
+  s_aa862b80a996ac::t_72174e6b9f6ae8 301
+  s_aa862b80a996ac::t_5b97cdb6dda3bd 295-300,302-303,307,316
+  s_aa862b80a996ac::t_71fc2c68300fbe 1572-1575
+  s_aa862b80a996ac::t_57ce40d8fd4938 18-23
+  s_aa862b80a996ac::t_0ce24d8220cfca 1569-1571,1582-1585
+web/lib/__tests__/stream-token-v2.test.ts
+  s_aa862b80a996ac::t_2b1c5949d3df89 125
+  s_aa862b80a996ac::t_4796db441af10d 2-5,8-11,13-14,16-18,22,30-43,57,66-68,70-74,78,85-89,91-96,99-100,102-105,110-124,126-127,130-132,135-139
+  s_aa862b80a996ac::t_d79a03186d0242 101
+  s_aa862b80a996ac::t_052a12eddfabe2 106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fff575ab8d182171c14288b9230e2db556099481",
+  "prompts": {},
+  "sessions": {
+    "s_aa862b80a996ac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f08c9d910ffeP2J7xRviKnEHTU",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
