@@ -1,0 +1,44 @@
+worker/src/__tests__/jev-plan-route.test.ts
+  s_7c5912c94d0993::t_2389cff74cf941 110-113,116,119-122
+  s_390571e24c4d90::t_24d5af91607fbc 134
+  s_7c5912c94d0993::t_8cf6304aab5759 176
+  s_390571e24c4d90::t_de43d11d8aef0a 1-109,114-115,117-118,123-127,129,131,133,138-151,153-160,174-175,178,180-188,195,205-211,213-215,217-222,228-230,232-238,242,244-257,260,262-273,276,278-290,292-294,296-316
+  s_7c5912c94d0993::t_316b666bfc3116 177
+  s_7c5912c94d0993::t_875c82901eaa65 196-204
+  s_390571e24c4d90::t_df060e16b4e34e 130
+  s_390571e24c4d90::t_302788288425fc 128
+  s_390571e24c4d90::t_88a556ba47b1de 179
+  s_390571e24c4d90::t_84660f1a8c6550 231
+  s_390571e24c4d90::t_931e30b1f2705d 240,259,275
+  s_7c5912c94d0993::t_72c2b35df9046d 212,216,239,243,258,261,274,277,291,295
+  s_7c5912c94d0993::t_0067a7aa21df9c 171
+  s_7c5912c94d0993::t_0c03bf9b5bab7a 189-194
+  s_390571e24c4d90::t_8592f5fdabd1e1 161-170,172-173
+  s_7c5912c94d0993::t_eb2553ad9b315d 223-227
+  s_390571e24c4d90::t_f6b7bf0b42ba1f 132,135-137,152
+  s_390571e24c4d90::t_83c3483c4f0dca 241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "25e1c7ac93b14c4360fdcd0717cc3aaeae6ba5d0",
+  "prompts": {},
+  "sessions": {
+    "s_390571e24c4d90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f099c4093ffesMxiQwjy3PUoWm",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_7c5912c94d0993": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f098d06ecffeU2D22gbMMmnb52",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
