@@ -16,6 +16,9 @@ import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
 import { canonicalJson } from "../../../web/lib/utils/canonical-json";
 
+/** sha256("") — the slice hash PlanAnalysisUseCase signs for projective cells. */
+const EMPTY_SLICE_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
 // R3b 2.3.5a: lowercase hex sha256 (partition digest in the v2 token message).
 const sha256Hex = async (input: string): Promise<string> => {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
@@ -276,7 +279,11 @@ async function verifyStreamToken(
       !Number.isInteger(startWord) ||
       !Number.isInteger(endWord) ||
       (startWord as number) < 0 ||
-      (startWord as number) >= (endWord as number)
+      (startWord as number) > (endWord as number) ||
+      // Projective cells read no transcript words: PlanAnalysisUseCase signs
+      // them with the empty slice (0, 0, sha256("")). That is the ONLY
+      // permitted empty range.
+      ((startWord as number) === (endWord as number) && !(startWord === 0 && sliceSha256 === EMPTY_SLICE_SHA256))
     ) {
       return { isValid: false, secret, msg: "v2_invalid_slice" };
     }

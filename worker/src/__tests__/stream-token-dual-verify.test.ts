@@ -222,6 +222,22 @@ describe('verifyStreamToken dual-verify (R3b 2.3.5a)', () => {
     expect(v2AsV1.isValid).toBe(false);
   });
 
+  it('projective cells: the empty slice (0, 0, sha256("")) verifies; any other empty or reversed range is rejected structurally', async () => {
+    const EMPTY = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    const projective = { ...VALID, jevChunkIndex: 0, chunkIndex: 5, sliceSha256: EMPTY, startWord: 0, endWord: 0 };
+    const sig = await signV2(EXP, projective);
+    expect((await verifyStreamToken('vid', 'an', EXP, sig, [], ENV, v2Opts(projective))).isValid).toBe(true);
+    for (const bad of [
+      { ...projective, startWord: 7, endWord: 7 },
+      { ...projective, sliceSha256: SLICE.sha256 },
+      { ...projective, startWord: 9, endWord: 3 },
+    ]) {
+      const res = await verifyStreamToken('vid', 'an', EXP, await signV2(EXP, bad), [], ENV, v2Opts(bad));
+      expect(res.isValid).toBe(false);
+      expect(res.msg).toBe('v2_invalid_slice');
+    }
+  });
+
   it('rejects a streamCount inconsistent with jevChunkCount*G+P from the bundle list', async () => {
     const fields: V2Fields = { ...VALID, streamCount: 999 };
     const sig = await signV2(EXP, { ...VALID });
