@@ -5,8 +5,17 @@
  * PURE module (no I/O). Input cells carry the per-Jev-chunk grounded
  * dimensions; output is a single deterministic dimension list plus the
  * `partial` list of dimension numbers that were missing from at least one
- * chunk (but present in at least one). A dimension missing from every chunk
- * is absent from the output entirely.
+ * EXPECTED chunk index (but present in at least one received cell). A chunk
+ * index in [0, expectedJevChunkCount) with no cell at all counts as missing
+ * for every dimension. A dimension missing from every received cell is absent
+ * from the output entirely.
+ *
+ * Key-term dedupe is case/whitespace-insensitive BY DESIGN (display keywords;
+ * e.g. "Compound Interest" and "compound  interest" are the same keyword).
+ *
+ * Confidence on a `partial` dimension is CONDITIONAL: it is the weighted mean
+ * over only the contributing chunks, so it reflects the chunks that actually
+ * produced the dimension, not the full expected chunk count.
  *
  * Determinism contract: the output is byte-identical (JSON.stringify) for the
  * same cell SET regardless of input order — cells are always processed in
@@ -20,9 +29,15 @@ export interface GroundedCell {
   dimensions: UCISDimension[];
 }
 
+/** Options bag: `expectedJevChunkCount` is REQUIRED and validated. */
+export interface ReduceGroundedChunksOptions {
+  /** Total number of Jev chunks the upstream segmentation produced. */
+  expectedJevChunkCount: number;
+}
+
 export interface ReducedGroundedResult {
   dimensions: UCISDimension[];
-  /** Dimension numbers missing from SOME chunks (present in at least one). Ascending. */
+  /** Dimension numbers missing from SOME expected chunks (present in at least one). Ascending. */
   partial: number[];
 }
 
@@ -32,25 +47,13 @@ function normalizeKey(raw: string): string {
 }
 
 /**
- * Dedupe key for an array item. Timestamped items (objects carrying
- * label/text + timestamp) dedupe by (label, timestamp); plain strings by
- * their normalized text.
+ * Dedupe key for an array item: plain strings by their normalized text.
+ * The public type of keyTerms is string[], so non-string items are dropped.
  */
 function itemKey(item: unknown): string | null {
-  if (typeof item === "string") {
-    const normalized = normalizeKey(item);
-    return normalized.length > 0 ? normalized : null;
-  }
-  if (item && typeof item === "object") {
-    const record = item as Record<string, unknown>;
-    const label = typeof record.label === "string" ? record.label : typeof record.text === "string" ? record.text : null;
-    if (label === null) return null;
-    const normalizedLabel = normalizeKey(label);
-    if (normalizedLabel.length === 0) return null;
-    const timestamp = typeof record.timestamp === "string" ? record.timestamp : "";
-    return timestamp.length > 0 ? `${normalizedLabel}|${timestamp}` : normalizedLabel;
-  }
-  return null;
+  if (typeof item !== "string") return null;
+  const normalized = normalizeKey(item);
+  return normalized.length > 0 ? normalized : null;
 }
 
 /** Round to the confidence source's 0–1 scale with 4-decimal precision. */
@@ -58,26 +61,105 @@ function roundConfidence(value: number): number {
   return Math.round(value * 10000) / 10000;
 }
 
+function isSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+/** Validate the REQUIRED option; throws a descriptive Error when invalid. */
+function validateExpectedCount(expectedJevChunkCount: unknown): number {
+  if (!isSafeInteger(expectedJevChunkCount) || expectedJevChunkCount <= 0) {
+    throw new Error(
+      `reduceGroundedChunks: expectedJevChunkCount must be a positive safe integer, received ${String(
+        expectedJevChunkCount,
+      )}`,
+    );
+  }
+  return expectedJevChunkCount;
+}
+
+/** Validate every cell's jevChunkIndex; throws on the first invalid/duplicate. */
+function validateCells(cells: readonly GroundedCell[], expectedJevChunkCount: number): void {
+  const seen = new Set<number>();
+  for (const cell of cells) {
+    const index = cell?.jevChunkIndex;
+    if (!isSafeInteger(index) || index < 0 || index >= expectedJevChunkCount) {
+      throw new Error(
+        `reduceGroundedChunks: jevChunkIndex must be a safe integer in [0, ${expectedJevChunkCount}), received ${String(
+          index,
+        )}`,
+      );
+    }
+    if (seen.has(index)) {
+      throw new Error(`reduceGroundedChunks: duplicate jevChunkIndex ${index} across cells`);
+    }
+    seen.add(index);
+
+    const dimensionNumbers = new Set<number>();
+    for (const dimension of cell.dimensions) {
+      if (dimension === null || dimension === undefined) continue;
+      if (!isSafeInteger(dimension.number)) {
+        throw new Error(
+          `reduceGroundedChunks: cell with jevChunkIndex ${index} has a dimension with invalid number ${String(
+            dimension.number,
+          )}`,
+        );
+      }
+      if (dimensionNumbers.has(dimension.number)) {
+        throw new Error(
+          `reduceGroundedChunks: cell with jevChunkIndex ${index} has duplicate dimension number ${dimension.number}`,
+        );
+      }
+      dimensionNumbers.add(dimension.number);
+    }
+  }
+}
+
 /**
  * Reduce K grounded cells into one grounded dimension list (A5).
  *
  * Rules:
+ * - `expectedJevChunkCount` is REQUIRED: a positive safe integer, else throw;
+ * - every cell's jevChunkIndex must be a safe integer in
+ *   [0, expectedJevChunkCount) — out-of-range/invalid/duplicate → throw;
+ * - a cell with two dimensions sharing the same number → throw;
  * - cells ordered by jevChunkIndex ascending, never by input order;
- * - arrays: concatenated in order, deduped by normalized key (first kept);
+ * - arrays: concatenated in order, deduped by normalized key (first kept) —
+ *   case/whitespace-insensitive by design (display keywords);
  * - prose `content`: per-chunk sections joined with one blank line, no rewriting;
  * - numeric scores (confidence): wordCount-weighted mean over chunks that
- *   have the dimension, rounded to 4 decimals;
- * - dimension missing in some chunks → still produced, listed in `partial`;
- *   missing in all → absent.
+ *   have the dimension and a finite confidence; when the total weight is 0,
+ *   the plain mean over the finite confidences; when there are none, the
+ *   `confidence` key is OMITTED (never 0);
+ * - dimension missing from ANY expected chunk index (including chunk indices
+ *   with no cell at all) → still produced, listed in `partial`;
+ *   missing from every received cell → absent;
+ * - K=1 passthrough: when expectedJevChunkCount === 1 and exactly one valid
+ *   cell is supplied, its dimensions are returned unchanged (same objects,
+ *   deep-equal, no rounding, no dedupe) and partial is [].
  */
-export function reduceGroundedChunks(cells: readonly GroundedCell[]): ReducedGroundedResult {
+export function reduceGroundedChunks(
+  cells: readonly GroundedCell[],
+  { expectedJevChunkCount }: ReduceGroundedChunksOptions,
+): ReducedGroundedResult {
+  const expectedCount = validateExpectedCount(expectedJevChunkCount);
+  validateCells(cells, expectedCount);
+
+  // K=1 fast path: exact passthrough of the single cell's dimensions.
+  if (expectedCount === 1) {
+    if (cells.length === 1) {
+      return { dimensions: [...cells[0]!.dimensions], partial: [] };
+    }
+    // expectedCount 1 with zero cells: every index [0,1) is missing → fall
+    // through to the general path, which yields an empty result.
+  }
+
   const ordered = [...cells].sort((first, second) => first.jevChunkIndex - second.jevChunkIndex);
 
   // Group per-dimension chunk contributions in jevChunkIndex order.
   const byDimension = new Map<number, { cellIndex: number; dimension: UCISDimension; wordCount: number }[]>();
   ordered.forEach((cell, cellIndex) => {
     for (const dimension of cell.dimensions) {
-      if (!dimension || typeof dimension.number !== "number" || Number.isNaN(dimension.number)) continue;
+      if (!dimension) continue;
       const bucket = byDimension.get(dimension.number);
       const entry = { cellIndex, dimension, wordCount: cell.wordCount };
       if (bucket) bucket.push(entry);
@@ -85,17 +167,25 @@ export function reduceGroundedChunks(cells: readonly GroundedCell[]): ReducedGro
     }
   });
 
-  const totalCells = ordered.length;
   const dimensions: UCISDimension[] = [];
   const partial: number[] = [];
 
   for (const dimensionNumber of [...byDimension.keys()].sort((first, second) => first - second)) {
     const contributions = byDimension.get(dimensionNumber)!;
-    const isFirstChunk = contributions[0]!.cellIndex === 0;
-    const isLastChunk = contributions[contributions.length - 1]!.cellIndex === totalCells - 1;
-    if (contributions.length < totalCells && !(totalCells === 1 && isFirstChunk && isLastChunk)) {
-      partial.push(dimensionNumber);
+
+    // Present chunk indices for this dimension, as a Set for O(1) lookups.
+    const presentIndices = new Set(contributions.map((contribution) => contribution.cellIndex));
+
+    // A dimension is partial when it is missing from ANY expected chunk
+    // index — including expected indices that have no cell at all.
+    let missingFromAnyExpectedChunk = false;
+    for (let chunkIndex = 0; chunkIndex < expectedCount; chunkIndex++) {
+      if (!presentIndices.has(chunkIndex)) {
+        missingFromAnyExpectedChunk = true;
+        break;
+      }
     }
+    if (missingFromAnyExpectedChunk) partial.push(dimensionNumber);
 
     // Prose: join per-chunk content sections in order with one blank line.
     const content = contributions
@@ -126,13 +216,11 @@ export function reduceGroundedChunks(cells: readonly GroundedCell[]): ReducedGro
     let confidenceWeightSum = 0;
     let wordCountSum = 0;
     let insufficientDataAll = true;
-    let hasConfidence = false;
     let name = "";
     for (const contribution of contributions) {
       const metadata = contribution.dimension.metadata;
       const weight = typeof contribution.wordCount === "number" && contribution.wordCount > 0 ? contribution.wordCount : 0;
       if (metadata && typeof metadata.confidence === "number" && Number.isFinite(metadata.confidence)) {
-        hasConfidence = true;
         weightedConfidenceSum += metadata.confidence * weight;
         confidenceWeightSum += weight;
       }
@@ -145,22 +233,24 @@ export function reduceGroundedChunks(cells: readonly GroundedCell[]): ReducedGro
 
     const metadata: UCISDimension["metadata"] = {};
     if (hasKeyTermsField) metadata.keyTerms = keyTerms;
-    if (hasConfidence && confidenceWeightSum > 0) {
+    if (confidenceWeightSum > 0) {
       metadata.confidence = roundConfidence(weightedConfidenceSum / confidenceWeightSum);
-    } else if (hasConfidence) {
-      // All-zero weights: fall back to the unweighted mean (deterministic).
-      const unweighted =
-        contributions.reduce(
-          (sum, contribution) => sum + (contribution.dimension.metadata?.confidence ?? 0),
-          0,
-        ) / contributions.length;
-      metadata.confidence = roundConfidence(unweighted);
+    } else {
+      // Total weight is 0: fall back to the plain mean over ONLY the finite
+      // confidences; if there are none, omit `confidence` entirely (never 0).
+      const finiteConfidences: number[] = [];
+      for (const contribution of contributions) {
+        const confidence = contribution.dimension.metadata?.confidence;
+        if (typeof confidence === "number" && Number.isFinite(confidence)) finiteConfidences.push(confidence);
+      }
+      if (finiteConfidences.length > 0) {
+        metadata.confidence = roundConfidence(finiteConfidences.reduce((sum, value) => sum + value, 0) / finiteConfidences.length);
+      }
     }
     if (wordCountSum > 0) metadata.wordCount = wordCountSum;
     if (insufficientDataAll) metadata.insufficientData = true;
 
-    // Spread the FIRST chunk's dimension as the base so a K=1 reduce is an
-    // exact passthrough (identical key order and shape), then override the
+    // Spread the FIRST chunk's dimension as the base, then override the
     // merged fields deterministically.
     const base = contributions[0]!.dimension;
     dimensions.push({

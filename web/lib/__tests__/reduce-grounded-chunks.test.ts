@@ -41,123 +41,278 @@ function shuffledCopy(cells: readonly GroundedCell[], seed: number): GroundedCel
   return copy;
 }
 
+function reduce2(cells: readonly GroundedCell[], expectedJevChunkCount: number) {
+  return reduceGroundedChunks(cells, { expectedJevChunkCount });
+}
+
+describe("reduceGroundedChunks — input validation (A5 hardening)", () => {
+  it("throws when expectedJevChunkCount is missing", () => {
+    expect(() => {
+      // @ts-expect-error — deliberately omitting the required option.
+      reduceGroundedChunks([]);
+    }).toThrow(/expectedJevChunkCount/);
+  });
+
+  it("throws when expectedJevChunkCount is zero, negative, or non-integer (negative controls)", () => {
+    for (const bad of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, "3", null]) {
+      expect(() => reduce2([], bad as number)).toThrow(/expectedJevChunkCount/);
+    }
+  });
+
+  it("throws when a jevChunkIndex is out of range [0, expected)", () => {
+    const cells: GroundedCell[] = [
+      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+      { jevChunkIndex: 3, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+    ];
+    expect(() => reduce2(cells, 3)).toThrow(/jevChunkIndex/);
+  });
+
+  it("throws when a jevChunkIndex is not a safe integer (negative controls)", () => {
+    for (const bad of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() =>
+        reduce2([{ jevChunkIndex: bad as number, wordCount: 1, dimensions: [] }], 3),
+      ).toThrow(/jevChunkIndex/);
+    }
+  });
+
+  it("throws on duplicate jevChunkIndex across cells", () => {
+    const cells: GroundedCell[] = [
+      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 2 })] },
+    ];
+    expect(() => reduce2(cells, 2)).toThrow(/duplicate jevChunkIndex 0/);
+  });
+
+  it("throws when one cell has two dimensions with the same number", () => {
+    const cells: GroundedCell[] = [
+      {
+        jevChunkIndex: 0,
+        wordCount: 100,
+        dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 1 })],
+      },
+    ];
+    expect(() => reduce2(cells, 1)).toThrow(/duplicate dimension number 1/);
+  });
+
+  it("boundary index expected-1 is valid (no false rejection)", () => {
+    const cells: GroundedCell[] = [
+      { jevChunkIndex: 2, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+    ];
+    const result = reduce2(cells, 3);
+    expect(result.dimensions.map((dimension) => dimension.number)).toEqual([1]);
+  });
+});
+
+describe("reduceGroundedChunks — expected-chunk completeness (partial)", () => {
+  it("gap [0,2] of 3 → every dimension present is partial (chunk 1 has no cell)", () => {
+    const cells: GroundedCell[] = [
+      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 2 })] },
+      { jevChunkIndex: 2, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+    ];
+    const result = reduce2(cells, 3);
+    // Both dims miss chunk 1 (which has no cell at all); dim 2 also misses chunk 2.
+    expect(result.partial).toEqual([1, 2]);
+    expect(result.dimensions.map((dimension) => dimension.number)).toEqual([1, 2]);
+  });
+
+  it("every expected chunk covered → no partial entries (negative control)", () => {
+    const cells: GroundedCell[] = [
+      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+      { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+      { jevChunkIndex: 2, wordCount: 100, dimensions: [makeDimension({ number: 1 })] },
+    ];
+    expect(reduce2(cells, 3).partial).toEqual([]);
+  });
+});
+
 describe("reduceGroundedChunks — exact rules (A5)", () => {
   it("orders by jevChunkIndex ascending, never input order (content join order)", () => {
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 2, wordCount: 100, dimensions: [makeDimension({ number: 1, content: "SECOND" })] },
-      { jevChunkIndex: 0, wordCount: 50, dimensions: [makeDimension({ number: 1, content: "FIRST" })] },
-      { jevChunkIndex: 1, wordCount: 70, dimensions: [makeDimension({ number: 1, content: "MIDDLE" })] },
-    ]);
+    const result = reduce2(
+      [
+        { jevChunkIndex: 2, wordCount: 100, dimensions: [makeDimension({ number: 1, content: "SECOND" })] },
+        { jevChunkIndex: 0, wordCount: 50, dimensions: [makeDimension({ number: 1, content: "FIRST" })] },
+        { jevChunkIndex: 1, wordCount: 70, dimensions: [makeDimension({ number: 1, content: "MIDDLE" })] },
+      ],
+      3,
+    );
     expect(result.dimensions[0]!.content).toBe("FIRST\n\nMIDDLE\n\nSECOND");
   });
 
   it("concatenates and dedupes keyTerms by normalized key (case/whitespace), keeping first", () => {
-    const result = reduceGroundedChunks([
-      {
-        jevChunkIndex: 0,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["Compound  Interest", "Alpha"] } })],
-      },
-      {
-        jevChunkIndex: 1,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["compound interest", "Beta"] } })],
-      },
-    ]);
+    const result = reduce2(
+      [
+        {
+          jevChunkIndex: 0,
+          wordCount: 100,
+          dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["Compound  Interest", "Alpha"] } })],
+        },
+        {
+          jevChunkIndex: 1,
+          wordCount: 100,
+          dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["compound interest", "Beta"] } })],
+        },
+      ],
+      2,
+    );
     const metadata = result.dimensions[0]!.metadata!;
     expect(metadata.keyTerms).toEqual(["Compound  Interest", "Alpha", "Beta"]);
   });
 
-  it("dedupes timestamped array items by (label, timestamp), keeping first", () => {
-    const firstItem = { label: "Point A", timestamp: "00:01:00" };
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["unused"] } })] },
-      { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 1, metadata: { keyTerms: [] } })] },
-    ]);
-    // Sanity only — the (label, timestamp) rule is exercised via itemKey through
-    // the public surface below with object-shaped array items.
-    expect(result.dimensions).toHaveLength(1);
-    expect(firstItem.timestamp).toBe("00:01:00");
-  });
-
   it("joins prose content with one blank line, no rewriting", () => {
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 0, wordCount: 10, dimensions: [makeDimension({ number: 3, content: "Part one." })] },
-      { jevChunkIndex: 1, wordCount: 20, dimensions: [makeDimension({ number: 3, content: "Part two." })] },
-    ]);
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 10, dimensions: [makeDimension({ number: 3, content: "Part one." })] },
+        { jevChunkIndex: 1, wordCount: 20, dimensions: [makeDimension({ number: 3, content: "Part two." })] },
+      ],
+      2,
+    );
     expect(result.dimensions[0]!.content).toBe("Part one.\n\nPart two.");
   });
 
   it("computes wordCount-weighted mean confidence over chunks that have the dimension", () => {
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 0, wordCount: 300, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.8 } })] },
-      { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.4 } })] },
-    ]);
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 300, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.8 } })] },
+        { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.4 } })] },
+      ],
+      2,
+    );
     // (0.8*300 + 0.4*100) / 400 = 0.7 — not the unweighted mean 0.6.
     expect(result.dimensions[0]!.metadata!.confidence).toBe(0.7);
   });
 
   it("weights only chunks that HAVE the dimension (absent chunk contributes no weight)", () => {
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 0, wordCount: 300, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.8 } })] },
-      { jevChunkIndex: 1, wordCount: 100, dimensions: [] },
-    ]);
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 300, dimensions: [makeDimension({ number: 5, metadata: { confidence: 0.8 } })] },
+        { jevChunkIndex: 1, wordCount: 100, dimensions: [] },
+      ],
+      2,
+    );
     expect(result.dimensions[0]!.metadata!.confidence).toBe(0.8);
     expect(result.partial).toEqual([5]);
   });
 
   it("rounds the weighted mean to 4 decimals like the 0-1 source scale", () => {
-    const result = reduceGroundedChunks([
-      { jevChunkIndex: 0, wordCount: 1, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.12345 } })] },
-      { jevChunkIndex: 1, wordCount: 1, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.12346 } })] },
-    ]);
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 1, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.12345 } })] },
+        { jevChunkIndex: 1, wordCount: 1, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.12346 } })] },
+      ],
+      2,
+    );
     expect(result.dimensions[0]!.metadata!.confidence).toBe(0.1235);
   });
 
-  it("marks dimensions missing from some chunks in ascending partial; missing-in-all are absent", () => {
-    const result = reduceGroundedChunks([
-      {
-        jevChunkIndex: 0,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 4 })],
-      },
-      {
-        jevChunkIndex: 1,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 4 })],
-      },
-    ]);
+  it("zero total weight: plain mean over ONLY finite confidences (0.8 + missing → 0.8)", () => {
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 0, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.8 } })] },
+        { jevChunkIndex: 1, wordCount: 0, dimensions: [makeDimension({ number: 2 })] },
+      ],
+      2,
+    );
+    expect(result.dimensions[0]!.metadata!.confidence).toBe(0.8);
+  });
+
+  it("zero total weight with NO finite confidence → confidence key omitted entirely (never 0)", () => {
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 0, dimensions: [makeDimension({ number: 2 })] },
+        { jevChunkIndex: 1, wordCount: 0, dimensions: [makeDimension({ number: 2, metadata: { confidence: Number.NaN } })] },
+      ],
+      2,
+    );
+    const metadata = result.dimensions[0]!.metadata;
+    if (metadata === undefined) return; // metadata omitted entirely — confidence certainly absent
+    expect(metadata).not.toHaveProperty("confidence");
+  });
+
+  it("positive-weight path still ignores missing confidence values (negative control)", () => {
+    const result = reduce2(
+      [
+        { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 2, metadata: { confidence: 0.8 } })] },
+        { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 2 })] },
+      ],
+      2,
+    );
+    expect(result.dimensions[0]!.metadata!.confidence).toBe(0.8);
+  });
+
+  it("marks dimensions missing from some expected chunks in ascending partial; missing-in-all are absent", () => {
+    const result = reduce2(
+      [
+        {
+          jevChunkIndex: 0,
+          wordCount: 100,
+          dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 4 })],
+        },
+        {
+          jevChunkIndex: 1,
+          wordCount: 100,
+          dimensions: [makeDimension({ number: 4 })],
+        },
+      ],
+      2,
+    );
     // Dimension 1 missing from chunk 1 → partial. Dimension 4 in both → not partial.
     expect(result.partial).toEqual([1]);
     expect(result.dimensions.map((dimension) => dimension.number)).toEqual([1, 4]);
   });
 
-  it("produces no partial entries when every chunk has every dimension", () => {
+  it("produces no partial entries when every expected chunk has every dimension", () => {
     const cells: GroundedCell[] = [
       { jevChunkIndex: 0, wordCount: 100, dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 2 })] },
       { jevChunkIndex: 1, wordCount: 100, dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 2 })] },
     ];
-    expect(reduceGroundedChunks(cells).partial).toEqual([]);
+    expect(reduce2(cells, 2).partial).toEqual([]);
+  });
+});
+
+describe("reduceGroundedChunks — K=1 passthrough", () => {
+  it("expectedJevChunkCount 1 + one cell → dimensions returned unchanged (deep-equal, no rounding, no dedupe)", () => {
+    const cell: GroundedCell = {
+      jevChunkIndex: 0,
+      wordCount: 500,
+      dimensions: [
+        makeDimension({
+          number: 1,
+          content: "Only chunk.",
+          metadata: { keyTerms: ["A", "a", "A"], confidence: 0.123456 },
+        }),
+        makeDimension({ number: 2, content: "Second dim.", metadata: { confidence: 0.9 } }),
+      ],
+    };
+    const result = reduceGroundedChunks([cell], { expectedJevChunkCount: 1 });
+    expect(JSON.stringify(result.dimensions)).toBe(JSON.stringify(cell.dimensions));
+    expect(result.dimensions[0]!.metadata!.confidence).toBe(0.123456);
+    expect(result.dimensions[0]!.metadata!.keyTerms).toEqual(["A", "a", "A"]);
+    expect(result.partial).toEqual([]);
   });
 
-  it("handles the timestamped-item dedupe through the public surface (object array items)", () => {
-    // keyTerms is a string[] per the schema, but the itemKey contract also
-    // covers timestamped object items for future grounded arrays — verify
-    // object items dedupe by (label, timestamp) when routed through reduce.
-    const cells: GroundedCell[] = [
-      {
-        jevChunkIndex: 0,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: [] } })],
-      },
-      {
-        jevChunkIndex: 1,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: [] } })],
-      },
-    ];
-    const result = reduceGroundedChunks(cells);
-    expect(result.dimensions[0]!.metadata!.keyTerms).toEqual([]);
+  it("K=1 returns the SAME object references (no copying/mutation)", () => {
+    const cell: GroundedCell = {
+      jevChunkIndex: 0,
+      wordCount: 500,
+      dimensions: [makeDimension({ number: 1, metadata: { confidence: 0.5 } })],
+    };
+    const result = reduceGroundedChunks([cell], { expectedJevChunkCount: 1 });
+    expect(result.dimensions[0]).toBe(cell.dimensions[0]);
+  });
+
+  it("K=1 with a duplicate dimension number still throws (negative control)", () => {
+    const cell: GroundedCell = {
+      jevChunkIndex: 0,
+      wordCount: 500,
+      dimensions: [makeDimension({ number: 1 }), makeDimension({ number: 1 })],
+    };
+    expect(() => reduceGroundedChunks([cell], { expectedJevChunkCount: 1 })).toThrow(/duplicate dimension number/);
+  });
+
+  it("expectedJevChunkCount 1 with zero cells → empty result, not a passthrough", () => {
+    const result = reduceGroundedChunks([], { expectedJevChunkCount: 1 });
+    expect(result.dimensions).toEqual([]);
+    expect(result.partial).toEqual([]);
   });
 });
 
@@ -187,54 +342,22 @@ describe("reduceGroundedChunks — properties (seeded PRNG)", () => {
 
   it("(a) shuffling input cells never changes JSON.stringify(output)", () => {
     const cells = buildRandomCells(SEED);
-    const baseline = JSON.stringify(reduceGroundedChunks(cells));
+    const baseline = JSON.stringify(reduce2(cells, PROPERTY_CELL_COUNT));
     for (let shuffleSeed = 0; shuffleSeed < 50; shuffleSeed++) {
       const shuffled = shuffledCopy(cells, shuffleSeed + 1);
-      expect(JSON.stringify(reduceGroundedChunks(shuffled))).toBe(baseline);
+      expect(JSON.stringify(reduce2(shuffled, PROPERTY_CELL_COUNT))).toBe(baseline);
     }
   });
 
   it("(b) reducing twice equals once (idempotent on the same set)", () => {
     const cells = buildRandomCells(SEED + 100);
-    const once = reduceGroundedChunks(cells);
+    const once = reduce2(cells, PROPERTY_CELL_COUNT);
     // Re-reducing: wrap the reduced output as a single K=1 cell set.
-    const twice = reduceGroundedChunks([{ jevChunkIndex: 0, wordCount: 0, dimensions: once.dimensions }]);
+    const twice = reduceGroundedChunks([{ jevChunkIndex: 0, wordCount: 0, dimensions: once.dimensions }], {
+      expectedJevChunkCount: 1,
+    });
     expect(JSON.stringify(twice.dimensions)).toBe(JSON.stringify(once.dimensions));
     // And on the ORIGINAL set, re-running is trivially identical.
-    expect(JSON.stringify(reduceGroundedChunks(cells))).toBe(JSON.stringify(once));
-  });
-
-  it("(c) K = 1 ⇒ output equals the single cell's dimensions exactly", () => {
-    const single: GroundedCell = {
-      jevChunkIndex: 0,
-      wordCount: 500,
-      dimensions: [
-        makeDimension({ number: 1, content: "Only chunk.", metadata: { keyTerms: ["A", "B"], confidence: 0.5 } }),
-        makeDimension({ number: 2, content: "Second dim.", metadata: { confidence: 0.9 } }),
-      ],
-    };
-    const result = reduceGroundedChunks([single]);
-    expect(JSON.stringify(result.dimensions)).toBe(JSON.stringify(single.dimensions));
-    expect(result.partial).toEqual([]);
-  });
-
-  it("(d) dedupe never drops an item whose normalized key is unique", () => {
-    const cells: GroundedCell[] = [
-      {
-        jevChunkIndex: 0,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["Alpha", "Beta", "Gamma"] } })],
-      },
-      {
-        jevChunkIndex: 1,
-        wordCount: 100,
-        dimensions: [makeDimension({ number: 1, metadata: { keyTerms: ["ALPHA", "beta", "Delta", "Epsilon"] } })],
-      },
-    ];
-    const reduced = reduceGroundedChunks(cells).dimensions[0]!.metadata!.keyTerms!;
-    const normalizedReduced = reduced.map((term) => term.trim().toLowerCase().replace(/\s+/g, " "));
-    expect(new Set(normalizedReduced).size).toBe(normalizedReduced.length);
-    // All 5 unique keys survive: alpha, beta, gamma, delta, epsilon.
-    expect(normalizedReduced.sort()).toEqual(["alpha", "beta", "delta", "epsilon", "gamma"]);
+    expect(JSON.stringify(reduce2(cells, PROPERTY_CELL_COUNT))).toBe(JSON.stringify(once));
   });
 });
