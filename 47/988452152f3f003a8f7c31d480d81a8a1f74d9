@@ -1,0 +1,27 @@
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_d84474d7509dd0::t_67eaf1b6a60867 140
+web/components/dashboard/HighlightsScrubber.tsx
+  s_d84474d7509dd0::t_d8ab8872eff895 303-305
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_d84474d7509dd0::t_dca0a73d6988c5 473-475,479,484,488
+web/lib/hooks/useHighlightTicker.test.ts
+  s_d84474d7509dd0::t_8f27ea667140e2 36-51
+web/lib/hooks/useHighlightTicker.ts
+  s_d84474d7509dd0::t_76799b997ac7e4 65-69,100-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "47988452152f3f003a8f7c31d480d81a8a1f74d9",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
