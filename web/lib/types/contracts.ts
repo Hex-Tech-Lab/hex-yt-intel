@@ -291,6 +291,8 @@ export interface WorkerStreamRequest {
   jevChunkIndex?: number;
   jevChunkCount?: number;
   bundleList?: number[][];
+  /** R3b 2.3 (P1): Jev semantic-chunk plan forwarded to the worker (absent = no plan / K=1). */
+  jevPlan?: JevPlanEvent;
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
@@ -300,6 +302,38 @@ export interface WorkerStreamRequest {
   commentsSamplePlan?: CommentsSamplePlanConfig;
   commentsSyncPoolConfig?: CommentsSyncPoolConfig;
 }
+
+/**
+ * R3b 2.3 (P1): Shared SSOT for the Jev semantic-chunk plan (ADR 029 v2
+ * relay). Two carriers share this shape:
+ * - job.jevPlan (CreateAnalysisUseCase): server-computed plan at job creation;
+ *   includes `estimateCents` (kept optional here so ONE schema validates both
+ *   carriers).
+ * - worker SSE `event: plan` frame: same fields plus the `v`/`source` envelope.
+ * safeParse only -- never cast. Malformed/absent plan ⇒ K=1 fallback.
+ */
+export const JevPlanCellSchema = z.object({
+  jevChunkIndex: z.number().int().min(0),
+  chunkIndex: z.number().int().min(0),
+  startWord: z.number().int().min(0),
+  endWord: z.number().int().min(0),
+  sha256: z.string().min(1),
+});
+
+export const JevPlanEventSchema = z
+  .object({
+    // Worker SSE frames carry the envelope keys (#392: {v:1,source,...plan}).
+    v: z.literal(1).optional(),
+    source: z.enum(['inline', 'worker']).optional(),
+    K: z.number().int().min(1),
+    streamCount: z.number().int().min(1),
+    cells: z.array(JevPlanCellSchema),
+    estimateCents: z.number().optional(),
+    truncatedFallback: z.boolean(),
+  })
+  .strict();
+
+export type JevPlanEvent = z.infer<typeof JevPlanEventSchema>;
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 /**

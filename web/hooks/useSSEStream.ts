@@ -6,7 +6,8 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useChaptersStore } from '@/store/useChaptersStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
-import type { WorkerStreamRequest } from '@/lib/types/contracts';
+import { JevPlanEventSchema } from '@/lib/types/contracts';
+import type { WorkerStreamRequest, JevPlanEvent } from '@/lib/types/contracts';
 
 /** R2b: signed, server-loaded grounded context for the projective bundle. */
 type ProjectiveContext = { prior_payload: Record<string, unknown>; contextSig: string; contextExp: number };
@@ -63,6 +64,35 @@ function isLlmSignalFrame(frame: string): boolean {
 }
 
 /**
+ * R3b 2.3 (P1): Extracts and validates a Jev plan from an SSE event frame
+ * carrying `event: plan`. Mirrors isLlmSignalFrame's frame-scanning shape:
+ * only frames whose `event:` line names `plan` are considered, and the
+ * frame's `data:` payload must safeParse against JevPlanEventSchema. A
+ * malformed or absent payload returns null (K=1 fallback) -- never cast.
+ * Unknown event frames are ignored by design (existing behavior preserved).
+ */
+export function parsePlanFrame(frame: string): JevPlanEvent | null {
+  let isPlanEvent = false;
+  let dataLine: string | undefined;
+  for (const line of frame.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('event:')) {
+      if (trimmed.slice(6).trim() === 'plan') isPlanEvent = true;
+      else return null;
+    } else if (trimmed.startsWith('data:')) {
+      dataLine = trimmed.slice(5).trim();
+    }
+  }
+  if (!isPlanEvent || dataLine === undefined) return null;
+  try {
+    const parsed = JevPlanEventSchema.safeParse(JSON.parse(dataLine));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Reads the worker stream body to completion, feeding every SSE event frame
  * to handleSseLine. Fires onLlmSignal exactly once, when the first
  * cacheable-LLM-start event frame arrives (see isLlmSignalFrame). A
@@ -70,7 +100,7 @@ function isLlmSignalFrame(frame: string): boolean {
  * propagates to the caller's retry/settle logic. Always releases the reader
  * lock.
  */
-async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, onLlmSignal?: () => void): Promise<void> {
+async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, onLlmSignal?: () => void, onPlanEvent?: (plan: JevPlanEvent) => void): Promise<void> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -88,10 +118,24 @@ async function readSseBody(res: Response, adapter: SynthesisStreamAdapter, curre
           onLlmSignal();
           onLlmSignal = undefined;
         }
+        if (onPlanEvent) {
+          const plan = parsePlanFrame(e);
+          if (plan) {
+            onPlanEvent(plan);
+            onPlanEvent = undefined;
+          }
+        }
       }
     }
     if (buffer.trim()) {
       handleSseLine(buffer, adapter);
+      if (onPlanEvent) {
+        const plan = parsePlanFrame(buffer);
+        if (plan) {
+          onPlanEvent(plan);
+          onPlanEvent = undefined;
+        }
+      }
       if (onLlmSignal && isLlmSignalFrame(buffer)) {
         onLlmSignal();
         onLlmSignal = undefined;
@@ -171,6 +215,12 @@ export function useSSEStream() {
   const activeAnalysisIdRef = useRef<string | null>(null);
   const processingRef = useRef(false);
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  // R3b 2.3 (P1): resolved Jev plan for the CURRENT analysis run. Ref (not
+  // store) so runSingleStream's per-bundle closures read one resolved value
+  // instead of racing stream events; state mirrors it for hook consumers.
+  const activePlanRef = useRef<JevPlanEvent | null>(null);
+  const [plan, setPlan] = useState<JevPlanEvent | null>(null);
+  const [planSource, setPlanSource] = useState<'job' | 'stream' | null>(null);
 
   useEffect(() => {
     return () => {
@@ -280,6 +330,40 @@ export function useSSEStream() {
 
               const job = await prepRes.json();
               store.logOk(`Bouncer checklist complete. Auth & quota checks passed.`);
+
+              // R3b 2.3 (P1): resolve the Jev plan ONCE per analysis run,
+              // before any stream dispatch. Preference: the server-computed
+              // job.jevPlan; otherwise the first valid worker SSE `plan`
+              // event (captured in readSseBody via onPlanEvent). A malformed
+              // or absent plan means K=1 (no plan forwarded, zero behavior
+              // change vs pre-Jev) -- never cast, always safeParse.
+              activePlanRef.current = null;
+              setPlan(null);
+              setPlanSource(null);
+              const rawJobPlan = (job as { jevPlan?: unknown } | undefined)?.jevPlan;
+              if (rawJobPlan !== undefined && rawJobPlan !== null) {
+                const jobPlan = JevPlanEventSchema.safeParse(rawJobPlan);
+                if (jobPlan.success) {
+                  activePlanRef.current = jobPlan.data;
+                  setPlan(jobPlan.data);
+                  setPlanSource('job');
+                  if (jobPlan.data.K > 1) {
+                    // R3b 2.3 (P1): per-cell v2 tokens are not issued yet
+                    // (the browser cannot sign them), so a multi-chunk plan
+                    // cannot change dispatch today. Warn + breadcrumb, then
+                    // proceed with today's K=1-equivalent partition.
+                    console.warn('jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1');
+                    Sentry.addBreadcrumb({
+                      category: 'jev-plan',
+                      message: 'jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1',
+                      level: 'warning',
+                      data: { K: jobPlan.data.K, streamCount: jobPlan.data.streamCount },
+                    });
+                  }
+                } else {
+                  console.warn('[useSSEStream] job.jevPlan failed validation; falling back to stream plan event or K=1');
+                }
+              }
 
               // 2. Metadata extraction
               if (job.metadata) {
@@ -467,6 +551,12 @@ export function useSSEStream() {
                   contextSig: projectiveContext?.contextSig,
                   contextExp: projectiveContext?.contextExp,
                   priorPayloadMaxBytes: job.priorPayloadMaxBytes,
+                  // R3b 2.3 (P1): forward the resolved Jev plan when present.
+                  // Dispatch count is NEVER derived from the plan -- it stays
+                  // today's K=1-equivalent stream partition (TOTAL_STREAMS).
+                  // v2 tokens (per-cell) are not issued yet, so K>1 plans are
+                  // logged but not acted on.
+                  jevPlan: activePlanRef.current ?? undefined,
                 };
 
                 const streamController = new AbortController();
@@ -492,7 +582,28 @@ export function useSSEStream() {
                   throw new Error(`Worker stream ${i + 1} failed (${res.status}): ${errBody}`);
                 }
 
-                await readSseBody(res, adapter, currentSignal, onLlmSignal);
+                await readSseBody(res, adapter, currentSignal, onLlmSignal, (streamPlan) => {
+                  // First valid SSE plan event wins only when no job plan
+                  // was resolved (job.jevPlan preference). Later events are
+                  // ignored -- the worker emits at most once per stream.
+                  if (activePlanRef.current) return;
+                  activePlanRef.current = streamPlan;
+                  setPlan(streamPlan);
+                  setPlanSource('stream');
+                  if (streamPlan.K > 1) {
+                    // R3b 2.3 (P1): per-cell v2 tokens are not issued yet
+                    // (the browser cannot sign them), so a multi-chunk plan
+                    // cannot change dispatch today. Warn + breadcrumb, then
+                    // proceed with today's K=1-equivalent partition.
+                    console.warn('jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1');
+                    Sentry.addBreadcrumb({
+                      category: 'jev-plan',
+                      message: 'jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1',
+                      level: 'warning',
+                      data: { K: streamPlan.K, streamCount: streamPlan.streamCount },
+                    });
+                  }
+                });
               };
 
               const runStreams = async () => {
@@ -857,5 +968,5 @@ export function useSSEStream() {
     setStatus('idle');
   };
 
-  return { startAnalysis, stopAnalysis, isLiveStreaming };
+  return { startAnalysis, stopAnalysis, isLiveStreaming, plan, planSource };
 }
