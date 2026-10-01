@@ -16,7 +16,7 @@
 
 import { isProjectiveBundle } from '@/lib/config/synthesis';
 import { chunkTranscript, tokenize, type JevChunk } from '@/lib/jev/boundary-engine';
-import { sha256Hex } from '@/lib/config/projective-context';
+import { sha256HexIsomorphic, sliceDigest, sliceText } from '@/lib/jev/transcript-slice';
 import type { JevConfig } from '@/lib/config/jev';
 
 /** Words-per-token conversion factor from ADR 037 Addendum A6. */
@@ -81,7 +81,7 @@ function mergeChunks(chunks: JevChunk[], words: string[]): MergedChunk[] {
     startWord: chunk.startWord,
     endWord: chunk.endWord,
     wordCount: chunk.wordCount,
-    text: words.filter((_unusedWord, wordIndex) => wordIndex >= chunk.startWord && wordIndex < chunk.endWord).join(' '),
+    text: sliceText(words, chunk.startWord, chunk.endWord),
   }));
 }
 
@@ -139,8 +139,8 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
 
   // K = 1 when Jev is disabled or the transcript fits today's budget (A1).
   if (!input.jevConfig.enabled || withinCharBudget) {
-    const text = words.join(' ');
-    const sha256 = await sha256Hex(text);
+    const text = sliceText(words, 0, words.length);
+    const sha256 = await sha256HexIsomorphic(text);
     const groundedBundleIndexes = input.bundles
       .map((bundle, bundleIdx) => ({ bundle, bundleIdx }))
       .filter(({ bundle }) => !isProjectiveBundle(bundle))
@@ -204,13 +204,13 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
   const cells: PlanCell[] = [];
   for (let k = 0; k < chunks.length; k++) {
     const chunk = chunks[k]!;
-    const sha256 = await sha256Hex(chunk.text);
+    const sha256 = await sha256HexIsomorphic(chunk.text);
     for (const chunkIndex of groundedBundleIndexes) {
       cells.push({ jevChunkIndex: k, chunkIndex, startWord: chunk.startWord, endWord: chunk.endWord, sha256 });
     }
     if (k === 0) {
       for (const chunkIndex of projectiveBundleIndexes) {
-        cells.push({ jevChunkIndex: 0, chunkIndex, startWord: 0, endWord: 0, sha256: await sha256Hex('') });
+        cells.push({ jevChunkIndex: 0, chunkIndex, startWord: 0, endWord: 0, sha256: await sliceDigest('', 0, 0) });
       }
     }
   }
