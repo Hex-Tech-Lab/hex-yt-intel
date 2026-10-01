@@ -1,0 +1,21 @@
+scripts/quality-engine/__tests__/wave9-new-rules.test.ts
+  s_d84474d7509dd0::t_b585be8ce28160 11,221-243
+scripts/quality-engine/rules/data-integrity.ts
+  s_d84474d7509dd0::t_76e1c08163b799 151-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6078f819ac8f1bc2eb225649b595960a6642444b",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
