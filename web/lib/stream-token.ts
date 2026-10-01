@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import { canonicalJson } from '@/lib/utils/canonical-json';
+import { sha256Hex } from '@/lib/config/projective-context';
 
 /**
  * Shared-secret HMAC for the direct browser->worker streaming flow.
@@ -61,10 +62,7 @@ export interface StreamTokenV2Params {
   slice: { sha256: string; startWord: number; endWord: number };
 }
 
-export async function sha256Hex(input: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+export { sha256Hex };
 
 /**
  * Exported for tests only: the canonical v2 message template. Byte-identical
