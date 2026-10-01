@@ -15,6 +15,15 @@ import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
 import { canonicalJson } from "../../../web/lib/utils/canonical-json";
+
+/** sha256("") — the slice hash PlanAnalysisUseCase signs for projective cells. */
+const EMPTY_SLICE_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+// R3b 2.3.5a: lowercase hex sha256 (partition digest in the v2 token message).
+const sha256Hex = async (input: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
@@ -140,10 +149,17 @@ interface StreamRequest {
   // binds streamCount/jevChunkIndex/jevChunkCount and carries the range +
   // stream-partition guards below. The web side keeps emitting v1 until the
   // v2 emission wave lands.
-  tokenVersion?: 1 | 2;
+  tokenVersion?: 1 | 2 | unknown;
   jevChunkIndex?: number;
   jevChunkCount?: number;
   streamCount?: number;
+  // R3b 2.3.5a: transcript slice triple bound into the v2 signature. The
+  // plan's per-cell slice (PlanAnalysisUseCase) is forwarded verbatim; the
+  // worker re-derives nothing — it only requires the fields be present,
+  // well-formed, and covered by the signature.
+  sliceSha256?: string;
+  startWord?: number;
+  endWord?: number;
   // R3b 2.2: the resolved bundle partition (job.streamBundles) forwarded on
   // v2 requests ONLY, so the worker can count grounded (G) and projective (P)
   // bundles and enforce streamCount === jevChunkCount*G + P. The worker has
@@ -216,11 +232,15 @@ async function verifyStreamToken(
   models: string[] | undefined,
   env: AnalysisEnv,
   opts?: {
-    tokenVersion?: 1 | 2;
+    tokenVersion?: 1 | 2 | unknown;
     streamCount?: number;
     jevChunkIndex?: number;
     jevChunkCount?: number;
     bundleList?: number[][];
+    chunkIndex?: number;
+    sliceSha256?: string;
+    startWord?: number;
+    endWord?: number;
   },
 ): Promise<TokenVerificationResult> {
   const secret = env.STREAM_HMAC_SECRET;
@@ -234,7 +254,7 @@ async function verifyStreamToken(
   // message the signer would never have produced.
   const isV2 = opts?.tokenVersion === 2;
   if (isV2) {
-    const { streamCount, jevChunkIndex, jevChunkCount, bundleList } = opts ?? {};
+    const { streamCount, jevChunkIndex, jevChunkCount, bundleList, chunkIndex, sliceSha256, startWord, endWord } = opts ?? {};
     const cellsInteger = Number.isInteger(streamCount) && Number.isInteger(jevChunkIndex) && Number.isInteger(jevChunkCount);
     if (!cellsInteger || (jevChunkCount as number) < 1 || (jevChunkIndex as number) < 0 || (jevChunkIndex as number) >= (jevChunkCount as number)) {
       return { isValid: false, secret, msg: "v2_invalid_cells" };
@@ -246,6 +266,26 @@ async function verifyStreamToken(
     const projectiveBundles = bundleList.length - groundedBundles;
     if ((streamCount as number) !== (jevChunkCount as number) * groundedBundles + projectiveBundles) {
       return { isValid: false, secret, msg: "v2_stream_count_mismatch" };
+    }
+    // R3b 2.3.5a: slice + per-cell chunk fields must be structurally sane
+    // BEFORE any HMAC work (same fail-closed pattern as v2_invalid_cells).
+    if (!Number.isInteger(chunkIndex) || (chunkIndex as number) < 1) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    if (typeof sliceSha256 !== "string" || !/^[0-9a-f]{64}$/.test(sliceSha256)) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    if (
+      !Number.isInteger(startWord) ||
+      !Number.isInteger(endWord) ||
+      (startWord as number) < 0 ||
+      (startWord as number) > (endWord as number) ||
+      // Projective cells read no transcript words: PlanAnalysisUseCase signs
+      // them with the empty slice (0, 0, sha256("")). That is the ONLY
+      // permitted empty range.
+      ((startWord as number) === (endWord as number) && !(startWord === 0 && sliceSha256 === EMPTY_SLICE_SHA256))
+    ) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
     }
   }
 
@@ -259,12 +299,19 @@ async function verifyStreamToken(
     secretsToTry.push(env.DEV_HMAC_SECRET);
   }
 
+  // R3b 2.3.5a: one canonical v2 message — the bundle partition digest and
+  // the transcript slice triple are part of the signed bytes, so a signature
+  // minted for one partition/slice can never verify against another. MUST
+  // stay byte-identical to the web signer (web/lib/stream-token.ts).
+  const buildV2Msg = async (modelStr: string): Promise<string> => {
+    const partitionDigest = await sha256Hex(canonicalJson(opts?.bundleList));
+    return `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}:${opts?.chunkIndex}:${partitionDigest}:${opts?.sliceSha256}:${opts?.startWord}:${opts?.endWord}`;
+  };
+
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(models ?? [])].sort().join(",");
-    const msg = isV2
-      ? `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}`
-      : `${videoId}:${analysisId}:${exp}:${modelStr}`;
+    const msg = isV2 ? await buildV2Msg(modelStr) : `${videoId}:${analysisId}:${exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
 
     if (timingSafeEqualHex(expected, sig)) {
@@ -273,9 +320,7 @@ async function verifyStreamToken(
   }
 
   const modelStr = [...(models ?? [])].sort().join(",");
-  const msg = isV2
-    ? `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}`
-    : `${videoId}:${analysisId}:${exp}:${modelStr}`;
+  const msg = isV2 ? await buildV2Msg(modelStr) : `${videoId}:${analysisId}:${exp}:${modelStr}`;
   return { isValid: false, secret: activeSecret, msg };
 }
 
@@ -1528,12 +1573,23 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Server misconfigured" }, 500);
   }
 
+  // R3b 2.3.5a: tokenVersion allowlist — a present-but-unrecognized version
+  // must fail CLOSED, never silently verify as v1 (previously any non-2 value
+  // fell through to the legacy path). Absent stays v1.
+  if (req.tokenVersion !== undefined && req.tokenVersion !== 1 && req.tokenVersion !== 2) {
+    return c.json({ error: "Invalid token", reason: "unknown_token_version" }, 401);
+  }
+
   const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env, {
     tokenVersion: req.tokenVersion,
     streamCount: req.streamCount,
     jevChunkIndex: req.jevChunkIndex,
     jevChunkCount: req.jevChunkCount,
     bundleList: req.bundleList,
+    chunkIndex: req.chunkIndex,
+    sliceSha256: req.sliceSha256,
+    startWord: req.startWord,
+    endWord: req.endWord,
   });
 
   if (!isTokenValid) {
