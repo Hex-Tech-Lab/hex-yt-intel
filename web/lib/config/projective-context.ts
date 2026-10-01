@@ -20,12 +20,10 @@ export const PROJECTIVE_CONTEXT_PURPOSE = 'projective-context' as const;
 /** How long a signed context stays valid (the projective call starts right after). */
 export const PROJECTIVE_CONTEXT_TTL_MS = 10 * 60 * 1000;
 
-export async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
+/** Lowercase-hex SHA-256; single implementation lives in the shared isomorphic slice module. */
+import { sha256HexIsomorphic as sha256Hex } from '../jev/transcript-slice';
+
+export { sha256Hex };
 
 /**
  * The signed content: the projective bundle's dimensions (sorted) plus the

@@ -11,6 +11,7 @@
  */
 
 import { FILLER_TERMS, STOPWORDS } from './lexicon';
+import { tokenizeTranscript } from './transcript-slice';
 import type { JevConfig } from '@/lib/config/jev';
 
 export interface JevWindow {
@@ -32,9 +33,9 @@ export interface JevChunk {
   forcedCut: boolean;
 }
 
-/** Split on whitespace, drop empties. */
+/** Split on whitespace, drop empties. Delegates to the shared isomorphic module (R3b 2.3.5b). */
 export function tokenize(transcript: string): string[] {
-  return transcript.split(/\s+/).filter((word) => word.length > 0);
+  return tokenizeTranscript(transcript);
 }
 
 function stripPunctuation(word: string): string {
