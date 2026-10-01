@@ -1,0 +1,21 @@
+web/hooks/__tests__/useSSEStream-jev-plan.test.tsx
+  s_d84474d7509dd0::t_3979c8f5a8afef 176,189-192
+web/hooks/useSSEStream.ts
+  s_d84474d7509dd0::t_ad1e4052dfd168 29-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "39fd6e8c6150e853c5161cc929f732c4c61b971e",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
