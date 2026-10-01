@@ -1,0 +1,19 @@
+supabase/migrations/20261001120000_comment_type_allow_experience.sql
+  s_d84474d7509dd0::t_b38bd028be77ff 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8f53283dd8a762cb31291eb281e913813c4cae85",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
