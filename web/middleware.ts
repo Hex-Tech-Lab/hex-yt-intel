@@ -187,6 +187,13 @@ const publicPostRoutes = [
     // ever ran (same bug class as /api/waitlist 2026-08-14 and
     // /api/test-auth 2026-08-20, both documented above).
     /^\/api\/videos\/[^/]+\/chapters$/,
+    // Same bug class, live-caught 2026-10-01: the worker's Tier 3 queue
+    // consumer callback (HMAC purpose 'comments-tier3') and the R3b /plan
+    // S2S call (HMAC purpose 'plan') both 401'd here before their handlers'
+    // own signature checks ran -- no comment sample run ever completed, and
+    // every worker /plan call would have silently fallen back to K=1.
+    /^\/api\/comments\/persist-sample-run$/,
+    /^\/api\/analyses\/[^/]+\/plan$/,
   ];
 
 // skipcq: JS-0067 -- module-scope helpers are idiomatic in a Next.js edge
