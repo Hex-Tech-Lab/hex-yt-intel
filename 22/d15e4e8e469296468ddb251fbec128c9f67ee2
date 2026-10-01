@@ -1,0 +1,44 @@
+web/hooks/__tests__/useSSEStream-jev-plan.test.tsx
+  s_ad7ebd040fe53a::t_f9c747ecae414a 149-154,159,161-171,187-188,190-195
+  s_ad7ebd040fe53a::t_f91209faea209f 120,202,232,262
+  s_ad7ebd040fe53a::t_d4061aef21a5b8 43
+  s_ad7ebd040fe53a::t_3008126284ed56 1-39,41,44-119,121-148,155,157-158,160,172-186,189,196-201,203-231,233-261,263-299
+  s_ad7ebd040fe53a::t_87ad176947a468 156
+  s_ad7ebd040fe53a::t_bdf8ae0024f291 40,42
+  s_ad7ebd040fe53a::t_65fae2a8f40a50 300
+web/hooks/useSSEStream.ts
+  s_ad7ebd040fe53a::t_216b7ebeab4efe 971
+  s_ad7ebd040fe53a::t_4cce76fe0846fd 121-127
+  s_ad7ebd040fe53a::t_2d210fbab1bd21 10
+  s_ad7ebd040fe53a::t_24845d7434c991 132-138
+  s_ad7ebd040fe53a::t_cc656873ce1177 218-223
+  s_ad7ebd040fe53a::t_1c4db26f3a2cfd 585-606
+  s_ad7ebd040fe53a::t_af259e6e5d99b3 554-559
+  s_ad7ebd040fe53a::t_797933ad144545 9
+  s_ad7ebd040fe53a::t_816099bb20efa8 67-94
+  s_ad7ebd040fe53a::t_893fea95dec690 103
+  s_ad7ebd040fe53a::t_5799ac69a20cb7 350-362
+  s_ad7ebd040fe53a::t_c129c7f03dc164 334-349,363-367
+  s_ad7ebd040fe53a::t_1af8fef532aeef 66
+web/lib/types/contracts.ts
+  s_ad7ebd040fe53a::t_d16f135f6c2dd1 306-334,336
+  s_ad7ebd040fe53a::t_fdfc4a148b121a 294-295
+  s_ad7ebd040fe53a::t_3f23781e3ff55e 335
+  s_ad7ebd040fe53a::t_37d4954922969c 337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "22d15e4e8e469296468ddb251fbec128c9f67ee2",
+  "prompts": {},
+  "sessions": {
+    "s_ad7ebd040fe53a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f09b9b277ffezNsdsjoUGnAE6B",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
