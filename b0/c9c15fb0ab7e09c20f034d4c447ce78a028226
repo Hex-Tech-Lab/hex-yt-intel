@@ -1,0 +1,31 @@
+.memory/AGENT_LEDGER.md
+  s_36f875f11b73af::t_a802b5552baf6d 1465-1475
+.memory/SESSION_TODO.md
+  s_36f875f11b73af::t_223e86092ca364 1-45
+docs/agent-prompts/2026-10-01-oc-r3b-2-3-qa-fixes.md
+  s_36f875f11b73af::t_9fa5562da46d19 1-27
+docs/agent-prompts/2026-10-01-oc-r3b-2-3c.md
+  s_36f875f11b73af::t_968ea24eda4c6a 1-246
+docs/agent-prompts/2026-10-01-oc-r3b-2-3w.md
+  s_36f875f11b73af::t_0b57dc01ae0300 1-246
+docs/agent-prompts/2026-10-01-oc-r3b-2-4b-reducer-hardening.md
+  s_36f875f11b73af::t_433f96650310e1 1-237
+docs/history/THOS_2026-10-01_R3B_PLAN_TOKEN_REDUCER_COMMENTS_UI.md
+  s_36f875f11b73af::t_1fd6253d4195ce 1-283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b0c9c15fb0ab7e09c20f034d4c447ce78a028226",
+  "prompts": {},
+  "sessions": {
+    "s_36f875f11b73af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6dfa071-43f2-446a-ae97-da6ffe823e4e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
