@@ -13,7 +13,8 @@ import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter
 import { PersistService } from "../services/PersistService";
 import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex, secretFingerprint } from "../crypto";
+import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
+import { canonicalJson } from "../../../web/lib/utils/canonical-json";
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
@@ -154,6 +155,18 @@ interface StreamRequest {
   dimensions?: number[];
   chunkIndex?: number;
   totalChunks?: number;
+  // R3b 2.3: server-computed Jev plan forwarded by the client when the
+  // transcript was already known at job creation (CreateAnalysisUseCase's
+  // jevPlan field). Null/absent -> the worker calls the S2S /plan endpoint
+  // itself after transcript resolution. Shape mirrors AnalysisPlan
+  // (web/lib/usecases/PlanAnalysisUseCase.ts).
+  jevPlan?: {
+    K: number;
+    streamCount: number;
+    cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
+    estimateCents: number;
+    truncatedFallback: boolean;
+  } | null;
   // Resolved server-side (Vercel has the DB access this worker doesn't, see
   // ADR 005) from the settings registry's chat.comments.* keys and forwarded
   // per-request -- never hardcode these worker-side, see fetchCommentsCached.
@@ -842,6 +855,130 @@ async function fetchTranscriptIfMissing(
   return { transcript, segments, channelMeta, comments, confirmedNoCaptions };
 }
 
+// ─── R3b 2.3: Jev plan resolution + SSE plan event ───────────────────────────
+//
+// The plan (K / streamCount / signed transcript cells) is resolved once per
+// analysis, BEFORE any grounded LLM call, and emitted as a dedicated
+// `event: plan` SSE frame. Resolution order (ADR 037 Addendum A):
+//   1. `req.jevPlan` (inline) — Vercel already computed it at job creation
+//      when the transcript was known.
+//   2. S2S POST {appUrl}/api/analyses/{id}/plan — signed with the same
+//      bound-content scheme as /persist, verified by the plan route.
+//   3. K=1 fallback — planning is NEVER allowed to block or fail the
+//      analysis; any failure (network/non-2xx/timeout/malformed body) emits
+//      a degenerate plan and the stream proceeds exactly as it did before
+//      R3b (A2: the client treats K=1 as "no plan").
+//
+// Projective bundles never receive a plan frame — planning partitions the
+// grounded transcript only (isProjectiveBundle guard, same epistemic
+// boundary as the prior_payload R1d guard).
+
+interface JevPlanShape {
+  K: number;
+  streamCount: number;
+  cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
+  estimateCents: number;
+  truncatedFallback: boolean;
+}
+
+/** K=1 degenerate plan emitted when planning is unavailable or failed. */
+function fallbackPlan(streamCount: number): JevPlanShape {
+  return { K: 1, streamCount, cells: [], estimateCents: 0, truncatedFallback: false };
+}
+
+/** Shape-check a /plan response body (or inline jevPlan) before trusting it. */
+function isValidJevPlan(value: unknown): value is JevPlanShape {
+  if (typeof value !== 'object' || value === null) return false;
+  const p = value as Record<string, unknown>;
+  return (
+    typeof p.K === 'number' && Number.isInteger(p.K) && p.K >= 1 &&
+    typeof p.streamCount === 'number' && Number.isInteger(p.streamCount) && p.streamCount >= 1 &&
+    Array.isArray(p.cells) &&
+    p.cells.every((c) => {
+      if (typeof c !== 'object' || c === null) return false;
+      const cell = c as Record<string, unknown>;
+      return (
+        Number.isInteger(cell.jevChunkIndex) && Number.isInteger(cell.chunkIndex) &&
+        Number.isInteger(cell.startWord) && Number.isInteger(cell.endWord) &&
+        typeof cell.sha256 === 'string' && cell.sha256.length > 0
+      );
+    }) &&
+    typeof p.estimateCents === 'number' &&
+    typeof p.truncatedFallback === 'boolean'
+  );
+}
+
+/**
+ * Fetch the plan from Vercel's S2S /plan endpoint. The body is signed with
+ * the same bound-content scheme as /persist (purpose 'plan', same secret
+ * that validated the stream token), verified by the plan route against
+ * `verifyContentSig`. One attempt, bounded by the same 10s AbortSignal
+ * timeout PersistService uses — a slow plan endpoint must never hold the
+ * analysis stream open.
+ */
+async function fetchJevPlan(params: {
+  appUrl: string;
+  analysisId: string;
+  videoId: string;
+  transcript: string;
+  signingKey: string;
+}): Promise<JevPlanShape | null> {
+  const exp = Date.now() + 600_000;
+  const body = { videoId: params.videoId, transcript: params.transcript };
+  const bodyJson = canonicalJson(body);
+  const sig = await signBoundContent(params.signingKey, 'plan', params.analysisId, exp, bodyJson);
+  try {
+    const res = await fetch(`${params.appUrl}/api/analyses/${encodeURIComponent(params.analysisId)}/plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'hex-worker-plan/1.0',
+      },
+      body: JSON.stringify({ ...body, sig, exp }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      console.warn(`[analyze-llm-stream] /plan returned ${res.status} for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan call returned non-2xx', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId, status: res.status },
+      });
+      return null;
+    }
+    const parsed: unknown = await res.json();
+    if (typeof parsed !== 'object' || parsed === null) {
+      console.warn(`[analyze-llm-stream] /plan returned a non-object body for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan response body is not an object', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId },
+      });
+      return null;
+    }
+    const plan = (parsed as Record<string, unknown>).plan;
+    if (!isValidJevPlan(plan)) {
+      console.warn(`[analyze-llm-stream] /plan returned a malformed plan for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan response plan failed shape check', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId },
+      });
+      return null;
+    }
+    return plan;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[analyze-llm-stream] /plan fetch failed for ${params.analysisId}: ${message}, falling back to K=1`);
+    Sentry.captureMessage('/plan fetch failed', {
+      level: 'warning',
+      tags: { operation: 'jev-plan-fetch' },
+      extra: { analysisId: params.analysisId, error: message },
+    });
+    return null;
+  }
+}
+
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
 function buildStreamResponse(
   engine: ReasoningEnginePort,
@@ -1044,6 +1181,18 @@ function buildStreamResponse(
         }
       };
 
+      // R3b 2.3: dedicated SSE event emitter for the named `plan` frame
+      // (event: plan / data: {...}). `send()` only emits default-framed
+      // data: lines; named events need the explicit event: prefix so the
+      // client's EventSource-style parser can route it separately.
+      const sendPlanEvent = (plan: JevPlanShape, source: 'inline' | 'worker') => {
+        try {
+          controller.enqueue(encoder.encode(`event: plan\ndata: ${JSON.stringify({ v: 1, source, ...plan })}\n\n`));
+        } catch (err: any) {
+          console.debug('[analyze-llm-stream] Client connection closed during plan enqueue:', err instanceof Error ? err.message : String(err));
+        }
+      };
+
       // Send immediate status frame, then fetch transcript asynchronously
       send({ type: "status", stage: "extracting", videoId: req.videoId });
 
@@ -1127,6 +1276,35 @@ function buildStreamResponse(
             transcriptLength: transcriptLen,
             budget,
           } as unknown as Record<string, unknown>);
+        }
+      }
+
+      // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
+      // BEFORE any grounded LLM call. Projective bundles never participate:
+      // planning partitions the grounded transcript only. Planning must
+      // never block or fail the analysis — every failure path below emits
+      // a K=1 degenerate plan and the stream proceeds unchanged.
+      if (!isProjectiveBundle(req.dimensions ?? [])) {
+        let plan: JevPlanShape;
+        if (isValidJevPlan(req.jevPlan)) {
+          // Path 1: inline plan from Vercel (transcript known at job creation).
+          plan = req.jevPlan;
+          sendPlanEvent(plan, 'inline');
+        } else {
+          // Path 2: S2S call to Vercel's /plan endpoint.
+          const planUrl = appUrl || "https://getvintel.com";
+          const fetched = await fetchJevPlan({
+            appUrl: planUrl,
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            transcript: resolvedTranscriptText ?? "",
+            signingKey,
+          });
+          // Path 3: K=1 fallback on any failure (fetchJevPlan already logged
+          // + captured the reason). streamCount mirrors the token's bound
+          // stream count (v2) or the legacy 5-bundle total (v1).
+          plan = fetched ?? fallbackPlan(req.streamCount ?? req.totalChunks ?? 5);
+          sendPlanEvent(plan, 'worker');
         }
       }
 
@@ -1509,3 +1687,6 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
 export default analysis;
 export { verifyStreamToken };
+// R3b 2.3W: exported for unit tests only (plan resolution contract tests in
+// worker/src/__tests__/jev-plan-worker.test.ts).
+export { fetchJevPlan, isValidJevPlan, fallbackPlan };
