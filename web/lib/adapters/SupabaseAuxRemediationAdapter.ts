@@ -99,7 +99,6 @@ export class SupabaseAuxRemediationAdapter {
           comment_external_id: row.commentExternalId,
           batch_id: `cochran-${sampleRunId}`,
           comment_text: row.commentText,
-          author: row.author,
           like_count: row.likeCount,
           published_at: row.publishedAt,
           sentiment: row.sentiment,
