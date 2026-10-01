@@ -300,7 +300,9 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     activeDuration,
     elapsedInSegmentSeconds,
     activeHighlight?.verbatimExcerpt ?? null,
-    data?.tickerWordsPerSecond
+    data?.tickerWordsPerSecond,
+    // Playback opens at max(0, start - contextLead), so the real lead-in is clamped near 0s.
+    activeHighlight ? Math.min(data?.contextLeadSeconds ?? 0, activeHighlight.start) : 0
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
