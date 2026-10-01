@@ -1,0 +1,21 @@
+worker/src/__tests__/stream-token-dual-verify.test.ts
+  s_d84474d7509dd0::t_e33838770bbaf5 225-240
+worker/src/routes/analysis.ts
+  s_d84474d7509dd0::t_fa2d3fcdfc5c3b 19-21,282-286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "015eb821d2954f06b8baed568fbf0e6b5549058c",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
