@@ -93,6 +93,7 @@ export default defineConfig({
       // bracket-ESCAPED -- unescaped, micromatch reads it as a character
       // class and matches nothing.
       'app/api/analyses/\\[id\\]/plan/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/stream-tokens/**/*.test.ts',
       'app/billing/**/*.test.tsx',
       // PR #326's pricing page gained a copy-contract sibling test
       // (qa-intel high finding: authorization-relevant file with no
