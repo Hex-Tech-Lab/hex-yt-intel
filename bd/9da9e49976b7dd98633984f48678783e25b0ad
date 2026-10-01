@@ -1,0 +1,27 @@
+web/app/api/analyses/[id]/stream-tokens/__tests__/route.test.ts
+  s_d84474d7509dd0::t_d247ecea235bb3 1-92
+web/app/api/analyses/[id]/stream-tokens/route.ts
+  s_d84474d7509dd0::t_786c305fc19431 1-98
+web/lib/__tests__/mint-cell-tokens.test.ts
+  s_d84474d7509dd0::t_07141d1443b336 1-91
+web/lib/usecases/MintCellTokensUseCase.ts
+  s_d84474d7509dd0::t_9d54a4be677ecb 1-128
+web/vitest.config.ts
+  s_d84474d7509dd0::t_430696fb700de4 96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bd9da9e49976b7dd98633984f48678783e25b0ad",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
