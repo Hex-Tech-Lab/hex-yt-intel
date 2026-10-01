@@ -49,9 +49,13 @@
     },
     "glm-cheap-preset": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Preset (cheap)",
+      "name": "OpenRouter Preset (glm-53-flash-on-cheap) — hex-expan attribution",
       "options": {
-        "baseURL": "https://openrouter.ai/api/v1"
+        "baseURL": "https://openrouter.ai/api/v1",
+        "headers": {
+          "X-Title": "OC-hex-expan",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-expan-press"
+        }
       },
       "models": {
         "@preset/glm-53-flash-on-cheap": {
@@ -150,7 +154,7 @@
       "options": {
         "baseURL": "https://openrouter.ai/api/v1",
         "headers": {
-          "X-Title": "hex-expan",
+          "X-Title": "OC-hex-expan",
           "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-expan-press"
         }
       },
