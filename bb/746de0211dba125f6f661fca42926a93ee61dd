@@ -1,0 +1,22 @@
+web/lib/services/reduce-grounded-chunks.ts
+  s_898389600c7d23::t_4b7dae68c12724 8-18,32-37,40,50-51,54-56,64-116,121-124,126-127,130-138,140-155,162,175-186,188,236,238-248,253
+web/lib/__tests__/reduce-grounded-chunks.test.ts
+  s_898389600c7d23::t_2969563b3f2cc1 226-228
+  s_898389600c7d23::t_418b3c5606b43e 44-53,56-87,91,93-138,141-158,162-168,173-179,185-191,197-203,207-225,229-257,263,268,270,272-315,345,348,354,356-358,361
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb746de0211dba125f6f661fca42926a93ee61dd",
+  "prompts": {},
+  "sessions": {
+    "s_898389600c7d23": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f09ac5c52ffehi906p6gsGjrwB",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
