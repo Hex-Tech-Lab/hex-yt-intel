@@ -173,6 +173,7 @@ describe('useSSEStream Jev plan consumption (R3b 2.3, P1)', () => {
       return Promise.resolve(new Response(JSON.stringify({ conversations: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     vi.stubGlobal('fetch', fetchMock);
+    const errorSpy = vi.spyOn(console, 'error');
 
     const { result } = renderHook(() => useSSEStream());
     await act(async () => {
@@ -185,6 +186,10 @@ describe('useSSEStream Jev plan consumption (R3b 2.3, P1)', () => {
 
     expect(result.current.plan).toMatchObject(streamPlan);
     expect(result.current.planSource).toBe('stream');
+    // Live-caught 2026-10-02: the named plan frame was also fed to the fragment
+    // adapter, logging "[Adapter] JSON parse failed" once per stream.
+    expect(errorSpy.mock.calls.filter((call) => String(call[0]).includes('JSON parse failed'))).toEqual([]);
+    errorSpy.mockRestore();
     const bodies = bodiesOf(fetchMock);
     expect(bodies).toHaveLength(5);
     for (const body of bodies) {

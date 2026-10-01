@@ -26,6 +26,9 @@ import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 function handleSseLine(line: string, adapter: SynthesisStreamAdapter): void {
   const trimmed = line.trim();
   if (!trimmed) return;
+  // Named events (`event: plan`, R3b 2.3) have their own parsers (parsePlanFrame);
+  // handing the whole frame to the fragment adapter only logged a JSON parse error.
+  if (trimmed.startsWith('event:')) return;
   if (trimmed.startsWith('data:')) {
     adapter.processLine(trimmed.slice(5).trim());
     return;
