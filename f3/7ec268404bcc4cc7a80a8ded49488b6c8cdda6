@@ -1,0 +1,33 @@
+.qa-intel/baseline.json
+  s_b70cf5106ad39d::t_2bd12b2a129c8b 1632-1645
+web/components/containers/DashboardContainer.tsx
+  s_b70cf5106ad39d::t_aa7f5af5bb18c3 930,935
+web/components/templates/console/DimensionDrawer.tsx
+  s_b70cf5106ad39d::t_14f3acc171516a 9-10,13-14,26-35,42,183-186,223-236
+web/components/templates/console/StreamingGrid.tsx
+  s_b70cf5106ad39d::t_5f682f4f79dfcb 6,57-60
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_b70cf5106ad39d::t_f03554edebb5bd 1-87
+web/hooks/__tests__/useSSEStream-jev-cells.test.tsx
+  s_b70cf5106ad39d::t_44b0f71b8139e0 1-260
+web/hooks/__tests__/useSSEStream-jev-plan.test.tsx
+  s_b70cf5106ad39d::t_3d35a99c8fce35 95,206,232
+web/hooks/useSSEStream.ts
+  s_b70cf5106ad39d::t_e7d8fbf3573295 11-13,276,513,554-571,606-609,612,860-1052,1148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f37ec268404bcc4cc7a80a8ded49488b6c8cdda6",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
