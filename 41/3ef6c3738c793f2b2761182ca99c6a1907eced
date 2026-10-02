@@ -1,0 +1,31 @@
+web/app/api/analyses/persist/route.ts
+  s_d84474d7509dd0::t_8cc097e8064973 8,213-219,309,348-352,369-380,610,684-691
+web/lib/__tests__/persist-cell-roundtrip.test.ts
+  s_d84474d7509dd0::t_6cca1d9bb3b726 1-140
+web/lib/__tests__/stored-plan.test.ts
+  s_d84474d7509dd0::t_e293e7b43a4c6e 3,34-54
+web/lib/jev/stored-plan.ts
+  s_d84474d7509dd0::t_0e9045a9598ff8 61-94
+worker/src/routes/analysis.ts
+  s_d84474d7509dd0::t_b392049774d04e 1212-1215
+.qa-intel/baseline.json
+  s_d84474d7509dd0::t_65bc88e0a6a62d 1611-1617
+worker/src/services/PersistService.ts
+  s_d84474d7509dd0::t_93a9b27333fdd5 49-52,227-230,269,300
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "413ef6c3738c793f2b2761182ca99c6a1907eced",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
