@@ -46,6 +46,10 @@ export interface PersistOptions {
   validate12D: (text: string) => boolean;
   chunkIndex?: number;
   totalChunks?: number;
+  // R3b 2.5b: set only for a v2 (K>1) cell, from the verified stream token.
+  // Signed in the canonical (as `cell`) only when present, so a K=1 persist
+  // signs exactly what it did before.
+  jevChunkIndex?: number;
   segments?: Array<{ start: number; duration: number; text: string }>;
   transcript?: string;
   channelMeta?: Record<string, unknown> | null;
@@ -220,6 +224,10 @@ export class PersistService {
       tokensUsed: options.tokensUsed ?? null,
       costUsd: options.costUsd ?? null,
       generationId: options.generationId ?? null,
+      // Must match the persist route's canonical exactly (R3b 2.5b).
+      ...(options.jevChunkIndex !== undefined
+        ? { cell: { jevChunkIndex: options.jevChunkIndex, chunkIndex: options.chunkIndex ?? null, totalChunks: options.totalChunks ?? null } }
+        : {}),
     });
     // Bind the signature to this analysis id and an expiry so an observed persist
     // body can't be replayed indefinitely or against a different analysis. Must
@@ -258,6 +266,7 @@ export class PersistService {
     exp: number;
     chunkIndex?: number;
     totalChunks?: number;
+    jevChunkIndex?: number;
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
@@ -288,6 +297,7 @@ export class PersistService {
             generationId: params.generationId,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
+            jevChunkIndex: params.jevChunkIndex,
             segments: params.segments,
             transcript: params.transcript,
             channelMeta: params.channelMeta,

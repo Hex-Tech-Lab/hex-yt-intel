@@ -1608,5 +1608,12 @@
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/services/PersistService.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   }
 ]
