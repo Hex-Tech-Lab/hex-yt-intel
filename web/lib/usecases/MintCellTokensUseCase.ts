@@ -9,25 +9,9 @@
  * Pure domain logic: the signer is injected, so the use case has no I/O.
  */
 
-import { z } from 'zod';
+import { cellKey, parseStoredPlan, type CellRef } from '@/lib/jev/stored-plan';
 
-const StoredPlanSchema = z.object({
-  K: z.number().int().min(1),
-  streamCount: z.number().int().min(1),
-  truncatedFallback: z.boolean().optional(),
-  cells: z.array(z.object({
-    jevChunkIndex: z.number().int().min(0),
-    chunkIndex: z.number().int().min(1),
-    startWord: z.number().int().min(0),
-    endWord: z.number().int().min(0),
-    sha256: z.string().regex(/^[0-9a-f]{64}$/),
-  })),
-});
-
-export interface CellRef {
-  jevChunkIndex: number;
-  chunkIndex: number;
-}
+export type { CellRef };
 
 export interface MintedCellToken extends CellRef {
   sig: string;
@@ -71,16 +55,13 @@ export interface MintCellTokensInput {
   cells: CellRef[];
 }
 
-const cellKey = (cell: CellRef) => `${cell.jevChunkIndex}:${cell.chunkIndex}`;
-
 export async function mintCellTokens(
   input: MintCellTokensInput,
   sign: (params: SignV2Params) => Promise<{ sig: string; exp: number }>,
 ): Promise<MintCellTokensResult> {
   if (input.storedPlan === null || input.storedPlan === undefined) return { type: 'no_plan' };
-  const parsed = StoredPlanSchema.safeParse(input.storedPlan);
-  if (!parsed.success) return { type: 'invalid_plan' };
-  const plan = parsed.data;
+  const plan = parseStoredPlan(input.storedPlan);
+  if (!plan) return { type: 'invalid_plan' };
   // K=1 keeps today's single v1 token; per-cell v2 tokens exist only for K>1.
   if (plan.K === 1) return { type: 'plan_k1' };
   // truncatedFallback is still only a flag (real truncation is a separate
