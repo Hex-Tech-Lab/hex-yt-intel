@@ -1,0 +1,27 @@
+web/hooks/__tests__/useSSEStream-jev-cells.test.tsx
+  s_b70cf5106ad39d::t_6a769bb7090fae 124,140-141,146-149,265-271
+web/hooks/useSSEStream.ts
+  s_b70cf5106ad39d::t_6063b430a43cbd 944-948
+web/lib/__tests__/jev-run-foundations.test.ts
+  s_b70cf5106ad39d::t_f8c70122b139c9 62-79
+web/lib/stores/synthesis-nucleus-store.ts
+  s_b70cf5106ad39d::t_4c56dee1d19f96 2,71-75
+web/store/useJevRunStore.ts
+  s_b70cf5106ad39d::t_5b624abe36c7aa 17-18,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b05122de23318f458d315ef3d9ccad2ebd110667",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
