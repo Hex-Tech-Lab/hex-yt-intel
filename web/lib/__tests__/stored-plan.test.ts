@@ -1,6 +1,6 @@
 /** R3b 2.5a: one rule for the cells an analysis expects before it can finalize. */
 import { describe, it, expect } from 'vitest';
-import { expectedCells, parseStoredPlan, cellKey } from '@/lib/jev/stored-plan';
+import { expectedCells, parseStoredPlan, cellKey, checkPersistCell } from '@/lib/jev/stored-plan';
 
 const SHA = 'a'.repeat(64);
 const cell = (jevChunkIndex: number, chunkIndex: number) => ({ jevChunkIndex, chunkIndex, startWord: 0, endWord: 10, sha256: SHA });
@@ -29,5 +29,26 @@ describe('expectedCells', () => {
     expect(parseStoredPlan({ ...K2, cells: [{ ...cell(0, 1), sha256: 'nothex' }] })).toBeNull();
     expect(parseStoredPlan({ ...K2, cells: [cell(-1, 1)] })).toBeNull();
     expect(parseStoredPlan(K2)?.K).toBe(2);
+  });
+});
+
+describe('checkPersistCell (R3b 2.5b)', () => {
+  it('v1/K=1 request: today\'s rule only, the plan is not consulted', () => {
+    expect(checkPersistCell(K2, { chunkIndex: 3, totalChunks: 5 }, 5)).toEqual({ ok: true });
+    expect(checkPersistCell(null, { chunkIndex: 3 }, 5)).toEqual({ ok: true });
+    expect(checkPersistCell(null, { chunkIndex: 3, totalChunks: 9 }, 5)).toEqual({ ok: false, reason: 'legacy_total_mismatch' });
+  });
+
+  it('v2 request: must be an expected cell of a K>1 plan with totalChunks = streamCount', () => {
+    expect(checkPersistCell(K2, { jevChunkIndex: 1, chunkIndex: 4, totalChunks: 9 }, 5)).toEqual({ ok: true });
+    expect(checkPersistCell(K2, { jevChunkIndex: 1, chunkIndex: 5, totalChunks: 9 }, 5)).toEqual({ ok: false, reason: 'cell_not_expected' });
+    expect(checkPersistCell(K2, { jevChunkIndex: 2, chunkIndex: 1, totalChunks: 9 }, 5)).toEqual({ ok: false, reason: 'cell_not_expected' });
+    expect(checkPersistCell(K2, { jevChunkIndex: 0, chunkIndex: 1, totalChunks: 5 }, 5)).toEqual({ ok: false, reason: 'total_mismatch' });
+    expect(checkPersistCell(K2, { jevChunkIndex: 0, totalChunks: 9 }, 5)).toEqual({ ok: false, reason: 'cell_not_expected' });
+  });
+
+  it('v2 request without a K>1 plan is rejected', () => {
+    expect(checkPersistCell(null, { jevChunkIndex: 0, chunkIndex: 1, totalChunks: 5 }, 5)).toEqual({ ok: false, reason: 'no_k_gt_1_plan' });
+    expect(checkPersistCell({ ...K2, K: 1, streamCount: 5 }, { jevChunkIndex: 0, chunkIndex: 1, totalChunks: 5 }, 5)).toEqual({ ok: false, reason: 'no_k_gt_1_plan' });
   });
 });

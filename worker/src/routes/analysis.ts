@@ -1209,7 +1209,10 @@ function buildStreamResponse(
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
-        totalChunks: req.totalChunks,
+        // R3b 2.5b: a verified v2 cell persists under its own key; its total
+        // is the signed stream count (K x G + P), not the 5-bundle total.
+        totalChunks: req.tokenVersion === 2 ? req.streamCount : req.totalChunks,
+        jevChunkIndex: req.tokenVersion === 2 ? req.jevChunkIndex : undefined,
         segments: resolvedSegments,
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,

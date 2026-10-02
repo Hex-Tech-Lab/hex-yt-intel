@@ -5,6 +5,7 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { verifyContentSig } from '@/lib/stream-token';
+import { checkPersistCell } from '@/lib/jev/stored-plan';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
@@ -209,9 +210,13 @@ export async function POST(request: NextRequest) {
       // tokensUsed/costUsd -- see canonical construction below).
       generationId: z.string().optional(),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
-      totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
-        message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
-      }).optional(),
+      // R3b 2.5b: totalChunks is checked after signature verification by
+      // checkPersistCell (TOTAL_STREAMS for v1/K=1, the plan's streamCount
+      // for a v2 cell), not by a fixed refine here.
+      totalChunks: z.number().int().min(1).optional(),
+      // R3b 2.5b: present only for a v2 (K>1) cell, from the verified stream
+      // token; signed (see canonical below). Absent = jev chunk 0 (K=1).
+      jevChunkIndex: z.number().int().min(0).optional(),
       segments: z.array(z.object({
         start: z.number(),
         duration: z.number(),
@@ -301,6 +306,7 @@ export async function POST(request: NextRequest) {
         generationId,
         chunkIndex,
         totalChunks,
+        jevChunkIndex,
         segments,
         transcript,
         channelMeta: rawChannelMeta,
@@ -339,6 +345,11 @@ export async function POST(request: NextRequest) {
         tokensUsed: tokensUsed ?? null,
         costUsd: costUsd ?? null,
         generationId: generationId ?? null,
+        // R3b 2.5b: a v2 cell's identity is signed so a captured cell body
+        // can't be replayed as another cell. Added ONLY when present, so a
+        // v1/K=1 canonical is byte-identical to before (no stale-worker
+        // signature mismatch during rollout).
+        ...(jevChunkIndex !== undefined ? { cell: { jevChunkIndex, chunkIndex: chunkIndex ?? null, totalChunks: totalChunks ?? null } } : {}),
       });
       let isSigValid = false;
       try {
@@ -353,6 +364,18 @@ export async function POST(request: NextRequest) {
       if (!isSigValid) {
         console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
         return { type: 'error' as const, error: 'Invalid signature', status: 401 };
+      }
+
+      // R3b 2.5b: the cell must be one this analysis expects. The plan is only
+      // read for a v2 cell; a v1/K=1 persist keeps today's checks exactly.
+      const cellCheck = checkPersistCell(
+        jevChunkIndex === undefined ? null : await new SupabasePersistenceAdapter().findJevPlan({ analysisId }),
+        { jevChunkIndex, chunkIndex, totalChunks },
+        TOTAL_STREAMS,
+      );
+      if (!cellCheck.ok) {
+        console.warn('[analyses/persist] Rejected unexpected cell', { analysisId, jevChunkIndex, chunkIndex, totalChunks, reason: cellCheck.reason });
+        return { type: 'error' as const, error: `Unexpected cell: ${cellCheck.reason}`, status: 400 };
       }
 
       // Cross-field check (end_seconds > start_seconds) that Zod's
@@ -584,6 +607,7 @@ export async function POST(request: NextRequest) {
           () => persistenceAdapter.persistAnalysisChunk({
             analysisId,
             chunkIndex,
+            jevChunkIndex,
             dimensionsCovered,
             payload,
             // A payload-less or malformed chunk never produced trustworthy
@@ -655,6 +679,14 @@ export async function POST(request: NextRequest) {
             Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters_chunked', analysisId } } });
             console.warn('[analyses/persist] Failed to upsert chapters (chunked path)', { analysisId, error: String(e) });
           });
+        }
+
+        // R3b 2.5b: a v2 (K>1) cell is stored under its own
+        // (jev_chunk_index, chunk_index) key. Completeness and finalize below
+        // still count one row per bundle at jev chunk 0, so a K>1 analysis
+        // is finalized by 2.5c's expectedCells rule, not here.
+        if (jevChunkIndex !== undefined) {
+          return { type: 'chunk_saved' as const, analysisId, chunkIndex };
         }
 
         // Verify chunk completeness immediately after persisting chunk

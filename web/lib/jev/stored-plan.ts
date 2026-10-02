@@ -58,3 +58,37 @@ export function expectedCells(rawPlan: unknown, totalStreams: number): CellRef[]
 export function cellKey(cell: CellRef): string {
   return `${cell.jevChunkIndex}:${cell.chunkIndex}`;
 }
+
+export type PersistCellCheck =
+  | { ok: true }
+  | { ok: false; reason: 'legacy_total_mismatch' | 'no_k_gt_1_plan' | 'cell_not_expected' | 'total_mismatch' };
+
+/**
+ * R3b 2.5b: is this persist request a cell the analysis expects?
+ *
+ * - No jevChunkIndex (v1 / K=1, including a K>1 analysis whose browser fell
+ *   back to K=1 dispatch): today's rule, totalChunks absent or equal to
+ *   totalStreams. The plan is not consulted.
+ * - With jevChunkIndex (v2): the stored plan must have K > 1, the pair
+ *   (jevChunkIndex, chunkIndex) must be one of expectedCells, and
+ *   totalChunks must equal the plan's streamCount.
+ */
+export function checkPersistCell(
+  rawPlan: unknown,
+  request: { jevChunkIndex?: number; chunkIndex?: number; totalChunks?: number },
+  totalStreams: number,
+): PersistCellCheck {
+  if (request.jevChunkIndex === undefined) {
+    return request.totalChunks === undefined || request.totalChunks === totalStreams
+      ? { ok: true }
+      : { ok: false, reason: 'legacy_total_mismatch' };
+  }
+  const plan = parseStoredPlan(rawPlan);
+  if (!plan || plan.K <= 1) return { ok: false, reason: 'no_k_gt_1_plan' };
+  if (request.chunkIndex === undefined) return { ok: false, reason: 'cell_not_expected' };
+  const key = cellKey({ jevChunkIndex: request.jevChunkIndex, chunkIndex: request.chunkIndex });
+  if (!expectedCells(plan, totalStreams).some((cell) => cellKey(cell) === key)) {
+    return { ok: false, reason: 'cell_not_expected' };
+  }
+  return request.totalChunks === plan.streamCount ? { ok: true } : { ok: false, reason: 'total_mismatch' };
+}
