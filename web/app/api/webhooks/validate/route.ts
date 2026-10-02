@@ -71,15 +71,17 @@ export async function POST(request: NextRequest) {
     // structured-JSON pipeline and fails all v2 analyses on formatting checks.
     // It must NOT downgrade validation_passed that the persist route already
     // set from the authoritative stitched-payload validation — report only.
+    // Stored under its own key and MERGED: replacing the whole report wiped
+    // status, dimension_status, metadata and jev_partial_dimensions written
+    // by the persist finalize two seconds earlier.
     const persistence = new SupabasePersistenceAdapter();
     await trackDatabaseQuery(
       'update',
       'analyses',
       async () => {
-        await persistence.updateValidationReport({
+        await persistence.mergeValidationReport({
           analysisId,
-          report,
-          preserveValidationPassed: true,
+          patch: { markdown_validation: report },
         });
       },
       { analysisId, videoId }

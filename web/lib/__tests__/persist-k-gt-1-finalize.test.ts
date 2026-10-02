@@ -49,6 +49,8 @@ vi.mock('@/lib/qstash-client', () => ({
   publishEmbeddingTask: vi.fn().mockResolvedValue(null),
 }));
 
+const enqueueSystemCommentSampleRun = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+vi.mock('@/lib/services/aux-remediation', () => ({ enqueueSystemCommentSampleRun }));
 vi.mock('@/lib/services/cache', () => ({
   setAnalysisCache: vi.fn().mockResolvedValue(null),
   generateCacheKey: vi.fn().mockReturnValue('cache-key'),
@@ -146,6 +148,9 @@ describe('POST /api/analyses/persist — K>1 reduce-then-stitch finalize (R3b 2.
     expect(dims.find((dimension) => dimension.number === 9)?.content).toBe('d9 from chunk 0');
     expect(call.validationReport.validation_status).toBe('done');
     expect(call.validationReport).not.toHaveProperty('jev_partial_dimensions');
+    // Comment insights: one system-paid sample run per finalized analysis.
+    expect(enqueueSystemCommentSampleRun).toHaveBeenCalledTimes(1);
+    expect(enqueueSystemCommentSampleRun.mock.calls[0]?.[0]).toMatchObject({ userId: expect.any(String), videoId: expect.any(String) });
   });
 
   it('a failed grounded cell: finalizes from the other chunk and records the partial dimensions', async () => {
@@ -162,6 +167,7 @@ describe('POST /api/analyses/persist — K>1 reduce-then-stitch finalize (R3b 2.
     const res = await POST(post(lastCell));
     expect(res.status).toBe(200);
     expect(adapterInstance.updateAnalysisResult).not.toHaveBeenCalled();
+    expect(enqueueSystemCommentSampleRun).not.toHaveBeenCalled();
   });
 
   it('degradation hatch: a K>1 analysis whose browser fell back to K=1 finalizes from the 5 chunk-0 bundle rows', async () => {

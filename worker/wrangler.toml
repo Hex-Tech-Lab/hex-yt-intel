@@ -6,7 +6,7 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 
 [env.production]
 name = "yt-intel"
-vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production", APP_URL = "https://yt-intel.getmytestdrive.com" }
+vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production", APP_URL = "https://www.getvintel.com" }
 # Production secrets (deploy via wrangler secret put):
 #   wrangler secret put RESIDENTIAL_PROXY_URL --env production
 #   wrangler secret put STREAM_HMAC_SECRET --env production

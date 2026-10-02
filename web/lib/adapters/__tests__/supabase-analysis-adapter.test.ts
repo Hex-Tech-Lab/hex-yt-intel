@@ -11,6 +11,7 @@ const mockSelect = vi.fn();
 const mockIs = vi.fn();
 const mockUpdate = vi.fn();
 const mockNot = vi.fn();
+const mockRpc = vi.fn();
 
 const queryBuilder: any = {
   select: mockSelect,
@@ -37,6 +38,7 @@ const mockFrom = vi.fn(() => queryBuilder);
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
     from: mockFrom,
+    rpc: mockRpc,
   }),
 }));
 
@@ -216,6 +218,24 @@ describe('SupabaseAnalysisAdapter.isAdminUser (R3b admin gate)', () => {
     expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'nobody' })).toBe(false);
     mockMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
     expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-1' })).toBe(false);
+  });
+});
+
+describe('SupabaseAnalysisAdapter.mergeValidationReport (webhook must never replace the report)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('merges through the atomic RPC and never issues a full update', async () => {
+    mockRpc.mockResolvedValueOnce({ error: null });
+    await SupabaseAnalysisAdapter.mergeValidationReport({ analysisId: 'a-1', patch: { markdown_validation: { passed: true } } });
+    expect(mockRpc).toHaveBeenCalledWith('merge_analysis_validation_report', { p_analysis_id: 'a-1', p_patch: { markdown_validation: { passed: true } } });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('throws an RPC error', async () => {
+    mockRpc.mockResolvedValueOnce({ error: { message: 'boom' } });
+    await expect(SupabaseAnalysisAdapter.mergeValidationReport({ analysisId: 'a-1', patch: {} })).rejects.toEqual({ message: 'boom' });
   });
 });
 

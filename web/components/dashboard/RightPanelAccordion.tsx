@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Switch, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
@@ -23,13 +23,22 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
     Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
 
+  // Last seen defaultOpen per item: an item whose defaultOpen flips false ->
+  // true (e.g. the Word Cloud when an analysis starts) opens once; otherwise
+  // the viewer's own open/close choice is kept.
+  const lastDefaults = useRef<Record<string, boolean>>({});
+
   useEffect(() => {
+    const risen = new Set(
+      items.filter((item) => item.defaultOpen && lastDefaults.current[item.id] === false).map((item) => item.id),
+    );
+    lastDefaults.current = Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]));
     setOpenStates((prev) => {
       let changed = false;
       const next: Record<string, boolean> = {};
       // Add defaults for newly appearing items...
       for (const item of items) {
-        next[item.id] = prev[item.id] ?? (item.defaultOpen || false);
+        next[item.id] = risen.has(item.id) ? true : prev[item.id] ?? (item.defaultOpen || false);
         if (item.id in prev) changed = changed || next[item.id] !== prev[item.id];
         else changed = true;
       }
