@@ -1,0 +1,21 @@
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_b70cf5106ad39d::t_7162f6a3d72c31 20-22,26-28
+web/hooks/__tests__/useSSEStream-jev-cells.test.tsx
+  s_b70cf5106ad39d::t_0835f5883c4366 136,144,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "065faf8e300b749b761f36d094b17098e43930bb",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
