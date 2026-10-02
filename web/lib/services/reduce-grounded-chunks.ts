@@ -229,7 +229,10 @@ export function reduceGroundedChunks(
         weightedConfidenceSum += metadata.confidence * weight;
         confidenceWeightSum += weight;
       }
-      if (typeof metadata?.wordCount === "number") wordCountSum += metadata.wordCount;
+      // LLM-written: only finite, non-negative integers count (negatives would
+      // silently shrink the total; a huge value can overflow to Infinity,
+      // which JSON serializes as null).
+      if (isSafeInteger(metadata?.wordCount) && metadata.wordCount >= 0) wordCountSum += metadata.wordCount;
       if (metadata?.insufficientData !== true) insufficientDataAll = false;
       if (name.length === 0 && typeof contribution.dimension.name === "string") {
         name = contribution.dimension.name;
@@ -252,7 +255,7 @@ export function reduceGroundedChunks(
         metadata.confidence = roundConfidence(finiteConfidences.reduce((sum, value) => sum + value, 0) / finiteConfidences.length);
       }
     }
-    if (wordCountSum > 0) metadata.wordCount = wordCountSum;
+    if (wordCountSum > 0 && Number.isSafeInteger(wordCountSum)) metadata.wordCount = wordCountSum;
     if (insufficientDataAll) metadata.insufficientData = true;
 
     // Spread the FIRST chunk's dimension as the base, then override the

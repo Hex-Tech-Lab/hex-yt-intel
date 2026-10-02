@@ -48,7 +48,8 @@ export const JEV_BOUNDS = {
   fluffCdiThreshold: { min: 0, max: 1 },
   minChunkTokens: { min: 100, max: 50000 },
   maxChunkTokens: { min: 200, max: 100000 },
-  maxChunks: { min: 1, max: 32 },
+  // 16 x 4 grounded bundles = 64 cells = /stream-tokens MAX_CELLS_PER_WAVE.
+  maxChunks: { min: 1, max: 16 },
   acronymMinLength: { min: 2, max: 6 },
   contentWordMinLength: { min: 1, max: 12 },
   maxParallelStreams: { min: 1, max: 32 },

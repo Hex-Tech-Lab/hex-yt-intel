@@ -10,6 +10,7 @@ const mockLimit = vi.fn();
 const mockSelect = vi.fn();
 const mockIs = vi.fn();
 const mockUpdate = vi.fn();
+const mockNot = vi.fn();
 
 const queryBuilder: any = {
   select: mockSelect,
@@ -17,6 +18,7 @@ const queryBuilder: any = {
   neq: mockNeq,
   is: mockIs,
   update: mockUpdate,
+  not: mockNot,
   order: mockOrder,
   limit: mockLimit,
   maybeSingle: mockMaybeSingle,
@@ -160,5 +162,26 @@ describe('SupabaseAnalysisAdapter.persistJevPlan (ownership/idempotence)', () =>
     await expect(
       SupabaseAnalysisAdapter.persistJevPlan({ analysisId: 'analysis-missing', plan: { K: 1 } })
     ).rejects.toThrow('persistJevPlan: analysis row not found: analysis-missing');
+  });
+});
+
+describe('SupabaseAnalysisAdapter.markJevPlanDegraded (R3b 2.5 degradation hatch)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates only this analysis, only where a plan already exists', async () => {
+    mockNot.mockResolvedValueOnce({ error: null });
+    const plan = { K: 2, streamCount: 9, cells: [], degraded: true };
+    await SupabaseAnalysisAdapter.markJevPlanDegraded({ analysisId: 'a-1', plan });
+    expect(mockFrom).toHaveBeenCalledWith('analyses');
+    expect(mockUpdate).toHaveBeenCalledWith({ jev_plan: plan });
+    expect(mockEq).toHaveBeenCalledWith('id', 'a-1');
+    expect(mockNot).toHaveBeenCalledWith('jev_plan', 'is', null);
+  });
+
+  it('throws a write error', async () => {
+    mockNot.mockResolvedValueOnce({ error: { message: 'boom' } });
+    await expect(SupabaseAnalysisAdapter.markJevPlanDegraded({ analysisId: 'a-1', plan: { degraded: true } })).rejects.toEqual({ message: 'boom' });
   });
 });

@@ -995,6 +995,20 @@ export class SupabaseAnalysisAdapter {
   }
 
   /** R3b 2.3: read the stored Jev plan for an analysis, null when absent. */
+  /** R3b 2.5: record that the browser fell back to K=1 for this plan (see planToDegrade). */
+  static async markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const { error } = await service
+      .from('analyses')
+      .update({ jev_plan: params.plan })
+      .eq('id', params.analysisId)
+      .not('jev_plan', 'is', null);
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'markJevPlanDegraded' }, extra: { analysisId: params.analysisId } });
+      throw error;
+    }
+  }
+
   static async findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service

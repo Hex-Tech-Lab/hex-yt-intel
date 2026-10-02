@@ -115,6 +115,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findJevPlan(params);
   }
 
+  markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void> {
+    return SupabaseAnalysisAdapter.markJevPlanDegraded(params);
+  }
+
   getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
     return SupabaseAnalysisAdapter.getTranscriptSegments(videoId);
   }

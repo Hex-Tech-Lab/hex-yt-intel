@@ -358,6 +358,9 @@ export interface AnalysisPersistencePort {
   /** Read the stored Jev plan for an analysis, or null when none is stored. */
   findJevPlan(params: { analysisId: string }): Promise<unknown | null>;
 
+  /** R3b 2.5: mark a K>1 plan degraded after the browser fell back to K=1. */
+  markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void>;
+
   /**
    * R3b 2.5c: every cell row of an analysis, ALL jev_chunk_index values
    * (findAnalysisChunks returns jev chunk 0 only). Used by the K>1 finalize,

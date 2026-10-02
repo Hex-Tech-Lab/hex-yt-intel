@@ -12,6 +12,8 @@ export const StoredPlanSchema = z.object({
   K: z.number().int().min(1),
   streamCount: z.number().int().min(1),
   truncatedFallback: z.boolean().optional(),
+  /** Set by persist when the browser fell back to K=1 for this plan. */
+  degraded: z.boolean().optional(),
   cells: z.array(z.object({
     jevChunkIndex: z.number().int().min(0),
     chunkIndex: z.number().int().min(1),
@@ -28,10 +30,24 @@ export interface CellRef {
   chunkIndex: number;
 }
 
-/** The stored plan when it parses, else null (absent and malformed plans are treated alike). */
+/**
+ * The stored plan when it parses, else null (absent and malformed plans are
+ * treated alike). A degraded plan (the browser ran today's K=1 dispatch,
+ * R3b 2.5 degradation hatch) reads as K=1, so every reader (persist,
+ * finalize, projective context, reaper, /stream-tokens) takes the K=1 path
+ * and none of them waits for cells that will never arrive.
+ */
 export function parseStoredPlan(raw: unknown): StoredPlan | null {
   const parsed = StoredPlanSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  return parsed.data.degraded === true ? { ...parsed.data, K: 1 } : parsed.data;
+}
+
+/** A plan to mark degraded: a v1 (K=1) persist arrived for a K>1 plan not yet marked. */
+export function planToDegrade(raw: unknown): Record<string, unknown> | null {
+  const parsed = StoredPlanSchema.safeParse(raw);
+  if (!parsed.success || parsed.data.K <= 1 || parsed.data.degraded === true) return null;
+  return { ...(raw as Record<string, unknown>), degraded: true };
 }
 
 /**

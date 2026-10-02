@@ -33,6 +33,7 @@ const adapterInstance = vi.hoisted(() => ({
   updateValidationReport: vi.fn().mockResolvedValue(null),
   markChunkFailed: vi.fn().mockResolvedValue(true),
   findJevPlan: vi.fn(),
+  markJevPlanDegraded: vi.fn(),
   findAnalysisCells: vi.fn(),
 }));
 vi.mock('@/lib/adapters', () => ({ SupabasePersistenceAdapter: vi.fn(function mockAdapterClass() { return adapterInstance; }) }));
@@ -136,11 +137,12 @@ describe('persist route — v2 cell (R3b 2.5b)', () => {
     expect(adapterInstance.persistAnalysisChunk).not.toHaveBeenCalled();
   });
 
-  it('a K=1 body signs without a cell, never reads the plan, and runs the normal completeness check', async () => {
+  it('a K=1 body signs without a cell, runs the normal completeness check, and (K=1 plan) never marks it degraded', async () => {
+    adapterInstance.findJevPlan.mockResolvedValue({ ...PLAN, K: 1, streamCount: 5 });
     const body = await workerSignedBody({ chunkIndex: 2, totalChunks: 5 });
     expect(body).not.toHaveProperty('jevChunkIndex');
     expect((await post(body)).status).toBe(200);
-    expect(adapterInstance.findJevPlan).not.toHaveBeenCalled();
+    expect(adapterInstance.markJevPlanDegraded).not.toHaveBeenCalled();
     expect(adapterInstance.persistAnalysisChunk).toHaveBeenCalledWith(expect.objectContaining({ chunkIndex: 2, jevChunkIndex: undefined }));
     expect(adapterInstance.findAnalysisChunks).toHaveBeenCalled();
   });

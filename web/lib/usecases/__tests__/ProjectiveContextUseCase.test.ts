@@ -110,6 +110,13 @@ describe('ProjectiveContextUseCase (R2b)', () => {
       expect(JSON.stringify(outcome)).toContain('content 4 chunk 0\\n\\ncontent 4 chunk 1');
     });
 
+    it('degradation hatch: a degraded K>1 plan (browser ran K=1) reads the jev-0 bundle rows at once, no 409 wait', async () => {
+      const { useCase, findChunks } = build({ plan: { ...PLAN, degraded: true }, cells: [] });
+      const outcome = await useCase.execute({ analysisId: 'a', userId: 'u' });
+      expect(outcome.type).toBe('ok');
+      expect(findChunks).toHaveBeenCalled();
+    });
+
     it('an interrupted cell counts as settled (degraded), like an interrupted K=1 bundle', async () => {
       const { useCase } = build({ plan: PLAN, cells: allGrounded({ '1:3': 'interrupted' }) });
       const outcome = await useCase.execute({ analysisId: 'a', userId: 'u' });

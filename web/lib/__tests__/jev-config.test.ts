@@ -103,3 +103,10 @@ describe('resolveJevConfig', () => {
     expect(config.countContentWords).toBe(false);
   });
 });
+
+describe('maxChunks clamp (R3b 2.5 audit)', () => {
+  it('caps K at 16 so K x 4 grounded bundles fits one /stream-tokens request (64 cells)', () => {
+    expect(JEV_BOUNDS.maxChunks.max).toBe(16);
+    expect(resolveJevConfig({ 'analysis.jev.maxChunks': 32 }).maxChunks).toBe(16);
+  });
+});

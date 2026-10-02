@@ -1,6 +1,6 @@
 /** R3b 2.5a: one rule for the cells an analysis expects before it can finalize. */
 import { describe, it, expect } from 'vitest';
-import { expectedCells, parseStoredPlan, cellKey, checkPersistCell } from '@/lib/jev/stored-plan';
+import { expectedCells, parseStoredPlan, cellKey, checkPersistCell, planToDegrade } from '@/lib/jev/stored-plan';
 
 const SHA = 'a'.repeat(64);
 const cell = (jevChunkIndex: number, chunkIndex: number) => ({ jevChunkIndex, chunkIndex, startWord: 0, endWord: 10, sha256: SHA });
@@ -50,5 +50,27 @@ describe('checkPersistCell (R3b 2.5b)', () => {
   it('v2 request without a K>1 plan is rejected', () => {
     expect(checkPersistCell(null, { jevChunkIndex: 0, chunkIndex: 1, totalChunks: 5 }, 5)).toEqual({ ok: false, reason: 'no_k_gt_1_plan' });
     expect(checkPersistCell({ ...K2, K: 1, streamCount: 5 }, { jevChunkIndex: 0, chunkIndex: 1, totalChunks: 5 }, 5)).toEqual({ ok: false, reason: 'no_k_gt_1_plan' });
+  });
+});
+
+describe('degraded plan (R3b 2.5 degradation hatch)', () => {
+  const k2 = {
+    K: 2,
+    streamCount: 9,
+    cells: [0, 1].flatMap((jevChunkIndex) => [1, 2, 3, 4].map((chunkIndex) => ({ jevChunkIndex, chunkIndex, startWord: 0, endWord: 10, sha256: 'a'.repeat(64) })))
+      .concat([{ jevChunkIndex: 0, chunkIndex: 5, startWord: 0, endWord: 0, sha256: 'b'.repeat(64) }]),
+  };
+
+  it('a degraded K>1 plan reads as K=1, so every reader expects today\'s 5 jev-0 bundles', () => {
+    expect(parseStoredPlan({ ...k2, degraded: true })?.K).toBe(1);
+    expect(expectedCells({ ...k2, degraded: true }, 5)).toEqual([1, 2, 3, 4, 5].map((chunkIndex) => ({ jevChunkIndex: 0, chunkIndex })));
+    expect(expectedCells(k2, 5)).toHaveLength(9);
+  });
+
+  it('planToDegrade marks only an unmarked K>1 plan, preserving its fields', () => {
+    expect(planToDegrade(k2)).toEqual({ ...k2, degraded: true });
+    expect(planToDegrade({ ...k2, degraded: true })).toBeNull();
+    expect(planToDegrade({ ...k2, K: 1, streamCount: 5 })).toBeNull();
+    expect(planToDegrade(null)).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { verifyContentSig } from '@/lib/stream-token';
-import { checkPersistCell } from '@/lib/jev/stored-plan';
+import { checkPersistCell, planToDegrade } from '@/lib/jev/stored-plan';
 import { reduceCellsToBundleRows } from '@/lib/jev/reduce-cells';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
@@ -377,6 +377,20 @@ export async function POST(request: NextRequest) {
       if (!cellCheck.ok) {
         console.warn('[analyses/persist] Rejected unexpected cell', { analysisId, jevChunkIndex, chunkIndex, totalChunks, reason: cellCheck.reason });
         return { type: 'error' as const, error: `Unexpected cell: ${cellCheck.reason}`, status: 400 };
+      }
+
+      // R3b 2.5 degradation hatch: a v1 chunk for a K>1 plan means the browser
+      // fell back to K=1 (/stream-tokens failed). Mark the plan degraded so
+      // projective context, finalize and the reaper stop waiting for cells.
+      // Best-effort: a failure here never fails the persist.
+      if (jevChunkIndex === undefined && chunkIndex !== undefined) {
+        try {
+          const adapter = new SupabasePersistenceAdapter();
+          const degraded = planToDegrade(await adapter.findJevPlan({ analysisId }));
+          if (degraded) await adapter.markJevPlanDegraded({ analysisId, plan: degraded });
+        } catch (degradeErr) {
+          Sentry.captureException(degradeErr, { tags: { route: 'analyses-persist', phase: 'jev-plan-degrade' }, extra: { analysisId } });
+        }
       }
 
       // Cross-field check (end_seconds > start_seconds) that Zod's

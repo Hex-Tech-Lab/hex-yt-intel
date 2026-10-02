@@ -19,6 +19,7 @@ const adapterInstance = vi.hoisted(() => ({
   updateValidationReport: vi.fn().mockResolvedValue(null),
   markChunkFailed: vi.fn().mockResolvedValue(true),
   findJevPlan: vi.fn(),
+  markJevPlanDegraded: vi.fn(),
   findAnalysisCells: vi.fn(),
 }));
 
@@ -172,7 +173,9 @@ describe('POST /api/analyses/persist — K>1 reduce-then-stitch finalize (R3b 2.
     );
     const res = await POST(post({ payload: bundlePayload(5, 0), chunkIndex: 5, totalChunks: 5 }));
     expect(res.status).toBe(200);
-    expect(adapterInstance.findJevPlan).not.toHaveBeenCalled();
+    // The v1 chunk on a K>1 plan marks the plan degraded (projective context,
+    // reaper and /stream-tokens then read it as K=1).
+    expect(adapterInstance.markJevPlanDegraded).toHaveBeenCalledWith({ analysisId: expect.any(String), plan: { ...PLAN, degraded: true } });
     expect(adapterInstance.findAnalysisCells).not.toHaveBeenCalled();
     expect(adapterInstance.updateAnalysisResult).toHaveBeenCalledTimes(1);
     const call = adapterInstance.updateAnalysisResult.mock.calls[0][0];
