@@ -24,12 +24,12 @@ export async function runWithConcurrency<T, R>(
   async function worker() {
     while (currentIndex < items.length) {
       const idx = currentIndex++;
-      try {
-        const value = await fn(items[idx] as T, idx);
-        results[idx] = { status: 'fulfilled', value };
-      } catch (reason) {
-        results[idx] = { status: 'rejected', reason };
-      }
+      // Every outcome is recorded as a settled result (Promise.allSettled
+      // semantics); a rejection is data for the caller, not swallowed.
+      results[idx] = await fn(items[idx] as T, idx).then(
+        (value): PromiseSettledResult<R> => ({ status: 'fulfilled', value }),
+        (reason: unknown): PromiseSettledResult<R> => ({ status: 'rejected', reason }),
+      );
     }
   }
 

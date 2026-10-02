@@ -45,12 +45,9 @@ describe('runWithConcurrency', () => {
   it('does not stop other tasks if one task rejects', async () => {
     const items = [1, 2, 3, 4, 5];
 
-    const results = await runWithConcurrency(items, 2, async (item) => {
-      if (item === 3) {
-        throw new Error('fail-item-3');
-      }
-      return item * 10;
-    });
+    const results = await runWithConcurrency(items, 2, (item) =>
+      item === 3 ? Promise.reject(new Error('fail-item-3')) : Promise.resolve(item * 10)
+    );
 
     expect(results).toHaveLength(5);
     expect(results[0]).toEqual({ status: 'fulfilled', value: 10 });

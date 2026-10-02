@@ -20,7 +20,7 @@ import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
-import { resolveJevConfig, JEV_MAX_PARALLEL_STREAMS_FALLBACK, JEV_BOUNDS } from '@/lib/config/jev';
+import { resolveJevConfig, resolveJevMaxParallelStreams, JEV_MAX_PARALLEL_STREAMS_FALLBACK } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -98,8 +98,7 @@ export interface UseCaseSuccess {
     estimateCents: number;
     truncatedFallback: boolean;
   } | null;
-  /** R3b 2.3.5e: client-side parallel concurrency cap for K>1 dispatch waves (analysis.jev.maxParallelStreams). */
-  jevMaxParallelStreams: number;
+  jevMaxParallelStreams: number; // R3b 2.3.5e: browser cap for concurrent K>1 cell streams (analysis.jev.maxParallelStreams)
   stream: {
     url: string;
     sig: string;
@@ -200,8 +199,8 @@ export class CreateAnalysisUseCase {
     // ADR 005) and surfaced in the stream log when truncation actually occurs,
     // so a truncated-input analysis can never read as an unqualified success.
     const resolvedBudgetRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['analysis.transcriptBudgetChars'],
-      { 'analysis.transcriptBudgetChars': 48000 }
+      ['analysis.transcriptBudgetChars', 'analysis.jev.maxParallelStreams'],
+      { 'analysis.transcriptBudgetChars': 48000, 'analysis.jev.maxParallelStreams': JEV_MAX_PARALLEL_STREAMS_FALLBACK }
     );
     const transcriptBudgetChars = Math.max(
       1000,
@@ -433,17 +432,6 @@ export class CreateAnalysisUseCase {
       }
     }
 
-    // R3b 2.3.5e: client-side concurrency cap for parallel Jev cell streams.
-    // Throttles simultaneous worker requests in flight during K>1 dispatch waves.
-    const resolvedConcurrencyRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['analysis.jev.maxParallelStreams'],
-      { 'analysis.jev.maxParallelStreams': JEV_MAX_PARALLEL_STREAMS_FALLBACK }
-    );
-    const maxParallelStreamsRaw = Number(resolvedConcurrencyRegistry['analysis.jev.maxParallelStreams']);
-    const jevMaxParallelStreams = Number.isFinite(maxParallelStreamsRaw)
-      ? Math.max(JEV_BOUNDS.maxParallelStreams.min, Math.min(JEV_BOUNDS.maxParallelStreams.max, Math.floor(maxParallelStreamsRaw)))
-      : JEV_MAX_PARALLEL_STREAMS_FALLBACK;
-
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -500,7 +488,7 @@ export class CreateAnalysisUseCase {
         commentsSyncPoolConfig,
         priorPayloadMaxBytes,
         jevPlan,
-        jevMaxParallelStreams,
+        jevMaxParallelStreams: resolveJevMaxParallelStreams(resolvedBudgetRegistry['analysis.jev.maxParallelStreams']),
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

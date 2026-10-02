@@ -56,6 +56,14 @@ export const JEV_BOUNDS = {
 
 export const JEV_MAX_PARALLEL_STREAMS_FALLBACK = 6;
 
+/** Registry value of `analysis.jev.maxParallelStreams` → an integer in [min, max]; non-numeric → fallback. */
+export function resolveJevMaxParallelStreams(raw: unknown): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return JEV_MAX_PARALLEL_STREAMS_FALLBACK;
+  const { min, max } = JEV_BOUNDS.maxParallelStreams;
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
 interface NumericSpec {
   key: string;
   min: number;
