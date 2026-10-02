@@ -1,0 +1,23 @@
+web/lib/__tests__/mint-cell-tokens.test.ts
+  s_b70cf5106ad39d::t_5811dddc38a8a0 49-50
+worker/src/__tests__/stream-token-dual-verify.test.ts
+  s_b70cf5106ad39d::t_c3710c677f8062 72-73,109,196-211
+worker/src/routes/analysis.ts
+  s_b70cf5106ad39d::t_76c4df6998b706 245,292-300,1674
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7c0a3d7cf783b9bcd73bb2e9411b9ae0122c05b2",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
