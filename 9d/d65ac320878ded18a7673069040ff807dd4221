@@ -1,0 +1,16 @@
+worker/src/__tests__/jev-slice-route.test.ts
+  h_60000122af7b55 1-485
+worker/src/routes/analysis.ts
+  h_60000122af7b55 18,1028-1105,1474-1480,1489
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9dd65ac320878ded18a7673069040ff807dd4221",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
