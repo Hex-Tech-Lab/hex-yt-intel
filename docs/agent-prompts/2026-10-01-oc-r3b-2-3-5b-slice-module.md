@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Comments Dispatch B (sentiment pending state + Sampled pool insights UI)
+# Agent Dispatch Prompt — R3b 2.3.5b — shared transcript slice module (split + hash), web and worker
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -70,31 +70,35 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-Worktree: `/home/kellyb_dev/projects/hex-yt-intel-dispB`, branch `feat/comments-dispatch-b` (already created off origin/main). Work ONLY in this worktree.
+Worktree `/home/kellyb_dev/projects/hex-yt-intel-r3b-235b`, branch `feat/r3b-2-3-5b-slice-module` (created by CC from origin/main). Home dir `/home/kellyb_dev` (UNDERSCORE).
 
-PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-duplicated comment pool (relevance + newest pages, YouTube API caps the pool — roughly 2,000 comments max), classifies each sampled comment with Jev, and the S2S callback `web/app/api/comments/persist-sample-run/route.ts` writes:
-- `comment_sample_runs` row: `status` pending → sampling → completed|failed, `mode` 'cochran'
-- `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
-- `analysis_payload.comments` (sampled comments) only if absent.
+Hard rules: work ONLY in your worktree; never `cd` (use `pnpm --filter ...` / `git -C`); `.scratch/` inside the worktree only, NEVER /tmp (a rejected /tmp call ENDS your run); never git checkout/restore/stash uncommitted work (negative controls: `cp file .scratch/x.bak`, break, test, `cp` back); never delete, weaken or overwrite an existing test; never run `pnpm qa-intel:baseline` or edit `.qa-intel/baseline.json`; qa-intel AFTER `git add`, must print "No new issues since baseline" with N>0 files scanned; never run qa-intel `--mode full` (OOM).
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+R3b 2.3.5 (approved 2026-10-01): each K>1 stream gets a token that signs a transcript slice `(startWord, endWord, sha256)`. Vercel computes the slice in `web/lib/usecases/PlanAnalysisUseCase.ts` (words from `tokenize` in `web/lib/jev/boundary-engine.ts` = `transcript.split(/\s+/).filter(w => w.length > 0)`; slice text = words[startWord, endWord) joined by ONE space; hash = `sha256Hex` from `web/lib/config/projective-context.ts`; projective cells use the empty slice `(0, 0, sha256(""))`). A later step (2.3.5d) makes the worker re-cut and re-hash the slice. If the two sides split or join differently by one character, every check fails. This task makes ONE module both sides import.
 
----
+Precedent for sharing code: `worker/src/services/KnowledgeGraphSynthesizer.ts` re-exports isomorphic code from `../../../web/lib/intelligence/...` by relative path. Follow that exactly. The shared file must NOT import anything with the `@/` alias, `env`, Node-only modules, or Next.js; only Web Crypto (`crypto.subtle`) and plain TS.
 
 ## 2. Contract & Implementation Directives
 
-1. Post `[IN_PROGRESS]` in `.memory/AGENT_LEDGER.md` (in this worktree) with target files.
-2. **Status source.** Add a read-only, auth-scoped GET route `web/app/api/comments/runs/[analysisId]/route.ts` returning the latest `comment_sample_runs` row for that analysis owned by the caller (`id, status, mode, sampled_count, created_at, completed_at`) or `null`. Use `getSupabaseClientWithAuth()` + ownership check (`user_id = user.id`), a thin route, Zod-validate the param as uuid. Follow the existing adapter pattern (look at `web/lib/adapters/SupabaseCommentSamplingAdapter.ts`) — put the query in the adapter, not the route.
-3. **Hook.** `web/hooks/useCommentInsights.ts`: given `analysisId` + the in-memory payload (`useSynthesisNucleus` `rawAnalysisPayload` when `rawAnalysisPayloadId === analysisId`, same guard as `useAuxElementStatus.ts:55`), returns `{ state: 'none' | 'analyzing' | 'ready' | 'failed', insights: CommentInsights | null }`. If insights exist in the payload → `ready`. Else fetch the run status; `pending|sampling` → `analyzing` and poll every 5 s with a hard cap of 3 minutes, abortable on unmount/analysisId change; on `completed` refetch the persisted payload (reuse whatever `useAuxElementStatus` uses to fetch it) to obtain insights. Define a web-side `CommentInsights` type with a Zod schema and `safeParse` the payload field — never cast.
-4. **Chip.** When state is `analyzing`, the dashboard Comments `StatusBadge` shows a loading state with label "Analyzing sentiment…" (use the existing `StatusBadge` loading/pending variant if one exists; check `web/components/templates/_shared/primitives.tsx`).
-5. **Insights panel.** New `web/components/templates/console/CommentInsightsCard.tsx`, rendered in `ProDashboardView.tsx` directly under the aux chip row when state is `ready`: sentiment split (4 bars or a stacked bar, percentages of `classified`), top types, pain points count, questions count, and a scope line that MUST read exactly: **"Sampled pool: {sampleSize} of {population} comments fetched (YouTube returns up to ~2,000) · ±{marginOfError×100 rounded 1dp}% at {confidence×100 rounded}% confidence"**, plus "{lowConfidence} low-confidence classifications excluded" when lowConfidence > 0. Never say "all comments" or imply the whole video. Use Tailwind + Astryx only (NOT shadcn), 8px radius panels / 6px chips per the system radius rule.
-6. Tests: route test (401 unauthenticated, 404/null for other user's analysis, happy path), hook test (payload-ready, analyzing→ready via mocked fetch with fake timers, poll cap stops), component test asserting the exact "Sampled pool" wording. Use happy-dom + RTL like `web/hooks/__tests__/useAuxElementStatus.test.tsx`.
-7. Run all gates in 4a. Commit on `feat/comments-dispatch-b`, push, open a PR titled `feat(comments): Dispatch B — Analyzing sentiment state + Sampled pool insights`. Do NOT merge.
-8. Post `[DONE]`/`[PARTIAL]` to the ledger with what actually happened.
+1. Ledger [IN_PROGRESS].
+2. Create `web/lib/jev/transcript-slice.ts` exporting:
+   - `tokenizeTranscript(transcript: string): string[]` (same regex as boundary-engine `tokenize`);
+   - `sliceText(words: string[], startWord: number, endWord: number): string` (words in `[start, end)` joined by a single space; `(0,0)` → `""`); throw a `RangeError` for non-integers, `start < 0`, `start > end`, or `end > words.length`;
+   - `sha256HexIsomorphic(text: string): Promise<string>` (lowercase hex, Web Crypto);
+   - `EMPTY_SLICE_SHA256` constant (= sha256 of "", assert it in a test);
+   - `sliceDigest(transcript: string, startWord: number, endWord: number): Promise<string>` composing the three.
+3. Make `web/lib/jev/boundary-engine.ts` `tokenize` delegate to `tokenizeTranscript` (keep its export and signature). Make `PlanAnalysisUseCase` build each cell's text with `sliceText` (replacing the ad-hoc `words.filter(...).join(' ')` in `mergeChunks` and `words.join(' ')`), keeping behavior byte-identical.
+4. Create `worker/src/services/TranscriptSlice.ts` that re-exports the five names from `../../../web/lib/jev/transcript-slice` (same pattern as KnowledgeGraphSynthesizer). Confirm the worker typecheck AND the worker build (`pnpm --filter youtube-intelligence-worker run build` or the build script in worker/package.json; find it) both succeed with the cross-package import.
+5. Tests:
+   - `web/lib/__tests__/transcript-slice.test.ts`: tokenization of tabs/newlines/multiple spaces/leading-trailing whitespace/unicode; `sliceText` bounds and RangeErrors; `EMPTY_SLICE_SHA256` equals sha256(""); a known vector (`sha256("abc")` = `ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`).
+   - PARITY test: for a fixed multi-chunk transcript with irregular whitespace, run `planAnalysis` (find its real export and input shape in PlanAnalysisUseCase) with Jev forced to K>1 using the test config pattern its existing tests use, then for EVERY returned cell recompute `sliceDigest(transcript, cell.startWord, cell.endWord)` through the WORKER re-export and assert it equals `cell.sha256` (projective cells included).
+   - Existing PlanAnalysisUseCase and boundary-engine tests must pass UNCHANGED.
+6. Negative controls (back up, break, run, restore, rerun green), record counts: (a) join with two spaces in `sliceText` → parity test fails; (b) change the tokenize regex to `/ /` → whitespace tests and parity fail.
+7. INVESTIGATE ONLY (no code change), and write the answer in your report: which transcript string does each side actually have? (i) What text does `CreateAnalysisUseCase` pass to the planner (inline plan), and what text does `POST /api/analyses/[id]/plan` receive from the worker? (ii) What text does the worker hold at stream time (`fetchTranscriptIfMissing`, cache vs live sources, any normalization)? (iii) Can they differ for the same video? Cite file:line for each claim.
+8. Gates: web tsc; worker tsc (`-p tsconfig.typecheck.json`); worker build; web vitest for the touched test files, then the full web suite; worker suite via `pnpm --filter @hex-yt-intel/web exec vitest run ../worker/src/__tests__/`; qa-intel after `git add`.
+9. Commit `feat(jev): R3b 2.3.5b — shared isomorphic transcript slice module (web + worker)`, `git push -u origin HEAD`, ledger [DONE] with test output, negative-control counts and the step-7 findings. NO PR.
 
-Out of scope: worker code, migrations, persist-sample-run route, the backfill script, AnalysisHistory layout.
-
----
+Out of scope: token code, the worker request path, enforcement, client code.
 
 ## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 

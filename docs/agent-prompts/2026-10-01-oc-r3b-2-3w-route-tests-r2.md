@@ -1,4 +1,14 @@
-# Agent Dispatch Prompt — Comments Dispatch B (sentiment pending state + Sampled pool insights UI)
+# RELAUNCH (correction, run 2 of 2) — read this block first; the full original prompt follows below.
+
+Your previous run did steps 1-4 correctly: it rebased onto ff8e0231, wrote `worker/src/__tests__/jev-plan-route.test.ts` (6 passing, now STAGED), ran negative controls (5/4/1 fail) and the full worker suite (322 pass). Do NOT redo or rewrite these. It ENDED because it wrote to `/tmp` (forbidden; the run is killed by a rejected tool call). Use `<worktree>/.scratch/` for ALL output files.
+
+Remaining work, in order:
+1. Run `pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare > .scratch/qa.json 2>&1` (launch dir is ~/projects; pass paths under the worktree). It currently reports 8 new findings: unclear names 'p' and 'r', LF-only split, 2x truncation without ellipsis, catch without logging, 2x non-null assertion after sort/filter. For each, note the file. Fix the ones in `jev-plan-route.test.ts`. For any in `worker/src/routes/analysis.ts`, fix them ONLY if the fix doesn't change behavior; otherwise list them in the report.
+2. Re-run the 6 route tests and the full worker suite. Then `git add`, re-run qa-intel, and confirm it exits 0 / "No new issues".
+3. Commit `test(worker): R3b 2.3W — route-level tests for plan event ordering, /plan fallback, projective skip`, `git push --force-with-lease`, ledger [DONE]. Do not un-draft.
+
+---
+# Agent Dispatch Prompt — R3b 2.3W route-level tests for PR #392
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -70,31 +80,33 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-Worktree: `/home/kellyb_dev/projects/hex-yt-intel-dispB`, branch `feat/comments-dispatch-b` (already created off origin/main). Work ONLY in this worktree.
+Worktree `/home/kellyb_dev/projects/hex-yt-intel-r3b-23w`, branch `feat/r3b-2-3w-worker-plan` (PR #392, DRAFT). Home dir `/home/kellyb_dev` (UNDERSCORE).
 
-PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-duplicated comment pool (relevance + newest pages, YouTube API caps the pool — roughly 2,000 comments max), classifies each sampled comment with Jev, and the S2S callback `web/app/api/comments/persist-sample-run/route.ts` writes:
-- `comment_sample_runs` row: `status` pending → sampling → completed|failed, `mode` 'cochran'
-- `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
-- `analysis_payload.comments` (sampled comments) only if absent.
+Hard rules: work ONLY in your worktree; never `cd` (use `pnpm --filter ...` / `git -C`); `.scratch/` only, never /tmp; never git checkout/restore/stash on uncommitted work (negative controls: `cp file .scratch/x.bak`, break, test, `cp` back); never delete, weaken or overwrite an existing test; never run `pnpm qa-intel:baseline` or edit `.qa-intel/baseline.json`; qa-intel AFTER `git add`, and it must print "No new issues since baseline" with N>0 files scanned.
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+PR #392 adds `/plan` resolution plus an `event: plan` SSE frame to `worker/src/routes/analysis.ts` (section starting ~L858: `isValidJevPlan`, the `/plan` fetch with K=1 fallback, and the plan emitter ~L1184). Its only tests (`worker/src/__tests__/jev-plan-worker.test.ts`) cover HELPERS. Nothing proves the ROUTE's behavior. No existing worker test drives the analysis route end to end, so you must build a minimal harness: call the Hono app/route handler with a `Request`, stub `globalThis.fetch` (vi.stubGlobal/vi.spyOn) so you can tell `/api/analyses/<id>/plan` calls apart from OpenRouter calls, and read the SSE response body as text. Use `worker/src/__tests__/stream-token-dual-verify.test.ts` to see how to mint a valid stream token.
 
----
+The branch is BEHIND origin/main (missing #391 and #393). Rebase first.
 
 ## 2. Contract & Implementation Directives
 
-1. Post `[IN_PROGRESS]` in `.memory/AGENT_LEDGER.md` (in this worktree) with target files.
-2. **Status source.** Add a read-only, auth-scoped GET route `web/app/api/comments/runs/[analysisId]/route.ts` returning the latest `comment_sample_runs` row for that analysis owned by the caller (`id, status, mode, sampled_count, created_at, completed_at`) or `null`. Use `getSupabaseClientWithAuth()` + ownership check (`user_id = user.id`), a thin route, Zod-validate the param as uuid. Follow the existing adapter pattern (look at `web/lib/adapters/SupabaseCommentSamplingAdapter.ts`) — put the query in the adapter, not the route.
-3. **Hook.** `web/hooks/useCommentInsights.ts`: given `analysisId` + the in-memory payload (`useSynthesisNucleus` `rawAnalysisPayload` when `rawAnalysisPayloadId === analysisId`, same guard as `useAuxElementStatus.ts:55`), returns `{ state: 'none' | 'analyzing' | 'ready' | 'failed', insights: CommentInsights | null }`. If insights exist in the payload → `ready`. Else fetch the run status; `pending|sampling` → `analyzing` and poll every 5 s with a hard cap of 3 minutes, abortable on unmount/analysisId change; on `completed` refetch the persisted payload (reuse whatever `useAuxElementStatus` uses to fetch it) to obtain insights. Define a web-side `CommentInsights` type with a Zod schema and `safeParse` the payload field — never cast.
-4. **Chip.** When state is `analyzing`, the dashboard Comments `StatusBadge` shows a loading state with label "Analyzing sentiment…" (use the existing `StatusBadge` loading/pending variant if one exists; check `web/components/templates/_shared/primitives.tsx`).
-5. **Insights panel.** New `web/components/templates/console/CommentInsightsCard.tsx`, rendered in `ProDashboardView.tsx` directly under the aux chip row when state is `ready`: sentiment split (4 bars or a stacked bar, percentages of `classified`), top types, pain points count, questions count, and a scope line that MUST read exactly: **"Sampled pool: {sampleSize} of {population} comments fetched (YouTube returns up to ~2,000) · ±{marginOfError×100 rounded 1dp}% at {confidence×100 rounded}% confidence"**, plus "{lowConfidence} low-confidence classifications excluded" when lowConfidence > 0. Never say "all comments" or imply the whole video. Use Tailwind + Astryx only (NOT shadcn), 8px radius panels / 6px chips per the system radius rule.
-6. Tests: route test (401 unauthenticated, 404/null for other user's analysis, happy path), hook test (payload-ready, analyzing→ready via mocked fetch with fake timers, poll cap stops), component test asserting the exact "Sampled pool" wording. Use happy-dom + RTL like `web/hooks/__tests__/useAuxElementStatus.test.tsx`.
-7. Run all gates in 4a. Commit on `feat/comments-dispatch-b`, push, open a PR titled `feat(comments): Dispatch B — Analyzing sentiment state + Sampled pool insights`. Do NOT merge.
-8. Post `[DONE]`/`[PARTIAL]` to the ledger with what actually happened.
+1. Ledger [IN_PROGRESS] (worktree ledger).
+2. `git -C <wt> fetch origin && git -C <wt> rebase origin/main`. On a conflict in `.memory/*`, take origin/main's version and re-append your ledger line. Any conflict in code: STOP and report [BLOCKED].
+3. Create `worker/src/__tests__/jev-plan-route.test.ts` with these route-level tests (each asserts on the real SSE response body and on the recorded fetch calls):
+   a. Grounded bundle, no `jevPlan` in the request, `/plan` returns a valid plan → the body contains exactly one `event: plan` frame, and it comes BEFORE the first grounded token/data frame (compare string indexes). Its `data` matches the contract `{v:1,source:"worker",K,streamCount,cells,...}`.
+   b. `/plan` returns 500 → one `event: plan` with K=1, AND the OpenRouter call still happens, AND tokens still stream.
+   c. `/plan` times out/rejects → same as (b).
+   d. `/plan` returns 200 with bad JSON / a malformed plan → same as (b).
+   e. Request body carries a valid `jevPlan` → NO `/plan` fetch; the plan frame has source "inline".
+   f. Projective bundles (bundle 9 and bundle 11, use the real bundle ids from the code) → NO `/plan` fetch and NO `event: plan` in the body.
+4. Negative controls (back up via `.scratch/`, break, run, restore, rerun green). Record the failing count for each:
+   - Move the plan emission after the first token → (a) fails.
+   - Make a `/plan` failure throw instead of falling back → (b)-(d) fail.
+   - Drop the projective guard → (f) fails.
+5. Gates: `pnpm --filter youtube-intelligence-worker exec tsc --noEmit -p tsconfig.typecheck.json`; `pnpm --filter youtube-intelligence-worker exec vitest run` (full worker suite); qa-intel after `git add` (`pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare`; do NOT run `--mode full`, it runs out of memory on this machine).
+6. Commit `test(worker): R3b 2.3W — route-level tests for plan event ordering, /plan fallback, projective skip`, then `git push --force-with-lease`. Do NOT un-draft or merge. Ledger [DONE] with actual test output + negative-control counts.
 
-Out of scope: worker code, migrations, persist-sample-run route, the backfill script, AnalysisHistory layout.
-
----
+Out of scope: any change to `worker/src/routes/analysis.ts` behavior. If a test reveals a real bug, do NOT fix it: report it, with the failing test left in `.skip` and a comment explaining why.
 
 ## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 

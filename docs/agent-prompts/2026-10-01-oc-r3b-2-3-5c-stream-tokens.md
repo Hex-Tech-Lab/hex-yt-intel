@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Comments Dispatch B (sentiment pending state + Sampled pool insights UI)
+# Agent Dispatch Prompt — R3b 2.3.5c — POST /api/analyses/[id]/stream-tokens (per-cell v2 minting)
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -70,31 +70,42 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-Worktree: `/home/kellyb_dev/projects/hex-yt-intel-dispB`, branch `feat/comments-dispatch-b` (already created off origin/main). Work ONLY in this worktree.
+Worktree `/home/kellyb_dev/projects/hex-yt-intel-r3b-235c`, branch `feat/r3b-2-3-5c-stream-tokens` (created by CC from origin/main d029d3ea, which includes 2.3.5a). Home dir `/home/kellyb_dev` (UNDERSCORE). A parallel OC run (2.3.5b) is editing `web/lib/jev/*`, `PlanAnalysisUseCase.ts` and `worker/src/services/TranscriptSlice.ts` in another worktree: do NOT touch those files.
 
-PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-duplicated comment pool (relevance + newest pages, YouTube API caps the pool — roughly 2,000 comments max), classifies each sampled comment with Jev, and the S2S callback `web/app/api/comments/persist-sample-run/route.ts` writes:
-- `comment_sample_runs` row: `status` pending → sampling → completed|failed, `mode` 'cochran'
-- `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
-- `analysis_payload.comments` (sampled comments) only if absent.
+Hard rules: work ONLY in your worktree; never `cd` (use `pnpm --filter ...` / `git -C`); `.scratch/` inside the worktree only, NEVER /tmp (a rejected /tmp call ENDS your run); never git checkout/restore/stash uncommitted work (negative controls: `cp file .scratch/x.bak`, break, test, `cp` back); never delete, weaken or overwrite an existing test; never run `pnpm qa-intel:baseline` or edit `.qa-intel/baseline.json`; qa-intel AFTER `git add`, must print "No new issues since baseline" with N>0 files scanned; never run qa-intel `--mode full` (OOM).
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+Approved design (2026-10-01): the browser never holds the signing secret, and a v2 token lives 120 s. Before each dispatch wave, the browser asks the server to mint one v2 token per cell it is about to start. The server derives every signed field from the STORED plan (`analyses.jev_plan`, written by #390/#392), never from the request body except the cell identifiers.
 
----
+`signStreamTokenV2` (web/lib/stream-token.ts, merged in #399) takes `{ videoId, analysisId, models, streamCount, jevChunkIndex, jevChunkCount, chunkIndex, bundleList, slice: { sha256, startWord, endWord } }` and returns `{ sig, exp }`.
+
+Patterns to copy (read them first):
+- Auth + ownership: `web/app/api/analyses/[id]/projective-context/route.ts` (SupabaseAuthAdapter session → 401; `verifyResourceOwnership` → 404 when not owner; Sentry; ERROR_CODES).
+- Plan shape and storage: `web/app/api/analyses/[id]/plan/route.ts` and `web/lib/usecases/PlanAnalysisUseCase.ts` (cells: `{ jevChunkIndex, chunkIndex, startWord, endWord, sha256 }`, plus `K`, `streamCount`).
+- Bundle list: `STREAM_BUNDLES` in `web/lib/config/synthesis.ts`. Models: how `CreateAnalysisUseCase` resolves `models` for the job (`resolveAnalysisCascade`); the token's `models` MUST equal what the worker receives in `req.models` for that analysis, or verification fails. Find out exactly what the browser sends as `models` today and reuse the same source; say how you confirmed it.
 
 ## 2. Contract & Implementation Directives
 
-1. Post `[IN_PROGRESS]` in `.memory/AGENT_LEDGER.md` (in this worktree) with target files.
-2. **Status source.** Add a read-only, auth-scoped GET route `web/app/api/comments/runs/[analysisId]/route.ts` returning the latest `comment_sample_runs` row for that analysis owned by the caller (`id, status, mode, sampled_count, created_at, completed_at`) or `null`. Use `getSupabaseClientWithAuth()` + ownership check (`user_id = user.id`), a thin route, Zod-validate the param as uuid. Follow the existing adapter pattern (look at `web/lib/adapters/SupabaseCommentSamplingAdapter.ts`) — put the query in the adapter, not the route.
-3. **Hook.** `web/hooks/useCommentInsights.ts`: given `analysisId` + the in-memory payload (`useSynthesisNucleus` `rawAnalysisPayload` when `rawAnalysisPayloadId === analysisId`, same guard as `useAuxElementStatus.ts:55`), returns `{ state: 'none' | 'analyzing' | 'ready' | 'failed', insights: CommentInsights | null }`. If insights exist in the payload → `ready`. Else fetch the run status; `pending|sampling` → `analyzing` and poll every 5 s with a hard cap of 3 minutes, abortable on unmount/analysisId change; on `completed` refetch the persisted payload (reuse whatever `useAuxElementStatus` uses to fetch it) to obtain insights. Define a web-side `CommentInsights` type with a Zod schema and `safeParse` the payload field — never cast.
-4. **Chip.** When state is `analyzing`, the dashboard Comments `StatusBadge` shows a loading state with label "Analyzing sentiment…" (use the existing `StatusBadge` loading/pending variant if one exists; check `web/components/templates/_shared/primitives.tsx`).
-5. **Insights panel.** New `web/components/templates/console/CommentInsightsCard.tsx`, rendered in `ProDashboardView.tsx` directly under the aux chip row when state is `ready`: sentiment split (4 bars or a stacked bar, percentages of `classified`), top types, pain points count, questions count, and a scope line that MUST read exactly: **"Sampled pool: {sampleSize} of {population} comments fetched (YouTube returns up to ~2,000) · ±{marginOfError×100 rounded 1dp}% at {confidence×100 rounded}% confidence"**, plus "{lowConfidence} low-confidence classifications excluded" when lowConfidence > 0. Never say "all comments" or imply the whole video. Use Tailwind + Astryx only (NOT shadcn), 8px radius panels / 6px chips per the system radius rule.
-6. Tests: route test (401 unauthenticated, 404/null for other user's analysis, happy path), hook test (payload-ready, analyzing→ready via mocked fetch with fake timers, poll cap stops), component test asserting the exact "Sampled pool" wording. Use happy-dom + RTL like `web/hooks/__tests__/useAuxElementStatus.test.tsx`.
-7. Run all gates in 4a. Commit on `feat/comments-dispatch-b`, push, open a PR titled `feat(comments): Dispatch B — Analyzing sentiment state + Sampled pool insights`. Do NOT merge.
-8. Post `[DONE]`/`[PARTIAL]` to the ledger with what actually happened.
+Route contract:
+```
+POST /api/analyses/{id}/stream-tokens
+body:   { cells: [{ jevChunkIndex: int>=0, chunkIndex: int>=1 }] }   (1..64 cells, no duplicates)
+200:    { tokens: [{ jevChunkIndex, chunkIndex, sig, exp, tokenVersion: 2,
+                     streamCount, jevChunkCount, bundleList, sliceSha256, startWord, endWord }] }
+401 no session · 404 not found / not owner · 409 { error: 'no_plan' } when jev_plan is null
+                · 409 { error: 'plan_k1' } when plan.K === 1 (K=1 keeps v1 tokens)
+400 malformed body or a cell not present in the stored plan (name the offending cell)
+```
+1. Ledger [IN_PROGRESS].
+2. Use case (domain logic, no I/O): `web/lib/usecases/MintCellTokensUseCase.ts`: input = stored plan + requested cells + videoId/analysisId/models/bundleList + a signer function; output = token list or a typed error. Look each requested cell up in `plan.cells` by `(jevChunkIndex, chunkIndex)`; `jevChunkCount = plan.K`; `streamCount = plan.streamCount`; slice fields from the stored cell. Inject the signer so the use case is unit-testable.
+3. Route: thin handler at `web/app/api/analyses/[id]/stream-tokens/route.ts`: Zod-validate the body (safeParse), auth, ownership, load `jev_plan` + `video_id` through the existing persistence adapter (add a narrow read method if none exists; follow the adapter's style), call the use case with the real `signStreamTokenV2`, map errors to the status codes above. Session-gated, so do NOT add it to the middleware allowlist.
+4. Tests:
+   - use case: happy path for K=3 (grounded + projective cells; projective has the empty slice); unknown cell → error naming it; duplicates rejected; K=1 → plan_k1; every returned token VERIFIES through the worker's `verifyStreamToken` (import it like `worker/src/__tests__/stream-token-dual-verify.test.ts` does) with the same secret, models and bundleList; a token minted for cell A fails verification when presented with cell B's fields.
+   - route (mock auth/adapters the way existing `web/app/api/analyses/[id]/*/__tests__/route.test.ts` do): 401, 404 non-owner, 409 no_plan, 409 plan_k1, 400 bad body, 200 shape.
+5. Negative controls (back up, break, run, restore, rerun green), record counts: (a) take the slice fields from the request instead of the stored plan → the forged-slice test fails (add that test: a request body carrying extra `startWord`/`sliceSha256` fields must be ignored or rejected); (b) remove the ownership check → 404 test fails.
+6. Gates: web tsc; worker tsc (`-p tsconfig.typecheck.json`); the new tests; full web suite; worker suite via `pnpm --filter @hex-yt-intel/web exec vitest run ../worker/src/__tests__/`; qa-intel after `git add`.
+7. Commit `feat(api): R3b 2.3.5c — POST /api/analyses/[id]/stream-tokens mints per-cell v2 tokens from the stored plan`, `git push -u origin HEAD`, ledger [DONE] with real output, negative-control counts and how you confirmed the `models` source. NO PR.
 
-Out of scope: worker code, migrations, persist-sample-run route, the backfill script, AnalysisHistory layout.
-
----
+Out of scope: client dispatch, worker slice enforcement, the transcript-slice module, migrations, enabling Jev.
 
 ## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 

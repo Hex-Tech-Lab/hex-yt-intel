@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Comments Dispatch B (sentiment pending state + Sampled pool insights UI)
+# Agent Dispatch Prompt — R3b 2.3.5e — browser K>1 dispatch with parallel cap
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -8,7 +8,7 @@
 > non-trivial or expensive, skim `.memory/AGENT_LEDGER.md` for a recent real
 > outcome on a similar task shape before trusting the table blindly.
 
-**Target Agent**: OC
+**Target Agent**: AGY (gemini-3.8-flash-low)
 **Effort Level**: medium
 
 > **Before dispatching**: run the `improve-prompt` skill against the filled-in
@@ -70,31 +70,35 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-Worktree: `/home/kellyb_dev/projects/hex-yt-intel-dispB`, branch `feat/comments-dispatch-b` (already created off origin/main). Work ONLY in this worktree.
+Worktree `/home/kellyb_dev/projects/hex-yt-intel-r3b-235e`, branch `feat/r3b-2-3-5e` (from origin/main). Home `/home/kellyb_dev` (UNDERSCORE). A parallel AGY run (2.3.5d) edits `worker/src/routes/analysis.ts` in another worktree: do NOT touch worker files.
 
-PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-duplicated comment pool (relevance + newest pages, YouTube API caps the pool — roughly 2,000 comments max), classifies each sampled comment with Jev, and the S2S callback `web/app/api/comments/persist-sample-run/route.ts` writes:
-- `comment_sample_runs` row: `status` pending → sampling → completed|failed, `mode` 'cochran'
-- `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
-- `analysis_payload.comments` (sampled comments) only if absent.
+Hard rules: work ONLY inside your worktree; never `cd` out of it; scratch files go in `<worktree>/.scratch/` only, NEVER /tmp; never `git checkout`/`restore`/`stash` uncommitted work (negative controls: `cp file .scratch/x.bak`, break, run, `cp` back); never delete, weaken or overwrite an existing test (only update one whose assertion encodes behaviour this task deliberately changes, and say so in the report); never run `pnpm qa-intel:baseline` or edit `.qa-intel/baseline.json`; run qa-intel AFTER `git add` (`pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare`, must print "No new issues since baseline" with N>0 files scanned; never `--mode full`); do NOT apply migrations (no Supabase CLI/MCP); commit, `git push -u origin HEAD`, NO PR (CC opens it). Worker tests run via `pnpm --filter @hex-yt-intel/web exec vitest run ../worker/src/__tests__/`. Watch exit codes: `cmd | tail` hides a failing `tsc`; run `tsc` without a pipe and check `$?`.
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+R3b 2.3.5 (approved 2026-10-01). Today `web/hooks/useSSEStream.ts` resolves a Jev plan (`activePlanRef`, merged #394) but always dispatches the 5 K=1 streams with the job's single v1 token; for `K > 1` it only warns ("per-cell tokens are not issued yet"). Per-cell v2 tokens now exist: `POST /api/analyses/{id}/stream-tokens` (PR #403, may still be merging; read its route at `web/app/api/analyses/[id]/stream-tokens/route.ts` on origin/main or the PR branch `feat/r3b-2-3-5c-stream-tokens`). Request `{ cells: [{ jevChunkIndex, chunkIndex }] }` (1..64, strict). Response `{ tokens: [{ jevChunkIndex, chunkIndex, sig, exp, tokenVersion: 2, streamCount, jevChunkCount, bundleList, sliceSha256, startWord, endWord }] }`; 409 `no_plan|invalid_plan|plan_k1|plan_truncated`. Tokens live 120 s, so request them per wave, right before dispatching that wave.
 
----
+Jev is OFF in production, so every real plan is K=1 today; this path only runs when K>1.
 
 ## 2. Contract & Implementation Directives
 
-1. Post `[IN_PROGRESS]` in `.memory/AGENT_LEDGER.md` (in this worktree) with target files.
-2. **Status source.** Add a read-only, auth-scoped GET route `web/app/api/comments/runs/[analysisId]/route.ts` returning the latest `comment_sample_runs` row for that analysis owned by the caller (`id, status, mode, sampled_count, created_at, completed_at`) or `null`. Use `getSupabaseClientWithAuth()` + ownership check (`user_id = user.id`), a thin route, Zod-validate the param as uuid. Follow the existing adapter pattern (look at `web/lib/adapters/SupabaseCommentSamplingAdapter.ts`) — put the query in the adapter, not the route.
-3. **Hook.** `web/hooks/useCommentInsights.ts`: given `analysisId` + the in-memory payload (`useSynthesisNucleus` `rawAnalysisPayload` when `rawAnalysisPayloadId === analysisId`, same guard as `useAuxElementStatus.ts:55`), returns `{ state: 'none' | 'analyzing' | 'ready' | 'failed', insights: CommentInsights | null }`. If insights exist in the payload → `ready`. Else fetch the run status; `pending|sampling` → `analyzing` and poll every 5 s with a hard cap of 3 minutes, abortable on unmount/analysisId change; on `completed` refetch the persisted payload (reuse whatever `useAuxElementStatus` uses to fetch it) to obtain insights. Define a web-side `CommentInsights` type with a Zod schema and `safeParse` the payload field — never cast.
-4. **Chip.** When state is `analyzing`, the dashboard Comments `StatusBadge` shows a loading state with label "Analyzing sentiment…" (use the existing `StatusBadge` loading/pending variant if one exists; check `web/components/templates/_shared/primitives.tsx`).
-5. **Insights panel.** New `web/components/templates/console/CommentInsightsCard.tsx`, rendered in `ProDashboardView.tsx` directly under the aux chip row when state is `ready`: sentiment split (4 bars or a stacked bar, percentages of `classified`), top types, pain points count, questions count, and a scope line that MUST read exactly: **"Sampled pool: {sampleSize} of {population} comments fetched (YouTube returns up to ~2,000) · ±{marginOfError×100 rounded 1dp}% at {confidence×100 rounded}% confidence"**, plus "{lowConfidence} low-confidence classifications excluded" when lowConfidence > 0. Never say "all comments" or imply the whole video. Use Tailwind + Astryx only (NOT shadcn), 8px radius panels / 6px chips per the system radius rule.
-6. Tests: route test (401 unauthenticated, 404/null for other user's analysis, happy path), hook test (payload-ready, analyzing→ready via mocked fetch with fake timers, poll cap stops), component test asserting the exact "Sampled pool" wording. Use happy-dom + RTL like `web/hooks/__tests__/useAuxElementStatus.test.tsx`.
-7. Run all gates in 4a. Commit on `feat/comments-dispatch-b`, push, open a PR titled `feat(comments): Dispatch B — Analyzing sentiment state + Sampled pool insights`. Do NOT merge.
-8. Post `[DONE]`/`[PARTIAL]` to the ledger with what actually happened.
+1. Post `[IN_PROGRESS]` in your worktree's ledger.
+2. Registry key: new migration `supabase/migrations/20261002090000_jev_max_parallel_streams_setting.sql` modelled EXACTLY on `20261001090000_jev_max_cost_per_video_setting.sql`: key `analysis.jev.maxParallelStreams`, tier system, number, validation `{"min": 1, "max": 32}`, default `6`, `on conflict (key) do nothing`, with a header comment saying CC applies it (ADR 018). Do not apply it.
+3. `CreateAnalysisUseCase`: resolve the key with `SupabaseSettingsAdapter.getRegistrySettings` (fallback 6, clamp to [1, 32]) and include `jevMaxParallelStreams` in the job response (find the job response type and the existing `jevPlan` field next to which it belongs). Update the job type and any Zod schema the browser uses for the job.
+4. `useSSEStream` when the resolved plan has `K > 1` (replace ONLY the current warn-and-continue branch; K=1 stays byte for byte):
+   a. Grounded wave: cells = every plan cell whose bundle is grounded. POST `/stream-tokens` with those cells. On ANY failure (non-200, 409, network) → Sentry breadcrumb + `console.warn` and dispatch today's K=1 streams instead (never block the analysis).
+   b. Dispatch the grounded cells with at most `jevMaxParallelStreams` (default 6) in flight. Each request body = today's body plus `tokenVersion: 2` and the token's `sig, exp, streamCount, jevChunkIndex, jevChunkCount, bundleList, sliceSha256, startWord, endWord`, and `chunkIndex` = the cell's chunkIndex.
+   c. Wait for ALL grounded cells to settle (Promise.allSettled), then POST `/stream-tokens` for the projective cells and dispatch them the same way.
+   d. A `{ type: 'status', stage: 'jev-fallback' }` frame from the worker → Sentry breadcrumb only; the cell continues (the worker already fell back to the full transcript).
+   Put the cap logic in a small pure helper (e.g. `web/lib/utils/run-with-concurrency.ts`) with its own unit test, not inline.
+5. Tests (follow `web/hooks/__tests__/useSSEStream-jev-plan.test.tsx`; do not rewrite its existing cases):
+   - K=1 plan → exactly today's 5 requests, no `/stream-tokens` call.
+   - K=2 plan with 4 grounded + 1 projective bundles → one `/stream-tokens` call for 8 grounded cells, at most N concurrent worker requests (assert the peak with a deferred fetch mock, N=3 via the job field), then one `/stream-tokens` call for the projective cell made only AFTER every grounded request settled; every worker body carries tokenVersion 2 + the token fields.
+   - `/stream-tokens` 409 → falls back to today's 5 K=1 requests.
+   - helper: never exceeds the cap; preserves result order; one rejection does not stop the others.
+6. Negative controls (record counts): (i) cap ignored (all at once) → concurrency test fails; (ii) projective dispatched together with grounded → ordering test fails.
+7. Gates: web tsc (check `0`), the touched test files, full web suite `pnpm --filter @hex-yt-intel/web exec vitest run`, lint, qa-intel after `git add`.
+8. Commit `feat(client): R3b 2.3.5e — K>1 dispatch via per-cell tokens with a parallel cap`, push, ledger `[DONE]` with real output and negative-control counts.
 
-Out of scope: worker code, migrations, persist-sample-run route, the backfill script, AnalysisHistory layout.
-
----
+Out of scope: worker files, the reducer/finalize (2.5), enabling Jev.
 
 ## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 

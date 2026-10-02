@@ -1,4 +1,4 @@
-# Agent Dispatch Prompt — Comments Dispatch B (sentiment pending state + Sampled pool insights UI)
+# Agent Dispatch Prompt — R3b 2.3.5a — extended v2 token envelope (verify + tests, NO emitter)
 
 > **Before filling in Target Agent/Effort below**: check CLAUDE.md's
 > "Model/task-fit routing" table — UI/grunt-level work → AGY Flash, no/low
@@ -70,31 +70,45 @@ Before writing sections 1–2 below, decide:
 
 ## 1. Context & Problem Statement
 
-Worktree: `/home/kellyb_dev/projects/hex-yt-intel-dispB`, branch `feat/comments-dispatch-b` (already created off origin/main). Work ONLY in this worktree.
+Worktree `/home/kellyb_dev/projects/hex-yt-intel-r3b-235a`, branch `feat/r3b-2-3-5a-v2-envelope` (created by CC from origin/main 98090ab3+). Home dir `/home/kellyb_dev` (UNDERSCORE).
 
-PR #378 (merged) added Tier 3 **cochran** comment runs: the worker samples a de-duplicated comment pool (relevance + newest pages, YouTube API caps the pool — roughly 2,000 comments max), classifies each sampled comment with Jev, and the S2S callback `web/app/api/comments/persist-sample-run/route.ts` writes:
-- `comment_sample_runs` row: `status` pending → sampling → completed|failed, `mode` 'cochran'
-- `analysis_payload.commentInsights` — shape `CommentInsights` in `worker/src/services/cochran-mode-engine.ts:25-44` (population, reportedTotal, sampleSize, classified, failed, lowConfidence, marginOfError, confidence, marginScope: 'sampled_pool', sentiment {positive,negative,neutral,mixed}, types, painPointCount, questionCount, costUsd, model, completedAt)
-- `analysis_payload.comments` (sampled comments) only if absent.
+Hard rules: work ONLY in your worktree; never `cd` (use `pnpm --filter ...` / `git -C`); `.scratch/` inside the worktree only, NEVER /tmp (a rejected /tmp call ENDS your run); never git checkout/restore/stash uncommitted work (negative controls: `cp file .scratch/x.bak`, break, test, `cp` back); never delete, weaken or overwrite an existing test (you may UPDATE the v2 tests whose contract this task changes, and say so in the report); never run `pnpm qa-intel:baseline` or edit `.qa-intel/baseline.json`; qa-intel AFTER `git add` and it must print "No new issues since baseline" with N>0 files scanned; do NOT run qa-intel `--mode full` (OOM on this machine).
 
-A backfill is enqueuing runs for ~41 existing analyses right now. Today the UI has NO view of this: the dashboard only shows a `Comments` StatusBadge (`web/components/containers/ProDashboardView.tsx:165-169`, fed by `web/hooks/useAuxElementStatus.ts` → `web/lib/utils/aux-status-from-report.ts`), and `commentInsights` is rendered nowhere. History rows (`web/components/templates/console/AnalysisHistory.tsx`) show a Comments chip as well. NOTE: another agent (CC) is concurrently editing `AnalysisHistory.tsx` layout in a different worktree — do NOT change that file's layout; only the minimal chip-state wiring in step 4 if needed, and flag it.
+User-approved design (2026-10-01, R3b 2.3.5): ONE canonical v2 signature per map-reduce cell that also binds the bundle partition and the transcript slice. Nothing emits v2 tokens in production yet (web still signs v1 only), so the v2 message format can change now with no dual-verify window. `signTranscriptSlice` is retired (folded into the token).
 
----
+Current code:
+- `web/lib/stream-token.ts` ~L40-82: `signStreamTokenV2` message is `v2:{videoId}:{analysisId}:{exp}:{models}:{streamCount}:{jevChunkIndex}:{jevChunkCount}`; `signTranscriptSlice` signs bound content `transcript-slice`.
+- `worker/src/routes/analysis.ts` ~L211-290 `verifyStreamToken(...)`: structural v2 checks (cells, bundleList shape, streamCount === K*G+P), then rebuilds the same v2 message. Call site ~L1531 passes `req.tokenVersion` etc. Request type fields ~L140-153.
+- Tests: `web/lib/__tests__/stream-token-v2.test.ts`, `worker/src/__tests__/stream-token-dual-verify.test.ts`.
+- `canonicalJson` exists in `web/lib/utils/canonical-json.ts` and is already used in worker (`worker/src/routes/analysis.ts`, `queue-consumers/comments-tier3.ts`) — find and reuse the worker's copy; do NOT write a new one.
 
 ## 2. Contract & Implementation Directives
 
-1. Post `[IN_PROGRESS]` in `.memory/AGENT_LEDGER.md` (in this worktree) with target files.
-2. **Status source.** Add a read-only, auth-scoped GET route `web/app/api/comments/runs/[analysisId]/route.ts` returning the latest `comment_sample_runs` row for that analysis owned by the caller (`id, status, mode, sampled_count, created_at, completed_at`) or `null`. Use `getSupabaseClientWithAuth()` + ownership check (`user_id = user.id`), a thin route, Zod-validate the param as uuid. Follow the existing adapter pattern (look at `web/lib/adapters/SupabaseCommentSamplingAdapter.ts`) — put the query in the adapter, not the route.
-3. **Hook.** `web/hooks/useCommentInsights.ts`: given `analysisId` + the in-memory payload (`useSynthesisNucleus` `rawAnalysisPayload` when `rawAnalysisPayloadId === analysisId`, same guard as `useAuxElementStatus.ts:55`), returns `{ state: 'none' | 'analyzing' | 'ready' | 'failed', insights: CommentInsights | null }`. If insights exist in the payload → `ready`. Else fetch the run status; `pending|sampling` → `analyzing` and poll every 5 s with a hard cap of 3 minutes, abortable on unmount/analysisId change; on `completed` refetch the persisted payload (reuse whatever `useAuxElementStatus` uses to fetch it) to obtain insights. Define a web-side `CommentInsights` type with a Zod schema and `safeParse` the payload field — never cast.
-4. **Chip.** When state is `analyzing`, the dashboard Comments `StatusBadge` shows a loading state with label "Analyzing sentiment…" (use the existing `StatusBadge` loading/pending variant if one exists; check `web/components/templates/_shared/primitives.tsx`).
-5. **Insights panel.** New `web/components/templates/console/CommentInsightsCard.tsx`, rendered in `ProDashboardView.tsx` directly under the aux chip row when state is `ready`: sentiment split (4 bars or a stacked bar, percentages of `classified`), top types, pain points count, questions count, and a scope line that MUST read exactly: **"Sampled pool: {sampleSize} of {population} comments fetched (YouTube returns up to ~2,000) · ±{marginOfError×100 rounded 1dp}% at {confidence×100 rounded}% confidence"**, plus "{lowConfidence} low-confidence classifications excluded" when lowConfidence > 0. Never say "all comments" or imply the whole video. Use Tailwind + Astryx only (NOT shadcn), 8px radius panels / 6px chips per the system radius rule.
-6. Tests: route test (401 unauthenticated, 404/null for other user's analysis, happy path), hook test (payload-ready, analyzing→ready via mocked fetch with fake timers, poll cap stops), component test asserting the exact "Sampled pool" wording. Use happy-dom + RTL like `web/hooks/__tests__/useAuxElementStatus.test.tsx`.
-7. Run all gates in 4a. Commit on `feat/comments-dispatch-b`, push, open a PR titled `feat(comments): Dispatch B — Analyzing sentiment state + Sampled pool insights`. Do NOT merge.
-8. Post `[DONE]`/`[PARTIAL]` to the ledger with what actually happened.
+Exact new v2 message (both sides, byte-identical):
+```
+v2:{videoId}:{analysisId}:{exp}:{models}:{streamCount}:{jevChunkIndex}:{jevChunkCount}:{chunkIndex}:{partitionDigest}:{sliceSha256}:{startWord}:{endWord}
+models          = sorted, comma-joined (as today)
+partitionDigest = lowercase hex sha256 of canonicalJson(bundleList)
+```
 
-Out of scope: worker code, migrations, persist-sample-run route, the backfill script, AnalysisHistory layout.
+1. Ledger [IN_PROGRESS] in your worktree's `.memory/AGENT_LEDGER.md`.
+2. `web/lib/stream-token.ts`: extend `StreamTokenV2Params` with `chunkIndex: number`, `bundleList: number[][]`, `slice: { sha256: string; startWord: number; endWord: number }`; compute `partitionDigest` inside `signStreamTokenV2`; build the message above. DELETE `signTranscriptSlice` and its `'transcript-slice'` purpose (grep the whole repo for usages first; there should be none outside tests; if any production caller exists, STOP and report [BLOCKED]).
+3. `worker/src/routes/analysis.ts`:
+   a. Request type: add `sliceSha256?: string; startWord?: number; endWord?: number` (chunkIndex already exists on the request — confirm and reuse it).
+   b. At the verify call site, reject with the existing invalid-token path when `req.tokenVersion` is present and is not exactly `1` or `2` (today any non-2 value silently verifies as v1). Absent stays v1.
+   c. In `verifyStreamToken` v2 branch: require `chunkIndex` integer >= 1, `sliceSha256` matching `/^[0-9a-f]{64}$/`, `startWord`/`endWord` integers with `0 <= startWord < endWord`; else return a structural-invalid result BEFORE any HMAC work (same pattern as `v2_invalid_cells`). Compute `partitionDigest` from the request's `bundleList`, rebuild the new message, verify. Pass the new fields from the call site.
+   d. v1 path: unchanged byte for byte.
+4. Tests (update the existing v2 tests to the new contract; add new ones in the same files):
+   - web: the signed message equals the exact template above for a fixed input (assert against an HMAC you compute in the test from the literal string); changing ANY one of bundleList / chunkIndex / sliceSha256 / startWord / endWord changes the signature; bundleList with the same content in a different array order gives a DIFFERENT digest (order is meaningful).
+   - worker: a token minted by the web signer verifies in the worker (import both, same secret) — round trip; tamper cases each rejected: bundleList reordered/changed while counts still satisfy streamCount = K*G+P, chunkIndex changed, sliceSha256 changed, startWord/endWord shifted; structural rejects (bad sha format, startWord >= endWord, non-integer) happen without HMAC; downgrade: `tokenVersion: 3` rejected, `tokenVersion: "2"` (string) rejected, absent still verifies as v1; v1 token round trip unchanged.
+5. Negative controls (back up, break, run, restore, rerun green); record failing counts:
+   - drop partitionDigest from the worker's rebuilt message → bundleList tamper test fails;
+   - remove the tokenVersion allowlist check → downgrade tests fail;
+   - drop the slice fields from the message on both sides → slice tamper tests fail.
+6. Gates: `pnpm --filter @hex-yt-intel/web exec tsc --noEmit`; `pnpm --filter youtube-intelligence-worker exec tsc --noEmit -p tsconfig.typecheck.json`; `pnpm --filter @hex-yt-intel/web exec vitest run lib/__tests__/stream-token-v2.test.ts`; worker suite `pnpm --filter @hex-yt-intel/web exec vitest run ../worker/src/__tests__/` (this is how the worker tests run here); full web suite once at the end; qa-intel after `git add`.
+7. Commit `feat(token): R3b 2.3.5a — v2 envelope binds partition + slice; reject unknown tokenVersion (no emitter)`, `git push -u origin HEAD`, ledger [DONE] with real test output and negative-control counts. NO PR (CC opens it).
 
----
+Out of scope: emitting v2 anywhere, the /stream-tokens route, slice enforcement against transcript text, client changes, migrations.
 
 ## 3. Pre-PR Review Skills Decision Tree (MANDATORY GATE)
 
