@@ -15,6 +15,7 @@ import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
 import { canonicalJson } from "../../../web/lib/utils/canonical-json";
+import { tokenizeTranscript, sliceText, sliceDigest } from "../services/TranscriptSlice";
 
 /** sha256("") — the slice hash PlanAnalysisUseCase signs for projective cells. */
 const EMPTY_SLICE_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -1024,6 +1025,84 @@ async function fetchJevPlan(params: {
   }
 }
 
+/**
+ * R3b 2.3.5d (ADR 037 2.3.5): enforce the signed transcript slice for grounded
+ * v2 cells, falling back to the full transcript on mismatch or range error.
+ *
+ * Mismatch policy: a slice that does not hash to sliceSha256 must NEVER fail
+ * the cell or the analysis. Report to Sentry, send one SSE status frame with
+ * stage: 'jev-fallback' and reason: 'slice_hash_mismatch' | 'slice_out_of_range',
+ * and continue with the full transcript (K=1 semantics).
+ */
+async function resolveCellTranscript(params: {
+  req: StreamRequest;
+  resolvedTranscript: string;
+  send: (obj: Record<string, unknown>) => void;
+}): Promise<string> {
+  const { req, resolvedTranscript, send } = params;
+
+  // Not v2 (tokenVersion absent or 1) -> unchanged, byte for byte
+  if (req.tokenVersion !== 2) {
+    return resolvedTranscript;
+  }
+
+  // v2 + projective bundle (empty slice) -> unchanged
+  if (isProjectiveBundle(req.dimensions ?? [])) {
+    return resolvedTranscript;
+  }
+
+  // v2 + grounded: startWord, endWord, sliceSha256 guaranteed by verifyStreamToken
+  const startWord = req.startWord ?? 0;
+  const endWord = req.endWord ?? 0;
+  const sliceSha256 = req.sliceSha256 ?? "";
+
+  try {
+    const computedHash = await sliceDigest(resolvedTranscript, startWord, endWord);
+    if (computedHash === sliceSha256) {
+      const words = tokenizeTranscript(resolvedTranscript);
+      return sliceText(words, startWord, endWord);
+    }
+
+    // Hash mismatch
+    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
+      level: 'warning',
+      tags: { operation: 'jev-slice-verify' },
+      extra: {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        startWord,
+        endWord,
+      },
+    });
+    send({
+      type: 'status',
+      stage: 'jev-fallback',
+      reason: 'slice_hash_mismatch',
+    });
+    return resolvedTranscript;
+  } catch (err) {
+    // RangeError or other sliceText bounds error
+    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
+      level: 'warning',
+      tags: { operation: 'jev-slice-verify' },
+      extra: {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        startWord,
+        endWord,
+      },
+    });
+    send({
+      type: 'status',
+      stage: 'jev-fallback',
+      reason: 'slice_out_of_range',
+    });
+    return resolvedTranscript;
+  }
+}
+
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
 function buildStreamResponse(
   engine: ReasoningEnginePort,
@@ -1392,6 +1471,13 @@ function buildStreamResponse(
         // fires before the transcript fetch and holds no cache write.
         // Client: useSSEStream awaitWarmGate releases safely on the first delta token.
 
+        // R3b 2.3.5d: resolve the signed cell transcript slice (or fallback to full transcript)
+        const cellTranscript = await resolveCellTranscript({
+          req,
+          resolvedTranscript,
+          send,
+        });
+
         const result = await engine.executeAndStream(
           {
             // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
@@ -1400,7 +1486,7 @@ function buildStreamResponse(
             // for these fields explicitly (Dimension 2.3/11.1/11.6) and got
             // Insufficient Data every time because they never arrived here.
             metadata: { ...req.metadata, ...(resolvedChannelMeta || {}) },
-            transcript: resolvedTranscript,
+            transcript: cellTranscript,
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
