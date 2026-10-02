@@ -43,7 +43,7 @@
  * callback (/api/comments/persist-sample-run) once done -- there is no
  * synchronous "fetch comments now" call to make. This harness enqueues that
  * job (system-triggered, no credit-wallet debit -- see
- * enqueueSystemCommentsBackfill's own comment for why the system-triggered
+ * enqueueSystemCommentSampleRun's own comment for why the system-triggered
  * enqueue (rather than /api/comments/tier3/start's user-charged flow) is
  * correct here) and defers
  * to the callback + a later sweep to observe completion: a row whose only
@@ -246,25 +246,25 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
  * row and calls the same worker enqueue endpoint directly with the
  * service-role client, at zero cost to the user's wallet.
  */
-async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
-  const reportObj = asReportObject(gap.validationReport);
+export async function enqueueSystemCommentSampleRun(params: { analysisId: string; userId: string; videoId: string; validationReport: unknown }): Promise<boolean> {
+  const reportObj = asReportObject(params.validationReport);
   const rawCount = (reportObj.metadata as Record<string, unknown> | undefined)?.commentCount;
   const totalCommentCount = typeof rawCount === 'number' ? rawCount : typeof rawCount === 'string' ? parseInt(rawCount, 10) || 0 : 0;
   if (totalCommentCount <= 0) {
-    console.warn('[aux-remediation] no known commentCount, skipping comments backfill enqueue', { analysisId: gap.id });
+    console.warn('[aux-remediation] no known commentCount, skipping comments backfill enqueue', { analysisId: params.analysisId });
     return false;
   }
 
   const runRow = await SupabaseAuxRemediationAdapter.insertSystemCommentSampleRun({
-    analysisId: gap.id,
-    userId: gap.userId,
+    analysisId: params.analysisId,
+    userId: params.userId,
     totalCommentCount,
   });
   if (!runRow) {
     return false;
   }
 
-  const token = await signCommentsTier3Token(runRow.id, gap.userId);
+  const token = await signCommentsTier3Token(runRow.id, params.userId);
 
   // Cochran-mode sampling config (Comments Dispatch A, 2026-09-30): all
   // values are registry-driven, resolved HERE (Vercel) and carried inside
@@ -315,11 +315,12 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
   // #378 review P2: never coerce a bad registry value to 0 and enqueue it.
   const validation = validateCochranSamplingConfig(sampling);
   if (!validation.ok) {
-    console.error('[aux-remediation] invalid comments sampling settings, not enqueueing', { analysisId: gap.id, errors: validation.errors });
+    console.error('[aux-remediation] invalid comments sampling settings, not enqueueing', { analysisId: params.analysisId, errors: validation.errors });
     Sentry.captureMessage('comments cochran backfill not enqueued: invalid sampling settings', {
       level: 'error',
-      extra: { analysisId: gap.id, errors: validation.errors },
+      extra: { analysisId: params.analysisId, errors: validation.errors },
     });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
     return false;
   }
 
@@ -329,8 +330,8 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sampleRunId: runRow.id,
-        videoId: gap.videoId,
-        userId: gap.userId,
+        videoId: params.videoId,
+        userId: params.userId,
         totalCommentCount,
         appUrl: env.appUrl || 'https://getvintel.com',
         mode: 'cochran',
@@ -343,8 +344,9 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
     if (!res.ok) throw new Error(`Worker enqueue returned ${res.status}`);
     return true;
   } catch (err) {
-    console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: gap.id } } });
+    console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: params.analysisId } } });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
     return false;
   }
 }
@@ -376,7 +378,7 @@ export async function remediateAuxGap(gap: AuxGap): Promise<AuxRemediationResult
 
   const nowHasComments = gap.hasComments; // this pass never synchronously gets comments -- only ever enqueues
   if (!nowHasComments) {
-    commentsEnqueued = await enqueueSystemCommentsBackfill(gap);
+    commentsEnqueued = await enqueueSystemCommentSampleRun({ analysisId: gap.id, userId: gap.userId, videoId: gap.videoId, validationReport: gap.validationReport });
     commentsEnqueueFailed = !commentsEnqueued;
   }
 

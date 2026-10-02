@@ -95,6 +95,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findHighlightsForAnalysis(analysisId);
   }
 
+  mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void> {
+    return SupabaseAnalysisAdapter.mergeValidationReport(params);
+  }
+
   updateValidationReport(params: { analysisId: string; report: any; passed?: boolean; preserveValidationPassed?: boolean }): Promise<void> {
     return SupabaseAnalysisAdapter.updateValidationReport(params);
   }

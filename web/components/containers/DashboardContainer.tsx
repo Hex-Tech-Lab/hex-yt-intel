@@ -583,11 +583,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       status === "downloading" ||
       status === "parsing";
 
-    if (displayGraph.nodes.length > 0 || isAnalyzing) {
+    // Always present (like Pro's other panels): collapsed with nothing to
+    // show, opening on its own once an analysis starts or words exist.
+    {
       items.push({
         id: "word-cloud",
         title: "Word Cloud",
-        defaultOpen: true,
+        defaultOpen: displayGraph.nodes.length > 0 || isAnalyzing,
         content: () => (
           <WordCloud
             graph={displayGraph}

@@ -80,6 +80,8 @@ export default defineConfig({
       // signature gate needs a regression test colocated with the route).
       // Named explicitly, same rationale as the app/api globs above.
       'app/api/comments/persist-sample-run/**/*.test.ts',
+      // Named explicitly: the UCIS webhook must merge, never replace, validation_report.
+      'app/api/webhooks/validate/**/*.test.ts',
       // 2026-09-30 Comments Dispatch B: runs/[analysisId] route gained an
       // authorization-relevant sibling test (ownership-scoped run status
       // read). Named explicitly, same rationale as the app/api globs above.

@@ -852,6 +852,19 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /** Atomic shallow merge of `patch` into validation_report (never replaces the report). */
+  static async mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const { error } = await service.rpc('merge_analysis_validation_report', {
+      p_analysis_id: params.analysisId,
+      p_patch: params.patch,
+    });
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'mergeValidationReport' }, extra: { analysisId: params.analysisId } });
+      throw error;
+    }
+  }
+
   static async updateValidationReport(params: {
     analysisId: string;
     report: any;

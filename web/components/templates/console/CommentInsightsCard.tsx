@@ -18,6 +18,8 @@ const PANEL_STYLE = {
   border: '1px solid var(--line)',
   background: 'rgb(26 31 43 / 0.6)',
   padding: 16,
+  // Same 16px rhythm as the dimensions header below it (12px + the parent's 4px gap).
+  marginTop: 12,
 } as const;
 
 const CHIP_STYLE = {

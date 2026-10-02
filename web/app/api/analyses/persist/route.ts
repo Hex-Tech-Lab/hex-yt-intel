@@ -22,6 +22,7 @@ import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
+import { enqueueSystemCommentSampleRun } from '@/lib/services/aux-remediation';
 import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
 import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
@@ -1194,6 +1195,15 @@ export async function POST(request: NextRequest) {
               console.warn('[analyses/persist] Failed to publish embedding task for chunks', { analysisId, error: String(e) });
             });
 
+            // Comment insights: one system-paid Cochran sample run per finalized
+            // analysis (~$0.003/video in the 2026-10-01 backfill). Previously only
+            // the remediation pass started runs (for rows missing `comments`), so
+            // no new analysis ever got a Comment insights card. Best-effort; never
+            // marks side effects failed (no outbox replay => no duplicate runs).
+            await enqueueSystemCommentSampleRun({ analysisId, userId: row.userId, videoId, validationReport: priorReport }).catch((e) => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'enqueue_comment_sample_run', analysisId } } });
+            });
+
             // Usage-log: analysis genuinely completed (chunked path). Purely
             // additive, fire-and-forget -- consumeQuota() itself never
             // throws (see PostgresBillingAdapter), and this .catch() is a
@@ -1597,6 +1607,15 @@ export async function POST(request: NextRequest) {
           sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_embedding_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish embedding task', { analysisId, error: String(e) });
+        });
+
+        // Comment insights: one system-paid Cochran sample run per finalized
+        // analysis (~$0.003/video in the 2026-10-01 backfill). Previously only
+        // the remediation pass started runs (for rows missing `comments`), so
+        // no new analysis ever got a Comment insights card. Best-effort; never
+        // marks side effects failed (no outbox replay => no duplicate runs).
+        await enqueueSystemCommentSampleRun({ analysisId, userId: row.userId, videoId, validationReport: priorReport }).catch((e) => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'enqueue_comment_sample_run', analysisId } } });
         });
 
         // Usage-log: analysis genuinely completed (non-chunked path). Same

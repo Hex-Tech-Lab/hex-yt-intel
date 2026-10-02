@@ -314,6 +314,9 @@ export interface AnalysisPersistencePort {
   /**
    * Update validation report and status.
    */
+  /** Atomic shallow merge into validation_report; never replaces keys it does not name. */
+  mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void>;
+
   updateValidationReport(params: {
     analysisId: string;
     report: any;

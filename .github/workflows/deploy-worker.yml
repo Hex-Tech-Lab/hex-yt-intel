@@ -79,3 +79,13 @@ jobs:
           echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
             || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
           echo "transcript-provider secrets bound: OK"
+
+      # A bound NAME can still hold an EMPTY value (TRANSCRIPTAPI_API_KEY was
+      # bound-but-empty 2026-09-26..10-02, sending every fresh transcript to
+      # Apify). /health/providers reports usable (non-blank) keys as booleans.
+      - name: Verify transcript-provider secrets are non-empty
+        run: |
+          body=$(curl -s --fail-with-body https://yt-intel.hex-tech-lab.workers.dev/health/providers)
+          echo "providers: $body"
+          echo "$body" | grep -q '"transcriptapi":true' \
+            || { echo "::error::TRANSCRIPTAPI_API_KEY is bound but EMPTY on the worker"; exit 1; }
