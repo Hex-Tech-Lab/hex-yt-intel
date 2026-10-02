@@ -26,6 +26,13 @@ export interface StreamAdapterOptions {
   onProgress?: (received: number, expected: number) => void;
   isPartialStream?: boolean;
   dimensions?: number[];
+  /**
+   * R3b 2.5e: a K>1 cell beyond chunk 0. Only completion and errors are
+   * reported (onComplete / onError); nothing is written to any store, so
+   * later chunks never overwrite chunk 0's live view. The server's reduced
+   * result replaces it at the end of the run.
+   */
+  progressOnly?: boolean;
 }
 
 export class SynthesisStreamAdapter {
@@ -78,6 +85,17 @@ export class SynthesisStreamAdapter {
     }
 
     const fragment = validation.data;
+
+    if (this.options.progressOnly) {
+      if (fragment.type === 'complete' || fragment.type === 'done') {
+        this.isComplete = true;
+        this.options.onComplete?.();
+      } else if (fragment.type === 'error') {
+        this.isComplete = true;
+        this.options.onError?.(fragment.error, fragment.code);
+      }
+      return;
+    }
 
     switch (fragment.type) {
       case 'status':
