@@ -927,10 +927,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const drawerDimensionData = useMemo(() => {
     if (!selectedDimension) return null;
+    const dimensionNumber = Number(selectedDimension.key.replace(/^dim-/, ''));
     return {
       label: selectedDimension.label,
       content: selectedDimension.content,
       icon: selectedDimension.icon,
+      number: Number.isInteger(dimensionNumber) ? dimensionNumber : undefined,
     };
   }, [selectedDimension]);
 
