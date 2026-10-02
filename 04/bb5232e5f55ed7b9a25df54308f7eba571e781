@@ -1,0 +1,45 @@
+web/app/api/analyses/persist/route.ts
+  s_b70cf5106ad39d::t_0c14e40cdce107 8,382-395
+web/lib/__tests__/jev-config.test.ts
+  s_b70cf5106ad39d::t_65c48d2f0bf56e 106-112
+web/lib/__tests__/persist-cell-roundtrip.test.ts
+  s_b70cf5106ad39d::t_cc58c3dbb0be84 36,140-141,145
+web/lib/__tests__/persist-k-gt-1-finalize.test.ts
+  s_b70cf5106ad39d::t_389d3045f39e84 22,176-178
+web/lib/__tests__/reduce-grounded-chunks.test.ts
+  s_b70cf5106ad39d::t_7127edae79a7c3 418-436
+web/lib/__tests__/stored-plan.test.ts
+  s_b70cf5106ad39d::t_bc1ef9c08d7a37 3,55-76
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_b70cf5106ad39d::t_cd0d361bceb89f 998-1011
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_b70cf5106ad39d::t_3aa52298e298a1 118-121
+web/lib/config/jev.ts
+  s_b70cf5106ad39d::t_0436342ed0462d 51-52
+web/lib/jev/stored-plan.ts
+  s_b70cf5106ad39d::t_90427088aa57db 15-16,33-39,42-50
+web/lib/ports/AnalysisPersistencePort.ts
+  s_b70cf5106ad39d::t_7dfcc509bcdffa 361-363
+web/lib/services/reduce-grounded-chunks.ts
+  s_b70cf5106ad39d::t_d775a5cf24f0fb 232-235,258
+web/lib/usecases/__tests__/ProjectiveContextUseCase.test.ts
+  s_b70cf5106ad39d::t_9e00a4b06484b7 113-119
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_b70cf5106ad39d::t_1faedcf9f0881f 13,21,167-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "04bb5232e5f55ed7b9a25df54308f7eba571e781",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
