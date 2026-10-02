@@ -13,7 +13,7 @@ export class StreamStatusTracker {
   public handleStatus(
     fragment: {
       type: 'status';
-      stage: 'extracting' | 'starting' | 'llm-started' | 'model' | 'fallback' | 'transcript-truncated';
+      stage: 'extracting' | 'starting' | 'llm-started' | 'model' | 'fallback' | 'transcript-truncated' | 'jev-fallback';
       videoId?: string;
       model?: string;
       from?: string;
@@ -22,6 +22,7 @@ export class StreamStatusTracker {
       message?: string;
       transcriptLength?: number;
       budget?: number;
+      reason?: 'slice_hash_mismatch' | 'slice_out_of_range';
     },
     options: StreamAdapterOptions,
     resetRawSink: () => void,
@@ -40,6 +41,11 @@ export class StreamStatusTracker {
       // prompt notice reaches the MODEL; this log line reaches the HUMAN.
       // logError (not logInfo) so it visually stands out in the stream log.
       store.logError(fragment.message || `Transcript truncated: model coverage limited to the first ${fragment.budget ?? 48000} of ${fragment.transcriptLength ?? '?'} chars.`);
+    } else if (fragment.stage === 'jev-fallback') {
+      // R3b 2.3.5d: the worker could not verify this cell's signed transcript
+      // slice and ran it on the full transcript. Informational only -- unlike
+      // a model 'fallback', nothing streamed so far is reset.
+      store.logInfo(`Transcript slice check failed (${fragment.reason ?? 'unknown'}); this section used the full transcript.`);
     } else if (fragment.stage === 'fallback') {
       // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
       resetRawSink();
