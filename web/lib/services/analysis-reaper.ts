@@ -18,6 +18,8 @@ import * as Sentry from '@sentry/nextjs';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { expectedCells, parseStoredPlan } from '@/lib/jev/stored-plan';
+import { reduceCellsToBundleRows, settleCellsForSalvage, type CellRow } from '@/lib/jev/reduce-cells';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { publishEmbeddingTask } from '@/lib/qstash-client';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
@@ -28,6 +30,7 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
 import { REMEDIATION_MAX_RETRIES_FALLBACK, tryRequeuePartial } from '@/lib/services/analysis-requeue';
 import {
   buildSettlePatch,
+  cellsAreFullyComplete,
   chunksAreFullyComplete,
   type ChunkRow,
 } from '@/lib/services/analysis-reap-policy';
@@ -46,6 +49,7 @@ export {
   MIN_SALVAGEABLE_DIMENSIONS,
   decideReapOutcome,
   buildSettlePatch,
+  cellsAreFullyComplete,
   chunksAreFullyComplete,
   type ChunkRow,
 } from '@/lib/services/analysis-reap-policy';
@@ -194,27 +198,50 @@ export async function tryChunkRecovery(  analysisId: string,
   userId: string | null = null
 ): Promise<{ outcome: Exclude<ReapOutcome, 'requeue-partial'> } | null> {
   const service = getSupabaseServiceClient();
-  const { data, error } = await service
-    .from('analysis_chunks')
-    .select('chunk_index, payload, status')
-    .eq('analysis_id', analysisId)
-    // R3b: Jev chunk 0 only (K=1) -- the salvage stitch keys rows by
-    // chunk_index, so other Jev chunks must not be mixed in.
-    .eq('jev_chunk_index', 0);
-  if (error) throw error;
 
-  const chunkRows = (data ?? []) as ChunkRow[];
-  const isFullSet = chunksAreFullyComplete(chunkRows);
+  // R3b 2.5d: a K>1 analysis is judged by its CELLS against the plan
+  // (expectedCells, strict) and salvaged through the same reduction the
+  // persist finalize uses; a missing/interrupted cell counts as failed here
+  // because nothing more will arrive. Anything else keeps the jev-0 path.
+  const plan = parseStoredPlan(await persistenceAdapter.findJevPlan({ analysisId }));
 
-  // Partial set: only feed chunks that individually completed with a valid
-  // dimensions array into the stitch -- a chunk row that exists but never
-  // reached `status === 'completed'` (or lacks a dimensions array) carries no
-  // trustworthy content and must not be mixed into the salvage.
-  const usableRows = isFullSet
-    ? chunkRows
-    : chunkRows.filter(
-        c => c.status === 'completed' && Array.isArray((c.payload as { dimensions?: unknown } | null)?.dimensions)
-      );
+  let isFullSet: boolean;
+  let usableRows: ChunkRow[];
+  let jevPartialDimensions: number[] = [];
+  if (plan && plan.K > 1) {
+    const cells: CellRow[] = ((await persistenceAdapter.findAnalysisCells({ analysisId })) ?? []).map((cell) => ({
+      ...cell,
+      payload: cell.payload ?? {},
+    }));
+    isFullSet = cellsAreFullyComplete(cells, expectedCells(plan, TOTAL_STREAMS));
+    const reduced = reduceCellsToBundleRows(plan, settleCellsForSalvage(plan, cells));
+    jevPartialDimensions = reduced.partialDimensions;
+    usableRows = reduced.rows
+      .filter((bundle) => bundle.status === 'completed')
+      .map((bundle) => ({ chunk_index: bundle.chunk_index, payload: bundle.payload, status: bundle.status }));
+  } else {
+    const { data, error } = await service
+      .from('analysis_chunks')
+      .select('chunk_index, payload, status')
+      .eq('analysis_id', analysisId)
+      // R3b: Jev chunk 0 only (K=1) -- the salvage stitch keys rows by
+      // chunk_index, so other Jev chunks must not be mixed in.
+      .eq('jev_chunk_index', 0);
+    if (error) throw error;
+
+    const chunkRows = (data ?? []) as ChunkRow[];
+    isFullSet = chunksAreFullyComplete(chunkRows);
+
+    // Partial set: only feed chunks that individually completed with a valid
+    // dimensions array into the stitch -- a chunk row that exists but never
+    // reached `status === 'completed'` (or lacks a dimensions array) carries no
+    // trustworthy content and must not be mixed into the salvage.
+    usableRows = isFullSet
+      ? chunkRows
+      : chunkRows.filter(
+          c => c.status === 'completed' && Array.isArray((c.payload as { dimensions?: unknown } | null)?.dimensions)
+        );
+  }
   if (usableRows.length === 0) return null;
 
   const chunkMap = new Map<number, any>(usableRows.map(c => [c.chunk_index, c.payload]));
@@ -263,6 +290,7 @@ export async function tryChunkRecovery(  analysisId: string,
     valid: stitchResult.validationPassed && validationStatus === 'done',
     reaped: true,
     reaped_via: isFullSet ? 'chunk_recovery' : 'chunk_recovery_partial',
+    ...(jevPartialDimensions.length > 0 ? { jev_partial_dimensions: jevPartialDimensions } : {}),
     reaped_at: nowIso,
     reaped_dimensions: dimensionCount,
   };

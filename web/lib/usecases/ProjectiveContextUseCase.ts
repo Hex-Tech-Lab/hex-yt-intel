@@ -12,6 +12,8 @@
  */
 import { isProjectiveBundle, STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import { fitPriorPayloadToCap, PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
+import { parseStoredPlan } from '@/lib/jev/stored-plan';
+import { reduceCellsToBundleRows, type CellRow } from '@/lib/jev/reduce-cells';
 import type { StreamToken } from '@/lib/types/stream-token';
 
 export const PROJECTIVE_CONTEXT_REGISTRY_FALLBACK = {
@@ -42,6 +44,9 @@ export interface ProjectiveContextDeps {
   /** Owner-checked existence of the analysis (null = not found / not owned). */
   ownsAnalysis: (analysisId: string, userId: string) => Promise<boolean>;
   findChunks: (analysisId: string) => Promise<PersistedChunk[] | null>;
+  /** R3b 2.5d: the stored Jev plan (K>1 analyses read cells instead of chunk-0 rows). */
+  findJevPlan: (analysisId: string) => Promise<unknown>;
+  findCells: (analysisId: string) => Promise<CellRow[] | null>;
   /** Registry values (analysis.streamBundles, priorPayloadMaxBytes, the two wait keys). */
   resolveSettings: () => Promise<{
     streamBundles: unknown;
@@ -68,6 +73,22 @@ function groundedDimensionsOf(payload: Record<string, unknown>): GroundedDimensi
 export class ProjectiveContextUseCase {
   constructor(private deps: ProjectiveContextDeps) {}
 
+  /**
+   * One row per bundle. K=1: today's chunk-0 rows. K>1 (R3b 2.5d): every
+   * expected cell must be persisted before its bundle appears (a missing cell
+   * keeps the bundle out, so the caller answers grounded_not_persisted); an
+   * interrupted cell counts as settled-failed, matching how an interrupted
+   * K=1 bundle already counts as settled here, and the bundle is reduced
+   * from its completed cells exactly as the persist finalize does.
+   */
+  private async persistedBundleRows(analysisId: string): Promise<PersistedChunk[]> {
+    const plan = parseStoredPlan(await this.deps.findJevPlan(analysisId));
+    if (!plan || plan.K <= 1) return (await this.deps.findChunks(analysisId)) ?? [];
+    const cells = ((await this.deps.findCells(analysisId)) ?? [])
+      .map((cell) => (cell.status === 'interrupted' ? { ...cell, status: 'failed' as const } : cell));
+    return reduceCellsToBundleRows(plan, cells).rows;
+  }
+
   async execute(params: { analysisId: string; userId: string }): Promise<ProjectiveContextOutcome> {
     const { analysisId, userId } = params;
     if (!(await this.deps.ownsAnalysis(analysisId, userId))) return { type: 'not_found' };
@@ -87,7 +108,7 @@ export class ProjectiveContextUseCase {
     const projectiveBundle = bundles.find((bundle) => isProjectiveBundle(bundle));
     if (!projectiveBundle) return { type: 'no_projective_bundle' };
 
-    const chunks = (await this.deps.findChunks(analysisId)) ?? [];
+    const chunks = await this.persistedBundleRows(analysisId);
     const byIndex = new Map(chunks.map((chunk) => [chunk.chunk_index, chunk]));
 
     // Race closure: every grounded bundle must have a PERSISTED chunk row

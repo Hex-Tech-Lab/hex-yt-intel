@@ -102,3 +102,28 @@ export function reduceCellsToBundleRows(rawPlan: unknown, cells: readonly CellRo
 
   return { rows, partialDimensions: [...partial].sort((left, right) => left - right) };
 }
+
+/**
+ * R3b 2.5d: for consumers that must not keep waiting (the reaper's salvage,
+ * projective context), every expected cell is settled: a missing or
+ * interrupted cell counts as failed, so its bundle reduces from whatever
+ * completed. Rows outside the plan's expected set are dropped.
+ */
+export function settleCellsForSalvage(rawPlan: unknown, cells: readonly CellRow[]): CellRow[] {
+  const plan = parseStoredPlan(rawPlan);
+  if (!plan) return [];
+  return plan.cells.map((planCell) => {
+    const row = cells.find((cell) => cell.jev_chunk_index === planCell.jevChunkIndex && cell.chunk_index === planCell.chunkIndex);
+    if (row && row.status !== 'interrupted') return row;
+    return {
+      jev_chunk_index: planCell.jevChunkIndex,
+      chunk_index: planCell.chunkIndex,
+      dimensions_covered: [],
+      payload: {},
+      status: 'failed' as const,
+      updated_at: row?.updated_at ?? null,
+      tokens_used: row?.tokens_used,
+      cost_usd: row?.cost_usd,
+    };
+  });
+}

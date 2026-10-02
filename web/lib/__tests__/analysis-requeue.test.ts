@@ -299,6 +299,8 @@ describe('sweepStuckAnalyses — requeue-partial wiring (ADR 021 Phase 3)', () =
       SupabasePersistenceAdapter: class {
         findAnalysisChunks = opts.findAnalysisChunksMock ?? vi.fn().mockResolvedValue(opts.portChunkRows);
         updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+        // R3b 2.5d: tryChunkRecovery reads the stored plan first; no plan = K=1 path.
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
     vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
