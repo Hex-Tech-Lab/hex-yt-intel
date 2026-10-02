@@ -1,0 +1,35 @@
+web/lib/jev/reduce-cells.ts
+  s_d84474d7509dd0::t_260cd762e61737 105-129
+web/app/api/analyses/[id]/projective-context/route.ts
+  s_d84474d7509dd0::t_f2a5e7a05e6793 42-43
+web/lib/__tests__/analysis-reaper.test.ts
+  s_d84474d7509dd0::t_2477841f8373e2 212-213,372,442
+web/lib/__tests__/analysis-requeue.test.ts
+  s_d84474d7509dd0::t_e81f20c23a1fa4 302-303
+web/lib/__tests__/reaper-k-gt-1.test.ts
+  s_d84474d7509dd0::t_e2c5ec05c07257 1-114
+web/lib/services/analysis-reap-policy.ts
+  s_d84474d7509dd0::t_31536dc5a1ddf7 136-159
+web/lib/services/analysis-reaper.ts
+  s_d84474d7509dd0::t_ac4366420d6ace 21-22,33,52,202-206,208-244,293
+web/lib/usecases/ProjectiveContextUseCase.ts
+  s_d84474d7509dd0::t_db7bcccc705d29 15-16,47-49,76-91,111
+web/lib/usecases/__tests__/ProjectiveContextUseCase.test.ts
+  s_d84474d7509dd0::t_b456b793730cb1 3,19,21,24-26,30,76-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "25e6e860a79fcaedb882d7f48f67e42bb95bccad",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
