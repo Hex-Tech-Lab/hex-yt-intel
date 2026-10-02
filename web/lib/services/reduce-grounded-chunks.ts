@@ -56,6 +56,11 @@ function itemKey(item: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+/** A confidence counts only when it is a finite number on the 0–1 scale. */
+function isUsableConfidence(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
 /** Round to the confidence source's 0–1 scale with 4-decimal precision. */
 function roundConfidence(value: number): number {
   return Math.round(value * 10000) / 10000;
@@ -93,6 +98,13 @@ function validateCells(cells: readonly GroundedCell[], expectedJevChunkCount: nu
       throw new Error(`reduceGroundedChunks: duplicate jevChunkIndex ${index} across cells`);
     }
     seen.add(index);
+    // The cell weight drives the confidence mean: Infinity or a negative value
+    // would turn it into NaN or invert it (2.5a, review P2/P3).
+    if (typeof cell.wordCount !== "number" || !Number.isFinite(cell.wordCount) || cell.wordCount < 0) {
+      throw new Error(
+        `reduceGroundedChunks: cell with jevChunkIndex ${index} has invalid wordCount ${String(cell.wordCount)} (finite, >= 0)`,
+      );
+    }
 
     const dimensionNumbers = new Set<number>();
     for (const dimension of cell.dimensions) {
@@ -146,8 +158,9 @@ export function reduceGroundedChunks(
 
   // K=1 fast path: exact passthrough of the single cell's dimensions.
   if (expectedCount === 1) {
-    if (cells.length === 1) {
-      return { dimensions: [...cells[0]!.dimensions], partial: [] };
+    const only = cells[0];
+    if (cells.length === 1 && only) {
+      return { dimensions: [...only.dimensions], partial: [] };
     }
     // expectedCount 1 with zero cells: every index [0,1) is missing → fall
     // through to the general path, which yields an empty result.
@@ -156,12 +169,12 @@ export function reduceGroundedChunks(
   const ordered = [...cells].sort((first, second) => first.jevChunkIndex - second.jevChunkIndex);
 
   // Group per-dimension chunk contributions in jevChunkIndex order.
-  const byDimension = new Map<number, { cellIndex: number; dimension: UCISDimension; wordCount: number }[]>();
-  ordered.forEach((cell, cellIndex) => {
+  const byDimension = new Map<number, { jevChunkIndex: number; dimension: UCISDimension; wordCount: number }[]>();
+  ordered.forEach((cell) => {
     for (const dimension of cell.dimensions) {
       if (!dimension) continue;
       const bucket = byDimension.get(dimension.number);
-      const entry = { cellIndex, dimension, wordCount: cell.wordCount };
+      const entry = { jevChunkIndex: cell.jevChunkIndex, dimension, wordCount: cell.wordCount };
       if (bucket) bucket.push(entry);
       else byDimension.set(dimension.number, [entry]);
     }
@@ -171,21 +184,13 @@ export function reduceGroundedChunks(
   const partial: number[] = [];
 
   for (const dimensionNumber of [...byDimension.keys()].sort((first, second) => first - second)) {
-    const contributions = byDimension.get(dimensionNumber)!;
+    const contributions = byDimension.get(dimensionNumber) ?? [];
 
-    // Present chunk indices for this dimension, as a Set for O(1) lookups.
-    const presentIndices = new Set(contributions.map((contribution) => contribution.cellIndex));
-
-    // A dimension is partial when it is missing from ANY expected chunk
-    // index — including expected indices that have no cell at all.
-    let missingFromAnyExpectedChunk = false;
-    for (let chunkIndex = 0; chunkIndex < expectedCount; chunkIndex++) {
-      if (!presentIndices.has(chunkIndex)) {
-        missingFromAnyExpectedChunk = true;
-        break;
-      }
-    }
-    if (missingFromAnyExpectedChunk) partial.push(dimensionNumber);
+    // Cells have unique in-range jevChunkIndex values and at most one
+    // dimension per number (validated above), so a dimension is partial
+    // exactly when fewer chunks contributed it than were expected, whether a
+    // chunk's cell is missing or present without this dimension.
+    if (contributions.length < expectedCount) partial.push(dimensionNumber);
 
     // Prose: join per-chunk content sections in order with one blank line.
     const content = contributions
@@ -220,7 +225,7 @@ export function reduceGroundedChunks(
     for (const contribution of contributions) {
       const metadata = contribution.dimension.metadata;
       const weight = typeof contribution.wordCount === "number" && contribution.wordCount > 0 ? contribution.wordCount : 0;
-      if (metadata && typeof metadata.confidence === "number" && Number.isFinite(metadata.confidence)) {
+      if (metadata && isUsableConfidence(metadata.confidence)) {
         weightedConfidenceSum += metadata.confidence * weight;
         confidenceWeightSum += weight;
       }
@@ -241,7 +246,7 @@ export function reduceGroundedChunks(
       const finiteConfidences: number[] = [];
       for (const contribution of contributions) {
         const confidence = contribution.dimension.metadata?.confidence;
-        if (typeof confidence === "number" && Number.isFinite(confidence)) finiteConfidences.push(confidence);
+        if (isUsableConfidence(confidence)) finiteConfidences.push(confidence);
       }
       if (finiteConfidences.length > 0) {
         metadata.confidence = roundConfidence(finiteConfidences.reduce((sum, value) => sum + value, 0) / finiteConfidences.length);
@@ -252,7 +257,13 @@ export function reduceGroundedChunks(
 
     // Spread the FIRST chunk's dimension as the base, then override the
     // merged fields deterministically.
-    const base = contributions[0]!.dimension;
+    // The first chunk's dimension is the base for untouched fields, but its
+    // own metadata is always replaced by the merged one: a stale non-finite
+    // confidence must never survive when nothing else merges (2.5a, review P2).
+    const first = contributions[0];
+    if (!first) continue;
+    const { metadata: _baseMetadata, ...base } = first.dimension;
+    void _baseMetadata;
     dimensions.push({
       ...base,
       number: dimensionNumber,

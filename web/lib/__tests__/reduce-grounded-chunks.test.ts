@@ -361,3 +361,57 @@ describe("reduceGroundedChunks — properties (seeded PRNG)", () => {
     expect(JSON.stringify(reduce2(cells, PROPERTY_CELL_COUNT))).toBe(JSON.stringify(once));
   });
 });
+
+describe("2.5a review fixes", () => {
+  const dimension = (number: number, metadata?: UCISDimension["metadata"]): UCISDimension =>
+    ({ number, name: `D${number}`, content: `c${number}`, ...(metadata ? { metadata } : {}) }) as UCISDimension;
+
+  it("drops a stale non-finite confidence from the first chunk even when nothing else merges", () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const result = reduceGroundedChunks(
+        [
+          { jevChunkIndex: 0, wordCount: 10, dimensions: [dimension(1, { confidence: bad })] },
+          { jevChunkIndex: 1, wordCount: 10, dimensions: [dimension(1)] },
+        ],
+        { expectedJevChunkCount: 2 },
+      );
+      expect(result.dimensions[0]).not.toHaveProperty("metadata");
+    }
+  });
+
+  it("ignores confidence outside the 0-1 scale", () => {
+    const result = reduceGroundedChunks(
+      [
+        { jevChunkIndex: 0, wordCount: 10, dimensions: [dimension(1, { confidence: 7 })] },
+        { jevChunkIndex: 1, wordCount: 10, dimensions: [dimension(1, { confidence: 0.4 })] },
+      ],
+      { expectedJevChunkCount: 2 },
+    );
+    expect(result.dimensions[0]?.metadata?.confidence).toBe(0.4);
+  });
+
+  it.each([Number.POSITIVE_INFINITY, Number.NaN, -1])("rejects a cell wordCount of %s", (wordCount) => {
+    expect(() =>
+      reduceGroundedChunks([{ jevChunkIndex: 0, wordCount, dimensions: [dimension(1)] }], { expectedJevChunkCount: 2 }),
+    ).toThrow(/invalid wordCount/);
+  });
+
+  it("marks partial by real chunk indices: present in chunks 1 and 2 of 3 with chunk 0 missing", () => {
+    const result = reduceGroundedChunks(
+      [
+        { jevChunkIndex: 1, wordCount: 10, dimensions: [dimension(1), dimension(2)] },
+        { jevChunkIndex: 2, wordCount: 10, dimensions: [dimension(1)] },
+      ],
+      { expectedJevChunkCount: 3 },
+    );
+    expect(result.partial).toEqual([1, 2]);
+  });
+
+  it("a dimension present in every expected chunk is not partial", () => {
+    const result = reduceGroundedChunks(
+      [0, 1, 2].map((jevChunkIndex) => ({ jevChunkIndex, wordCount: 10, dimensions: [dimension(4)] })),
+      { expectedJevChunkCount: 3 },
+    );
+    expect(result.partial).toEqual([]);
+  });
+});
