@@ -1,0 +1,27 @@
+supabase/migrations/20261003010000_merge_analysis_validation_report.sql
+  s_b70cf5106ad39d::t_213252688e20af 13
+web/app/api/webhooks/validate/__tests__/route.test.ts
+  s_b70cf5106ad39d::t_5ea28f7a3fc5f1 52
+web/lib/__tests__/aux-remediation-enqueue-orphan.test.ts
+  s_b70cf5106ad39d::t_99a8e9b6126c55 1-54
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_b70cf5106ad39d::t_797fa408782f01 158-164
+web/lib/services/aux-remediation.ts
+  s_b70cf5106ad39d::t_5475b3af1467ef 323,349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "193620bc7c6cbd9bd2ffed8d578fe6d339f38c16",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
