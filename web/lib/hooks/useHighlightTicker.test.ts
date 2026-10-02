@@ -33,6 +33,22 @@ describe('useHighlightTicker', () => {
     expect(result.current.revealedText).toBe('one...');
   });
 
+  it('does not start the reveal clock until the lead-in has played (entry drift, 2026-10-02)', () => {
+    const twentyWords = Array.from({ length: 20 }, (unused, position) => `w${position + 1}`).join(' ');
+    // 2.5s lead-in, 2.5 w/s: during the lead-in only the first word shows;
+    // 2s into the highlight's own speech (elapsed 4.5s) shows 5 words, not 12.
+    const during = renderHook(() => useHighlightTicker(0, twentyWords, 10, 2, null, 2.5, 2.5));
+    expect(during.result.current.revealedText).toBe('w1...');
+    const after = renderHook(() => useHighlightTicker(0, twentyWords, 10, 4.5, null, 2.5, 2.5));
+    expect(after.result.current.revealedText.replace(/\.\.\.$/, '').split(' ')).toHaveLength(5);
+  });
+
+  it('a lead-in of 0 (default) keeps the previous pacing', () => {
+    const twentyWords = Array.from({ length: 20 }, (unused, position) => `w${position + 1}`).join(' ');
+    const { result } = renderHook(() => useHighlightTicker(0, twentyWords, 10, 2, null, 2.5));
+    expect(result.current.revealedText.replace(/\.\.\.$/, '').split(' ')).toHaveLength(5);
+  });
+
   it('reveals words at the words-per-second pace, not a duration ratio', () => {
     // default 2.5 w/s: at 5s elapsed -> 12.5 -> 13 words (w0..w12), truncated
     const twentyWords = Array.from({ length: 20 }, (unused, wordIndex) => `w${wordIndex}`).join(' ');

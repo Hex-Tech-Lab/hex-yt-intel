@@ -62,6 +62,11 @@ export function useHighlightTicker(
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
   wordsPerSecond = 2.5,
+  // Seconds of context played before the highlight's own start (2026-10-02,
+  // live report "ticker gets ahead when entering a segment"): elapsedSeconds
+  // counts from the lead-in, but the highlight's words only begin after it,
+  // so the reveal clock starts at leadInSeconds, not 0.
+  leadInSeconds = 0,
 ): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
   // Trim before checking truthiness: a whitespace-only verbatimExcerpt (a
   // real DB row shape a corrupt/poorly-normalized transcript can produce)
@@ -92,7 +97,8 @@ export function useHighlightTicker(
   // (it keeps the last readable position) instead of scrolling faster.
   // floor + fraction keeps steady word pacing even for long texts (the
   // old ceil-on-ratio rushed early words when totalWords >> duration).
-  const revealedFloat = Math.min(totalWords, Math.max(1, elapsedSeconds * wordsPerSecond));
+  const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
+  const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * wordsPerSecond));
   const baseCount = Math.floor(revealedFloat);
   const fraction = revealedFloat - baseCount;
   const revealedWordCount = Math.min(totalWords, baseCount + (fraction > 0 ? 1 : 0));

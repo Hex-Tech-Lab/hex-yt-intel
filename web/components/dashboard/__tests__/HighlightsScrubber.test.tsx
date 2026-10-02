@@ -470,19 +470,21 @@ describe('HighlightsScrubber', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Play highlights' }));
     await waitFor(() => expect(useVideoStore.getState().seekTo).toBe(8));
 
-    // 4 s into the segment at the default 2.5 words/s -> 10 words spoken.
+    // Playback opened at 8 s (2 s lead-in before start=10). At 12 s the speaker
+    // is 2 s into the highlight's own words: 2.5 words/s -> 5 words. (Counting
+    // from the lead-in, 10 words, was the 2026-10-02 entry-drift bug.)
     useVideoStore.setState({ currentPlaybackSeconds: 12 });
     await waitFor(() => {
       const spoken = screen.getByTestId('caption-spoken');
-      expect(spoken.textContent?.trim().split(/\s+/).pop()).toBe('word10');
+      expect(spoken.textContent?.trim().split(/\s+/).pop()).toBe('word5');
     });
     const spoken = screen.getByTestId('caption-spoken');
     // Clips from the START (rtl container, ltr text) so the newest word is the visible edge.
     expect(spoken.style.direction).toBe('rtl');
-    expect(screen.getByTestId('caption-remaining').textContent?.startsWith('word11')).toBe(true);
+    expect(screen.getByTestId('caption-remaining').textContent?.startsWith('word6')).toBe(true);
 
     // Time does not move (paused): the reveal stays frozen, it never runs ahead on its own.
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(screen.getByTestId('caption-spoken').textContent?.trim().split(/\s+/).pop()).toBe('word10');
+    expect(screen.getByTestId('caption-spoken').textContent?.trim().split(/\s+/).pop()).toBe('word5');
   });
 });

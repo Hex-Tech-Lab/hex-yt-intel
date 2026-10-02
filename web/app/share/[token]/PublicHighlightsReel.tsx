@@ -137,7 +137,7 @@ export function PublicHighlightsReel({
   const activeDuration = activeHighlight
     ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur) + contextLeadSeconds
     : segmentDurationSeconds + contextLeadSeconds;
-  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond);
+  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond, activeHighlight ? Math.min(contextLeadSeconds, activeHighlight.start) : 0);
 
   if (highlights.length === 0) return null;
 
