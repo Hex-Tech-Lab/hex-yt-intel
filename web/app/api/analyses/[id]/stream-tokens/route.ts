@@ -42,13 +42,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'invalid_request', issues: body.error.flatten() }, { status: 400 });
     }
 
-    const { data: owned, error: ownershipError } = await verifyResourceOwnership<{ user_id: string; video_id: string }>(
+    const { data: owned, error: ownershipError } = await verifyResourceOwnership<{
+      user_id: string;
+      video_id: string;
+      billing_status: string | null;
+      validation_report: { validation_status?: string; status?: string } | null;
+    }>(
       id,
       'analyses',
-      'id, user_id, video_id'
+      'id, user_id, video_id, billing_status, validation_report'
     );
     if (ownershipError || !owned || owned.user_id !== identity.userId) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
+    }
+
+    // Tokens only for an analysis still being generated: quota is consumed
+    // once at job creation, so minting for a settled analysis would let its
+    // owner re-run every cell at our expense, unbilled.
+    const report = owned.validation_report ?? {};
+    const validationStatus = report.validation_status || report.status || 'processing';
+    if (validationStatus !== 'processing' || owned.billing_status === 'completed') {
+      return NextResponse.json({ error: 'not_processing' }, { status: 409 });
     }
 
     // Same models and bundle partition the job was dispatched with: the token

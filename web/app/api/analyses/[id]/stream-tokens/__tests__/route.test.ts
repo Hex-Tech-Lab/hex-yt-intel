@@ -64,6 +64,19 @@ describe('POST /api/analyses/[id]/stream-tokens', () => {
     expect((await call({ cells: [{ jevChunkIndex: 0, chunkIndex: 1, startWord: 0, sliceSha256: 'c'.repeat(64) }] })).status).toBe(400);
   });
 
+  it.each([
+    [{ validation_report: { validation_status: 'done' }, billing_status: 'completed' }],
+    [{ validation_report: { status: 'error' }, billing_status: 'failed' }],
+    [{ validation_report: { validation_status: 'partial' }, billing_status: null }],
+    [{ validation_report: { validation_status: 'processing' }, billing_status: 'completed' }],
+  ])('409 not_processing for a settled analysis, without reading the plan (%#)', async (row) => {
+    verifyResourceOwnership.mockResolvedValue({ data: { user_id: OWNER, video_id: 'vid', ...row }, error: null });
+    const res = await call({ cells: [{ jevChunkIndex: 0, chunkIndex: 1 }] });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'not_processing' });
+    expect(findJevPlan).not.toHaveBeenCalled();
+  });
+
   it('400 naming a cell that is not in the stored plan', async () => {
     const res = await call({ cells: [{ jevChunkIndex: 7, chunkIndex: 1 }] });
     expect(res.status).toBe(400);
