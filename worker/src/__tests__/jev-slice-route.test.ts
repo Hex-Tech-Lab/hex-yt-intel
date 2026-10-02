@@ -10,14 +10,8 @@
  */
 import * as Sentry from '@sentry/cloudflare';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isProjectiveBundle } from '../../../web/lib/config/synthesis';
 import { hmacHex } from '../crypto';
-import {
-  tokenizeTranscript,
-  sliceText,
-  sliceDigest,
-  EMPTY_SLICE_SHA256,
-} from '../services/TranscriptSlice';
+import { sliceDigest, EMPTY_SLICE_SHA256 } from '../services/TranscriptSlice';
 
 vi.mock('@sentry/cloudflare', () => ({
   captureMessage: vi.fn(),
