@@ -1,0 +1,21 @@
+web/app/api/analyses/[id]/stream-tokens/route.ts
+  s_d84474d7509dd0::t_84f8cccc5a1642 93-96
+web/lib/usecases/MintCellTokensUseCase.ts
+  s_d84474d7509dd0::t_0ab4132b6a649d 92-95,97-99,103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2976940ca67e7e5b3e34107e68202665ef1be92d",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
