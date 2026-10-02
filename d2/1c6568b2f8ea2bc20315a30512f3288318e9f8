@@ -1,0 +1,21 @@
+web/app/api/analyses/[id]/stream-tokens/__tests__/route.test.ts
+  s_b70cf5106ad39d::t_48d9536ed00175 67-79
+web/app/api/analyses/[id]/stream-tokens/route.ts
+  s_b70cf5106ad39d::t_e919db6cf7dd59 45-50,53,59-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d21c6568b2f8ea2bc20315a30512f3288318e9f8",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
