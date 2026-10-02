@@ -1,0 +1,31 @@
+supabase/migrations/20261002090000_jev_max_parallel_streams_setting.sql
+  s_d84474d7509dd0::t_22f61048feef63 1-27
+web/lib/__tests__/create-analysis-jev-plan.test.ts
+  s_d84474d7509dd0::t_205b61db9847a3 28-38,142-167
+web/lib/config/jev.ts
+  s_d84474d7509dd0::t_cdd1fb7ab397b1 54,57-58
+web/lib/types/contracts.ts
+  s_d84474d7509dd0::t_d9ccf84edf9b37 294-297
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_d84474d7509dd0::t_be1c7cb42b48a9 23,101-102,436-446,503
+web/lib/utils/__tests__/run-with-concurrency.test.ts
+  s_d84474d7509dd0::t_154b017516da2b 1-82
+web/lib/utils/run-with-concurrency.ts
+  s_d84474d7509dd0::t_a2bdda841420b1 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c7263affa853b896bbd48bbc6da5e9c2c6e7fc84",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
