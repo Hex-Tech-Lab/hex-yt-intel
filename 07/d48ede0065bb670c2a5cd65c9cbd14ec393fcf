@@ -1,0 +1,41 @@
+.memory/AGENT_LEDGER.md
+  s_d84474d7509dd0::t_3e38d2deadd207 1481
+.memory/SESSION_TODO.md
+  s_d84474d7509dd0::t_760def3b867a94 1,3-9,11-32
+docs/agent-prompts/2026-09-30-oc-comments-dispatch-b.md
+  s_d84474d7509dd0::t_8b7040ef3614cd 80,179
+docs/agent-prompts/2026-10-01-oc-r3b-2-3-5a-v2-envelope.md
+  s_d84474d7509dd0::t_b98a9033e8322c 1-254
+docs/agent-prompts/2026-10-01-oc-r3b-2-3-5b-slice-module.md
+  s_d84474d7509dd0::t_bb7b81ec68165e 1-244
+docs/agent-prompts/2026-10-01-oc-r3b-2-3-5c-stream-tokens.md
+  s_d84474d7509dd0::t_a26701af9b0010 1-251
+docs/agent-prompts/2026-10-01-oc-r3b-2-3w-route-tests-r2.md
+  s_d84474d7509dd0::t_da84c84a4ff010 1-252
+docs/agent-prompts/2026-10-01-oc-r3b-2-3w-route-tests.md
+  s_d84474d7509dd0::t_94d34bf28acf2f 1-242
+docs/agent-prompts/2026-10-02-agy-r3b-2-3-5d-slice-enforcement.md
+  s_d84474d7509dd0::t_da11b42829597f 1-242
+docs/agent-prompts/2026-10-02-agy-r3b-2-3-5e-client-dispatch-r2.md
+  s_d84474d7509dd0::t_6744899451169a 1-273
+docs/agent-prompts/2026-10-02-agy-r3b-2-3-5e-client-dispatch.md
+  s_d84474d7509dd0::t_385fb9f9da74b6 1-244
+docs/history/THOS_2026-10-02_R3B_2.3.5_2.5_MAPREDUCE.md
+  s_d84474d7509dd0::t_8f6df3ccdbcb23 1-299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "07d48ede0065bb670c2a5cd65c9cbd14ec393fcf",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
