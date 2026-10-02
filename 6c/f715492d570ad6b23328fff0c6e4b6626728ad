@@ -1,0 +1,19 @@
+.github/workflows/deploy-worker.yml
+  s_b70cf5106ad39d::t_afd54e1913132e 88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6cf715492d570ad6b23328fff0c6e4b6626728ad",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
