@@ -85,7 +85,7 @@ jobs:
       # Apify). /health/providers reports usable (non-blank) keys as booleans.
       - name: Verify transcript-provider secrets are non-empty
         run: |
-          body=$(curl -s https://yt-intel.hex-tech-lab.workers.dev/health/providers)
+          body=$(curl -s --fail-with-body https://yt-intel.hex-tech-lab.workers.dev/health/providers)
           echo "providers: $body"
           echo "$body" | grep -q '"transcriptapi":true' \
             || { echo "::error::TRANSCRIPTAPI_API_KEY is bound but EMPTY on the worker"; exit 1; }
