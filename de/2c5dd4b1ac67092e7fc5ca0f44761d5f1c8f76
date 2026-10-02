@@ -1,0 +1,53 @@
+supabase/migrations/20261003010000_merge_analysis_validation_report.sql
+  s_b70cf5106ad39d::t_4e76565977bb07 1-19
+web/app/api/analyses/persist/route.ts
+  s_b70cf5106ad39d::t_6d0d08b10a8cbc 25,1198-1206,1612-1620
+web/app/api/webhooks/validate/__tests__/route.test.ts
+  s_b70cf5106ad39d::t_3b90a03b381462 1-63
+web/app/api/webhooks/validate/route.ts
+  s_b70cf5106ad39d::t_c05e1f73a48174 74-76,82,84
+web/components/containers/DashboardContainer.tsx
+  s_b70cf5106ad39d::t_0fe6950e21408a 586-588,592
+web/components/dashboard/RightPanelAccordion.tsx
+  s_b70cf5106ad39d::t_04524e22184e5c 3,26-30,32-35,41
+web/components/dashboard/__tests__/RightPanelAccordion.test.tsx
+  s_b70cf5106ad39d::t_7f0971cf0634a5 1-35
+web/components/templates/console/CommentInsightsCard.tsx
+  s_b70cf5106ad39d::t_5973e29cbb7b1b 21-22
+web/components/templates/console/DimensionAccordion.tsx
+  s_b70cf5106ad39d::t_75cc4198ae3c4e 124-125
+web/lib/__tests__/persist-k-gt-1-finalize.test.ts
+  s_b70cf5106ad39d::t_53c28c54032db1 52-53,151-153,170
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_b70cf5106ad39d::t_706782c1d5c7d2 855-867
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_b70cf5106ad39d::t_1e530d72f138f9 98-101
+web/lib/ports/AnalysisPersistencePort.ts
+  s_b70cf5106ad39d::t_81a6f116ef6d2a 317-319
+web/lib/services/aux-remediation.ts
+  s_b70cf5106ad39d::t_0f5c5939bd0e1d 46,249-250,254,259-260,267,318,321,332-333,346-347,379
+web/vitest.config.ts
+  s_b70cf5106ad39d::t_5cc12cf1cb6380 83-84
+worker/wrangler.toml
+  s_b70cf5106ad39d::t_43a900932ea473 9
+.qa-intel/baseline.json
+  s_b70cf5106ad39d::t_67865a31b7db70 1646-1659
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_b70cf5106ad39d::t_e655852a59d09f 14,41,224-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "de2c5dd4b1ac67092e7fc5ca0f44761d5f1c8f76",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
