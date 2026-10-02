@@ -228,3 +228,13 @@ describe("kg fragment tolerant normalization (2026-09-27 regression, 39hqY3nH5ug
     expect(node.dimension).toBe(11);
   });
 });
+
+describe("status fragment accepts the worker's jev-fallback frame (R3b 2.3.5d)", () => {
+  it.each(["slice_hash_mismatch", "slice_out_of_range"])("accepts reason %s", (reason) => {
+    expect(validateFragment({ type: "status", stage: "jev-fallback", reason }).success).toBe(true);
+  });
+
+  it("still rejects an unknown reason", () => {
+    expect(validateFragment({ type: "status", stage: "jev-fallback", reason: "other" }).success).toBe(false);
+  });
+});

@@ -479,7 +479,10 @@ export const UCISStreamFragmentSchema = z.preprocess((val) => {
         // (the exact end-to-end contract lesson this file's KG section
         // documents). carried fields optional; strict() keeps unknown keys
         // rejected so future frame drift still surfaces.
-        "transcript-truncated"]),
+        "transcript-truncated",
+        // R3b 2.3.5d: the worker could not verify a K>1 cell's signed
+        // transcript slice and ran the cell on the full transcript instead.
+        "jev-fallback"]),
       videoId: z.string().optional(),
       model: z.string().optional(),
       from: z.string().optional(),
@@ -489,6 +492,8 @@ export const UCISStreamFragmentSchema = z.preprocess((val) => {
       message: z.string().optional(),
       transcriptLength: z.number().optional(),
       budget: z.number().optional(),
+      // jev-fallback payload (optional on other stages):
+      reason: z.enum(["slice_hash_mismatch", "slice_out_of_range"]).optional(),
     })
     .strict(),
 

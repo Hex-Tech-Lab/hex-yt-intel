@@ -1056,51 +1056,33 @@ async function resolveCellTranscript(params: {
   const endWord = req.endWord ?? 0;
   const sliceSha256 = req.sliceSha256 ?? "";
 
-  try {
-    const computedHash = await sliceDigest(resolvedTranscript, startWord, endWord);
-    if (computedHash === sliceSha256) {
-      const words = tokenizeTranscript(resolvedTranscript);
-      return sliceText(words, startWord, endWord);
-    }
+  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): string => {
+    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
+      level: 'warning',
+      tags: { operation: 'jev-slice-verify', reason },
+      extra: {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        startWord,
+        endWord,
+        expectedSha256: sliceSha256,
+        computedSha256,
+      },
+    });
+    send({ type: 'status', stage: 'jev-fallback', reason });
+    return resolvedTranscript;
+  };
 
-    // Hash mismatch
-    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
-      level: 'warning',
-      tags: { operation: 'jev-slice-verify' },
-      extra: {
-        analysisId: req.analysisId,
-        chunkIndex: req.chunkIndex,
-        jevChunkIndex: req.jevChunkIndex,
-        startWord,
-        endWord,
-      },
-    });
-    send({
-      type: 'status',
-      stage: 'jev-fallback',
-      reason: 'slice_hash_mismatch',
-    });
-    return resolvedTranscript;
-  } catch (err) {
-    // RangeError or other sliceText bounds error
-    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
-      level: 'warning',
-      tags: { operation: 'jev-slice-verify' },
-      extra: {
-        analysisId: req.analysisId,
-        chunkIndex: req.chunkIndex,
-        jevChunkIndex: req.jevChunkIndex,
-        startWord,
-        endWord,
-      },
-    });
-    send({
-      type: 'status',
-      stage: 'jev-fallback',
-      reason: 'slice_out_of_range',
-    });
-    return resolvedTranscript;
+  let computedHash: string;
+  try {
+    computedHash = await sliceDigest(resolvedTranscript, startWord, endWord);
+  } catch {
+    // sliceText RangeError: the signed range lies outside this transcript.
+    return fallBack('slice_out_of_range', null);
   }
+  if (computedHash !== sliceSha256) return fallBack('slice_hash_mismatch', computedHash);
+  return sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord);
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */

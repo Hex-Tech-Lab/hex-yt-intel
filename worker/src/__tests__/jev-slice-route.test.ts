@@ -357,13 +357,16 @@ describe('analyze-llm-stream transcript slice enforcement (R3b 2.3.5d route-leve
       'jev slice hash mismatch; falling back to full transcript',
       expect.objectContaining({
         level: 'warning',
-        tags: { operation: 'jev-slice-verify' },
+        tags: { operation: 'jev-slice-verify', reason: 'slice_hash_mismatch' },
         extra: {
           analysisId: ANALYSIS_ID,
           chunkIndex: 1,
           jevChunkIndex: 0,
           startWord,
           endWord,
+          expectedSha256: bogusHash,
+          // The digest the worker actually computed: a real sha256, not the signed one.
+          computedSha256: expect.stringMatching(/^(?!(?:ee){32}$)[0-9a-f]{64}$/),
         },
       }),
     );
@@ -424,13 +427,15 @@ describe('analyze-llm-stream transcript slice enforcement (R3b 2.3.5d route-leve
       'jev slice hash mismatch; falling back to full transcript',
       expect.objectContaining({
         level: 'warning',
-        tags: { operation: 'jev-slice-verify' },
+        tags: { operation: 'jev-slice-verify', reason: 'slice_out_of_range' },
         extra: {
           analysisId: ANALYSIS_ID,
           chunkIndex: 1,
           jevChunkIndex: 0,
           startWord,
           endWord,
+          expectedSha256: bogusHash,
+          computedSha256: null,
         },
       }),
     );
