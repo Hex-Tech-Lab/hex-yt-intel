@@ -1,0 +1,25 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_d84474d7509dd0::t_ab75bcc67c8d3a 23,101,202-203,491
+web/lib/utils/__tests__/run-with-concurrency.test.ts
+  s_d84474d7509dd0::t_d112ca3651072d 48-50
+web/lib/config/jev.ts
+  s_d84474d7509dd0::t_9034c3a84c9d40 59-66
+web/lib/utils/run-with-concurrency.ts
+  s_d84474d7509dd0::t_c09fc1c5e34055 27-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "09a137b41e713dd29777c8ccfcc27ef72a9f7833",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
