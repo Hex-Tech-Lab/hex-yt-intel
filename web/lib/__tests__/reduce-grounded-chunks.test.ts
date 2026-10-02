@@ -415,3 +415,22 @@ describe("2.5a review fixes", () => {
     expect(result.partial).toEqual([]);
   });
 });
+
+describe('wordCount safety bounds (R3b 2.5 audit)', () => {
+  const cell = (jevChunkIndex: number, wordCount: unknown): GroundedCell => ({
+    jevChunkIndex,
+    wordCount: 100,
+    dimensions: [{ number: 1, name: 'D1', content: `chunk ${jevChunkIndex}`, metadata: { wordCount } } as unknown as UCISDimension],
+  });
+
+  it('ignores negative, fractional and non-finite per-cell wordCount', () => {
+    const out = reduceGroundedChunks([cell(0, 120), cell(1, -50), cell(2, 3.5)], { expectedJevChunkCount: 3 });
+    expect(out.dimensions[0]?.metadata?.wordCount).toBe(120);
+  });
+
+  it('never emits a sum that overflowed past a safe integer', () => {
+    const out = reduceGroundedChunks([cell(0, Number.MAX_SAFE_INTEGER), cell(1, Number.MAX_SAFE_INTEGER)], { expectedJevChunkCount: 2 });
+    expect(out.dimensions[0]?.metadata?.wordCount).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain('null');
+  });
+});
