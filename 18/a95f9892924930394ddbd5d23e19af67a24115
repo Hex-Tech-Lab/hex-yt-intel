@@ -1,0 +1,27 @@
+web/lib/__tests__/synthesis-fragment-fixtures.test.ts
+  s_d84474d7509dd0::t_6f51370a687590 231-240
+web/lib/adapters/stream-status-tracker.ts
+  s_d84474d7509dd0::t_f88726ab572ad5 16,25,44-48
+web/lib/validators/synthesis.ts
+  s_d84474d7509dd0::t_9a1340cb8329c6 482-485,495-496
+worker/src/__tests__/jev-slice-route.test.ts
+  s_d84474d7509dd0::t_12d50aa5cc8d31 360,367-369,430,437-438
+worker/src/routes/analysis.ts
+  s_d84474d7509dd0::t_48fce02ec1ae44 1059,1062,1069-1070,1073,1075-1082,1084-1085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "18a95f9892924930394ddbd5d23e19af67a24115",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
