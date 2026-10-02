@@ -1,0 +1,37 @@
+web/app/api/analyses/[id]/plan/__tests__/route.test.ts
+  s_b70cf5106ad39d::t_8032cfda69e261 158-168
+web/app/api/analyses/[id]/plan/route.ts
+  s_b70cf5106ad39d::t_16cf9fc4582acc 11,123
+web/lib/__tests__/create-analysis-jev-plan.test.ts
+  s_b70cf5106ad39d::t_0569871a9c50b1 15,68,171-201
+web/lib/__tests__/jev-config.test.ts
+  s_b70cf5106ad39d::t_270b326c7d5130 1-2,113-143
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_b70cf5106ad39d::t_133bc2ac443f64 1012-1032
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_b70cf5106ad39d::t_c01d7f1645ae5b 118-121
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_b70cf5106ad39d::t_387b4c69f5e22d 188-221
+web/lib/config/jev.ts
+  s_b70cf5106ad39d::t_4ba251b97c31c5 60-70
+web/lib/ports/AnalysisPersistencePort.ts
+  s_b70cf5106ad39d::t_4e57cd488f8100 361-363
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_b70cf5106ad39d::t_0848fa38caf039 23,397
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d0ac309c75b8284be5eb0fa6244399d0acd7c3c9",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
