@@ -209,6 +209,8 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = updateAnalysisResultMock;
+        // R3b 2.5d: tryChunkRecovery reads the stored plan first; no plan = K=1 path.
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 
@@ -367,6 +369,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = vi.fn();
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 
@@ -436,6 +439,7 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 
