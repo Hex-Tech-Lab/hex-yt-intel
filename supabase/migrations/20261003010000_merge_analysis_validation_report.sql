@@ -10,7 +10,7 @@ security definer
 set search_path = public
 as $$
   update public.analyses
-     set validation_report = coalesce(validation_report, '{}'::jsonb) || p_patch,
+     set validation_report = coalesce(validation_report, '{}'::jsonb) || coalesce(p_patch, '{}'::jsonb),
          updated_at = now()
    where id = p_analysis_id;
 $$;

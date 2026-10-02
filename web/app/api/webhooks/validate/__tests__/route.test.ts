@@ -49,7 +49,7 @@ describe('POST /api/webhooks/validate', () => {
     expect(res.status).toBe(200);
     expect(updateValidationReport).not.toHaveBeenCalled();
     expect(mergeValidationReport).toHaveBeenCalledTimes(1);
-    const { analysisId, patch } = mergeValidationReport.mock.calls[0]![0] as { analysisId: string; patch: Record<string, unknown> };
+    const { analysisId, patch } = mergeValidationReport.mock.calls[0]?.[0] as { analysisId: string; patch: Record<string, unknown> };
     expect(analysisId).toBe('an-1');
     expect(Object.keys(patch)).toEqual(['markdown_validation']);
     expect(patch.markdown_validation).toMatchObject({ totalChecks: expect.any(Number) });

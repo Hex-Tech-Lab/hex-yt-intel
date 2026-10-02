@@ -155,6 +155,13 @@ export class SupabaseAuxRemediationAdapter {
    * row out of 'pending' only — completed_at and any already-final status
    * are never touched (a retry racing a completed report can't regress it).
    */
+  /** A pending run whose worker enqueue never happened: mark it failed so it is never left orphaned (a later backfill retries it). */
+  static async markSampleRunFailed(sampleRunId: string): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const { error } = await service.from('comment_sample_runs').update({ status: 'failed' }).eq('id', sampleRunId).eq('status', 'pending');
+    if (error) console.error('[aux-remediation] markSampleRunFailed failed', { sampleRunId, err: error.message });
+  }
+
   static async markSampleRunSampling(sampleRunId: string, mode?: 'uncapped' | 'cochran'): Promise<void> {
     const service = getSupabaseServiceClient();
     const { error } = await service

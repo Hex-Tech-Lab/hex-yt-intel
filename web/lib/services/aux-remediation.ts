@@ -320,6 +320,7 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
       level: 'error',
       extra: { analysisId: params.analysisId, errors: validation.errors },
     });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
     return false;
   }
 
@@ -345,6 +346,7 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   } catch (err) {
     console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: params.analysisId } } });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
     return false;
   }
 }
