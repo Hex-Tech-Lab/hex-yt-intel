@@ -1,0 +1,23 @@
+.github/workflows/deploy-worker.yml
+  s_b70cf5106ad39d::t_1ddf8cf4255ee5 82-91
+worker/src/__tests__/health-providers.test.ts
+  s_b70cf5106ad39d::t_3c93c3e9eedb57 1-21
+worker/src/routes/health.ts
+  s_b70cf5106ad39d::t_1f57dc8190fc22 3-12,22-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b02f70f75253f517d97f68532ec016f47c40df15",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
