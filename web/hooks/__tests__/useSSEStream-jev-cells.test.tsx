@@ -121,7 +121,7 @@ interface Harness {
   dim1AtFirstPoll: () => string | undefined;
 }
 
-function harness(opts: { job?: Record<string, unknown>; tokensStatus?: number } = {}): Harness {
+function harness(opts: { job?: Record<string, unknown>; tokensStatus?: number; tokenTtlMs?: number } = {}): Harness {
   const events: string[] = [];
   const tokenCalls: Cell[][] = [];
   const workerBodies: Array<Record<string, unknown>> = [];
@@ -137,11 +137,16 @@ function harness(opts: { job?: Record<string, unknown>; tokensStatus?: number } 
       tokenCalls.push(cells);
       events.push(`tokens:${cells.map((c) => `${c.jevChunkIndex}:${c.chunkIndex}`).join(',')}`);
       if (opts.tokensStatus && opts.tokensStatus !== 200) return Promise.resolve(json({ error: 'plan_k1' }, opts.tokensStatus));
-      return Promise.resolve(json({ tokens: cells.map(tokenFor) }));
+      const exp = Date.now() + (opts.tokenTtlMs ?? 120_000);
+      return Promise.resolve(json({ tokens: cells.map((cell) => ({ ...tokenFor(cell), exp })) }));
     }
     if (url === WORKER_URL) {
       const body = JSON.parse(init!.body as string) as Record<string, unknown>;
       workerBodies.push(body);
+      if (opts.tokenTtlMs !== undefined && Date.now() > (body.exp as number)) {
+        events.push(`expired:${body.jevChunkIndex}:${body.chunkIndex}`);
+        return Promise.resolve(new Response('token expired', { status: 401 }));
+      }
       const id = `${body.jevChunkIndex ?? 'v1'}:${body.chunkIndex}`;
       inFlight += 1;
       peak = Math.max(peak, inFlight);
@@ -256,5 +261,12 @@ describe('useSSEStream K>1 cell dispatch (R3b 2.5e)', () => {
     await runAnalysis();
     expect(useAnalysisDimensionsStore.getState().getDimension(1)?.content).toBe('REDUCED');
     expect(useJevRunStore.getState()).toMatchObject({ run: null, partialDimensions: [3] });
+  });
+
+  it('a queued cell never starts on an expired token (tokens outlive the wait in the queue)', async () => {
+    // 15 ms TTL, >= 5 ms per cell, cap 1: cells queued behind 3+ others wait past the TTL.
+    const mock = harness({ job: { jevPlan: makeK2Plan(), jevMaxParallelStreams: 1 }, tokenTtlMs: 15 });
+    await runAnalysis();
+    expect(mock.events.filter((event) => event.startsWith('expired:'))).toEqual([]);
   });
 });

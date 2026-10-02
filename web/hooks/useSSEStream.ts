@@ -941,8 +941,11 @@ export function useSSEStream() {
                         .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
                     });
 
-                  const runCellWithRetry = async (cell: MintedCellToken, projectiveContext?: ProjectiveContext) => {
-                    const label = `[Cell ${cell.jevChunkIndex}:${cell.chunkIndex}]`;
+                  const runCellWithRetry = async (queuedCell: MintedCellToken, projectiveContext?: ProjectiveContext) => {
+                    const label = `[Cell ${queuedCell.jevChunkIndex}:${queuedCell.chunkIndex}]`;
+                    // Tokens live 120 s but a queued cell can wait minutes
+                    // behind the concurrency cap: re-mint when little is left.
+                    const cell = queuedCell.exp - Date.now() < 30000 ? ((await mintTokens([queuedCell]))?.[0] ?? queuedCell) : queuedCell;
                     let attemptController = new AbortController();
                     let outcome = await attemptCell(cell, attemptController, projectiveContext);
                     if (!outcome.ok && !currentSignal.aborted) {

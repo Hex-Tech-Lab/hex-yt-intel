@@ -59,3 +59,21 @@ describe('SynthesisStreamAdapter progressOnly', () => {
     expect(onError).toHaveBeenCalledWith('boom', undefined);
   });
 });
+
+describe('restore paths carry the partial badge (R3b 2.5e)', () => {
+  beforeEach(() => {
+    useSynthesisNucleus.getState().reset();
+    useJevRunStore.getState().clear();
+  });
+
+  it('loads jev_partial_dimensions from the restored analysis and clears it on switch, never touching a live run', () => {
+    const init = useSynthesisNucleus.getState().initializeAnalysis;
+    init({ id: 'a-1', validation: { jev_partial_dimensions: [3, 7] } } as never);
+    expect(useJevRunStore.getState().partialDimensions).toEqual([3, 7]);
+
+    useJevRunStore.getState().startRun(9, 0);
+    init({ id: 'a-2' } as never);
+    expect(useJevRunStore.getState().partialDimensions).toEqual([]);
+    expect(useJevRunStore.getState().run).toEqual({ total: 9, settled: 0, startedAt: 0 });
+  });
+});
