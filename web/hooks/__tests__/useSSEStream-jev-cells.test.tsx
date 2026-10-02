@@ -133,7 +133,7 @@ function harness(opts: { job?: Record<string, unknown>; tokensStatus?: number; t
     const url = typeof input === 'string' ? input : input.toString();
     if (url === '/api/analyses') return Promise.resolve(json(makeJob(opts.job)));
     if (url === TOKENS_URL) {
-      const cells = (JSON.parse(init!.body as string) as { cells: Cell[] }).cells;
+      const cells = (JSON.parse(String(init?.body)) as { cells: Cell[] }).cells;
       tokenCalls.push(cells);
       events.push(`tokens:${cells.map((c) => `${c.jevChunkIndex}:${c.chunkIndex}`).join(',')}`);
       if (opts.tokensStatus && opts.tokensStatus !== 200) return Promise.resolve(json({ error: 'plan_k1' }, opts.tokensStatus));
@@ -141,7 +141,7 @@ function harness(opts: { job?: Record<string, unknown>; tokensStatus?: number; t
       return Promise.resolve(json({ tokens: cells.map((cell) => ({ ...tokenFor(cell), exp })) }));
     }
     if (url === WORKER_URL) {
-      const body = JSON.parse(init!.body as string) as Record<string, unknown>;
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       workerBodies.push(body);
       if (opts.tokenTtlMs !== undefined && Date.now() > (body.exp as number)) {
         events.push(`expired:${body.jevChunkIndex}:${body.chunkIndex}`);
@@ -224,7 +224,7 @@ describe('useSSEStream K>1 cell dispatch (R3b 2.5e)', () => {
 
     expect(mock.tokenCalls).toHaveLength(2);
     expect(mock.tokenCalls[0]).toHaveLength(8);
-    expect(mock.tokenCalls[0]!.some((c) => c.chunkIndex === 5)).toBe(false);
+    expect(mock.tokenCalls[0]?.some((c) => c.chunkIndex === 5)).toBe(false);
     expect(mock.tokenCalls[1]).toEqual([{ jevChunkIndex: 0, chunkIndex: 5 }]);
 
     expect(mock.workerBodies).toHaveLength(9);

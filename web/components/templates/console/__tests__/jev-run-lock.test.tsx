@@ -17,11 +17,15 @@ const DIMENSION = { label: 'Core Thesis', content: 'Chunk 0 live text for the co
 const CARD = { key: 'dim-3', label: 'Core Thesis', icon: 'solar:document-linear', status: 'done' as const, content: 'Chunk 0 live text.' };
 
 function banner() {
-  return screen.getAllByRole('status').find((el) => el.textContent?.includes('Applying intelligence…'))!;
+  const found = screen.getAllByRole('status').find((el) => el.textContent?.includes('Applying intelligence…'));
+  if (!found) throw new Error('banner not rendered');
+  return found;
 }
 
 function copyButton() {
-  return screen.getAllByRole('button').find((b) => /copy/i.test(b.getAttribute('aria-label') ?? ''))!;
+  const found = screen.getAllByRole('button').find((b) => /copy/i.test(b.getAttribute('aria-label') ?? ''));
+  if (!found) throw new Error('copy button not rendered');
+  return found;
 }
 
 describe('K>1 run UI lock (R3b 2.5e)', () => {
