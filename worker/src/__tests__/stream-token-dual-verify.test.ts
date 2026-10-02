@@ -69,6 +69,8 @@ interface V2Fields {
   endWord?: number;
   tokenVersion?: unknown;
   omitDigestFromMsg?: boolean;
+  /** Request dimensions; defaults to the signed bundleList[chunkIndex - 1]. */
+  dimensions?: number[];
 }
 
 function buildV2Msg(exp: number, flds: V2Fields, modelStr: string, partitionDigest: string): string {
@@ -104,6 +106,7 @@ function v2Opts(flds: V2Fields) {
     sliceSha256: flds.sliceSha256 ?? SLICE.sha256,
     startWord: flds.startWord ?? SLICE.startWord,
     endWord: flds.endWord ?? SLICE.endWord,
+    dimensions: flds.dimensions ?? (flds.bundleList ?? BUNDLE_LIST)[flds.chunkIndex - 1],
   };
 }
 
@@ -188,6 +191,22 @@ describe('verifyStreamToken dual-verify (R3b 2.3.5a)', () => {
 
     const mismatch = await verifyStreamToken('vid', 'an', EXP, '00'.repeat(32), [], ENV, v2Opts({ ...VALID, streamCount: 999 }));
     expect(mismatch.msg).toBe('v2_stream_count_mismatch');
+  });
+
+  it('rejects request dimensions that differ from the signed bundle (no projective claim to skip the slice)', async () => {
+    const sig = await signV2(EXP, VALID);
+    const grounded = { ...VALID, chunkIndex: 1 };
+    const groundedSig = await signV2(EXP, grounded);
+    expect((await verifyStreamToken('vid', 'an', EXP, groundedSig, [], ENV, v2Opts(grounded))).isValid).toBe(true);
+    const projectiveBundle = BUNDLE_LIST[BUNDLE_LIST.length - 1] as number[];
+    for (const dimensions of [projectiveBundle, [], [...(BUNDLE_LIST[0] as number[]), 3], [...(BUNDLE_LIST[0] as number[])].reverse()]) {
+      const res = await verifyStreamToken('vid', 'an', EXP, groundedSig, [], ENV, { ...v2Opts(grounded), dimensions });
+      expect(res).toMatchObject({ isValid: false, msg: 'v2_dimensions_mismatch' });
+    }
+    const absent = await verifyStreamToken('vid', 'an', EXP, sig, [], ENV, { ...v2Opts(VALID), dimensions: undefined });
+    expect(absent.msg).toBe('v2_dimensions_mismatch');
+    const outOfRange = await verifyStreamToken('vid', 'an', EXP, sig, [], ENV, v2Opts({ ...VALID, chunkIndex: BUNDLE_LIST.length + 1, dimensions: [1] }));
+    expect(outOfRange.msg).toBe('v2_dimensions_mismatch');
   });
 
   it('downgrade/upgrade: tokenVersion 3 rejected, "2" (string) rejected, absent still verifies as v1', async () => {

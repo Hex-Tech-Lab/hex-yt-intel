@@ -46,6 +46,8 @@ function verifyOpts(token: { streamCount: number; jevChunkIndex: number; jevChun
     sliceSha256: token.sliceSha256,
     startWord: token.startWord,
     endWord: token.endWord,
+    // The browser sends the cell's signed bundle as its dimensions.
+    dimensions: token.bundleList[token.chunkIndex - 1],
   };
 }
 

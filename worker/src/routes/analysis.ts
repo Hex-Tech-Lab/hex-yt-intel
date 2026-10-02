@@ -242,6 +242,7 @@ async function verifyStreamToken(
     sliceSha256?: string;
     startWord?: number;
     endWord?: number;
+    dimensions?: number[];
   },
 ): Promise<TokenVerificationResult> {
   const secret = env.STREAM_HMAC_SECRET;
@@ -287,6 +288,15 @@ async function verifyStreamToken(
       ((startWord as number) === (endWord as number) && !(startWord === 0 && sliceSha256 === EMPTY_SLICE_SHA256))
     ) {
       return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    // The request's dimensions are not signed; the cell's bundle is
+    // (chunkIndex + partition digest). They must match exactly, or a grounded
+    // cell could claim the projective bundle and skip its signed slice
+    // (resolveCellTranscript), or run any dimensions on any cell's token.
+    const signedBundle = bundleList[(chunkIndex as number) - 1];
+    const dims = opts?.dimensions;
+    if (!signedBundle || !Array.isArray(dims) || dims.length !== signedBundle.length || dims.some((dim, idx) => dim !== signedBundle[idx])) {
+      return { isValid: false, secret, msg: "v2_dimensions_mismatch" };
     }
   }
 
@@ -1661,6 +1671,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     sliceSha256: req.sliceSha256,
     startWord: req.startWord,
     endWord: req.endWord,
+    dimensions: req.dimensions,
   });
 
   if (!isTokenValid) {
