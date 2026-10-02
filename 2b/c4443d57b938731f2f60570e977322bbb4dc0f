@@ -1,0 +1,27 @@
+web/lib/__tests__/jev-run-foundations.test.ts
+  s_d84474d7509dd0::t_5f93561c5458c1 1-61
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_d84474d7509dd0::t_22d67442c2301e 29-35,89-99
+web/lib/jev/eta.ts
+  s_d84474d7509dd0::t_aa401b914ab34c 1-20
+web/store/useJevRunStore.ts
+  s_d84474d7509dd0::t_5dbc64539e3d67 1-28
+.qa-intel/baseline.json
+  s_d84474d7509dd0::t_f4518cff77b749 1618-1631
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2bc4443d57b938731f2f60570e977322bbb4dc0f",
+  "prompts": {},
+  "sessions": {
+    "s_d84474d7509dd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "735c0339-b301-4d3b-b393-0e6b8538e141",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
