@@ -6,9 +6,12 @@ import { Icon } from '@/components/templates/_shared/primitives';
 import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 import { STACKED_LAYOUT_QUERY } from '@/hooks/useIsStackedLayout';
+import { useJevRunStore } from '@/store/useJevRunStore';
+import { estimateRemainingMs, formatEta } from '@/lib/jev/eta';
 
 export interface DimensionDrawerProps {
-  dimension: { label: string; content?: string; icon: string } | null;
+  /** `number` drives the K>1 "based on part of the video" badge. */
+  dimension: { label: string; content?: string; icon: string; number?: number } | null;
   onClose: () => void;
 }
 
@@ -20,13 +23,23 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTokenRef = useRef(0);
+  // R3b 2.5e: while a K>1 run is in flight the panel shows chunk 0's live
+  // text only; Copy stays locked until the server's reduced result lands.
+  const jevRun = useJevRunStore((s) => s.run);
+  const isPartialDimension = useJevRunStore((s) => dimension?.number !== undefined && s.partialDimensions.includes(dimension.number));
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!jevRun) return;
+    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(ticker);
+  }, [jevRun]);
 
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
 
   const handleCopy = useCallback(async () => {
-    if (!dimension?.content) return;
+    if (!dimension?.content || useJevRunStore.getState().run) return;
     const token = ++copyTokenRef.current;
     try {
       await navigator.clipboard.writeText(dimension.content);
@@ -167,8 +180,10 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           </div>
           <div className="flex items-center gap-1">
             <IconButton
-              label={copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
-              tooltip={copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
+              label={jevRun ? 'Copy unavailable until the analysis finishes' : copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
+              tooltip={jevRun ? 'Available when the analysis finishes' : copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy to clipboard'}
+              isDisabled={jevRun !== null}
+              aria-disabled={jevRun !== null}
               variant="ghost"
               size="sm"
               onClick={() => { handleCopy().catch((e) => console.error('[DimensionDrawer] copy handler rejected', e)); }}
@@ -204,6 +219,20 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
             </Tooltip>
           </div>
         </div>
+
+        {jevRun ? (
+          <div role="status" className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--line)] bg-[var(--accent-soft,rgb(99_102_241_/_0.12))] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)]">
+            <span className="flex items-center gap-2">
+              <Icon icon="solar:magic-stick-3-linear" size={14} />
+              Applying intelligence…
+            </span>
+            <span className="text-[var(--ink-secondary)]">{formatEta(estimateRemainingMs(jevRun, now))}</span>
+          </div>
+        ) : isPartialDimension ? (
+          <div className="px-3 py-1.5 border-b border-[var(--line)] font-mono text-[11px] text-[var(--ink-secondary)]">
+            Based on part of the video
+          </div>
+        ) : null}
 
         {/* Content */}
         <SelectedDimensionReadout dimension={dimension} />

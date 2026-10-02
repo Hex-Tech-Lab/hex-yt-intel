@@ -8,6 +8,9 @@ import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter'
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { JevPlanEventSchema } from '@/lib/types/contracts';
 import type { WorkerStreamRequest, JevPlanEvent } from '@/lib/types/contracts';
+import type { MintedCellToken } from '@/lib/usecases/MintCellTokensUseCase';
+import { useJevRunStore } from '@/store/useJevRunStore';
+import { runWithConcurrency } from '@/lib/utils/run-with-concurrency';
 
 /** R2b: signed, server-loaded grounded context for the projective bundle. */
 type ProjectiveContext = { prior_payload: Record<string, unknown>; contextSig: string; contextExp: number };
@@ -270,6 +273,7 @@ export function useSSEStream() {
     clearAnalysis();
     setVideoMetadata(preservedMetadata);
     resetSynthesis();
+    useJevRunStore.getState().clear();
     if (!isSameVideo) {
       useChatStore.getState().reset();
       useVideoStore.getState().reset();
@@ -350,19 +354,6 @@ export function useSSEStream() {
                   activePlanRef.current = jobPlan.data;
                   setPlan(jobPlan.data);
                   setPlanSource('job');
-                  if (jobPlan.data.K > 1) {
-                    // R3b 2.3 (P1): per-cell v2 tokens are not issued yet
-                    // (the browser cannot sign them), so a multi-chunk plan
-                    // cannot change dispatch today. Warn + breadcrumb, then
-                    // proceed with today's K=1-equivalent partition.
-                    console.warn('jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1');
-                    Sentry.addBreadcrumb({
-                      category: 'jev-plan',
-                      message: 'jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1',
-                      level: 'warning',
-                      data: { K: jobPlan.data.K, streamCount: jobPlan.data.streamCount },
-                    });
-                  }
                 } else {
                   console.warn('[useSSEStream] job.jevPlan failed validation; falling back to stream plan event or K=1');
                 }
@@ -519,7 +510,7 @@ export function useSSEStream() {
                 }
               };
 
-              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void, projectiveContext?: ProjectiveContext) => {
+              const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, attemptSignal?: AbortSignal, onLlmSignal?: () => void, projectiveContext?: ProjectiveContext, cellToken?: MintedCellToken) => {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
@@ -560,6 +551,24 @@ export function useSSEStream() {
                   // v2 tokens (per-cell) are not issued yet, so K>1 plans are
                   // logged but not acted on.
                   jevPlan: activePlanRef.current ?? undefined,
+                  // R3b 2.5e: a K>1 cell carries its own v2 token; every
+                  // signed field comes from /stream-tokens, never the job.
+                  ...(cellToken
+                    ? {
+                        sig: cellToken.sig,
+                        exp: cellToken.exp,
+                        chunkIndex: cellToken.chunkIndex,
+                        totalChunks: cellToken.streamCount,
+                        tokenVersion: 2 as const,
+                        streamCount: cellToken.streamCount,
+                        jevChunkIndex: cellToken.jevChunkIndex,
+                        jevChunkCount: cellToken.jevChunkCount,
+                        bundleList: cellToken.bundleList,
+                        sliceSha256: cellToken.sliceSha256,
+                        startWord: cellToken.startWord,
+                        endWord: cellToken.endWord,
+                      }
+                    : {}),
                 };
 
                 const streamController = new AbortController();
@@ -594,14 +603,13 @@ export function useSSEStream() {
                   setPlan(streamPlan);
                   setPlanSource('stream');
                   if (streamPlan.K > 1) {
-                    // R3b 2.3 (P1): per-cell v2 tokens are not issued yet
-                    // (the browser cannot sign them), so a multi-chunk plan
-                    // cannot change dispatch today. Warn + breadcrumb, then
-                    // proceed with today's K=1-equivalent partition.
-                    console.warn('jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1');
+                    // R3b 2.5e: K>1 dispatch is decided from the JOB plan
+                    // before any stream starts; a K>1 plan that arrives
+                    // mid-stream cannot change a dispatch already running.
+                    console.warn('jev plan K>1 received mid-stream; dispatch already started as K=1');
                     Sentry.addBreadcrumb({
                       category: 'jev-plan',
-                      message: 'jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1',
+                      message: 'jev plan K>1 received mid-stream; dispatch already started as K=1',
                       level: 'warning',
                       data: { K: streamPlan.K, streamCount: streamPlan.streamCount },
                     });
@@ -824,27 +832,6 @@ export function useSSEStream() {
                   });
                 }
 
-                // R1b (2026-09-29) Layer 2 epistemic split: grounded ("Universe
-                // of 1") bundles run first, in parallel; the projective bundle
-                // — dims 9/11 — is dispatched ONLY after every grounded bundle
-                // has settled, and consumes the grounded output as prior_payload
-                // (isProjectiveBundle SSOT in web/lib/config/synthesis.ts).
-                // Grounded failures degrade gracefully: whatever landed is
-                // still handed to the projective call as foundational truth.
-                const groundedIndexes = dimensionsList
-                  .map((_bundle, bundleIndex) => bundleIndex)
-                  .filter((bundleIndex) => !isProjectiveBundle(dimensionsList[bundleIndex]!));
-                const projectiveIndexes = dimensionsList
-                  .map((_bundle, bundleIndex) => bundleIndex)
-                  .filter((bundleIndex) => isProjectiveBundle(dimensionsList[bundleIndex]!));
-
-                store.logInfo(
-                  `Connecting to Cloudflare edge worker for parallel synthesis (${groundedIndexes.length} grounded, then ${projectiveIndexes.length} projective of ${TOTAL_STREAMS} streams)...`,
-                );
-                await Promise.all(
-                  groundedIndexes.map((i) => runBundleWithRetry(i, dimensionsList[i]!))
-                );
-
                 // R2b: the grounded evidence for the projective bundle comes
                 // from the SERVER, read from PERSISTED grounded chunks and
                 // signed (see /api/analyses/[id]/projective-context). 409 means
@@ -869,6 +856,202 @@ export function useSSEStream() {
                   }
                   return undefined;
                 };
+
+                // R1b (2026-09-29) Layer 2 epistemic split: grounded ("Universe
+                // of 1") bundles run first, in parallel; the projective bundle
+                // — dims 9/11 — is dispatched ONLY after every grounded bundle
+                // has settled, and consumes the grounded output as prior_payload
+                // (isProjectiveBundle SSOT in web/lib/config/synthesis.ts).
+                // Grounded failures degrade gracefully: whatever landed is
+                // still handed to the projective call as foundational truth.
+                const groundedIndexes = dimensionsList
+                  .map((_bundle, bundleIndex) => bundleIndex)
+                  .filter((bundleIndex) => !isProjectiveBundle(dimensionsList[bundleIndex]!));
+                const projectiveIndexes = dimensionsList
+                  .map((_bundle, bundleIndex) => bundleIndex)
+                  .filter((bundleIndex) => isProjectiveBundle(dimensionsList[bundleIndex]!));
+
+                // R3b 2.5e: K>1 (Jev map-reduce) dispatch. One v2 token per
+                // cell from /stream-tokens; grounded cells run under the
+                // analysis.jev.maxParallelStreams cap, projective cells only
+                // after every grounded cell settled. Chunk 0 streams live;
+                // chunks >= 1 are progress-only so they never overwrite it.
+                // The server reduces; the browser then swaps in the reduced
+                // record. Returns false when K>1 cannot start (token mint
+                // failed) so the caller runs today's K=1 dispatch unchanged.
+                // Completion counts CELLS, never completedIndexes/TOTAL_STREAMS.
+                const runJevCells = async (jevPlan: JevPlanEvent): Promise<boolean> => {
+                  const analysisId = job.analysisId || job.id;
+                  if (!analysisId) return false;
+                  const mintTokens = async (cells: Array<{ jevChunkIndex: number; chunkIndex: number }>): Promise<MintedCellToken[] | null> => {
+                    try {
+                      const res = await fetch(`/api/analyses/${analysisId}/stream-tokens`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cells: cells.map(({ jevChunkIndex, chunkIndex }) => ({ jevChunkIndex, chunkIndex })) }),
+                        signal: currentSignal,
+                      });
+                      if (!res.ok) {
+                        Sentry.addBreadcrumb({ category: 'jev-run', message: `stream-tokens ${res.status}`, level: 'warning' });
+                        return null;
+                      }
+                      const body = (await res.json()) as { tokens?: unknown };
+                      return Array.isArray(body.tokens) && body.tokens.length === cells.length ? (body.tokens as MintedCellToken[]) : null;
+                    } catch (mintErr) {
+                      if (!currentSignal.aborted) console.warn('[useSSEStream] stream-tokens request failed:', mintErr);
+                      return null;
+                    }
+                  };
+
+                  const isGroundedCell = (cell: { chunkIndex: number }) => {
+                    const bundle = dimensionsList[cell.chunkIndex - 1];
+                    return bundle !== undefined && !isProjectiveBundle(bundle);
+                  };
+                  const groundedCells = jevPlan.cells.filter(isGroundedCell);
+                  const projectiveCells = jevPlan.cells.filter((cell) => !isGroundedCell(cell));
+                  const groundedTokens = await mintTokens(groundedCells);
+                  if (!groundedTokens) {
+                    console.warn('[useSSEStream] jev K>1: stream-tokens unavailable; dispatching K=1');
+                    return false;
+                  }
+                  const jevRun = useJevRunStore.getState();
+                  jevRun.startRun(jevPlan.cells.length, Date.now());
+                  const maxParallel = typeof job.jevMaxParallelStreams === 'number' ? job.jevMaxParallelStreams : 6;
+                  let cellsCompleted = 0;
+
+                  const attemptCell = (cell: MintedCellToken, attemptController: AbortController, projectiveContext?: ProjectiveContext): Promise<BundleOutcome> =>
+                    new Promise<BundleOutcome>((resolve) => {
+                      let settledLocal = false;
+                      const resolveOnce = (result: BundleOutcome) => {
+                        if (settledLocal) return;
+                        settledLocal = true;
+                        resolve(result);
+                      };
+                      const dimensions = cell.bundleList[cell.chunkIndex - 1] ?? dimensionsList[cell.chunkIndex - 1] ?? [];
+                      const callbacks = {
+                        onError: (error: string, code?: string) => resolveOnce({ ok: false, error, code }),
+                        onComplete: () => resolveOnce({ ok: true }),
+                      };
+                      const adapter = new SynthesisStreamAdapter(
+                        cell.jevChunkIndex === 0 ? { isPartialStream: true, dimensions, ...callbacks } : { progressOnly: true, ...callbacks },
+                      );
+                      runSingleStream(cell.chunkIndex - 1, dimensions, adapter, currentSignal, job, safeTimezone, attemptController.signal, undefined, projectiveContext, cell)
+                        .then(() => resolveOnce({ ok: false, error: 'Stream ended without a terminal signal.' }))
+                        .catch((err: unknown) => resolveOnce({ ok: false, error: err instanceof Error ? err.message : String(err) }));
+                    });
+
+                  const runCellWithRetry = async (queuedCell: MintedCellToken, projectiveContext?: ProjectiveContext) => {
+                    const label = `[Cell ${queuedCell.jevChunkIndex}:${queuedCell.chunkIndex}]`;
+                    // Tokens live 120 s but a queued cell can wait minutes
+                    // behind the concurrency cap: re-mint when little is left.
+                    const cell = queuedCell.exp - Date.now() < 30000 ? ((await mintTokens([queuedCell]))?.[0] ?? queuedCell) : queuedCell;
+                    let attemptController = new AbortController();
+                    let outcome = await attemptCell(cell, attemptController, projectiveContext);
+                    if (!outcome.ok && !currentSignal.aborted) {
+                      attemptController.abort();
+                      store.logError(`${label} failed, retrying once: ${outcome.error}`);
+                      // Fresh single-cell token: the first one may be near its TTL.
+                      const [freshCell] = (await mintTokens([cell])) ?? [];
+                      if (freshCell) {
+                        attemptController = new AbortController();
+                        outcome = await attemptCell(freshCell, attemptController, projectiveContext);
+                      }
+                    }
+                    if (currentSignal.aborted) return;
+                    useJevRunStore.getState().markCellSettled();
+                    if (outcome.ok) {
+                      cellsCompleted += 1;
+                      return;
+                    }
+                    Sentry.captureException(new Error(outcome.error), {
+                      tags: { component: 'useSSEStream', phase: 'jev-cell-retry-exhausted' },
+                      extra: { jevChunkIndex: cell.jevChunkIndex, chunkIndex: cell.chunkIndex, code: outcome.code },
+                    });
+                    store.logError(`${label} error after retry: ${outcome.error}`);
+                  };
+
+                  store.logInfo(`Jev map-reduce: ${groundedCells.length} grounded cells (max ${maxParallel} in flight), then ${projectiveCells.length} projective.`);
+                  await runWithConcurrency(groundedTokens, maxParallel, (cell) => runCellWithRetry(cell));
+
+                  if (projectiveCells.length > 0 && !currentSignal.aborted) {
+                    const projectiveContext = await fetchProjectiveContext().catch((contextErr: unknown) => {
+                      if (!currentSignal.aborted) console.warn('[useSSEStream] projective context unavailable, dispatching without grounded evidence:', contextErr);
+                      return undefined;
+                    });
+                    const projectiveTokens = await mintTokens(projectiveCells);
+                    if (projectiveTokens) {
+                      await runWithConcurrency(projectiveTokens, maxParallel, (cell) => runCellWithRetry(cell, projectiveContext));
+                    } else {
+                      Sentry.addBreadcrumb({ category: 'jev-run', message: 'projective stream-tokens unavailable; skipping projective cells', level: 'warning' });
+                      store.logError('Projective cells skipped: stream tokens unavailable.');
+                      for (let skipped = 0; skipped < projectiveCells.length; skipped += 1) useJevRunStore.getState().markCellSettled();
+                    }
+                  }
+
+                  if (currentSignal.aborted || hasSettled) {
+                    useJevRunStore.getState().clear();
+                    return true;
+                  }
+                  if (cellsCompleted === 0) {
+                    useJevRunStore.getState().clear();
+                    settleAnalysis('error', 'All analysis streams failed.');
+                    return true;
+                  }
+
+                  // The server reduces on the last cell persist (finalize);
+                  // poll the full record until it is terminal, then swap.
+                  type ReducedRecord = {
+                    analysisStatus?: string;
+                    analysis_payload?: { dimensions?: unknown } | null;
+                    validation_report?: { jev_partial_dimensions?: unknown } | null;
+                  };
+                  let record: ReducedRecord | null = null;
+                  const pollDeadline = Date.now() + 60000;
+                  while (!currentSignal.aborted) {
+                    const res = await fetch(`/api/analyses/${analysisId}`, { credentials: 'include', signal: currentSignal }).catch(() => null);
+                    if (res?.ok) {
+                      record = (await res.json().catch(() => null)) as ReducedRecord | null;
+                      if (record?.analysisStatus === 'complete' || record?.analysisStatus === 'error') break;
+                    }
+                    if (Date.now() + 2000 > pollDeadline) break;
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                  }
+                  if (currentSignal.aborted) {
+                    useJevRunStore.getState().clear();
+                    return true;
+                  }
+                  if (record?.analysisStatus === 'error') {
+                    useJevRunStore.getState().clear();
+                    settleAnalysis('error', 'The analysis failed while combining its parts.');
+                    return true;
+                  }
+                  if (record?.analysisStatus !== 'complete') {
+                    // The reaper finalizes server-side; keep the live view.
+                    store.logInfo('Combined result not ready yet; it will appear when the analysis is reopened.');
+                    useJevRunStore.getState().finishRun([]);
+                    settleAnalysis('complete', undefined, `${cellsCompleted}/${jevPlan.cells.length} cells completed; combined result still pending.`);
+                    return true;
+                  }
+                  const reducedDimensions = record.analysis_payload?.dimensions;
+                  if (Array.isArray(reducedDimensions)) {
+                    for (const dimension of reducedDimensions) useSynthesisNucleus.getState().addDimension(dimension);
+                  }
+                  const partial = record.validation_report?.jev_partial_dimensions;
+                  useJevRunStore.getState().finishRun(Array.isArray(partial) ? partial.filter((n): n is number => Number.isInteger(n)) : []);
+                  settleAnalysis('complete', undefined, `${cellsCompleted}/${jevPlan.cells.length} cells completed; combined result applied.`);
+                  return true;
+                };
+
+                const startPlan = activePlanRef.current;
+                if (startPlan && startPlan.K > 1 && (await runJevCells(startPlan))) return;
+
+                store.logInfo(
+                  `Connecting to Cloudflare edge worker for parallel synthesis (${groundedIndexes.length} grounded, then ${projectiveIndexes.length} projective of ${TOTAL_STREAMS} streams)...`,
+                );
+                await Promise.all(
+                  groundedIndexes.map((i) => runBundleWithRetry(i, dimensionsList[i]!))
+                );
 
                 if (projectiveIndexes.length > 0) {
                   const projectiveContext = await fetchProjectiveContext().catch((contextErr: unknown) => {
@@ -965,6 +1148,7 @@ export function useSSEStream() {
       abortControllerRef.current = null;
     }
     activeAnalysisIdRef.current = null;
+    useJevRunStore.getState().clear();
     processingRef.current = false;
     setIsLiveStreaming(false);
     setIsLoading(false);

@@ -92,6 +92,7 @@ const COMPLETE_RESPONSE = () => sseResponse([completeFrame()]);
 
 function bodiesOf(fetchMock: ReturnType<typeof vi.fn>): Array<Record<string, unknown>> {
   return fetchMock.mock.calls
+    .filter(([input]) => String(input) === WORKER_URL)
     .map(([, init]) => init as RequestInit)
     .filter((init) => typeof init?.body === 'string' && (init.body as string).includes('chunkIndex'))
     .map((init) => JSON.parse(init.body as string) as Record<string, unknown>);
@@ -202,7 +203,7 @@ describe('useSSEStream Jev plan consumption (R3b 2.3, P1)', () => {
     }
   });
 
-  it('K>1 plan still dispatches exactly 5 streams and warns (no per-cell tokens yet)', async () => {
+  it('K>1 plan with no usable /stream-tokens response falls back to exactly 5 streams and warns', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const k3Plan = makePlan(3);
     const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
@@ -228,7 +229,7 @@ describe('useSSEStream Jev plan consumption (R3b 2.3, P1)', () => {
     expect(bodies).toHaveLength(5);
     expect(result.current.plan).toEqual(k3Plan);
     expect(result.current.planSource).toBe('job');
-    const warned = warnSpy.mock.calls.some((args) => typeof args[0] === 'string' && args[0].includes('jev plan K>1 received but per-cell tokens are not issued yet; dispatching K=1'));
+    const warned = warnSpy.mock.calls.some((args) => typeof args[0] === 'string' && args[0].includes('jev K>1: stream-tokens unavailable; dispatching K=1'));
     expect(warned).toBe(true);
     warnSpy.mockRestore();
   });
