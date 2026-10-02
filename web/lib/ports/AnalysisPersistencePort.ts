@@ -357,5 +357,14 @@ export interface AnalysisPersistencePort {
 
   /** Read the stored Jev plan for an analysis, or null when none is stored. */
   findJevPlan(params: { analysisId: string }): Promise<unknown | null>;
+
+  /**
+   * R3b 2.5c: every cell row of an analysis, ALL jev_chunk_index values
+   * (findAnalysisChunks returns jev chunk 0 only). Used by the K>1 finalize,
+   * which reduces each bundle's cells before the per-bundle stitch.
+   */
+  findAnalysisCells(params: {
+    analysisId: string;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 }
 

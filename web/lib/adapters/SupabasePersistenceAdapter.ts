@@ -642,6 +642,26 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
   }
 
+  async findAnalysisCells(params: {
+    analysisId: string;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analysis_chunks')
+        .select('jev_chunk_index, chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
+        .eq('analysis_id', params.analysisId);
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] findAnalysisCells failed:', error.message);
+        throw error;
+      }
+      return data || [];
+    } catch (error: unknown) {
+      Sentry.captureException(error, { tags: { method: 'findAnalysisCells' }, extra: { analysisId: params.analysisId } });
+      throw error;
+    }
+  }
+
   /**
    * Narrow projection of findAnalysisChunks for presence-check-only callers
    * (ADR 021 Phase 2, chunk-presence.ts) -- skips `payload`, which can be
