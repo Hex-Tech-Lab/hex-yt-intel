@@ -33,6 +33,7 @@ const adapterInstance = vi.hoisted(() => ({
   updateValidationReport: vi.fn().mockResolvedValue(null),
   markChunkFailed: vi.fn().mockResolvedValue(true),
   findJevPlan: vi.fn(),
+  findAnalysisCells: vi.fn(),
 }));
 vi.mock('@/lib/adapters', () => ({ SupabasePersistenceAdapter: vi.fn(function mockAdapterClass() { return adapterInstance; }) }));
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
@@ -78,6 +79,10 @@ beforeEach(() => {
   adapterInstance.persistAnalysisChunk.mockResolvedValue(undefined);
   adapterInstance.findAnalysisChunks.mockResolvedValue([]);
   adapterInstance.findJevPlan.mockResolvedValue(PLAN);
+  // Only the cell under test exists: the K>1 set is incomplete.
+  adapterInstance.findAnalysisCells.mockResolvedValue([
+    { jev_chunk_index: 1, chunk_index: 2, dimensions_covered: [1, 2, 3], payload: JSON.parse(CHUNK_TEXT), status: 'completed', updated_at: new Date().toISOString() },
+  ]);
 });
 
 async function workerSignedBody(extra: { chunkIndex: number; totalChunks: number; jevChunkIndex?: number }) {
@@ -100,14 +105,16 @@ const post = (body: Record<string, unknown>) =>
   POST(new NextRequest('https://example.com/api/analyses/persist', { method: 'POST', body: JSON.stringify(body) }));
 
 describe('persist route — v2 cell (R3b 2.5b)', () => {
-  it('accepts a worker-signed v2 cell and stores it under (jevChunkIndex, chunkIndex) without finalizing', async () => {
+  it('accepts a worker-signed v2 cell, stores it under (jevChunkIndex, chunkIndex), and does not finalize an incomplete set', async () => {
     const body = await workerSignedBody({ chunkIndex: 2, totalChunks: 9, jevChunkIndex: 1 });
     expect(body.jevChunkIndex).toBe(1);
     const res = await post(body);
     expect(res.status).toBe(200);
     expect(adapterInstance.persistAnalysisChunk).toHaveBeenCalledWith(expect.objectContaining({ chunkIndex: 2, jevChunkIndex: 1 }));
-    // Finalize for K>1 is 2.5c: the per-bundle completeness check must not run.
+    // 2.5c: a v2 cell reads every cell (never the jev-0-only bundle rows);
+    // with only this one cell present the set is incomplete, so no finalize.
     expect(adapterInstance.findAnalysisChunks).not.toHaveBeenCalled();
+    expect(adapterInstance.findAnalysisCells).toHaveBeenCalled();
     expect(adapterInstance.updateAnalysisResult).not.toHaveBeenCalled();
   });
 

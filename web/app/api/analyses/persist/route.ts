@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { verifyContentSig } from '@/lib/stream-token';
 import { checkPersistCell } from '@/lib/jev/stored-plan';
+import { reduceCellsToBundleRows } from '@/lib/jev/reduce-cells';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
@@ -435,7 +436,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
+      // A v2 cell's totalChunks is the cell count (K x G + P); completeness
+      // and stitching below always count bundles.
+      const resolvedTotal = jevChunkIndex === undefined ? (totalChunks ?? TOTAL_STREAMS) : TOTAL_STREAMS;
 
       // R1b (2026-09-29): registry-resolved cap for the crossDomainBridges
       // field (UCIS sub-dimension 8.3) consumed by stitchChunksIntoPayload.
@@ -681,19 +684,27 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // R3b 2.5b: a v2 (K>1) cell is stored under its own
-        // (jev_chunk_index, chunk_index) key. Completeness and finalize below
-        // still count one row per bundle at jev chunk 0, so a K>1 analysis
-        // is finalized by 2.5c's expectedCells rule, not here.
-        if (jevChunkIndex !== undefined) {
-          return { type: 'chunk_saved' as const, analysisId, chunkIndex };
-        }
-
-        // Verify chunk completeness immediately after persisting chunk
-        const chunks = await retryWithBackoff(
-          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
-          2
-        );
+        // Completeness input: one row per bundle.
+        // - v1 / K=1 (no jevChunkIndex) — including a K>1 analysis whose
+        //   browser fell back to K=1 dispatch (the degradation hatch): today's
+        //   jev-chunk-0 rows, unchanged.
+        // - v2 (K>1, R3b 2.5c): every cell row is read and each bundle's
+        //   cells are reduced into one bundle row (reduceCellsToBundleRows);
+        //   a bundle with a missing/interrupted cell is omitted, so the
+        //   completeness logic below waits exactly as it does for a missing
+        //   bundle today. Partial dimensions go to validation_report.
+        let jevPartialDimensions: number[] = [];
+        const chunks = jevChunkIndex === undefined
+          ? await retryWithBackoff(() => persistenceAdapter.findAnalysisChunks({ analysisId }), 2)
+          : await (async () => {
+            const [storedPlan, cells] = await Promise.all([
+              retryWithBackoff(() => persistenceAdapter.findJevPlan({ analysisId }), 2),
+              retryWithBackoff(() => persistenceAdapter.findAnalysisCells({ analysisId }), 2),
+            ]);
+            const reduced = reduceCellsToBundleRows(storedPlan, cells ?? []);
+            jevPartialDimensions = reduced.partialDimensions;
+            return reduced.rows;
+          })();
         const FINAL_CHUNK_STATUS = 'completed';
         const finalChunks = chunks ? chunks.filter(c => c.status === FINAL_CHUNK_STATUS) : [];
 
@@ -1032,6 +1043,9 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isFullyValidated,
+            // R3b 2.5c: dimensions built from only part of the video (a K>1
+            // cell failed or omitted them). Drives the UI's partial badge.
+            ...(jevPartialDimensions.length > 0 ? { jev_partial_dimensions: jevPartialDimensions } : {}),
             ...(sideEffectsClaimed ? claimSideEffectsPending({}) : {}),
             ...withFreshAuxMetadata(channelMeta, comments),
           };
@@ -1213,6 +1227,31 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        return { type: 'chunk_saved' as const, analysisId, chunkIndex };
+      }
+
+      // R3b 2.5c: a v2 (K>1) cell that did not take the chunk branch above
+      // (interrupted with no usable payload) records ITS OWN row as
+      // 'interrupted' and never writes the parent: the parent belongs to the
+      // whole cell set (interrupted cells are not terminal, so finalize keeps
+      // waiting; the reaper settles a run that never completes). Unlike K=1,
+      // where this path writes the parent 'interrupted' directly.
+      if (jevChunkIndex !== undefined && chunkIndex !== undefined) {
+        await retryWithBackoff(
+          () => persistenceAdapter.persistAnalysisChunk({
+            analysisId,
+            chunkIndex,
+            jevChunkIndex,
+            dimensionsCovered: [],
+            payload: {},
+            status: 'interrupted',
+            tokensUsed,
+            costUsd,
+            cachedTokens,
+            generationId,
+          }),
+          2
+        );
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
       }
 
