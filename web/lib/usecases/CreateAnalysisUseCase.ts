@@ -20,7 +20,7 @@ import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
-import { resolveJevConfig, resolveJevMaxParallelStreams, JEV_MAX_PARALLEL_STREAMS_FALLBACK } from '@/lib/config/jev';
+import { gateJevForUser, resolveJevConfig, resolveJevMaxParallelStreams, JEV_MAX_PARALLEL_STREAMS_FALLBACK } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -394,7 +394,7 @@ export class CreateAnalysisUseCase {
           ],
           {} as Record<string, unknown>
         );
-        const jevConfig = resolveJevConfig(rawJevRegistry);
+        const jevConfig = await gateJevForUser(resolveJevConfig(rawJevRegistry), () => this.persistence.isAdminUser({ userId: params.userId }));
         const costCapCents = Number(rawJevRegistry['analysis.jev.maxCostUsdCentsPerVideo']);
         // Worst-case pricing: the most expensive resolved cascade item
         // (CascadeItem cost is USD per 1K tokens → ×1000 for per-million).

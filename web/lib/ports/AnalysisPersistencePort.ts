@@ -358,6 +358,9 @@ export interface AnalysisPersistencePort {
   /** Read the stored Jev plan for an analysis, or null when none is stored. */
   findJevPlan(params: { analysisId: string }): Promise<unknown | null>;
 
+  /** R3b admin gate: users.role === 'admin' for this user, or this analysis's owner. Unknown => false. */
+  isAdminUser(params: { userId: string } | { analysisId: string }): Promise<boolean>;
+
   /** R3b 2.5: mark a K>1 plan degraded after the browser fell back to K=1. */
   markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void>;
 

@@ -1009,6 +1009,27 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /** R3b admin gate: users.role === 'admin' for a user, or an analysis's owner. Any miss or error => false (fail closed). */
+  static async isAdminUser(params: { userId: string } | { analysisId: string }): Promise<boolean> {
+    const service = getSupabaseServiceClient();
+    let userId = 'userId' in params ? params.userId : null;
+    if ('analysisId' in params) {
+      const { data, error } = await service.from('analyses').select('user_id').eq('id', params.analysisId).maybeSingle();
+      if (error) {
+        Sentry.captureException(error, { tags: { method: 'isAdminUser', phase: 'owner' }, extra: { analysisId: params.analysisId } });
+        return false;
+      }
+      userId = (data?.user_id as string | undefined) ?? null;
+    }
+    if (!userId) return false;
+    const { data, error } = await service.from('users').select('role').eq('id', userId).maybeSingle();
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'isAdminUser', phase: 'role' } });
+      return false;
+    }
+    return data?.role === 'admin';
+  }
+
   static async findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service

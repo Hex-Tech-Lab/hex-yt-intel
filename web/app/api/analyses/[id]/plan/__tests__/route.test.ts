@@ -155,4 +155,15 @@ describe('POST /api/analyses/[id]/plan — idempotence', () => {
     expect(json.plan.K).toBe(1);
     expect(json.plan.streamCount).toBe(5);
   });
+
+  it('admin gate: with analysis.jev.enabled on, a non-admin owner is planned with Jev disabled (K=1)', async () => {
+    verifyContentSig.mockResolvedValue(true);
+    serviceMock.__setStoredPlan(undefined);
+    getRegistrySettings.mockResolvedValue({ 'analysis.jev.enabled': true });
+
+    await post(body());
+    // The service mock has no admin owner row (no user_id), so the gate
+    // fails closed and the planner gets enabled=false.
+    expect(planAnalysis.mock.calls.at(-1)?.[0].jevConfig.enabled).toBe(false);
+  });
 });

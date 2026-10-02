@@ -8,7 +8,7 @@ import { canonicalJson } from '@/lib/utils/canonical-json';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
-import { resolveJevConfig } from '@/lib/config/jev';
+import { gateJevForUser, resolveJevConfig } from '@/lib/config/jev';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import { resolveAnalysisCascade } from '@/lib/config/cascade';
 
@@ -120,7 +120,7 @@ export async function POST(
     } as Record<string, unknown>
   );
 
-  const jevConfig = resolveJevConfig(rawJev);
+  const jevConfig = await gateJevForUser(resolveJevConfig(rawJev), () => persistence.isAdminUser({ analysisId }));
   const transcriptBudgetChars = Math.max(
     1000,
     Number(rawJev['analysis.transcriptBudgetChars']) || 48000

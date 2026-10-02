@@ -185,3 +185,37 @@ describe('SupabaseAnalysisAdapter.markJevPlanDegraded (R3b 2.5 degradation hatch
     await expect(SupabaseAnalysisAdapter.markJevPlanDegraded({ analysisId: 'a-1', plan: { degraded: true } })).rejects.toEqual({ message: 'boom' });
   });
 });
+
+describe('SupabaseAnalysisAdapter.isAdminUser (R3b admin gate)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('true only for users.role === admin', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { role: 'admin' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-1' })).toBe(true);
+    expect(mockFrom).toHaveBeenCalledWith('users');
+    expect(mockEq).toHaveBeenCalledWith('id', 'u-1');
+    mockMaybeSingle.mockResolvedValueOnce({ data: { role: 'user' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-2' })).toBe(false);
+  });
+
+  it('resolves an analysis to its owner first', async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { user_id: 'owner-1' }, error: null })
+      .mockResolvedValueOnce({ data: { role: 'admin' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ analysisId: 'an-1' })).toBe(true);
+    expect(mockEq).toHaveBeenCalledWith('id', 'an-1');
+    expect(mockEq).toHaveBeenCalledWith('id', 'owner-1');
+  });
+
+  it('fails closed: missing owner, missing user, or a read error => false', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ analysisId: 'gone' })).toBe(false);
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'nobody' })).toBe(false);
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-1' })).toBe(false);
+  });
+});
+

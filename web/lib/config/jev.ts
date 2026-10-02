@@ -57,6 +57,17 @@ export const JEV_BOUNDS = {
 
 export const JEV_MAX_PARALLEL_STREAMS_FALLBACK = 6;
 
+/**
+ * R3b admin gate: K>1 planning needs the registry flag AND an admin
+ * requester (users.role === 'admin'). Everyone else keeps today's K=1 plan
+ * even with `analysis.jev.enabled` on. `isAdmin` is only consulted when the
+ * flag is on, so normal traffic pays no role lookup while Jev is off.
+ */
+export async function gateJevForUser(config: JevConfig, isAdmin: () => Promise<boolean>): Promise<JevConfig> {
+  if (!config.enabled) return config;
+  return (await isAdmin()) ? config : { ...config, enabled: false };
+}
+
 /** Registry value of `analysis.jev.maxParallelStreams` → an integer in [min, max]; non-numeric → fallback. */
 export function resolveJevMaxParallelStreams(raw: unknown): number {
   const value = Number(raw);
