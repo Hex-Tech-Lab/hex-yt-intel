@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const planAnalysis = vi.hoisted(() => vi.fn());
 const getRegistrySettings = vi.hoisted(() => vi.fn());
 const persistJevPlan = vi.hoisted(() => vi.fn());
+const isAdminUser = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/usecases/PlanAnalysisUseCase', () => ({ planAnalysis }));
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
@@ -64,6 +65,7 @@ function buildUseCase() {
     upsertProcessingStub: () => Promise.resolve({ id: 'an-1', status: 'processing' }),
     persistJevPlan,
     findJevPlan: () => Promise.resolve(null),
+    isAdminUser,
     persist: vi.fn(),
   };
   const billingQuota = {
@@ -164,5 +166,36 @@ describe('CreateAnalysisUseCase inline Jev planning (P1)', () => {
     expect(resultClamped.type).toBe('processing');
     expect(resultClamped.type === 'processing' && resultClamped.data.jevMaxParallelStreams).toBe(32);
     vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
+  });
+});
+
+describe('admin gate (R3b): K>1 planning needs the flag AND an admin requester', () => {
+  const enabledRegistry = (keys: string[], fallback: Record<string, unknown>) => {
+    const result = defaultRegistry(keys, fallback);
+    if (keys.includes('analysis.jev.enabled')) result['analysis.jev.enabled'] = true;
+    return result;
+  };
+
+  it('NEGATIVE CONTROL: a standard user gets the disabled (K=1) config even with analysis.jev.enabled on', async () => {
+    vi.mocked(getRegistrySettings).mockImplementation(enabledRegistry);
+    isAdminUser.mockResolvedValue(false);
+    await buildUseCase().execute(baseParams());
+    expect(isAdminUser).toHaveBeenCalledWith({ userId: 'u-1' });
+    expect(planAnalysis.mock.calls[0][0].jevConfig.enabled).toBe(false);
+    vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
+  });
+
+  it('an admin gets the enabled config', async () => {
+    vi.mocked(getRegistrySettings).mockImplementation(enabledRegistry);
+    isAdminUser.mockResolvedValue(true);
+    await buildUseCase().execute(baseParams());
+    expect(planAnalysis.mock.calls[0][0].jevConfig.enabled).toBe(true);
+    vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
+  });
+
+  it('flag off: no role lookup at all', async () => {
+    await buildUseCase().execute(baseParams());
+    expect(isAdminUser).not.toHaveBeenCalled();
+    expect(planAnalysis.mock.calls[0][0].jevConfig.enabled).toBe(false);
   });
 });
