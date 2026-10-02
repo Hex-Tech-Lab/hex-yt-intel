@@ -291,6 +291,10 @@ export interface WorkerStreamRequest {
   jevChunkIndex?: number;
   jevChunkCount?: number;
   bundleList?: number[][];
+  /** R3b 2.3.5: v2 token slice bounds and hash. */
+  sliceSha256?: string;
+  startWord?: number;
+  endWord?: number;
   /** R3b 2.3 (P1): Jev semantic-chunk plan forwarded to the worker (absent = no plan / K=1). */
   jevPlan?: JevPlanEvent;
   appUrl?: string;

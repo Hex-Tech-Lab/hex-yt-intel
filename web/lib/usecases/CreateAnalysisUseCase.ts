@@ -20,7 +20,7 @@ import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
-import { resolveJevConfig } from '@/lib/config/jev';
+import { resolveJevConfig, JEV_MAX_PARALLEL_STREAMS_FALLBACK, JEV_BOUNDS } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -98,6 +98,8 @@ export interface UseCaseSuccess {
     estimateCents: number;
     truncatedFallback: boolean;
   } | null;
+  /** R3b 2.3.5e: client-side parallel concurrency cap for K>1 dispatch waves (analysis.jev.maxParallelStreams). */
+  jevMaxParallelStreams: number;
   stream: {
     url: string;
     sig: string;
@@ -431,6 +433,17 @@ export class CreateAnalysisUseCase {
       }
     }
 
+    // R3b 2.3.5e: client-side concurrency cap for parallel Jev cell streams.
+    // Throttles simultaneous worker requests in flight during K>1 dispatch waves.
+    const resolvedConcurrencyRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.jev.maxParallelStreams'],
+      { 'analysis.jev.maxParallelStreams': JEV_MAX_PARALLEL_STREAMS_FALLBACK }
+    );
+    const maxParallelStreamsRaw = Number(resolvedConcurrencyRegistry['analysis.jev.maxParallelStreams']);
+    const jevMaxParallelStreams = Number.isFinite(maxParallelStreamsRaw)
+      ? Math.max(JEV_BOUNDS.maxParallelStreams.min, Math.min(JEV_BOUNDS.maxParallelStreams.max, Math.floor(maxParallelStreamsRaw)))
+      : JEV_MAX_PARALLEL_STREAMS_FALLBACK;
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -487,6 +500,7 @@ export class CreateAnalysisUseCase {
         commentsSyncPoolConfig,
         priorPayloadMaxBytes,
         jevPlan,
+        jevMaxParallelStreams,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

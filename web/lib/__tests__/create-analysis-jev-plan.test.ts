@@ -25,14 +25,17 @@ import { JEV_DEFAULTS, resolveJevConfig } from '@/lib/config/jev';
 // Registry returns jev defaults verbatim with `enabled: false` (the absent/
 // disabled case). All other registry reads fall back to the same numbers the
 // use case itself uses.
-vi.mocked(getRegistrySettings).mockImplementation((keys: string[], fallback: Record<string, unknown>) => {
-  void keys;
-  return {
-    ...fallback,
-    'analysis.jev.enabled': false,
-    'analysis.jev.maxCostUsdCentsPerVideo': 100,
-  };
-});
+const defaultRegistry = (keys: string[], fallback: Record<string, unknown>) => {
+  const result: Record<string, unknown> = { ...fallback };
+  if (keys.includes('analysis.jev.enabled')) {
+    result['analysis.jev.enabled'] = false;
+  }
+  if (keys.includes('analysis.jev.maxCostUsdCentsPerVideo')) {
+    result['analysis.jev.maxCostUsdCentsPerVideo'] = 100;
+  }
+  return result;
+};
+vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
 
 const TRANSCRIPT = 'hello world '.repeat(50);
 
@@ -135,5 +138,31 @@ describe('CreateAnalysisUseCase inline Jev planning (P1)', () => {
     const result = await uc.execute(baseParams());
     expect(result.type).not.toBe('error');
     expect(persistJevPlan).not.toHaveBeenCalled();
+  });
+
+  it('resolves jevMaxParallelStreams from registry with fallback 6 and clamps to [1, 32]', async () => {
+    const uc = buildUseCase();
+    const result = await uc.execute(baseParams());
+    expect(result.type).toBe('processing');
+    expect(result.type === 'processing' && result.data.jevMaxParallelStreams).toBe(6);
+
+    // Clamping test: override registry for analysis.jev.maxParallelStreams
+    vi.mocked(getRegistrySettings).mockImplementation((keys: string[], fallback: Record<string, unknown>) => {
+      const res: Record<string, unknown> = { ...fallback };
+      if (keys.includes('analysis.jev.enabled')) {
+        res['analysis.jev.enabled'] = false;
+      }
+      if (keys.includes('analysis.jev.maxCostUsdCentsPerVideo')) {
+        res['analysis.jev.maxCostUsdCentsPerVideo'] = 100;
+      }
+      if (keys.includes('analysis.jev.maxParallelStreams')) {
+        res['analysis.jev.maxParallelStreams'] = 64; // exceeds max 32
+      }
+      return res;
+    });
+    const resultClamped = await uc.execute(baseParams());
+    expect(resultClamped.type).toBe('processing');
+    expect(resultClamped.type === 'processing' && resultClamped.data.jevMaxParallelStreams).toBe(32);
+    vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
   });
 });

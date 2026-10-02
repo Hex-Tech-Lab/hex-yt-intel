@@ -51,7 +51,10 @@ export const JEV_BOUNDS = {
   maxChunks: { min: 1, max: 32 },
   acronymMinLength: { min: 2, max: 6 },
   contentWordMinLength: { min: 1, max: 12 },
+  maxParallelStreams: { min: 1, max: 32 },
 } as const;
+
+export const JEV_MAX_PARALLEL_STREAMS_FALLBACK = 6;
 
 interface NumericSpec {
   key: string;
