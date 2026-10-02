@@ -89,16 +89,18 @@ export async function mintCellTokens(
 
   const planCells = new Map(plan.cells.map((cell) => [cellKey(cell), cell]));
   const seen = new Set<string>();
-  for (const cell of input.cells) {
-    const key = cellKey(cell);
-    if (seen.has(key)) return { type: 'duplicate_cell', cell };
+  const resolved: Array<(typeof plan.cells)[number]> = [];
+  for (const requested of input.cells) {
+    const key = cellKey(requested);
+    if (seen.has(key)) return { type: 'duplicate_cell', cell: requested };
     seen.add(key);
-    if (!planCells.has(key)) return { type: 'unknown_cell', cell };
+    const cell = planCells.get(key);
+    if (!cell) return { type: 'unknown_cell', cell: requested };
+    resolved.push(cell);
   }
 
   const tokens: MintedCellToken[] = [];
-  for (const requested of input.cells) {
-    const cell = planCells.get(cellKey(requested))!;
+  for (const cell of resolved) {
     const { sig, exp } = await sign({
       videoId: input.videoId,
       analysisId: input.analysisId,

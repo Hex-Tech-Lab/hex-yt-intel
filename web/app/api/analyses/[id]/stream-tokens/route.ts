@@ -90,6 +90,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       case 'duplicate_cell':
       case 'unknown_cell':
         return NextResponse.json({ error: outcome.type, cell: outcome.cell }, { status: 400 });
+      default: {
+        const unhandled: never = outcome;
+        throw new Error(`unhandled mint outcome: ${JSON.stringify(unhandled)}`);
+      }
     }
   } catch (error) {
     Sentry.captureException(error, { tags: { route: 'analyses-stream-tokens' }, extra: { analysisId: id } });
