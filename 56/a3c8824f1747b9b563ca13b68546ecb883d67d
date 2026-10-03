@@ -1,0 +1,25 @@
+scripts/bakeoff-gate.ts
+  s_71981e252ebeb0::t_5c5191a824c2c7 102-103
+scripts/bakeoff-l2-evaluator.ts
+  s_71981e252ebeb0::t_88d37b189b9cd5 520
+scripts/bakeoff-v54-prompt-legacy.ts
+  s_71981e252ebeb0::t_980d41cb474f1d 766
+scripts/quality-engine/bakeoff-gate.test.ts
+  s_71981e252ebeb0::t_7515e2d3e8f865 21-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "56a3c8824f1747b9b563ca13b68546ecb883d67d",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
