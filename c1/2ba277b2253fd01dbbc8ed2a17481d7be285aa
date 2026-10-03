@@ -1,0 +1,19 @@
+docs/history/THOS_2026-10-03_PM_SCHEMA_PROVENANCE_ADR036-038_DNA_HANDOVER.md
+  s_3c29bcb7cb358e::t_383da6f8f02bff 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c12ba277b2253fd01dbbc8ed2a17481d7be285aa",
+  "prompts": {},
+  "sessions": {
+    "s_3c29bcb7cb358e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42143085-22b2-466e-806a-a7d97ffd1a0b",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
