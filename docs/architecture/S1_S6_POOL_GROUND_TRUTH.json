@@ -1,0 +1,72 @@
+{
+  "Z6l4HpuyyP0": {
+    "class": "S1",
+    "confidence": "high",
+    "rationale": "Single continuous narrative of retirement statistics; no turn markers; audience asks are incidental."
+  },
+  "ymgH8jS6Wb8": {
+    "class": "S1",
+    "confidence": "medium",
+    "rationale": "One continuous demo-and-explainer narrative; screen references are present but not dominant (14 markers in ~4k words)."
+  },
+  "MoBr0nQtOnA": {
+    "class": "S2",
+    "confidence": "high",
+    "rationale": "Host-and-guest conversation with alternating turns and explicit questions (\"So, Dwayne, I'm curious...\")."
+  },
+  "_LCeJZFIsd4": {
+    "class": "S2",
+    "confidence": "medium",
+    "rationale": "Host/guest podcast with alternating turns and questions; long guest stretches and PR/screen demonstration add S4-like cues."
+  },
+  "DlNWYzaL_F0": {
+    "class": "S2",
+    "confidence": "high",
+    "rationale": "Interview with ~370 turn markers and explicit Q&A exchanges."
+  },
+  "LTNVA2iP9YU": {
+    "class": "S2",
+    "confidence": "high",
+    "rationale": "Q&A broadcast interview in German: question, answer, question; no >> tags but explicit question phrasing."
+  },
+  "1U8-4N1HNtU": {
+    "class": "S1",
+    "confidence": "medium",
+    "rationale": "One continuous Arabic news-analysis narrative with direct address; only 4 turn markers."
+  },
+  "yB92mx97A8s": {
+    "class": "S3",
+    "confidence": "low",
+    "rationale": "Rapid fragmented turns (~394 markers in ~570 words) among several voices with competing positions; non-speech tags dominate. S5 (disjointed scenes) is plausible."
+  },
+  "gneNjQuLv88": {
+    "class": "S1",
+    "confidence": "high",
+    "rationale": "Continuous first-person narrative; closing sales line is a small share of the text."
+  },
+  "GOLgLU54b5s": {
+    "class": "S1",
+    "confidence": "medium",
+    "rationale": "Continuous countdown narration; sequential counting is a list device, not procedural steps."
+  },
+  "EoKdX13w7SI": {
+    "class": "S1",
+    "confidence": "high",
+    "rationale": "Single-speaker lecture; slide references are illustrative; 13 turn markers in ~9k words."
+  },
+  "pjGvA-D0Fcs": {
+    "class": "S1",
+    "confidence": "medium",
+    "rationale": "Majority is one continuous speech; the closing commentary segment has alternating voices."
+  },
+  "uZ5kJ9CBbv0": {
+    "class": "S1",
+    "confidence": "high",
+    "rationale": "Continuous sales-pitch narrative; no turn markers; direct address only at the end."
+  },
+  "39hqY3nH5ug": {
+    "class": "S3",
+    "confidence": "high",
+    "rationale": "Rapid alternating turns (~523 markers, ~306 questions) with multiple distinct viewpoints debating."
+  }
+}

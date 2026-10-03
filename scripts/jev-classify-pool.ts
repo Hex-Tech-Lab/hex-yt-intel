@@ -38,12 +38,12 @@ const POOL_VIDEO_IDS = [
 const WORKER_URL = process.env.WORKER_URL ?? 'https://yt-intel.hex-tech-lab.workers.dev';
 const WORKER_ORIGIN = 'https://hex-yt-intel.vercel.app';
 const TRANSCRIPT_DIR = nodePath.join(os.tmpdir(), 'hex-yt-intel-pool-transcripts');
-const POC_PATH = process.env.POC_LABELS_PATH ?? 'scripts/bakeoff-inputs/pool_classification.json';
+const POC_PATH = process.env.POC_LABELS_PATH ?? 'docs/architecture/S1_S6_POOL_GROUND_TRUTH.json';
 const OUT_PATH = 'docs/architecture/S1_S6_POOL_RECLASSIFICATION.json';
 const MAX_CALL_COST = 0.01;
 const MAX_TOTAL_COST = 0.1;
 
-type PocEntry = { class: string; multiSpeaker: number; inventRisk: number };
+type PocEntry = { class: string; multiSpeaker?: number; inventRisk?: number };
 type Rec = {
   videoId: string;
   pocClass: string | null;
@@ -142,27 +142,27 @@ const questions = {
   structural_class: {
     type: 'choice',
     instructions:
-      'Classify this YouTube transcript into exactly one structural class describing how the content is spoken and produced.',
+      'Analyze this document strictly through its textual flow, semantic structure, turn-taking markers (>>), and typographic formatting. Do not infer audio, video, or production quality. Classify it into exactly one structural class.',
     criteria: { ...JEV_STRUCTURAL_CRITERIA },
   },
   multi_speaker: {
     type: 'noul',
     instructions:
-      'Does the transcript contain multiple distinct speakers (interviewees, panelists, back-and-forth dialogue), as opposed to one primary speaker? Judge from the transcript text alone.',
+      'Does the transcript text contain explicit structural dialogue tags or alternating Q&A formatting (turn markers such as ">>", question-and-answer exchanges), as opposed to one continuous narrative flow? Judge from the transcript text alone.',
     criteria: {
-      true: 'Multiple distinct speakers are present',
-      false: 'One primary speaker throughout',
+      true: 'Explicit structural dialogue tags or alternating Q&A formatting are present',
+      false: 'One continuous narrative flow with no turn markers or Q&A exchanges',
     },
   },
   extrapolation_risk: {
     type: 'score',
     instructions:
-      'How much does this transcript rely on heavily edited narration or missing visual context, such that analysis extrapolating beyond the spoken words risks inventing facts? 0 = low risk, 9 = extreme risk.',
+      'How many abrupt semantic context shifts lacking conversational flow does the transcript text contain, such that analysis extrapolating beyond the stated words risks inventing facts? 0 = low risk, 9 = extreme risk.',
     criteria: [
-      'Grade 0 — Plain direct speech; everything needed is in the words',
-      'Grade 3 — Some reliance on visuals or editing, minor risk',
-      'Grade 6 — Heavy reliance on visuals/editing; meaning unclear from words alone',
-      'Grade 9 — Almost entirely edited narration over unseen footage',
+      'Grade 0 — Coherent text flow; everything needed is in the words',
+      'Grade 3 — Occasional abrupt context shifts, minor risk',
+      'Grade 6 — Frequent abrupt context shifts; meaning unclear from the words alone',
+      'Grade 9 — Disjointed fragments with no conversational bridging',
     ],
   },
 };
@@ -181,9 +181,9 @@ for (const id of POOL_VIDEO_IDS) {
       pocClass: pocEntry ? pocEntry.class : null,
       newClass: null,
       agree: null,
-      multiSpeakerPoc: pocEntry ? pocEntry.multiSpeaker : null,
+      multiSpeakerPoc: pocEntry?.multiSpeaker ?? null,
       multiSpeakerNew: null,
-      inventRiskPoc: pocEntry ? pocEntry.inventRisk : null,
+      inventRiskPoc: pocEntry?.inventRisk ?? null,
       inventRiskNew: null,
       costUsd: 0,
       skippedReason: 'worker /fetch-transcript returned no transcript',
@@ -216,9 +216,9 @@ for (const id of POOL_VIDEO_IDS) {
     pocClass: pocCode,
     newClass: newCode,
     agree: newCode !== null && pocCode !== null ? newCode === pocCode : null,
-    multiSpeakerPoc: pocEntry ? pocEntry.multiSpeaker : null,
+    multiSpeakerPoc: pocEntry?.multiSpeaker ?? null,
     multiSpeakerNew: typeof multi === 'number' ? Number(multi.toFixed(2)) : null,
-    inventRiskPoc: pocEntry ? pocEntry.inventRisk : null,
+    inventRiskPoc: pocEntry?.inventRisk ?? null,
     inventRiskNew: typeof riskRaw === 'number' ? Number(to9(riskRaw).toFixed(2)) : null,
     costUsd: Number(cost.toFixed(6)),
   });
