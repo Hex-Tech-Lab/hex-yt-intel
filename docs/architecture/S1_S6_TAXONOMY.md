@@ -42,10 +42,10 @@ registry seed is written.
 ## Provenance
 
 The 2026-09-26/27 Jev classification POC saved ONLY per-video results:
-`/tmp/opencode/pool_classification.json` = `{videoId: {class: "S1".."S6",
+a local POC output file (not committed) = `{videoId: {class: "S1".."S6",
 multiSpeaker: 0–1, inventRisk: 0–9 scale}}` for the 14 pool videos
 (S1×6, S3×4, S4×1, S5×2, S6×1 — no S2). The keyed criteria text the POC sent
-to Jev was never saved (`/tmp/opencode/articulation-exercise.mts` has no
+to Jev was never saved (the POC script has no
 S1–S6 criteria; ledger line 1429 and
 `docs/history/HANDOVER_2026-09-27-OC-BAKEOFF-PIPELINE-REENGINEERING.md:25`
 only describe the API shape: choice-type needs keyed criteria record; noul
@@ -61,14 +61,16 @@ reconstructed criteria and the POC labels was measured on 2026-10-03 — see
 `docs/architecture/S1_S6_POOL_RECLASSIFICATION.json` and the §7 Q3 line in
 `docs/architecture/DESIGN-036-phase-b-layer0-layer1.md`.
 
-## Pool re-classification result (2026-10-03)
+## Pool re-classification result (2026-10-03) — STALE
+
+**Measured under the RETIRED v1 (audio-dependent) rubrics. Every figure below, including 33% agreement, is superseded and pending a re-run under the text-observable rubrics above.**
 
 Run by `scripts/jev-classify-pool.ts` over the 14-video pool
 (`CURATED_VIDEO_IDS`, scripts/bakeoff-l2-evaluator.ts:60). Raw results:
 `docs/architecture/S1_S6_POOL_RECLASSIFICATION.json`.
 
-- Videos classified: **12 / 14** (2 skipped — transcript not cached in
-  `/tmp/opencode/transcripts`, not fetched per dispatch: `Z6l4HpuyyP0`,
+- Videos classified: **12 / 14** (2 skipped — transcript not cached
+  locally, not fetched per dispatch: `Z6l4HpuyyP0`,
   `GOLgLU54b5s`; their POC labels are recorded but unverified against a
   fresh Jev call)
 - **Class agreement: 4 / 12 (33%)** — LOW. Disagreements (POC → v1):
@@ -101,9 +103,10 @@ Run by `scripts/jev-classify-pool.ts` over the 14-video pool
 
 **Interpretation (v1 caveat):** 33% agreement means the reconstructed v1
 criteria are NOT yet equivalent to the lost POC criteria as a classifier.
-Before Phase B relies on Layer 0 routing, either (a) tighten the v1
-criteria wording (especially the S2/S3 two-speaker-vs-panel boundary and
-the S5 voiceover signal) and re-run this script, or (b) treat the v1 labels
+Before Phase B relies on Layer 0 routing, either (a) re-run this script under
+the text-observable rubrics above (watch the S2/S3 boundary: explicit Q&A
+phrasing vs fragmented multi-viewpoint debate, and the S5 signal: abrupt
+contextual shifts and quotes from disconnected subjects), or (b) treat the v1 labels
 as the new baseline and re-derive routing rules against them. This decision
 is flagged in DESIGN-036 §7 Q3 — it needs a user call.
 
