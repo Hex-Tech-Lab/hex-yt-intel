@@ -1,0 +1,31 @@
+web/components/templates/console/DimensionDrawer.tsx
+  s_c2a25f37023b9d::t_eea70fc3549680 36-37,44,46-47,50,129-131
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_c3443b6dfc38ba::t_a36fd0134ab8ce 96,133-153
+web/lib/jev/eta.ts
+  s_c3443b6dfc38ba::t_5b8df8cd0981a1 38-39,42-43,49-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c272f9c092eb89da94653502ef4fd75773db134e",
+  "prompts": {},
+  "sessions": {
+    "s_c2a25f37023b9d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd700c49ffeodP77J9aUbyptK",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_c3443b6dfc38ba": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd7702daffe24LgKJO5NHWqar",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
