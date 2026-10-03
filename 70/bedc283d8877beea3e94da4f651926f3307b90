@@ -1,0 +1,37 @@
+docs/architecture/ADR-038-analysis-model-cascade.md
+  s_06a305390bccef::t_2a9d4b499a9b3e 72
+  s_06a305390bccef::t_1b8b253d8c0287 81,83,85-115
+  s_06a305390bccef::t_e77ca882dbf62c 55
+  s_06a305390bccef::t_9a4b8c17e11740 24
+  s_06a305390bccef::t_9d01205013c82b 27
+  s_06a305390bccef::t_ffd3160c14f0a3 26
+  s_06a305390bccef::t_1b4b10ba2d670d 49
+  s_06a305390bccef::t_33d38d4b9105d0 25
+  s_06a305390bccef::t_26ee9304b29da8 126
+  s_06a305390bccef::t_f6830ef191c144 28
+  s_06a305390bccef::t_8093e8f1497772 3
+  s_06a305390bccef::t_eb08f11d9d824d 16
+docs/architecture/ADR-036-5-Layer-Jev-Gated-Architecture.md
+  s_06a305390bccef::t_ef97a5db2f0e05 51-52
+  s_06a305390bccef::t_d478aaae0805d2 57-59
+CLAUDE.md
+  s_06a305390bccef::t_735cd61f4f9238 104
+.memory/AGENT_LEDGER.md
+  s_06a305390bccef::t_d7bfac4f97c58b 1479
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "70bedc283d8877beea3e94da4f651926f3307b90",
+  "prompts": {},
+  "sessions": {
+    "s_06a305390bccef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd770369ffehjZD6UiOCqjsxW",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
