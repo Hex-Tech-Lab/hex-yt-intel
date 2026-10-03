@@ -266,6 +266,16 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   // in the service guarantees no paid run is ever started on an uncertain
   // probe — and the error is still reported (log + Sentry).
   try {
+    const {
+      'comments.system.minUsableComments': minUsableComments,
+      'comments.system.staleRunMinutes': staleRunMinutes,
+    } = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.system.minUsableComments', 'comments.system.staleRunMinutes'],
+      { 'comments.system.minUsableComments': 10, 'comments.system.staleRunMinutes': 30 }
+    );
+    // A run stuck pending/sampling past the cutoff would otherwise hold the
+    // unique index forever; release it before the existence check.
+    await SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns(params.analysisId, Number(staleRunMinutes));
     if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
       console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
       return false;
@@ -274,10 +284,6 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
     // Skip: the analysis already has usable comments (at least
     // comments.system.minUsableComments, default 10) — below that the run is
     // needed for data density (directive 2026-10-03).
-    const { 'comments.system.minUsableComments': minUsableComments } = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['comments.system.minUsableComments'],
-      { 'comments.system.minUsableComments': 10 }
-    );
     if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId, Number(minUsableComments))) {
       console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
       return false;

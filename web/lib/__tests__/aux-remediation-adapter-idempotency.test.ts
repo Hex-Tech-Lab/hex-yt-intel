@@ -136,3 +136,33 @@ describe('analysisHasUsableComments', () => {
     expect(await SupabaseAuxRemediationAdapter.analysisHasUsableComments('an-1', 10)).toBe(expected);
   });
 });
+
+describe('failStaleSystemSampleRuns', () => {
+  it('fails only this analysis cochran pending/sampling runs older than the cutoff', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-03T12:00:00Z'));
+    const calls: Array<[string, ...unknown[]]> = [];
+    const chain = {
+      update: (row: unknown) => { calls.push(['update', row]); return chain; },
+      eq: (col: string, val: unknown) => { calls.push(['eq', col, val]); return chain; },
+      in: (col: string, val: unknown) => { calls.push(['in', col, val]); return chain; },
+      lt: (col: string, val: unknown) => { calls.push(['lt', col, val]); return Promise.resolve({ error: null }); },
+    };
+    fromFn.mockReturnValueOnce(chain);
+    await SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns('an-1', 30);
+    expect(calls).toEqual([
+      ['update', { status: 'failed' }],
+      ['eq', 'analysis_id', 'an-1'],
+      ['eq', 'mode', 'cochran'],
+      ['in', 'status', ['pending', 'sampling']],
+      ['lt', 'created_at', '2026-10-03T11:30:00.000Z'],
+    ]);
+    vi.useRealTimers();
+  });
+
+  it('throws on a DB error (the service contains it and fails closed)', async () => {
+    const chain = { update: () => chain, eq: () => chain, in: () => chain, lt: () => Promise.resolve({ error: { message: 'db down' } }) };
+    fromFn.mockReturnValueOnce(chain);
+    await expect(SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns('an-1', 30)).rejects.toEqual({ message: 'db down' });
+  });
+});

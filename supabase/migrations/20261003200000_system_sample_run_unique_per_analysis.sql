@@ -48,11 +48,20 @@ values (
   '10'::jsonb,
   'Minimum number of comments already in analysis_payload.comments for an analysis to SKIP the system-funded Cochran sample run. Fewer than this and the run is enqueued (data density). Directive 2026-10-03: 10.',
   'admin'
+),
+(
+  'comments.system.staleRunMinutes',
+  'system',
+  'number',
+  '{"min": 1}'::jsonb,
+  '30'::jsonb,
+  'A system-funded comment sample run still pending/sampling this many minutes after creation is marked failed before the next enqueue, so an orphaned run cannot hold uq_comment_sample_runs_system_per_analysis and block retries. Runs complete in about a minute today.',
+  'admin'
 )
 on conflict (key) do nothing;
 
 insert into public.setting_values (setting_key, scope_type, scope_id, value)
 select key, 'system', null, default_value
 from public.setting_definitions
-where key = 'comments.system.minUsableComments'
+where key in ('comments.system.minUsableComments', 'comments.system.staleRunMinutes')
 on conflict (setting_key, scope_type, scope_id) do nothing;

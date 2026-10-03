@@ -9,6 +9,7 @@ const insertSystemCommentSampleRun = vi.hoisted(() => vi.fn());
 const markSampleRunFailed = vi.hoisted(() => vi.fn());
 const hasSystemSampleRun = vi.hoisted(() => vi.fn());
 const analysisHasUsableComments = vi.hoisted(() => vi.fn());
+const failStaleSystemSampleRuns = vi.hoisted(() => vi.fn());
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 vi.mock('@/lib/env', () => ({ env: { cloudflareWorkerUrl: 'https://worker.test', appUrl: 'https://www.getvintel.com' } }));
@@ -19,7 +20,7 @@ vi.mock('@/lib/stream-token', () => ({
 vi.mock('@/lib/adapters', () => ({ SupabasePersistenceAdapter: class {} }));
 vi.mock('@/lib/qstash-client', () => ({ publishEmbeddingTask: vi.fn() }));
 vi.mock('@/lib/adapters/SupabaseAuxRemediationAdapter', () => ({
-  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed, hasSystemSampleRun, analysisHasUsableComments },
+  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed, hasSystemSampleRun, analysisHasUsableComments, failStaleSystemSampleRuns },
 }));
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   SupabaseSettingsAdapter: { getRegistrySettings: vi.fn((_keys: string[], fallback: Record<string, unknown>) => Promise.resolve(fallback)) },
@@ -34,6 +35,7 @@ beforeEach(() => {
   insertSystemCommentSampleRun.mockResolvedValue({ id: 'run-1', alreadyQueued: false });
   hasSystemSampleRun.mockResolvedValue(false);
   analysisHasUsableComments.mockResolvedValue(false);
+  failStaleSystemSampleRuns.mockResolvedValue(undefined);
 });
 
 describe('enqueueSystemCommentSampleRun', () => {
@@ -66,6 +68,15 @@ describe('enqueueSystemCommentSampleRun', () => {
     analysisHasUsableComments.mockResolvedValue(true);
     expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
     expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+  });
+
+  it('releases stale pending/sampling runs (registry staleRunMinutes, default 30) BEFORE the existence check', async () => {
+    const order: string[] = [];
+    failStaleSystemSampleRuns.mockImplementation(() => { order.push('stale'); return Promise.resolve(); });
+    hasSystemSampleRun.mockImplementation(() => { order.push('exists'); return Promise.resolve(false); });
+    await enqueueSystemCommentSampleRun(params);
+    expect(failStaleSystemSampleRuns).toHaveBeenCalledWith(params.analysisId, 30);
+    expect(order).toEqual(['stale', 'exists']);
   });
 
   it('passes the registry minUsableComments (default 10) to the usable-comments probe', async () => {

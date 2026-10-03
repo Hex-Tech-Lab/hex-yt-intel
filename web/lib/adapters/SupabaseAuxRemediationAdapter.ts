@@ -62,11 +62,11 @@ export class SupabaseAuxRemediationAdapter {
   }
 
   /**
-   * True when the analysis's persisted payload already carries usable
-   * comments (a non-empty array — same definition as
-   * aux-status-from-report.ts's hasComments: absent, null, and [] are all
-   * "no usable comments"). Backs enqueueSystemCommentSampleRun's skip gate:
-   * an analysis that already has comments must not get a system-funded run.
+   * True when the analysis's persisted payload already carries at least
+   * `minCount` comments (registry comments.system.minUsableComments, default
+   * 10 — deliberately stricter than aux-status-from-report.ts's hasComments,
+   * which only needs a non-empty array). Backs enqueueSystemCommentSampleRun's
+   * skip gate: below minCount the system-funded run is still enqueued.
    */
   static async analysisHasUsableComments(analysisId: string, minCount: number): Promise<boolean> {
     const service = getSupabaseServiceClient();
@@ -217,6 +217,25 @@ export class SupabaseAuxRemediationAdapter {
    * are never touched (a retry racing a completed report can't regress it).
    */
   /** A pending run whose worker enqueue never happened: mark it failed so it is never left orphaned (a later backfill retries it). */
+  /**
+   * Marks this analysis's system-funded runs that are still pending/sampling
+   * after `staleMinutes` as failed, so a run orphaned by a failed status
+   * update or a crashed worker cannot hold the unique index
+   * (uq_comment_sample_runs_system_per_analysis) and block every retry.
+   */
+  static async failStaleSystemSampleRuns(analysisId: string, staleMinutes: number): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const cutoff = new Date(Date.now() - staleMinutes * 60_000).toISOString();
+    const { error } = await service
+      .from('comment_sample_runs')
+      .update({ status: 'failed' })
+      .eq('analysis_id', analysisId)
+      .eq('mode', 'cochran')
+      .in('status', ['pending', 'sampling'])
+      .lt('created_at', cutoff);
+    if (error) throw error;
+  }
+
   static async markSampleRunFailed(sampleRunId: string): Promise<void> {
     const service = getSupabaseServiceClient();
     const { error } = await service.from('comment_sample_runs').update({ status: 'failed' }).eq('id', sampleRunId).eq('status', 'pending');
