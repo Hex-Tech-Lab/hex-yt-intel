@@ -1,0 +1,19 @@
+scripts/jev-classify-pool.ts
+  s_71981e252ebeb0::t_210fc538ea227a 4-5,11-15,20-21,38-41,61-66,68,70,74-93,155-156,168,173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "31a195a12c3738653d47e09c0a821a51b416a394",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
