@@ -28,13 +28,17 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const jevRun = useJevRunStore((s) => s.run);
   const isPartialDimension = useJevRunStore((s) => dimension?.number !== undefined && s.partialDimensions.includes(dimension.number));
   const [eta, setEta] = useState<EtaState | null>(null);
+  const startedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!jevRun || jevRun.settled >= jevRun.total) {
+      startedAtRef.current = null;
       setEta(null);
     } else {
+      const isNewRun = jevRun.startedAt !== startedAtRef.current;
+      startedAtRef.current = jevRun.startedAt;
       const nowTimestamp = Date.now();
-      setEta((prev) => smoothEta(prev, estimateRemainingMs(jevRun, nowTimestamp), nowTimestamp));
+      setEta((prev) => smoothEta(isNewRun ? null : prev, estimateRemainingMs(jevRun, nowTimestamp), nowTimestamp));
     }
   // Keyed on the run's identity + counts only: re-seed on settlement or a new run, never on unrelated store updates.
   // eslint-disable-next-line react-hooks/exhaustive-deps

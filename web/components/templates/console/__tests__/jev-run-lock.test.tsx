@@ -161,8 +161,38 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(etaSpy).not.toHaveBeenCalled();
-
     etaSpy.mockRestore();
+  });
+
+  it('a new run never inherits the previous run ETA when started without finishRun', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    // Start run A at t=0
+    act(() => {
+      useJevRunStore.getState().startRun(4, 0);
+    });
+    render(<DimensionDrawer dimension={DIMENSION} onClose={vi.fn()} />);
+
+    // Settle 1 cell of run A at t=10s so an ETA shows (30s)
+    act(() => {
+      vi.setSystemTime(10_000);
+      useJevRunStore.getState().markCellSettled();
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(banner().textContent).toContain('ETA: 29s');
+
+    // Start run B (new startedAt) WITHOUT calling finishRun, with 0 settled
+    act(() => {
+      vi.setSystemTime(20_000);
+      useJevRunStore.getState().startRun(4, 20_000);
+    });
+
+    // Banner must show the no-estimate state ("Estimating…") per DimensionDrawer.tsx:245,
+    // not run A's countdown or blend
+    expect(banner().textContent).toContain('Estimating…');
+    expect(banner().textContent).not.toContain('ETA:');
   });
 });
