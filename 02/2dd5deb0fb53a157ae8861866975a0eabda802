@@ -1,0 +1,39 @@
+worker/src/services/TranscriptTimeMarkers.ts
+  s_b70cf5106ad39d::t_8719dda3e89309 1-7
+supabase/migrations/20261003120000_jev_time_marker_interval_setting.sql
+  s_b70cf5106ad39d::t_1ed0ccbdb4693d 1-17
+web/hooks/useSSEStream.ts
+  s_b70cf5106ad39d::t_232d3284e28bee 531
+web/lib/__tests__/jev-config.test.ts
+  s_b70cf5106ad39d::t_c797c240a6ef8f 144-154
+web/lib/__tests__/transcript-time-markers.test.ts
+  s_b70cf5106ad39d::t_0d3013dbcce931 1-80
+web/lib/config/jev.ts
+  s_b70cf5106ad39d::t_63c2a008823872 56,60-68,81-90,93-94
+web/lib/jev/transcript-time-markers.ts
+  s_b70cf5106ad39d::t_70de4ab40469de 1-133
+web/lib/types/contracts.ts
+  s_b70cf5106ad39d::t_3fb8401903d3a8 279-280
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_b70cf5106ad39d::t_c728087aea377a 23,101,202-203,491
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_b70cf5106ad39d::t_a6bd872a3a30a8 1-152
+worker/src/routes/analysis.ts
+  s_b70cf5106ad39d::t_47dd479fe8a71c 9,172-173,1054,1056,1060,1065,1073,1088,1099,1460-1508,1517,1521
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "022dd5deb0fb53a157ae8861866975a0eabda802",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
