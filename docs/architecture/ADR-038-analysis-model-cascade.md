@@ -100,6 +100,16 @@ Metrics — parity and style reported **separately** (R5): median, P25/P75, pass
 
 Enablement bar (to seed `cascade.analysis`): **≥12/14 videos** jointly parity ≥90 AND style ≥85; candidate medians ≥90 (parity) / ≥85 (style); **no video below 80 parity or 75 style**; **no regression >10 points vs Haiku** on either metric.
 
+**Score definitions (preregistered 2026-10-03, before any R6 run).** Per video, *parity* = the median over that video's dimensions of the judge's `InformationParity` score and *style* = the median of `StyleConsistency`, both on 0–100 (`scripts/bakeoff-l2-evaluator.ts` `scoreTo100`, per-video `medInfo`/`medStyle`). Every arm, the Haiku arm included, is graded by the same judge against the full transcript (transcript-grounded, full-ctx), so arms are comparable. *Regression vs Haiku* = for each video and each metric, Haiku arm score − candidate arm score; the bar fails if any single video exceeds 10 points on either metric. The evaluator must emit these per-video values and the paired differences; adding that output is part of the R6 harness work, not a post-hoc calculation.
+
+**Each candidate arm is gated independently.** The enablement bar above applies, unchanged, to **each** of GLM-only, GLM→OSS and the full Jev-gated path on its own; no arm passes on another arm's results, and arms are not compared by picking the best after seeing results.
+
+**What a failed gate means (preregistered).**
+- An arm that misses the bar is a **no-go**: it is not seeded into `cascade.analysis` and its route is not built further.
+- If **no** candidate arm passes, production stays on the **current Haiku-based route with its existing escalation path** (Appendix A). No other route is promoted.
+- GLM-only may proceed on its own only if it clears the bar on its own; a GLM→OSS failure neither blocks nor promotes GLM-only.
+- **Orchestrator design (ADR 036 Phases B–D) may proceed in parallel with the bake-off; orchestrator implementation PRs for a route wait until that route's arm passes §4b.** The §4c holdout remains a separate production blocker after §4b passes.
+
 ### 4c. Holdout gate (required before production)
 
 A holdout set **disjoint from the 14-video pool**, frozen before scoring, never tuned on:
