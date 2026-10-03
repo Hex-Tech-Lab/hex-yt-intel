@@ -1,17 +1,24 @@
 /**
  * One-off: re-classify the 14-video bake-off pool against the S1–S6 v1
  * taxonomy (user-approved 2026-10-03) and compare with the 2026-09-26/27 POC
- * labels (/tmp/opencode/pool_classification.json — POC saved labels only,
- * criteria text lost). Writes
+ * labels (scripts/bakeoff-inputs/pool_classification.json — POC saved labels
+ * only, criteria text lost; override with POC_LABELS_PATH). Writes
  * docs/architecture/S1_S6_POOL_RECLASSIFICATION.json.
  *
  * Cost guard: STOP if any single call costs > $0.01 or the running total
  * would exceed $0.10 (expected ≈ $0.01 total).
  *
+ * Transcripts: fetched from the worker's POST /fetch-transcript
+ * (worker/src/routes/transcript.ts:17; needs the Origin header below) and
+ * cached under the OS temp dir — never written to the repo (ADR 012).
+ * Keys: process.env first, else a repo-relative .env.local.
+ *
  * Run: pnpm dlx tsx scripts/jev-classify-pool.ts
  * Design-only — no pipeline wiring (ADR 038).
  */
 import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as nodePath from 'node:path';
 
 import {
   CLASS_CODE_BY_ID,
@@ -28,8 +35,10 @@ const POOL_VIDEO_IDS = [
   'EoKdX13w7SI', 'pjGvA-D0Fcs', 'uZ5kJ9CBbv0', '39hqY3nH5ug',
 ] as const;
 
-const TRANSCRIPT_DIR = '/tmp/opencode/transcripts';
-const POC_PATH = '/tmp/opencode/pool_classification.json';
+const WORKER_URL = process.env.WORKER_URL ?? 'https://yt-intel.hex-tech-lab.workers.dev';
+const WORKER_ORIGIN = 'https://hex-yt-intel.vercel.app';
+const TRANSCRIPT_DIR = nodePath.join(os.tmpdir(), 'hex-yt-intel-pool-transcripts');
+const POC_PATH = process.env.POC_LABELS_PATH ?? 'scripts/bakeoff-inputs/pool_classification.json';
 const OUT_PATH = 'docs/architecture/S1_S6_POOL_RECLASSIFICATION.json';
 const MAX_CALL_COST = 0.01;
 const MAX_TOTAL_COST = 0.1;
@@ -48,21 +57,38 @@ type Rec = {
   skippedReason?: string;
 };
 
-const ENV_CANDIDATES = ['.env.local', 'web/.env.local', '/home/kellyb_dev/projects/hex-yt-intel/.env.local'];
-const envPath = ENV_CANDIDATES.find((p) => fs.existsSync(p));
-if (!envPath) {
-  console.error('No .env.local found (tried web/.env.local, .env.local) — aborting');
-  process.exit(1);
-}
 const env: Record<string, string> = {};
-for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
-  const m = line.match(/^([A-Z_]+)=(.*)$/);
-  if (m) env[m[1]] = m[2].replace(/^"|"$/g, '');
+const envPath = ['.env.local', 'web/.env.local'].find((p) => fs.existsSync(p));
+if (envPath) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m && env[m[1]] === undefined) env[m[1]] = m[2].replace(/^"|"$/g, '');
+  }
 }
-const OR_KEY = env['OPENROUTER_API_KEY'];
+const OR_KEY = process.env.OPENROUTER_API_KEY ?? env['OPENROUTER_API_KEY'];
 if (!OR_KEY) {
-  console.error('OPENROUTER_API_KEY not found in .env.local — aborting');
+  console.error('OPENROUTER_API_KEY not set (process.env or a repo-relative .env.local) — aborting');
   process.exit(1);
+}
+
+/** Cached transcript text for a video, fetched from the worker on a miss; null when the worker has none. */
+async function loadTranscript(videoId: string): Promise<string | null> {
+  const cachePath = nodePath.join(TRANSCRIPT_DIR, `${videoId}.txt`);
+  if (fs.existsSync(cachePath)) return fs.readFileSync(cachePath, 'utf8');
+  const res = await fetch(`${WORKER_URL}/fetch-transcript`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: WORKER_ORIGIN },
+    body: JSON.stringify({ videoId }),
+  });
+  if (!res.ok) {
+    console.warn(`[classify] fetch-transcript ${videoId} → HTTP ${res.status}`);
+    return null;
+  }
+  const body = (await res.json()) as { transcript?: string };
+  if (!body.transcript) return null;
+  fs.mkdirSync(TRANSCRIPT_DIR, { recursive: true });
+  fs.writeFileSync(cachePath, body.transcript);
+  return body.transcript;
 }
 
 const poc: Record<string, PocEntry> = JSON.parse(fs.readFileSync(POC_PATH, 'utf8'));
@@ -126,8 +152,8 @@ const missing: string[] = [];
 
 for (const id of POOL_VIDEO_IDS) {
   const pocEntry = poc[id] ?? null;
-  const path = `${TRANSCRIPT_DIR}/${id}.txt`;
-  if (!fs.existsSync(path)) {
+  const rawTranscript = await loadTranscript(id);
+  if (rawTranscript === null) {
     missing.push(id);
     records.push({
       videoId: id,
@@ -139,12 +165,12 @@ for (const id of POOL_VIDEO_IDS) {
       inventRiskPoc: pocEntry ? pocEntry.inventRisk : null,
       inventRiskNew: null,
       costUsd: 0,
-      skippedReason: 'transcript not cached in /tmp/opencode/transcripts (not fetched per dispatch)',
+      skippedReason: 'worker /fetch-transcript returned no transcript',
     });
     continue;
   }
 
-  const transcript = fs.readFileSync(path, 'utf8').replace(/\s+/g, ' ').trim().slice(0, 24000);
+  const transcript = rawTranscript.replace(/\s+/g, ' ').trim().slice(0, 24000);
   const call = await jevDecisions({ transcript }, questions);
   const cost = call.usage?.cost ?? 0;
   if (cost > MAX_CALL_COST) {
