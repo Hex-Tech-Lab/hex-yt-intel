@@ -61,6 +61,16 @@ reconstructed criteria and the POC labels was measured on 2026-10-03 — see
 `docs/architecture/S1_S6_POOL_RECLASSIFICATION.json` and the §7 Q3 line in
 `docs/architecture/DESIGN-036-phase-b-layer0-layer1.md`.
 
+## Re-run under the text-observable rubrics (2026-10-03)
+
+14/14 videos classified (transcripts re-fetched via the worker), total cost $0.004.
+**Agreement with the POC labels: 3/14 (21%)** vs the retired v1 baseline of 4/12 (33%).
+Agreeing: gneNjQuLv88, GOLgLU54b5s, pjGvA-D0Fcs (all S1). Raw per-video results:
+`docs/architecture/S1_S6_POOL_RECLASSIFICATION.json` (overwritten by this run).
+The POC labels are themselves unreliable (see the night handover), so low agreement
+is not by itself proof the rubrics are wrong; it does mean the classifier is not
+yet validated for Phase B routing.
+
 ## Pool re-classification result (2026-10-03) — STALE
 
 **Measured under the RETIRED v1 (audio-dependent) rubrics. Every figure below, including 33% agreement, is superseded and pending a re-run under the text-observable rubrics above.**
