@@ -1,0 +1,64 @@
+web/app/api/analyses/persist/route.ts
+  s_c2a25f37023b9d::t_3f61d271440a2d 1484-1486,1490-1499
+  s_c2a25f37023b9d::t_a92f66374c8bad 662-668,673-682
+worker/src/services/TranscriptTimeMarkers.ts
+  s_c2a25f37023b9d::t_f16b1910f5fd82 7-12
+web/lib/jev/transcript-time-markers.ts
+  s_c2a25f37023b9d::t_bd6d5cd11f17a4 204
+  s_c2a25f37023b9d::t_db6b4c8e64b9c3 29-35
+  s_c2a25f37023b9d::t_ac07899cd7ec5a 54-77
+  s_c2a25f37023b9d::t_7b93853c6bd85e 158-159
+  s_c2a25f37023b9d::t_69460ae536869a 78
+  s_c2a25f37023b9d::t_ae05649169b5f6 157
+  s_c2a25f37023b9d::t_46cfdd6819d416 122,124-131,133-141,153-155,161,164-165,172-173,180,189
+  s_c2a25f37023b9d::t_84c7ccaaec8430 38-47
+  s_c2a25f37023b9d::t_f75b4112b77591 160
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_c2a25f37023b9d::t_04b48434a791a5 302
+  s_c2a25f37023b9d::t_ea3e7d014167df 280-281
+  s_c2a25f37023b9d::t_bc970919e8a4c8 297-301,303
+  s_c2a25f37023b9d::t_2220ad491583c5 279,291-292,294-295
+web/lib/__tests__/SupabaseTranscriptAdapter.test.ts
+  s_c2a25f37023b9d::t_906e6c8913f14c 146-147,153
+  s_c2a25f37023b9d::t_6a07ac3c5d3e5d 237
+  s_c2a25f37023b9d::t_01413833216f7b 254
+  s_c2a25f37023b9d::t_bbd3b609db7111 163-166
+  s_c2a25f37023b9d::t_dd9f5d744ae2ee 138-145,151-152,154,160,167,173-175,178,180-192,197-206,209-236,238-253
+  s_c2a25f37023b9d::t_69f10b264c7218 193,196,207-208
+  s_c2a25f37023b9d::t_bda768dcbde5c7 194-195
+worker/src/routes/analysis.ts
+  s_c2a25f37023b9d::t_9729860f12b922 1493-1499,1504-1509,1511-1520,1534-1536,1538
+  s_c2a25f37023b9d::t_9eb057572de194 1249-1254
+  s_c2a25f37023b9d::t_b84bcd4ee8945a 9
+  s_c2a25f37023b9d::t_f51eb003d50fbd 1510
+  s_c2a25f37023b9d::t_7476c57b34435e 1141
+  s_c2a25f37023b9d::t_147b6e94a4506e 1367-1371
+  s_c2a25f37023b9d::t_754cfffb5d5463 1127-1137
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_c2a25f37023b9d::t_d687b6d279b5b7 90-91
+  s_c2a25f37023b9d::t_b68316f7541a5b 40-56,60,65,68,73-89,92-97,99-100,106-110,123-138
+web/lib/__tests__/transcript-time-markers.test.ts
+  s_c2a25f37023b9d::t_a3b9809bbb6fc3 115-143
+  s_c2a25f37023b9d::t_c7ba392b8044f1 2
+worker/src/services/PersistService.ts
+  s_c2a25f37023b9d::t_f294b723deb40a 408-409
+  s_c2a25f37023b9d::t_33fd7bc896d464 301-305
+.qa-intel/baseline.json
+  s_c2a25f37023b9d::t_3bb1c85ab3a3e7 1695-1701,1703
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c8e3e9e1dca848756d8036cc5de442a7d66a8e7d",
+  "prompts": {},
+  "sessions": {
+    "s_c2a25f37023b9d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd700c49ffeodP77J9aUbyptK",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
