@@ -11,6 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAnalysisMetadataStore } from '../stores/analysis-metadata-store';
 import { StreamDeltaHandler } from '../adapters/stream-delta-handler';
+import type { StreamAdapterOptions } from '../adapters/synthesis-stream-adapter';
 
 const QUALIFIED = {
   recommendation: 'recommended' as const,
@@ -61,21 +62,21 @@ describe('stream-delta-handler per-delta logging is opt-in', () => {
   afterEach(() => {
     debugSpy.mockRestore();
     errorSpy.mockRestore();
-    delete (window as any).__CHAT_DEBUG;
+    delete window.__CHAT_DEBUG;
   });
 
   it('does NOT log [Adapter] heal/parse failures by default', () => {
     const handler = new StreamDeltaHandler();
     // Partial JSON: heal succeeds mid-stream, full parse fails → healed-parse log path
-    handler.handleDelta('{"schemaVersion":"2.0","perso', {} as any, () => {});
+    handler.handleDelta('{"schemaVersion":"2.0","perso', {} as StreamAdapterOptions, () => {});
     const adapterLogs = debugSpy.mock.calls.filter((c) => typeof c[0] === 'string' && c[0].startsWith('[Adapter]'));
     expect(adapterLogs).toHaveLength(0);
   });
 
   it('logs [Adapter] heal/parse failures only when window.__CHAT_DEBUG is set', () => {
-    (window as any).__CHAT_DEBUG = true;
+    window.__CHAT_DEBUG = true;
     const handler = new StreamDeltaHandler();
-    handler.handleDelta('{"schemaVersion":"2.0","perso', {} as any, () => {});
+    handler.handleDelta('{"schemaVersion":"2.0","perso', {} as StreamAdapterOptions, () => {});
     const adapterLogs = debugSpy.mock.calls.filter((c) => typeof c[0] === 'string' && c[0].startsWith('[Adapter]'));
     expect(adapterLogs.length).toBeGreaterThan(0);
   });

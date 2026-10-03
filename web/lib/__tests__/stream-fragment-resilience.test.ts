@@ -176,11 +176,12 @@ describe('stitch persists the normalized classification and graph', () => {
     };
     const { payload, validationPassed } = stitchChunksIntoPayload(new Map([[4, grounded]]), 5);
     expect(validationPassed).toBe(true);
-    const cls = (payload as any).classification;
+    const stitched = payload as unknown as { classification: Record<string, unknown>; knowledgeGraph: { nodes: Array<{ keyTerms: string[] }> } };
+    const cls = stitched.classification;
     expect(cls.personaOptimised).toBe(true);
     expect(cls).not.toHaveProperty('personaIndicatorIdentified');
     expect(cls.safe).toBe(true);
     expect(cls.recommendation).toBe('highly_recommended');
-    expect((payload as any).knowledgeGraph.nodes[0].keyTerms).toEqual([]);
+    expect(stitched.knowledgeGraph.nodes[0]!.keyTerms).toEqual([]);
   });
 });
