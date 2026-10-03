@@ -1,6 +1,7 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { ClassificationDataSchema } from '@/lib/validators/synthesis';
 import { type StreamAdapterOptions } from './synthesis-stream-adapter';
 
 export class StreamDeltaHandler {
@@ -187,16 +188,12 @@ export class StreamDeltaHandler {
           }
 
           // 4. Validate and set Classification
+          // Same schema as the SSE classification frame, so aliases and
+          // missing qualifiers are handled identically on both paths.
           if (obj.classification && typeof obj.classification === 'object') {
-            const c = obj.classification;
-            if (
-              typeof c.authoritative === 'boolean' &&
-              typeof c.recommendation === 'string' &&
-              typeof c.practicallyActionable === 'boolean' &&
-              typeof c.knowledgeGraphReady === 'boolean' &&
-              typeof c.safe === 'boolean'
-            ) {
-              this.synthStore.getState().setClassification(c);
+            const parsed = ClassificationDataSchema.safeParse(obj.classification);
+            if (parsed.success) {
+              this.synthStore.getState().setClassification(parsed.data);
             }
           }
 

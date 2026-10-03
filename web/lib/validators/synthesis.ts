@@ -126,9 +126,11 @@ const normalizeKgNodeFields = (val: unknown): unknown => {
   out.dimension = Math.min(TOTAL_DIMENSIONS, Math.max(0, dimNum));
   out.weight = clampNumber(out.weight, 0.1, 10, 5);
   out.polarity = clampNumber(out.polarity, -1, 1, 0);
-  if (Array.isArray(out.keyTerms)) {
-    out.keyTerms = out.keyTerms.filter((t): t is string => typeof t === "string").slice(0, 10);
-  }
+  // Missing keyTerms (15 of 555 live nodes, 2026-10-03) used to reject the
+  // ENTIRE kg fragment/graph; an empty list is the honest default.
+  out.keyTerms = Array.isArray(out.keyTerms)
+    ? out.keyTerms.filter((t): t is string => typeof t === "string").slice(0, 10)
+    : [];
   if (typeof out.label === "string") out.label = out.label.slice(0, 200);
   if (typeof out.id === "string") out.id = out.id.slice(0, 100);
   if (out.content !== undefined && typeof out.content !== "string") delete out.content;
@@ -281,22 +283,62 @@ export const UCISDimensionV2Schema = UCISDimensionSchema;
 
 /**
  * Classification data for the analysis.
+ *
+ * Tolerant normalization (2026-10-03, Carmack crucible): live cells emitted
+ * `personaIndicatorIdentified` in place of `personaOptimised`, and `.strict()`
+ * rejected the whole block (browser "Fragment validation failed" on every
+ * classification frame from those cells). Known aliases are mapped, "true"/
+ * "false" strings coerced, unknown keys dropped. The five boolean qualifiers
+ * are nullish (never invented: a missing qualifier stays absent and the web
+ * markdown reconstructor skips null/undefined; the worker keeps its own
+ * strict schema in worker/src/services/ZodSchemas.ts); `recommendation` is
+ * the core verdict and stays required.
  */
-export const ClassificationDataSchema = z
-  .object({
-    authoritative: z.boolean(),
-    practicallyActionable: z.boolean(),
-    knowledgeGraphReady: z.boolean(),
-    safe: z.boolean(),
-    personaOptimised: z.boolean(),
-    recommendation: z.enum([
-      "highly_recommended",
-      "recommended",
-      "conditional",
-      "skip",
-    ]),
-  })
-  .strict();
+const CLASSIFICATION_KEY_ALIASES: Record<string, string> = {
+  personaIndicatorIdentified: "personaOptimised",
+  personaOptimized: "personaOptimised",
+};
+const CLASSIFICATION_KEYS = [
+  "authoritative",
+  "practicallyActionable",
+  "knowledgeGraphReady",
+  "safe",
+  "personaOptimised",
+  "recommendation",
+];
+const normalizeClassificationFields = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = {};
+  for (const [rawKey, v] of Object.entries(val as Record<string, unknown>)) {
+    const key = CLASSIFICATION_KEY_ALIASES[rawKey] ?? rawKey;
+    // A canonical key always wins over its alias, whichever comes first.
+    if (!CLASSIFICATION_KEYS.includes(key) || (key in out && rawKey !== key)) continue;
+    out[key] = v === "true" ? true : v === "false" ? false : v;
+  }
+  if (typeof out.recommendation === "string") {
+    out.recommendation = out.recommendation.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  }
+  return out;
+};
+
+export const ClassificationDataSchema = z.preprocess(
+  normalizeClassificationFields,
+  z
+    .object({
+      authoritative: z.boolean().nullish(),
+      practicallyActionable: z.boolean().nullish(),
+      knowledgeGraphReady: z.boolean().nullish(),
+      safe: z.boolean().nullish(),
+      personaOptimised: z.boolean().nullish(),
+      recommendation: z.enum([
+        "highly_recommended",
+        "recommended",
+        "conditional",
+        "skip",
+      ]),
+    })
+    .strict(),
+);
 
 /**
  * Monetization verdicts for different persona types.
