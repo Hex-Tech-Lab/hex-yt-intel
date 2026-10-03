@@ -72,3 +72,21 @@ Scope with code-review-graph (if available in the cloud) → change → qa-intel
 3. [S1–S6 + Phase B answers] "Approved: Use a QStash job." / "Approved: Reuse ADR 036's 0.90 / 0.70 bands." / "[S1–S6 taxonomy, six classes with actions] … codify it permanently into worker/src/services/jev-types.ts and docs/architecture/S1_S6_TAXONOMY.md" (CC put the type in `web/lib/jev/taxonomy.ts` — shared code, since Phase B runs on Vercel — and recorded the criteria as a reconstruction, not a copy; see §2.1.)
 4. "Merge #426 now (Recommended)" (DeepSource question).
 5. [Bake-off] "Upgrade harness, then run … FACTUAL Parity … strictly measures adherence to the transcript's truth … Generate the 5 missing Haiku baselines using the exact legacy UCIS v5.4 prompt … You are authorized for the ~$6 spend … Report the exact final cost." / "[Phase B] Design doc only … Strict adherence to ADR 038."
+
+---
+
+## 5. ADDENDUM — 2026-10-03 ~23:30 EEST (supersedes §1.2 / §2.2 where they differ)
+
+**Merged after the handover (user go):** #421 `2e021d2e`, #425 `7050d729`, #424 `22bc471a`. #424's migration was applied by CI under its own version `20261003200000` (`system_sample_run_unique_per_analysis`) — local filename = recorded version, ADR 018 satisfied; full version-set diff before merge showed it was the only pending migration. Index live: `UNIQUE (analysis_id) WHERE mode='cochran' AND status<>'failed'`; registry keys `comments.system.minUsableComments`=10, `comments.system.staleRunMinutes`=30. Worker deployed through the new pre-deploy gate successfully.
+
+**#428 review (CC, commit `56a3c882`):**
+- Legacy prompt: system constant (37,594 chars) and grounding block **byte-identical** to `c4125116`. Assembly: `buildLegacyV54Prompt` was NOT identical — it said "All **12** dimensions" (c4125116 said 11); fixed → output byte-identical to c4125116 `getUCISPrompt` at durations none / 120 s / 3600 s. Production used the embedded constant (no `prompt_config` row in `app_settings`).
+- Baseline persona `'investor'` → `'creator'` (all 9 existing baselines have primary persona creator).
+- Gate: each of the 9 clauses mutation-tested (disable it → a test fails). Added: fewer than 14 scored videos fails (previously 12/12 passed).
+- **Open decision for the user:** the 9 existing Haiku baselines are dated 2026-07-26 → 2026-09-25, i.e. mostly produced by **UCIS v5.1–v5.3**, not v5.4 (shipped 2026-09-25). Generating only the 5 missing ones with exact v5.4 mixes prompt versions inside the Haiku arm. Options: (a) accept the mix as "the historical monolith" and document it; (b) regenerate all 14 with exact v5.4 (≈ 14 × $1.13 ≈ $16 — above the $6 authorization).
+- Still to do on #428: OC's interrupted qa-intel fixes; the full checklist in §2.2 items 2, 3, 6.
+
+**S1–S6 (on #427):**
+- `scripts/jev-classify-pool.ts` refactored (commit `31a195a1`): no local paths; transcripts via worker `POST /fetch-transcript`, cached in the OS temp dir; POC labels default `scripts/bakeoff-inputs/pool_classification.json` (arrives with #428; `POC_LABELS_PATH` override). Not executed.
+- The POC labels are themselves unreliable: `uZ5kJ9CBbv0` has 0 `>>` speaker-change markers (single speaker) but POC said S3/0.87; `39hqY3nH5ug` is a rapid-exchange debate (1,046 `>>`) but POC said S4. Validate new criteria against cue-based labels, not the POC alone.
+- **Tightened criteria drafted, awaiting user approval** (CC's report to the user, 2026-10-03 night) — built on caption cues: `>>` speaker-change markers, `?` density, non-speech tags (`[Music]`, `[موسيقى]`), imperative step language. Do not write them into `web/lib/jev/taxonomy.ts` or re-run Jev until the user approves AND confirms the cloud env vars are active.
