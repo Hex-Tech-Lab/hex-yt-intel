@@ -1,0 +1,376 @@
+{
+  "generatedAt": "2026-10-03T19:26:11.615Z",
+  "poolSize": 14,
+  "videosClassified": 12,
+  "skipped": [
+    "Z6l4HpuyyP0",
+    "GOLgLU54b5s"
+  ],
+  "agreement": "4/12",
+  "agreementPct": 33,
+  "disagreements": [
+    {
+      "videoId": "MoBr0nQtOnA",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "multiSpeakerPoc": 0.84,
+      "multiSpeakerNew": 0.99
+    },
+    {
+      "videoId": "_LCeJZFIsd4",
+      "pocClass": "S6",
+      "newClass": "S2",
+      "multiSpeakerPoc": 0.31,
+      "multiSpeakerNew": 0.97
+    },
+    {
+      "videoId": "DlNWYzaL_F0",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "multiSpeakerPoc": 0.85,
+      "multiSpeakerNew": 0.87
+    },
+    {
+      "videoId": "LTNVA2iP9YU",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "multiSpeakerPoc": 0.92,
+      "multiSpeakerNew": 0.94
+    },
+    {
+      "videoId": "yB92mx97A8s",
+      "pocClass": "S5",
+      "newClass": "S3",
+      "multiSpeakerPoc": 0.59,
+      "multiSpeakerNew": 0.99
+    },
+    {
+      "videoId": "EoKdX13w7SI",
+      "pocClass": "S5",
+      "newClass": "S1",
+      "multiSpeakerPoc": 0.5,
+      "multiSpeakerNew": 0.8
+    },
+    {
+      "videoId": "uZ5kJ9CBbv0",
+      "pocClass": "S3",
+      "newClass": "S1",
+      "multiSpeakerPoc": 0.87,
+      "multiSpeakerNew": 0.06
+    },
+    {
+      "videoId": "39hqY3nH5ug",
+      "pocClass": "S4",
+      "newClass": "S3",
+      "multiSpeakerPoc": 0.96,
+      "multiSpeakerNew": 0.99
+    }
+  ],
+  "multiSpeakerDelta": [
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "poc": 0.05,
+      "new": 0.05,
+      "absDelta": 0
+    },
+    {
+      "videoId": "MoBr0nQtOnA",
+      "poc": 0.84,
+      "new": 0.99,
+      "absDelta": 0.15
+    },
+    {
+      "videoId": "_LCeJZFIsd4",
+      "poc": 0.31,
+      "new": 0.97,
+      "absDelta": 0.66
+    },
+    {
+      "videoId": "DlNWYzaL_F0",
+      "poc": 0.85,
+      "new": 0.87,
+      "absDelta": 0.02
+    },
+    {
+      "videoId": "LTNVA2iP9YU",
+      "poc": 0.92,
+      "new": 0.94,
+      "absDelta": 0.02
+    },
+    {
+      "videoId": "1U8-4N1HNtU",
+      "poc": 0.61,
+      "new": 0.17,
+      "absDelta": 0.44
+    },
+    {
+      "videoId": "yB92mx97A8s",
+      "poc": 0.59,
+      "new": 0.99,
+      "absDelta": 0.4
+    },
+    {
+      "videoId": "gneNjQuLv88",
+      "poc": 0.05,
+      "new": 0.05,
+      "absDelta": 0
+    },
+    {
+      "videoId": "EoKdX13w7SI",
+      "poc": 0.5,
+      "new": 0.8,
+      "absDelta": 0.3
+    },
+    {
+      "videoId": "pjGvA-D0Fcs",
+      "poc": 0.24,
+      "new": 0.33,
+      "absDelta": 0.09
+    },
+    {
+      "videoId": "uZ5kJ9CBbv0",
+      "poc": 0.87,
+      "new": 0.06,
+      "absDelta": 0.81
+    },
+    {
+      "videoId": "39hqY3nH5ug",
+      "poc": 0.96,
+      "new": 0.99,
+      "absDelta": 0.03
+    }
+  ],
+  "inventRiskDelta": [
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "poc": 1.53,
+      "new": 0.14,
+      "absDelta": 1.39
+    },
+    {
+      "videoId": "MoBr0nQtOnA",
+      "poc": 1.9,
+      "new": 0.03,
+      "absDelta": 1.87
+    },
+    {
+      "videoId": "_LCeJZFIsd4",
+      "poc": 1.46,
+      "new": 0.13,
+      "absDelta": 1.33
+    },
+    {
+      "videoId": "DlNWYzaL_F0",
+      "poc": 2.4,
+      "new": 0.06,
+      "absDelta": 2.34
+    },
+    {
+      "videoId": "LTNVA2iP9YU",
+      "poc": 2.12,
+      "new": 0.02,
+      "absDelta": 2.1
+    },
+    {
+      "videoId": "1U8-4N1HNtU",
+      "poc": 3.21,
+      "new": 0.19,
+      "absDelta": 3.02
+    },
+    {
+      "videoId": "yB92mx97A8s",
+      "poc": 1.72,
+      "new": 0.09,
+      "absDelta": 1.63
+    },
+    {
+      "videoId": "gneNjQuLv88",
+      "poc": 1.06,
+      "new": 0.08,
+      "absDelta": 0.98
+    },
+    {
+      "videoId": "EoKdX13w7SI",
+      "poc": 2.91,
+      "new": 0.08,
+      "absDelta": 2.83
+    },
+    {
+      "videoId": "pjGvA-D0Fcs",
+      "poc": 2.36,
+      "new": 0.05,
+      "absDelta": 2.31
+    },
+    {
+      "videoId": "uZ5kJ9CBbv0",
+      "poc": 2.14,
+      "new": 0.11,
+      "absDelta": 2.03
+    },
+    {
+      "videoId": "39hqY3nH5ug",
+      "poc": 1.93,
+      "new": 0.05,
+      "absDelta": 1.88
+    }
+  ],
+  "totalCostUsd": 0.0037,
+  "records": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "pocClass": "S1",
+      "newClass": null,
+      "agree": null,
+      "multiSpeakerPoc": 0.04,
+      "multiSpeakerNew": null,
+      "inventRiskPoc": 2.49,
+      "inventRiskNew": null,
+      "costUsd": 0,
+      "skippedReason": "transcript not cached in /tmp/opencode/transcripts (not fetched per dispatch)"
+    },
+    {
+      "videoId": "ymgH8jS6Wb8",
+      "pocClass": "S1",
+      "newClass": "S1",
+      "agree": true,
+      "multiSpeakerPoc": 0.05,
+      "multiSpeakerNew": 0.05,
+      "inventRiskPoc": 1.53,
+      "inventRiskNew": 0.14,
+      "costUsd": 0.000238
+    },
+    {
+      "videoId": "MoBr0nQtOnA",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "agree": false,
+      "multiSpeakerPoc": 0.84,
+      "multiSpeakerNew": 0.99,
+      "inventRiskPoc": 1.9,
+      "inventRiskNew": 0.03,
+      "costUsd": 0.00028
+    },
+    {
+      "videoId": "_LCeJZFIsd4",
+      "pocClass": "S6",
+      "newClass": "S2",
+      "agree": false,
+      "multiSpeakerPoc": 0.31,
+      "multiSpeakerNew": 0.97,
+      "inventRiskPoc": 1.46,
+      "inventRiskNew": 0.13,
+      "costUsd": 0.000266
+    },
+    {
+      "videoId": "DlNWYzaL_F0",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "agree": false,
+      "multiSpeakerPoc": 0.85,
+      "multiSpeakerNew": 0.87,
+      "inventRiskPoc": 2.4,
+      "inventRiskNew": 0.06,
+      "costUsd": 0.000262
+    },
+    {
+      "videoId": "LTNVA2iP9YU",
+      "pocClass": "S3",
+      "newClass": "S2",
+      "agree": false,
+      "multiSpeakerPoc": 0.92,
+      "multiSpeakerNew": 0.94,
+      "inventRiskPoc": 2.12,
+      "inventRiskNew": 0.02,
+      "costUsd": 0.00025
+    },
+    {
+      "videoId": "1U8-4N1HNtU",
+      "pocClass": "S1",
+      "newClass": "S1",
+      "agree": true,
+      "multiSpeakerPoc": 0.61,
+      "multiSpeakerNew": 0.17,
+      "inventRiskPoc": 3.21,
+      "inventRiskNew": 0.19,
+      "costUsd": 0.000523
+    },
+    {
+      "videoId": "yB92mx97A8s",
+      "pocClass": "S5",
+      "newClass": "S3",
+      "agree": false,
+      "multiSpeakerPoc": 0.59,
+      "multiSpeakerNew": 0.99,
+      "inventRiskPoc": 1.72,
+      "inventRiskNew": 0.09,
+      "costUsd": 0.000705
+    },
+    {
+      "videoId": "gneNjQuLv88",
+      "pocClass": "S1",
+      "newClass": "S1",
+      "agree": true,
+      "multiSpeakerPoc": 0.05,
+      "multiSpeakerNew": 0.05,
+      "inventRiskPoc": 1.06,
+      "inventRiskNew": 0.08,
+      "costUsd": 0.000201
+    },
+    {
+      "videoId": "GOLgLU54b5s",
+      "pocClass": "S1",
+      "newClass": null,
+      "agree": null,
+      "multiSpeakerPoc": 0.11,
+      "multiSpeakerNew": null,
+      "inventRiskPoc": 1.95,
+      "inventRiskNew": null,
+      "costUsd": 0,
+      "skippedReason": "transcript not cached in /tmp/opencode/transcripts (not fetched per dispatch)"
+    },
+    {
+      "videoId": "EoKdX13w7SI",
+      "pocClass": "S5",
+      "newClass": "S1",
+      "agree": false,
+      "multiSpeakerPoc": 0.5,
+      "multiSpeakerNew": 0.8,
+      "inventRiskPoc": 2.91,
+      "inventRiskNew": 0.08,
+      "costUsd": 0.00026
+    },
+    {
+      "videoId": "pjGvA-D0Fcs",
+      "pocClass": "S1",
+      "newClass": "S1",
+      "agree": true,
+      "multiSpeakerPoc": 0.24,
+      "multiSpeakerNew": 0.33,
+      "inventRiskPoc": 2.36,
+      "inventRiskNew": 0.05,
+      "costUsd": 0.000254
+    },
+    {
+      "videoId": "uZ5kJ9CBbv0",
+      "pocClass": "S3",
+      "newClass": "S1",
+      "agree": false,
+      "multiSpeakerPoc": 0.87,
+      "multiSpeakerNew": 0.06,
+      "inventRiskPoc": 2.14,
+      "inventRiskNew": 0.11,
+      "costUsd": 0.000221
+    },
+    {
+      "videoId": "39hqY3nH5ug",
+      "pocClass": "S4",
+      "newClass": "S3",
+      "agree": false,
+      "multiSpeakerPoc": 0.96,
+      "multiSpeakerNew": 0.99,
+      "inventRiskPoc": 1.93,
+      "inventRiskNew": 0.05,
+      "costUsd": 0.000252
+    }
+  ]
+}
