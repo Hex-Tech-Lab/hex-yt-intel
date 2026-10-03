@@ -72,7 +72,7 @@ export class SupabaseTranscriptAdapter {
       .maybeSingle();
     // #417 P1: an uncertain probe must not authorize a destructive write.
     // The legacy hasTranscriptRow probe threw here; the same fail-closed
-    // posture is kept — on a probe error, treat the row as existing.
+    // posture is kept — on a probe error, throw (no write at all).
     if (probeError) {
       Sentry.captureException(probeError, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
       throw probeError;
