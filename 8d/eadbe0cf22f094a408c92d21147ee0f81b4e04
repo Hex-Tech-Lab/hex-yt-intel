@@ -1,0 +1,21 @@
+web/lib/__tests__/analysis-metadata-store.test.ts
+  s_3c29bcb7cb358e::t_7de9ce727322df 14,65,71,77,79
+web/lib/__tests__/stream-fragment-resilience.test.ts
+  s_3c29bcb7cb358e::t_3e0f2b9d98f247 179-180,185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8deadbe0cf22f094a408c92d21147ee0f81b4e04",
+  "prompts": {},
+  "sessions": {
+    "s_3c29bcb7cb358e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42143085-22b2-466e-806a-a7d97ffd1a0b",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
