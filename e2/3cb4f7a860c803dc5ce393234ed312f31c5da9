@@ -1,0 +1,29 @@
+web/app/api/analyses/persist/route.ts
+  s_b70cf5106ad39d::t_1b927242b8d13d 226-228
+web/lib/__tests__/transcript-time-markers.test.ts
+  s_b70cf5106ad39d::t_42933c2f6678d5 2,83
+web/lib/jev/transcript-time-markers.ts
+  s_b70cf5106ad39d::t_b16408cad4492e 36-40,88
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_b70cf5106ad39d::t_41aac7e62985cb 151-168
+worker/src/routes/analysis.ts
+  s_b70cf5106ad39d::t_4f2d4327d74b3b 9,1473-1477
+worker/src/services/TranscriptTimeMarkers.ts
+  s_b70cf5106ad39d::t_d0c965555b52a5 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e23cb4f7a860c803dc5ce393234ed312f31c5da9",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
