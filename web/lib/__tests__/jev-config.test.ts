@@ -141,3 +141,14 @@ describe('gateJevForUser + real planner (R3b admin gate)', () => {
     expect(isAdmin).not.toHaveBeenCalled();
   });
 });
+
+describe('resolveJevTimeMarkerIntervalSeconds (R3b Phase 2.6)', () => {
+  it('clamps to [5, 300], floors, and falls back to 30 for non-numeric values', async () => {
+    const { resolveJevTimeMarkerIntervalSeconds } = await import('@/lib/config/jev');
+    expect([1, 30, 45.9, 999, 'x', undefined].map(resolveJevTimeMarkerIntervalSeconds)).toEqual([5, 30, 45, 300, 30, 30]);
+    // Unset registry values fall back; they are never coerced to 0/1 and clamped.
+    expect([null, '', '  ', false, true, '45'].map(resolveJevTimeMarkerIntervalSeconds)).toEqual([30, 30, 30, 30, 30, 45]);
+    const { resolveJevMaxParallelStreams } = await import('@/lib/config/jev');
+    expect([null, '', false, '8', 3].map(resolveJevMaxParallelStreams)).toEqual([6, 6, 6, 8, 3]);
+  });
+});

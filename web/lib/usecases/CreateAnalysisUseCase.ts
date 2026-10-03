@@ -20,7 +20,7 @@ import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { STREAM_BUNDLES, assertBundlePartition } from '@/lib/config/synthesis';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
-import { gateJevForUser, resolveJevConfig, resolveJevMaxParallelStreams, JEV_MAX_PARALLEL_STREAMS_FALLBACK } from '@/lib/config/jev';
+import { gateJevForUser, resolveJevConfig, resolveJevMaxParallelStreams, resolveJevTimeMarkerIntervalSeconds, JEV_MAX_PARALLEL_STREAMS_FALLBACK, JEV_TIME_MARKER_INTERVAL_FALLBACK } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -98,7 +98,7 @@ export interface UseCaseSuccess {
     estimateCents: number;
     truncatedFallback: boolean;
   } | null;
-  jevMaxParallelStreams: number; // R3b 2.3.5e: browser cap for concurrent K>1 cell streams (analysis.jev.maxParallelStreams)
+  jevMaxParallelStreams: number; timeMarkerIntervalSeconds: number; // R3b 2.3.5e K>1 cell stream cap; Phase 2.6 prompt time-marker interval (analysis.jev.*)
   stream: {
     url: string;
     sig: string;
@@ -199,8 +199,8 @@ export class CreateAnalysisUseCase {
     // ADR 005) and surfaced in the stream log when truncation actually occurs,
     // so a truncated-input analysis can never read as an unqualified success.
     const resolvedBudgetRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['analysis.transcriptBudgetChars', 'analysis.jev.maxParallelStreams'],
-      { 'analysis.transcriptBudgetChars': 48000, 'analysis.jev.maxParallelStreams': JEV_MAX_PARALLEL_STREAMS_FALLBACK }
+      ['analysis.transcriptBudgetChars', 'analysis.jev.maxParallelStreams', 'analysis.jev.timeMarkerIntervalSeconds'],
+      { 'analysis.transcriptBudgetChars': 48000, 'analysis.jev.maxParallelStreams': JEV_MAX_PARALLEL_STREAMS_FALLBACK, 'analysis.jev.timeMarkerIntervalSeconds': JEV_TIME_MARKER_INTERVAL_FALLBACK }
     );
     const transcriptBudgetChars = Math.max(
       1000,
@@ -488,7 +488,7 @@ export class CreateAnalysisUseCase {
         commentsSyncPoolConfig,
         priorPayloadMaxBytes,
         jevPlan,
-        jevMaxParallelStreams: resolveJevMaxParallelStreams(resolvedBudgetRegistry['analysis.jev.maxParallelStreams']),
+        jevMaxParallelStreams: resolveJevMaxParallelStreams(resolvedBudgetRegistry['analysis.jev.maxParallelStreams']), timeMarkerIntervalSeconds: resolveJevTimeMarkerIntervalSeconds(resolvedBudgetRegistry['analysis.jev.timeMarkerIntervalSeconds']),
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

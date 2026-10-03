@@ -276,6 +276,8 @@ export interface WorkerStreamRequest {
   cacheWarmTimeoutMs?: number;
   /** Registry-resolved prompt transcript char budget (analysis.transcriptBudgetChars). */
   transcriptBudgetChars?: number;
+  /** R3b Phase 2.6: seconds between real [HH:MM:SS] prompt markers (analysis.jev.timeMarkerIntervalSeconds). */
+  timeMarkerIntervalSeconds?: number;
   /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
   prior_payload?: Record<string, unknown>;
   /** R1d: registry-resolved byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */

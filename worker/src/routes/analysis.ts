@@ -6,6 +6,7 @@ import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
+import { annotateWithTimeMarkers } from "../services/TranscriptTimeMarkers";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
@@ -168,6 +169,8 @@ interface StreamRequest {
   // a v2 request without a well-formed bundleList is rejected (fail closed),
   // never guessed from STREAM_BUNDLES.
   bundleList?: number[][];
+  /** R3b Phase 2.6: seconds between real [HH:MM:SS] prompt markers (registry analysis.jev.timeMarkerIntervalSeconds). */
+  timeMarkerIntervalSeconds?: number;
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
@@ -1048,17 +1051,18 @@ async function resolveCellTranscript(params: {
   req: StreamRequest;
   resolvedTranscript: string;
   send: (obj: Record<string, unknown>) => void;
-}): Promise<string> {
+}): Promise<{ text: string; startWord: number }> {
   const { req, resolvedTranscript, send } = params;
+  const full = { text: resolvedTranscript, startWord: 0 };
 
   // Not v2 (tokenVersion absent or 1) -> unchanged, byte for byte
   if (req.tokenVersion !== 2) {
-    return resolvedTranscript;
+    return full;
   }
 
   // v2 + projective bundle (empty slice) -> unchanged
   if (isProjectiveBundle(req.dimensions ?? [])) {
-    return resolvedTranscript;
+    return full;
   }
 
   // v2 + grounded: startWord, endWord, sliceSha256 guaranteed by verifyStreamToken
@@ -1066,7 +1070,7 @@ async function resolveCellTranscript(params: {
   const endWord = req.endWord ?? 0;
   const sliceSha256 = req.sliceSha256 ?? "";
 
-  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): string => {
+  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): { text: string; startWord: number } => {
     Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
       level: 'warning',
       tags: { operation: 'jev-slice-verify', reason },
@@ -1081,7 +1085,7 @@ async function resolveCellTranscript(params: {
       },
     });
     send({ type: 'status', stage: 'jev-fallback', reason });
-    return resolvedTranscript;
+    return full;
   };
 
   let computedHash: string;
@@ -1092,7 +1096,7 @@ async function resolveCellTranscript(params: {
     return fallBack('slice_out_of_range', null);
   }
   if (computedHash !== sliceSha256) return fallBack('slice_hash_mismatch', computedHash);
-  return sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord);
+  return { text: sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord), startWord };
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -1378,26 +1382,6 @@ function buildStreamResponse(
         return;
       }
 
-      // Truncation guardrail (2026-09-27, user directive — no success-washing):
-      // when the assembled prompt will slice the transcript, SAY SO in the
-      // client's own log stream. The prompt's in-band notice tells the model;
-      // this status frame tells the human. Budget mirrors
-      // analysis.transcriptBudgetChars (registry-resolved client-side,
-      // forwarded per request; fallback matches getUCISPrompt's legacy 48000).
-      {
-        const budget = req.transcriptBudgetChars ?? 48000;
-        const transcriptLen = resolvedTranscriptText?.length ?? 0;
-        if (transcriptLen > budget) {
-          send({
-            type: "status",
-            stage: "transcript-truncated",
-            message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
-            transcriptLength: transcriptLen,
-            budget,
-          } as unknown as Record<string, unknown>);
-        }
-      }
-
       // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
       // BEFORE any grounded LLM call. Projective bundles never participate:
       // planning partitions the grounded transcript only. Planning must
@@ -1473,6 +1457,55 @@ function buildStreamResponse(
           send,
         });
 
+        // R3b Phase 2.6 time-sync: insert REAL video times ([HH:MM:SS] every
+        // analysis.jev.timeMarkerIntervalSeconds, from the timed segments)
+        // into the text the model reads, AFTER the slice hash check. The
+        // prompt budget is spent on plain words (cut at a word boundary
+        // first), so markers never cost coverage; the prompt builder is then
+        // handed the annotated text's own length so it never cuts again.
+        const transcriptBudget = req.transcriptBudgetChars ?? 48000;
+        const timeAnnotated = annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
+          startWord: cellTranscript.startWord,
+          durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration),
+          intervalSeconds: req.timeMarkerIntervalSeconds,
+          maxChars: transcriptBudget,
+        });
+        if (!timeAnnotated && (resolvedSegments?.length ?? 0) > 0) {
+          // Segments exist but their words do not line up with the text
+          // (different provider or normalization): the model falls back to
+          // guessed timestamps. Never silent.
+          console.warn('[analyze-llm-stream] time markers skipped: segments do not align with the transcript', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex });
+          Sentry.captureMessage('time markers skipped: segments do not align with transcript', {
+            level: 'warning',
+            tags: { operation: 'time-markers' },
+            extra: { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, segments: resolvedSegments?.length },
+          });
+        }
+        const promptTranscript = timeAnnotated?.text ?? cellTranscript.text;
+
+        // Truncation guardrail (2026-09-27, user directive — no success-washing):
+        // when the assembled prompt will cut the transcript, SAY SO in the
+        // client's own log stream. Measured on THIS cell's prompt text (a K>1
+        // cell's slice, not the whole video — Phase 2.6 false-positive fix).
+        // Budget mirrors analysis.transcriptBudgetChars (fallback matches
+        // getUCISPrompt's legacy 48000).
+        {
+          const budget = transcriptBudget;
+          const transcriptLen = cellTranscript.text.length;
+          // The annotator made the actual cut on single-space-joined words; trust
+          // its verdict (raw whitespace runs must not fake a truncation).
+          const wasTruncated = timeAnnotated ? timeAnnotated.truncated : transcriptLen > budget;
+          if (wasTruncated) {
+            send({
+              type: "status",
+              stage: "transcript-truncated",
+              message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
+              transcriptLength: transcriptLen,
+              budget,
+            } as unknown as Record<string, unknown>);
+          }
+        }
+
         const result = await engine.executeAndStream(
           {
             // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
@@ -1481,11 +1514,11 @@ function buildStreamResponse(
             // for these fields explicitly (Dimension 2.3/11.1/11.6) and got
             // Insufficient Data every time because they never arrived here.
             metadata: { ...req.metadata, ...(resolvedChannelMeta || {}) },
-            transcript: cellTranscript,
+            transcript: promptTranscript,
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
-            transcriptBudgetChars: req.transcriptBudgetChars,
+            transcriptBudgetChars: timeAnnotated ? timeAnnotated.text.length : req.transcriptBudgetChars,
             prior_payload: priorPayload,
           },
           {
