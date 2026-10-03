@@ -1,0 +1,21 @@
+web/lib/adapters/stream-delta-handler.ts
+  s_9273e9ba4f6ab3::t_78def868e0ce31 205
+web/lib/validators/synthesis.ts
+  s_9273e9ba4f6ab3::t_2cca9c8c4143de 333,336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c10310ffac02883f52f6b0bbb89715543b02916c",
+  "prompts": {},
+  "sessions": {
+    "s_9273e9ba4f6ab3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd91b62cffeRySzygSET8Isjd",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
