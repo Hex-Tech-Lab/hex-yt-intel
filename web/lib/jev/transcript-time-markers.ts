@@ -33,6 +33,11 @@ export const TIME_MARKER_INTERVAL_SECONDS = 30;
 export const TIME_MARKER_INTERVAL_MIN_SECONDS = 5;
 export const TIME_MARKER_INTERVAL_MAX_SECONDS = 300;
 
+/** True when any segment's start was invented by the provider (no caption timing). */
+export function hasEstimatedTimes(segments: readonly TimedSegment[] | undefined): boolean {
+  return (segments ?? []).some((segment) => segment.estimated === true);
+}
+
 /** 3725.4 -> "01:02:05". */
 export function formatClock(totalSeconds: number): string {
   const whole = Math.max(0, Math.floor(totalSeconds));
@@ -80,7 +85,7 @@ export function annotateWithTimeMarkers(
   if (!segments || segments.length === 0) return null;
   // A provider that had no caption timing invents start times; the header
   // calls markers "real video times", so plain text beats confident guesses.
-  if (segments.some((segment) => segment.estimated === true)) return null;
+  if (hasEstimatedTimes(segments)) return null;
   const sliceWords = tokenizeTranscript(text);
   if (sliceWords.length === 0) return null;
   const { words, starts, ends } = wordTimes(segments);

@@ -6,7 +6,7 @@ import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
-import { annotateWithTimeMarkers } from "../services/TranscriptTimeMarkers";
+import { annotateWithTimeMarkers, hasEstimatedTimes } from "../services/TranscriptTimeMarkers";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
@@ -1470,10 +1470,11 @@ function buildStreamResponse(
           intervalSeconds: req.timeMarkerIntervalSeconds,
           maxChars: transcriptBudget,
         });
-        if (!timeAnnotated && (resolvedSegments?.length ?? 0) > 0) {
-          // Segments exist but their words do not line up with the text
-          // (different provider or normalization): the model falls back to
-          // guessed timestamps. Never silent.
+        if (!timeAnnotated && (resolvedSegments?.length ?? 0) > 0 && !hasEstimatedTimes(resolvedSegments)) {
+          // Segments exist (with real timing) but their words do not line up
+          // with the text (different provider or normalization): the model
+          // falls back to guessed timestamps. Never silent. Provider-estimated
+          // timing is skipped on purpose and is not an alignment failure.
           console.warn('[analyze-llm-stream] time markers skipped: segments do not align with the transcript', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex });
           Sentry.captureMessage('time markers skipped: segments do not align with transcript', {
             level: 'warning',

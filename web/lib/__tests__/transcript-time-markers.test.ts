@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { annotateWithTimeMarkers, formatClock } from '@/lib/jev/transcript-time-markers';
+import { annotateWithTimeMarkers, formatClock, hasEstimatedTimes } from '@/lib/jev/transcript-time-markers';
 import { sliceText, tokenizeTranscript } from '@/lib/jev/transcript-slice';
 
 // 2-word segments every 10 s: "w0 w1" @0, "w2 w3" @10, ... 200 words over ~1000 s.
@@ -80,6 +80,7 @@ describe('annotateWithTimeMarkers', () => {
   it('never presents provider-invented times as real: any estimated segment => plain text', () => {
     const invented = SEGMENTS.map((segment, index) => (index === 3 ? { ...segment, estimated: true } : segment));
     expect(annotateWithTimeMarkers(FULL, invented, { startWord: 0 })).toBeNull();
+    expect([hasEstimatedTimes(invented), hasEstimatedTimes(SEGMENTS), hasEstimatedTimes(undefined)]).toEqual([true, false, false]);
   });
 });
 

@@ -148,5 +148,23 @@ describe('analyze-llm-stream Phase 2.6 time-sync (route-level)', () => {
     const raw = await res.text();
     expect(raw).not.toContain('transcript-truncated');
   });
+
+  it('(j) provider-estimated timing: plain text, and no misleading "do not align" Sentry warning', async () => {
+    const Sentry = await import('@sentry/cloudflare');
+    vi.mocked(Sentry.captureMessage).mockClear();
+    const estimated = SEGMENTS.map((segment) => ({ ...segment, estimated: true }));
+    const { prompt } = await run({ segments: estimated });
+    expect(prompt).not.toContain('[TIMELINE]');
+    expect(vi.mocked(Sentry.captureMessage).mock.calls.some(([message]) => String(message).includes('do not align'))).toBe(false);
+  });
+
+  it('(k) segments that genuinely do not align: plain text AND a Sentry warning', async () => {
+    const Sentry = await import('@sentry/cloudflare');
+    vi.mocked(Sentry.captureMessage).mockClear();
+    const shifted = SEGMENTS.map((segment) => ({ ...segment, text: `x${segment.text}` }));
+    const { prompt } = await run({ segments: shifted });
+    expect(prompt).not.toContain('[TIMELINE]');
+    expect(vi.mocked(Sentry.captureMessage).mock.calls.some(([message]) => String(message).includes('do not align'))).toBe(true);
+  });
 });
 

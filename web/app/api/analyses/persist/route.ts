@@ -223,6 +223,9 @@ export async function POST(request: NextRequest) {
         start: z.number(),
         duration: z.number(),
         text: z.string(),
+        // Phase 2.6: provider-invented caption time; kept so a stored
+        // transcript is never presented to the model as real timing.
+        estimated: z.boolean().optional(),
       })).optional(),
       // Flat transcript text carried alongside segments so a `transcripts` row
       // can still be written when the video's transcript arrived pre-fetched

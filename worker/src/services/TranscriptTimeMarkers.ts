@@ -4,4 +4,4 @@
  * as TranscriptSlice.ts.
  */
 
-export { annotateWithTimeMarkers, formatClock } from '../../../web/lib/jev/transcript-time-markers';
+export { annotateWithTimeMarkers, formatClock, hasEstimatedTimes } from '../../../web/lib/jev/transcript-time-markers';
