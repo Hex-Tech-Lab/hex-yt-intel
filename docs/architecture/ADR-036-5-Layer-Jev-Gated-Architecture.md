@@ -48,11 +48,15 @@ Bake-off rounds 1–4 (`docs/history/HANDOVER_2026-09-27-OC-BAKEOFF-PIPELINE-REE
 - **(R9)** prompt versions + model/provider versions immutable per run — UCIS v5.4/5.1.1 drift fix and the unlogged prompt-update ADR belong to Phase A (baseline reproducibility).
 - **(R10)** escalation defined BEFORE implementation: low evidence confidence, failed grounding, invalid JSON, unresolved speaker attribution, weak style after rendering.
 
+**User decision (2026-10-03)**: unsupported facts are **prohibited in the report**. Cross-domain context, if needed, goes in a **separate, clearly labelled, sourced section** that cannot be mistaken for what the video established — never woven into the per-dimension narrative. This is binding on every layer: extraction flags provenance status (R3 `unsupported`), Gate C routes material extrapolation-presented-as-fact to REPAIR/ESCALATE, and Layer 4 rendering may not soften or integrate an `unsupported` item into the body text.
+
 **CRITICAL**: Layer 4 is an evidence-preserving transformation, NOT another analysis pass — it receives the canonical report + evidence ledger (never the transcript or the full UCIS prompt), with fact addition procedurally forbidden.
 
 ## 4. Evaluation contract
 
-Median + P25/P75 + worst-case per metric, stratified by classification class (S1–S6) and language; pass = parity ≥90 AND style ≥85; production gate 95/95 (user target — Haiku fully dropped if met); unsupported-claim rate and schema validity reported separately.
+Comparator set (R6, full pipeline — all four on identical inputs): **Haiku vs GLM-only vs GLM→OSS vs the full Jev-gated path**.
+
+Median + P25/P75 + worst-case per metric, stratified by classification class (S1–S6) and language; pass = parity ≥90 AND style ≥85; production gate 95/95 (user target — Haiku fully dropped if met); unsupported-claim rate and schema validity reported separately. The operational detail of these gates (enablement bar, holdout set, cluster bootstrap) is preregistered in ADR 038 §4b–§4c and is normative for both ADRs.
 
 ## 5. Cost model
 
