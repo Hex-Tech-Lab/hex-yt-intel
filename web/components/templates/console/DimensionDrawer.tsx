@@ -7,7 +7,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 import { STACKED_LAYOUT_QUERY } from '@/hooks/useIsStackedLayout';
 import { useJevRunStore } from '@/store/useJevRunStore';
-import { estimateRemainingMs, formatEta } from '@/lib/jev/eta';
+import { estimateRemainingMs, formatEta, smoothEta, type EtaState } from '@/lib/jev/eta';
 
 export interface DimensionDrawerProps {
   /** `number` drives the K>1 "based on part of the video" badge. */
@@ -28,6 +28,15 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const jevRun = useJevRunStore((s) => s.run);
   const isPartialDimension = useJevRunStore((s) => dimension?.number !== undefined && s.partialDimensions.includes(dimension.number));
   const [now, setNow] = useState(() => Date.now());
+  const etaRef = useRef<EtaState | null>(null);
+
+  if (!jevRun || jevRun.settled >= jevRun.total) {
+    etaRef.current = null;
+  } else {
+    const raw = estimateRemainingMs(jevRun, now);
+    etaRef.current = smoothEta(etaRef.current, raw, now);
+  }
+
   useEffect(() => {
     if (!jevRun) return;
     const ticker = setInterval(() => setNow(Date.now()), 1000);
@@ -226,7 +235,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               <Icon icon="solar:magic-stick-3-linear" size={14} />
               Applying intelligence…
             </span>
-            <span className="text-[var(--ink-secondary)]">{formatEta(estimateRemainingMs(jevRun, now))}</span>
+            <span className="text-[var(--ink-secondary)]">{formatEta(etaRef.current?.remainingMs ?? null)}</span>
           </div>
         ) : isPartialDimension ? (
           <div className="px-3 py-1.5 border-b border-[var(--line)] font-mono text-[11px] text-[var(--ink-secondary)]">

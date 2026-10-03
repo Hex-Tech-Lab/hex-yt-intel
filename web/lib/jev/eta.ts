@@ -18,3 +18,34 @@ export function formatEta(remainingMs: number | null): string {
   const seconds = String(totalSeconds % 60).padStart(2, '0');
   return `ETA: ${minutes}m ${seconds}s`;
 }
+
+export interface EtaState {
+  remainingMs: number;
+  at: number;
+}
+
+/** Countdown since the last shown value, blended toward the raw estimate. alpha in (0,1]. */
+export function smoothEta(
+  prev: EtaState | null,
+  rawMs: number | null,
+  now: number,
+  alpha = 0.2
+): EtaState | null {
+  const safeAlpha = typeof alpha === 'number' && !Number.isNaN(alpha) && alpha > 0 && alpha <= 1 ? alpha : 0.2;
+
+  if (rawMs === null && prev === null) return null;
+  if (prev === null) {
+    return { remainingMs: rawMs!, at: now };
+  }
+
+  const countdown = Math.max(0, prev.remainingMs - (now - prev.at));
+
+  if (rawMs === null) {
+    return { remainingMs: countdown, at: now };
+  }
+
+  return {
+    remainingMs: Math.round(safeAlpha * rawMs + (1 - safeAlpha) * countdown),
+    at: now,
+  };
+}
