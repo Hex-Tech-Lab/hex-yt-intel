@@ -1,0 +1,18 @@
+web/components/templates/console/DimensionDrawer.tsx
+  h_60000122af7b55 10,31-39,238
+web/lib/__tests__/jev-run-foundations.test.ts
+  h_60000122af7b55 3,24-66
+web/lib/jev/eta.ts
+  h_60000122af7b55 21-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6029ed7769f5f020482b9bed79d39c3ec47816e5",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
