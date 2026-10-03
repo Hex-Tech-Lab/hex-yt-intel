@@ -16,6 +16,8 @@ export interface TimedSegment {
   start: number;
   duration?: number;
   text: string;
+  /** Provider invented this start time (no caption timing): never present it as real. */
+  estimated?: boolean;
 }
 
 export interface TimeAnnotated {
@@ -76,6 +78,9 @@ export function annotateWithTimeMarkers(
   options: { startWord: number; durationSeconds?: number; intervalSeconds?: number; maxChars?: number },
 ): TimeAnnotated | null {
   if (!segments || segments.length === 0) return null;
+  // A provider that had no caption timing invents start times; the header
+  // calls markers "real video times", so plain text beats confident guesses.
+  if (segments.some((segment) => segment.estimated === true)) return null;
   const sliceWords = tokenizeTranscript(text);
   if (sliceWords.length === 0) return null;
   const { words, starts, ends } = wordTimes(segments);

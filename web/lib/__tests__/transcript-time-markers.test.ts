@@ -76,5 +76,10 @@ describe('annotateWithTimeMarkers', () => {
     expect(count(5)).toBe(100);
     expect(count(100000)).toBe(count(300));
   });
+
+  it('never presents provider-invented times as real: any estimated segment => plain text', () => {
+    const invented = SEGMENTS.map((segment, index) => (index === 3 ? { ...segment, estimated: true } : segment));
+    expect(annotateWithTimeMarkers(FULL, invented, { startWord: 0 })).toBeNull();
+  });
 });
 
