@@ -53,7 +53,7 @@ surfaced.
 
 Before writing sections 1–2 below, decide:
 - **Small, single-file task?** One dispatch is fine, but still phrase the
-  Three Tenets (section 5) as a literal numbered checklist scoped to the
+  4 Development Tenets (section 5) as a literal numbered checklist scoped to the
   exact files/functions involved — not the generic prose block.
 - **Touches more than ~2 files, or needs investigation + fix + PR?** Split
   into sequential, separately-dispatched prompts (investigate → fix →
@@ -210,12 +210,16 @@ catch. Do not merge on a missing required gate without an explicit, logged waive
 
 ---
 
-## 5. The Three Tenets — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
+## 5. The 4 Development Tenets — Universal Executor DNA — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
 
-> 1. **Contract definition + enforcement.** State the exact input→output
-> contract for what you're building BEFORE writing it.
-> 2. **E2E cycle complete, input to output, across the ENTIRE chain.**
-> 3. **Tangent hunt as you walk the workflow.**
+Source: `docs/agent-prompts/UNIVERSAL_EXECUTOR_DNA.md` (keep both identical).
+
+> ### THE 4 DEVELOPMENT TENETS (YOUR MANDATORY DNA)
+> You are a 10X Executor Agent. You must rigidly adhere to these laws during this task:
+> 1. **End-to-End (E2E) Workflow Traversal:** Never fix an isolated "site error." Trace the payload path backward to the input and forward to the database or DOM. Ensure no breaks exist across the timeline.
+> 2. **Contract Definition & Enforcement:** Mismatched schemas across boundaries are fatal. Rigorously enforce typing, handle edge cases, and respect cryptographic provenance.
+> 3. **Hunt Breakages & Tangents:** While walking your assigned E2E path, actively hunt for blind spots, latent risks, and breakages. Fix critical leaks immediately.
+> 4. **Mandatory Skill Execution:** You MUST run your local verification skills. Do not return your report until you have executed `/refactor-safely` for AST mutations, and validated your work with `qa-intel`, local linters, and test suites.
 
 ---
 
