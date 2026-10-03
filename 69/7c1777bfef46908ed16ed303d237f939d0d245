@@ -1,0 +1,55 @@
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_786ebf0d6f22fc::t_89fe61a6c4a3b4 102,104-113,115-116,122,126-129,135-138
+  s_786ebf0d6f22fc::t_b1c7fbb501a73e 189
+  s_786ebf0d6f22fc::t_44a4589e19a5b0 75
+  s_786ebf0d6f22fc::t_a443503db7b4a9 114,117
+  s_786ebf0d6f22fc::t_e75f0c1f56d30f 222,230-231
+  s_786ebf0d6f22fc::t_66d1b39ae6cd44 151
+  s_786ebf0d6f22fc::t_718e65164ffa4a 241,259,301-305,314
+  s_786ebf0d6f22fc::t_cda64a55fdeeb8 269
+  s_786ebf0d6f22fc::t_f7ac29847a1b5b 306-307,312-313
+  s_786ebf0d6f22fc::t_c0f521eba2a4bc 88
+  s_786ebf0d6f22fc::t_25db644eb7aa27 264-265
+  s_786ebf0d6f22fc::t_56972adc42516d 204-220,223-229,232-239,242-243,254-256,258,260-263,266-268,270-300,308-311,315-322
+  s_786ebf0d6f22fc::t_ac8fc3caea4deb 198
+  s_786ebf0d6f22fc::t_908f09766ff8fb 39-48
+  s_786ebf0d6f22fc::t_dd168f3cffb317 83-87,89,101,103,120-121,123-125,133,142-143
+  s_786ebf0d6f22fc::t_9f877ce2a136c7 160
+  s_786ebf0d6f22fc::t_b169f979dfe3dd 168
+  s_786ebf0d6f22fc::t_4a823d2a112d85 221
+  s_786ebf0d6f22fc::t_f613cea19a6143 240,244-253,257
+  s_786ebf0d6f22fc::t_6bb315dee23cce 76,91-92
+  s_786ebf0d6f22fc::t_0f61d65867e41d 178-181
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_786ebf0d6f22fc::t_52957a774a0793 2
+  s_786ebf0d6f22fc::t_c5776c0f21c954 110
+  s_786ebf0d6f22fc::t_fb11ceb0694624 89-96,98-109
+web/lib/__tests__/SupabaseTranscriptAdapter.test.ts
+  s_786ebf0d6f22fc::t_7819e6065caff1 137-148,150-151,156-178,191-195
+  s_786ebf0d6f22fc::t_b352e420103e63 149,152-155,179-190
+worker/src/routes/analysis.ts
+  s_786ebf0d6f22fc::t_4d76a128faee7f 1363-1368
+  s_786ebf0d6f22fc::t_ef46f780468324 1123-1132
+  s_786ebf0d6f22fc::t_7531598fcb1689 1241-1245
+  s_786ebf0d6f22fc::t_c624d9db14bb57 1488-1494,1499-1502
+  s_786ebf0d6f22fc::t_236bcfc7ac71ff 1133
+web/app/api/analyses/persist/route.ts
+  s_786ebf0d6f22fc::t_8c0e4cb700b48e 662-668,673-687
+  s_786ebf0d6f22fc::t_ed35fb2e15e718 1492-1508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "697c1777bfef46908ed16ed303d237f939d0d245",
+  "prompts": {},
+  "sessions": {
+    "s_786ebf0d6f22fc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efdc523e6ffeULxgWQiNeXvryO",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": null
+    }
+  }
+}
