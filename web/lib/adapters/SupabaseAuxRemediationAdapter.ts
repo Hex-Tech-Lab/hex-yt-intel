@@ -68,7 +68,7 @@ export class SupabaseAuxRemediationAdapter {
    * "no usable comments"). Backs enqueueSystemCommentSampleRun's skip gate:
    * an analysis that already has comments must not get a system-funded run.
    */
-  static async analysisHasUsableComments(analysisId: string): Promise<boolean> {
+  static async analysisHasUsableComments(analysisId: string, minCount: number): Promise<boolean> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('analyses')
@@ -77,7 +77,7 @@ export class SupabaseAuxRemediationAdapter {
       .maybeSingle();
     if (error) throw error;
     const priorComments = (data?.analysis_payload as { comments?: unknown } | null)?.comments;
-    return Array.isArray(priorComments) && priorComments.length > 0;
+    return Array.isArray(priorComments) && priorComments.length >= minCount;
   }
 
   /**

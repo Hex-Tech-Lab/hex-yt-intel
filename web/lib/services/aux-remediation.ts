@@ -271,9 +271,14 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
       return false;
     }
 
-    // Skip: the analysis already has usable comments (non-empty array) —
-    // a second sample run would buy nothing (#416 external review).
-    if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId)) {
+    // Skip: the analysis already has usable comments (at least
+    // comments.system.minUsableComments, default 10) — below that the run is
+    // needed for data density (directive 2026-10-03).
+    const { 'comments.system.minUsableComments': minUsableComments } = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.system.minUsableComments'],
+      { 'comments.system.minUsableComments': 10 }
+    );
+    if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId, Number(minUsableComments))) {
       console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
       return false;
     }

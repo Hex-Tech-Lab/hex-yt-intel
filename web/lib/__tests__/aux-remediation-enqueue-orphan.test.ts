@@ -68,6 +68,11 @@ describe('enqueueSystemCommentSampleRun', () => {
     expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
   });
 
+  it('passes the registry minUsableComments (default 10) to the usable-comments probe', async () => {
+    await enqueueSystemCommentSampleRun(params);
+    expect(analysisHasUsableComments).toHaveBeenCalledWith(params.analysisId, 10);
+  });
+
   it('treats a unique-violation insert (lost race) as already-queued: no enqueue, no error, no failure marking', async () => {
     insertSystemCommentSampleRun.mockResolvedValue({ id: '', alreadyQueued: true });
     expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
@@ -89,7 +94,12 @@ describe('enqueueSystemCommentSampleRun', () => {
 
   it('marks the run failed when the registry settings lookup throws (orphaned-pending bug, #416 follow-up)', async () => {
     vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
-      SupabaseSettingsAdapter: { getRegistrySettings: vi.fn().mockRejectedValue(new Error('db down')) },
+      // Only the post-insert sampling-config lookup fails; the pre-insert
+      // minUsableComments lookup resolves so the run row is inserted first.
+      SupabaseSettingsAdapter: {
+        getRegistrySettings: vi.fn((keys: string[], fallback: Record<string, unknown>) =>
+          keys.includes('comments.system.minUsableComments') ? Promise.resolve(fallback) : Promise.reject(new Error('db down'))),
+      },
     }));
     vi.resetModules();
     const { enqueueSystemCommentSampleRun: enqueueFresh } = await import('@/lib/services/aux-remediation');

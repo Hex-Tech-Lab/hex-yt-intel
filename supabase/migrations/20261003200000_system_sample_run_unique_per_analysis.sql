@@ -35,3 +35,24 @@
 create unique index if not exists uq_comment_sample_runs_system_per_analysis
   on public.comment_sample_runs (analysis_id)
   where mode = 'cochran' and status <> 'failed';
+
+-- Registry key (no hardcoded tunables): an analysis whose payload already
+-- holds at least this many comments skips the system-funded sample run;
+-- below it, the run is required for data density (GCW directive 2026-10-03).
+insert into public.setting_definitions (key, tier, data_type, validation, default_value, description, owner_role)
+values (
+  'comments.system.minUsableComments',
+  'system',
+  'number',
+  '{"min": 1}'::jsonb,
+  '10'::jsonb,
+  'Minimum number of comments already in analysis_payload.comments for an analysis to SKIP the system-funded Cochran sample run. Fewer than this and the run is enqueued (data density). Directive 2026-10-03: 10.',
+  'admin'
+)
+on conflict (key) do nothing;
+
+insert into public.setting_values (setting_key, scope_type, scope_id, value)
+select key, 'system', null, default_value
+from public.setting_definitions
+where key = 'comments.system.minUsableComments'
+on conflict (setting_key, scope_type, scope_id) do nothing;
