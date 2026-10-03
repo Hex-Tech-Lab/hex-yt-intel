@@ -60,7 +60,7 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
     expect(banner().textContent).toContain('Applying intelligence…');
     expect(banner().textContent).toContain('Estimating…');
 
-    // 1 of 4 cells settled at 10 s; one tick later (11 s): 11 s/cell x 3 left = 33 s.
+    // 1 of 4 cells settled at 10 s (seeds 30 s); one 1 s tick of countdown (11 s): ETA: 29s.
     act(() => {
       vi.setSystemTime(10_000);
       useJevRunStore.getState().markCellSettled();
@@ -68,7 +68,49 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(banner().textContent).toContain('ETA: 33s');
+    expect(banner().textContent).toContain('ETA: 29s');
+  });
+
+  it('ETA decreases on ticks with no settlement and blends toward new estimate on settlement', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    useJevRunStore.getState().startRun(4, 0);
+    render(<DimensionDrawer dimension={DIMENSION} onClose={vi.fn()} />);
+
+    act(() => {
+      vi.setSystemTime(10_000);
+      useJevRunStore.getState().markCellSettled();
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(banner().textContent).toContain('ETA: 29s');
+
+    let prevEta = 29;
+    for (let i = 0; i < 5; i++) {
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      const match = banner().textContent?.match(/ETA:\s*(\d+)s/);
+      expect(match).not.toBeNull();
+      const currentEta = parseInt(match![1]!, 10);
+      expect(currentEta).toBe(prevEta - 1);
+      prevEta = currentEta;
+    }
+    // After 5 ticks (at t=16s), remainingMs is 24,000 (ETA: 24s)
+    expect(banner().textContent).toContain('ETA: 24s');
+
+    // Settle 2nd cell at t=16s:
+    // settled = 2 of 4, elapsed = 16,000ms.
+    // raw = (16,000 / 2) * (4 - 2) = 16,000ms.
+    // countdown = 24,000ms.
+    // gap = 24,000 - 16,000 = 8,000ms.
+    // blend: round(0.2 * 16,000 + 0.8 * 24,000) = round(3,200 + 19,200) = 22,400ms -> ceil(22.4) = 23s.
+    // It moves toward the new estimate (16s) by alpha (0.2) of the gap, never jumps fully.
+    act(() => {
+      useJevRunStore.getState().markCellSettled();
+    });
+    expect(banner().textContent).toContain('ETA: 23s');
   });
 
   it('unlocks Copy, drops the banner and badges partial dimensions after the run', () => {

@@ -27,19 +27,25 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   // text only; Copy stays locked until the server's reduced result lands.
   const jevRun = useJevRunStore((s) => s.run);
   const isPartialDimension = useJevRunStore((s) => dimension?.number !== undefined && s.partialDimensions.includes(dimension.number));
-  const [now, setNow] = useState(() => Date.now());
-  const etaRef = useRef<EtaState | null>(null);
+  const [eta, setEta] = useState<EtaState | null>(null);
 
-  if (!jevRun || jevRun.settled >= jevRun.total) {
-    etaRef.current = null;
-  } else {
-    const raw = estimateRemainingMs(jevRun, now);
-    etaRef.current = smoothEta(etaRef.current, raw, now);
-  }
+  useEffect(() => {
+    if (!jevRun || jevRun.settled >= jevRun.total) {
+      setEta(null);
+    } else {
+      const t = Date.now();
+      setEta((prev) => smoothEta(prev, estimateRemainingMs(jevRun, t), t));
+    }
+  // Keyed on the run's identity + counts only: re-seed on settlement or a new run, never on unrelated store updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jevRun?.startedAt, jevRun?.settled, jevRun?.total]);
 
   useEffect(() => {
     if (!jevRun) return;
-    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    const ticker = setInterval(() => {
+      const t = Date.now();
+      setEta((prev) => smoothEta(prev, null, t));
+    }, 1000);
     return () => clearInterval(ticker);
   }, [jevRun]);
 
@@ -235,7 +241,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               <Icon icon="solar:magic-stick-3-linear" size={14} />
               Applying intelligence…
             </span>
-            <span className="text-[var(--ink-secondary)]">{formatEta(etaRef.current?.remainingMs ?? null)}</span>
+            <span className="text-[var(--ink-secondary)]">{formatEta(eta?.remainingMs ?? null)}</span>
           </div>
         ) : isPartialDimension ? (
           <div className="px-3 py-1.5 border-b border-[var(--line)] font-mono text-[11px] text-[var(--ink-secondary)]">
