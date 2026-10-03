@@ -1,0 +1,21 @@
+web/components/templates/console/DimensionDrawer.tsx
+  s_3c29bcb7cb358e::t_553311292abe17 30,32-41,45-48,244
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_3c29bcb7cb358e::t_ab4e9ce4db1ea9 63,71-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "24998169fd2f6163ecac3622e3c2d5a66a9e05c7",
+  "prompts": {},
+  "sessions": {
+    "s_3c29bcb7cb358e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42143085-22b2-466e-806a-a7d97ffd1a0b",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
