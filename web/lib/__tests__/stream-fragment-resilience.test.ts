@@ -16,23 +16,23 @@ const node = (id: string, extra: Record<string, unknown> = {}) => ({
 describe('kg fragment resilience', () => {
   it('accepts a graph where one node has no keyTerms, defaulting to []', () => {
     const { keyTerms: _omit, ...bare } = node('n2');
-    const r = validateFragment({ type: 'kg', nodes: [node('n1'), bare], edges: [], rootId: null });
-    expect(r.success).toBe(true);
-    if (r.success && r.data.type === 'kg') {
-      expect(r.data.nodes).toHaveLength(2);
-      expect(r.data.nodes[1]!.keyTerms).toEqual([]);
+    const result = validateFragment({ type: 'kg', nodes: [node('n1'), bare], edges: [], rootId: null });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.type === 'kg') {
+      expect(result.data.nodes).toHaveLength(2);
+      expect(result.data.nodes[1]!.keyTerms).toEqual([]);
     }
   });
 
   it('accepts rootId null or missing without dropping nodes/edges', () => {
     const edges = [{ source: 'n1', target: 'n2', strength: 9, kind: 'enables', rationale: 'Ray casting underlies it' }];
     for (const rootId of [null, undefined]) {
-      const r = validateFragment({ type: 'kg', nodes: [node('n1'), node('n2')], edges, rootId });
-      expect(r.success).toBe(true);
-      if (r.success && r.data.type === 'kg') {
-        expect(r.data.nodes).toHaveLength(2);
-        expect(r.data.edges).toHaveLength(1);
-        expect(r.data.rootId).toBeNull();
+      const result = validateFragment({ type: 'kg', nodes: [node('n1'), node('n2')], edges, rootId });
+      expect(result.success).toBe(true);
+      if (result.success && result.data.type === 'kg') {
+        expect(result.data.nodes).toHaveLength(2);
+        expect(result.data.edges).toHaveLength(1);
+        expect(result.data.rootId).toBeNull();
       }
     }
   });
@@ -46,27 +46,27 @@ describe('classification fragment resilience', () => {
   const base = { authoritative: true, practicallyActionable: true, knowledgeGraphReady: true, safe: true, recommendation: 'highly_recommended' };
 
   it('maps personaIndicatorIdentified to personaOptimised (live crucible shape)', () => {
-    const r = validateFragment({ type: 'classification', data: { ...base, personaIndicatorIdentified: true } });
-    expect(r.success).toBe(true);
-    if (r.success && r.data.type === 'classification') {
-      expect(r.data.data.personaOptimised).toBe(true);
-      expect(r.data.data).not.toHaveProperty('personaIndicatorIdentified');
+    const result = validateFragment({ type: 'classification', data: { ...base, personaIndicatorIdentified: true } });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.type === 'classification') {
+      expect(result.data.data.personaOptimised).toBe(true);
+      expect(result.data.data).not.toHaveProperty('personaIndicatorIdentified');
     }
   });
 
   it('canonical key wins over its alias regardless of order', () => {
-    const r = ClassificationDataSchema.safeParse({ personaOptimised: false, ...base, personaIndicatorIdentified: true });
-    expect(r.success && r.data.personaOptimised).toBe(false);
+    const result = ClassificationDataSchema.safeParse({ personaOptimised: false, ...base, personaIndicatorIdentified: true });
+    expect(result.success && result.data.personaOptimised).toBe(false);
   });
 
   it('tolerates missing/null qualifiers, string booleans, unknown keys and "Highly Recommended"', () => {
-    const r = ClassificationDataSchema.safeParse({ safe: 'true', authoritative: null, recommendation: 'Highly Recommended', rationale: 'extra' });
-    expect(r.success).toBe(true);
-    if (r.success) {
-      expect(r.data.safe).toBe(true);
-      expect(r.data.recommendation).toBe('highly_recommended');
-      expect(r.data.practicallyActionable).toBeUndefined();
-      expect(r.data).not.toHaveProperty('rationale');
+    const result = ClassificationDataSchema.safeParse({ safe: 'true', authoritative: null, recommendation: 'Highly Recommended', rationale: 'extra' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.safe).toBe(true);
+      expect(result.data.recommendation).toBe('highly_recommended');
+      expect(result.data.practicallyActionable).toBeUndefined();
+      expect(result.data).not.toHaveProperty('rationale');
     }
   });
 
@@ -77,6 +77,81 @@ describe('classification fragment resilience', () => {
 
   it('negative control: rejects a non-boolean qualifier like "maybe"', () => {
     expect(ClassificationDataSchema.safeParse({ ...base, safe: 'maybe' }).success).toBe(false);
+  });
+
+  it('coerces case/padding-drifted string booleans ("True", " FALSE ")', () => {
+    const result = ClassificationDataSchema.safeParse({ ...base, safe: 'True', authoritative: ' FALSE ' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.safe).toBe(true);
+      expect(result.data.authoritative).toBe(false);
+    }
+  });
+});
+
+describe('kg keyTerms provenance', () => {
+  it('preserves a single string keyTerm as a one-element array', () => {
+    const result = validateFragment({
+      type: 'kg',
+      nodes: [node('n1', { keyTerms: ' ray casting ' })],
+      edges: [],
+      rootId: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.type === 'kg') {
+      expect(result.data.nodes[0]!.keyTerms).toEqual(['ray casting']);
+    }
+  });
+
+  it('degrades a non-array non-string keyTerms (number) to []', () => {
+    const result = validateFragment({
+      type: 'kg',
+      nodes: [node('n1', { keyTerms: 42 })],
+      edges: [],
+      rootId: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.type === 'kg') {
+      expect(result.data.nodes[0]!.keyTerms).toEqual([]);
+    }
+  });
+});
+
+describe('restore path validates classification', () => {
+  it('normalize an alias/string-bool row via the store initializeAnalysis restore entry point', async () => {
+    const { useSynthesisNucleus } = await import('@/lib/stores/synthesis-nucleus-store');
+    const { useAnalysisMetadataStore } = await import('@/lib/stores/analysis-metadata-store');
+    useSynthesisNucleus.getState().reset();
+    useSynthesisNucleus.getState().initializeAnalysis({
+      analysisPayload: {
+        classification: {
+          authoritative: true,
+          practicallyActionable: true,
+          knowledgeGraphReady: true,
+          safe: 'true',
+          personaIndicatorIdentified: true,
+          recommendation: 'Highly Recommended',
+        },
+      },
+    } as never);
+    const cls = useAnalysisMetadataStore.getState().classification;
+    expect(cls).not.toBeNull();
+    expect(cls!.personaOptimised).toBe(true);
+    expect(cls!.safe).toBe(true);
+    expect(cls!.recommendation).toBe('highly_recommended');
+  });
+
+  it('rejects a garbage classification row on restore instead of setting it', async () => {
+    const { useSynthesisNucleus } = await import('@/lib/stores/synthesis-nucleus-store');
+    const { useAnalysisMetadataStore } = await import('@/lib/stores/analysis-metadata-store');
+    useSynthesisNucleus.getState().reset();
+    const before = useAnalysisMetadataStore.getState().classification;
+    useSynthesisNucleus.getState().initializeAnalysis({
+      analysisPayload: {
+        classification: { recommendation: 'must_watch', unknownKey: true },
+      },
+    } as never);
+    expect(useAnalysisMetadataStore.getState().classification).toBe(before);
   });
 });
 

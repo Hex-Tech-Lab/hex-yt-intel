@@ -127,10 +127,19 @@ const normalizeKgNodeFields = (val: unknown): unknown => {
   out.weight = clampNumber(out.weight, 0.1, 10, 5);
   out.polarity = clampNumber(out.polarity, -1, 1, 0);
   // Missing keyTerms (15 of 555 live nodes, 2026-10-03) used to reject the
-  // ENTIRE kg fragment/graph; an empty list is the honest default.
-  out.keyTerms = Array.isArray(out.keyTerms)
-    ? out.keyTerms.filter((t): t is string => typeof t === "string").slice(0, 10)
-    : [];
+  // ENTIRE kg fragment/graph; an empty list is the honest default. A single
+  // string is preserved as a one-element list (provenance kept, not silently
+  // dropped); any other non-array type degrades to [].
+  if (out.keyTerms === undefined || out.keyTerms === null) {
+    out.keyTerms = [];
+  } else if (typeof out.keyTerms === "string") {
+    const trimmedTerm = out.keyTerms.trim();
+    out.keyTerms = trimmedTerm ? [trimmedTerm] : [];
+  } else if (Array.isArray(out.keyTerms)) {
+    out.keyTerms = out.keyTerms.filter((term): term is string => typeof term === "string").slice(0, 10);
+  } else {
+    out.keyTerms = [];
+  }
   if (typeof out.label === "string") out.label = out.label.slice(0, 200);
   if (typeof out.id === "string") out.id = out.id.slice(0, 100);
   if (out.content !== undefined && typeof out.content !== "string") delete out.content;
@@ -313,7 +322,15 @@ const normalizeClassificationFields = (val: unknown): unknown => {
     const key = CLASSIFICATION_KEY_ALIASES[rawKey] ?? rawKey;
     // A canonical key always wins over its alias, whichever comes first.
     if (!CLASSIFICATION_KEYS.includes(key) || (key in out && rawKey !== key)) continue;
-    out[key] = v === "true" ? true : v === "false" ? false : v;
+    // Live LLM drift ships booleans as "True" / " FALSE " (case + padding);
+    // only exact true/false strings after normalization are coerced — any
+    // other string ("maybe") stays as-is so the schema still rejects it.
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      out[key] = s === "true" ? true : s === "false" ? false : v;
+    } else {
+      out[key] = v;
+    }
   }
   if (typeof out.recommendation === "string") {
     out.recommendation = out.recommendation.trim().toLowerCase().replace(/[\s-]+/g, "_");

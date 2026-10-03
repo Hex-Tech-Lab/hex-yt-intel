@@ -62,7 +62,10 @@ export class StreamDeltaHandler {
     try {
       JSON.parse(healed);
       return healed;
-    } catch {
+    } catch (healErr) {
+      // Not display truncation: healJson returns null on failure and the
+      // caller falls back to plaintext markdown, so no ellipsis applies.
+      console.error('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
       return null;
     }
   }
@@ -79,10 +82,9 @@ export class StreamDeltaHandler {
 
     let cleanSink = this.rawSink.trim();
     if (cleanSink.startsWith('```')) {
-      const braceIndex = cleanSink.indexOf('{');
-      if (braceIndex !== -1) {
-        cleanSink = cleanSink.slice(braceIndex);
-      }
+      // Strip everything before the first '{' (markdown fence prefix) — this
+      // is JSON-sink normalization, not display truncation, so no ellipsis.
+      cleanSink = cleanSink.replace(/^[^{]*/, '');
     }
     // Only strip markdown code fence closers, not stray backticks in JSON strings
     if (cleanSink.endsWith('```')) {
@@ -102,8 +104,9 @@ export class StreamDeltaHandler {
       let obj: any;
       try {
         obj = JSON.parse(healed);
-      } catch {
+      } catch (parseErr) {
         // Expected parsing failures on incomplete JSON stream
+        console.error('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
         return isJsonStream;
       }
 
@@ -135,17 +138,17 @@ export class StreamDeltaHandler {
 
           // 1. Validate and set Persona
           if (obj.persona && typeof obj.persona === 'object') {
-            const p = obj.persona;
+            const persona = obj.persona;
             if (
-              p.primary &&
-              typeof p.primary === 'object' &&
-              typeof p.primary.id === 'string' &&
-              typeof p.primary.label === 'string' &&
-              typeof p.primary.weight === 'number' &&
-              Array.isArray(p.cognitiveLenses) &&
-              typeof p.selectionRationale === 'string'
+              persona.primary &&
+              typeof persona.primary === 'object' &&
+              typeof persona.primary.id === 'string' &&
+              typeof persona.primary.label === 'string' &&
+              typeof persona.primary.weight === 'number' &&
+              Array.isArray(persona.cognitiveLenses) &&
+              typeof persona.selectionRationale === 'string'
             ) {
-              this.synthStore.getState().setPersonaConfig(p);
+              this.synthStore.getState().setPersonaConfig(persona);
             }
           }
 
@@ -194,6 +197,10 @@ export class StreamDeltaHandler {
             const parsed = ClassificationDataSchema.safeParse(obj.classification);
             if (parsed.success) {
               this.synthStore.getState().setClassification(parsed.data);
+            } else {
+              // Log paths/codes only -- never the raw values, which can carry
+              // transcript-derived content into the console/Sentry.
+              console.warn('[Adapter] classification rejected', parsed.error.issues.map((i) => i.path.join('.') + ':' + i.code));
             }
           }
 
