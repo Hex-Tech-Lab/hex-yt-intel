@@ -1,6 +1,6 @@
 /** R3b 2.5e foundations: ETA, K>1 run store, progress-only stream adapter. */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { estimateRemainingMs, formatEta } from '@/lib/jev/eta';
+import { estimateRemainingMs, formatEta, smoothEta } from '@/lib/jev/eta';
 import { useJevRunStore } from '@/store/useJevRunStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -20,6 +20,60 @@ describe('estimateRemainingMs / formatEta', () => {
     expect(formatEta(null)).toBe('Estimating…');
     expect(formatEta(14_000)).toBe('ETA: 14s');
     expect(formatEta(125_000)).toBe('ETA: 2m 05s');
+  });
+
+  it('first call returns raw', () => {
+    expect(smoothEta(null, null, 1000)).toBeNull();
+    expect(smoothEta(null, 60_000, 1000)).toEqual({ remainingMs: 60_000, at: 1000 });
+  });
+
+  it('raw null after a value -> counts down by elapsed', () => {
+    const s1 = smoothEta(null, 60_000, 1000);
+    expect(s1).toEqual({ remainingMs: 60_000, at: 1000 });
+    const s2 = smoothEta(s1, null, 2000);
+    expect(s2).toEqual({ remainingMs: 59_000, at: 2000 });
+    const s3 = smoothEta(s2, null, 3500);
+    expect(s3).toEqual({ remainingMs: 57_500, at: 3500 });
+  });
+
+  it('blends below the cutoff and bypasses at its boundary', () => {
+    const previous = { remainingMs: 20_000, at: 1_000 };
+    expect(smoothEta(previous, 29_999, 1_000)).toEqual({ remainingMs: 22_000, at: 1_000 });
+    expect(smoothEta(previous, 30_000, 1_000)).toEqual({ remainingMs: 30_000, at: 1_000 });
+  });
+
+  it('bypasses smoothing for a qualifying large change', () => {
+    const previous = smoothEta(null, 60_000, 1_000);
+    expect(smoothEta(previous, 120_000, 2_000)).toEqual({ remainingMs: 120_000, at: 2_000 });
+  });
+
+  it('uses a fresh estimate directly after the countdown reaches zero', () => {
+    const initial = smoothEta(null, 1_000, 1_000);
+    const expired = smoothEta(initial, null, 2_000);
+    expect(expired).toEqual({ remainingMs: 0, at: 2_000 });
+    expect(smoothEta(expired, 5_000, 2_000)).toEqual({ remainingMs: 5_000, at: 2_000 });
+  });
+
+  it('backward clock (now < prev.at) never increases the ETA', () => {
+    const previous = { remainingMs: 20_000, at: 5_000 };
+    const steppedBack = smoothEta(previous, null, 3_000);
+    expect(steppedBack).toEqual({ remainingMs: 20_000, at: 3_000 });
+  });
+
+  it('countdown never goes below 0', () => {
+    const s1 = smoothEta(null, 5_000, 1000);
+    const s2 = smoothEta(s1, null, 10_000); // 9s elapsed, initial was 5s
+    expect(s2).toEqual({ remainingMs: 0, at: 10_000 });
+  });
+
+  it('alpha 0 / NaN treated as 0.2', () => {
+    const s1 = smoothEta(null, 20_000, 1000);
+    const sAlpha0 = smoothEta(s1, 25_000, 1000, 0);
+    expect(sAlpha0).toEqual({ remainingMs: 21_000, at: 1000 });
+    const sAlphaNaN = smoothEta(s1, 25_000, 1000, Number.NaN);
+    expect(sAlphaNaN).toEqual({ remainingMs: 21_000, at: 1000 });
+    const sAlphaNeg = smoothEta(s1, 25_000, 1000, -0.5);
+    expect(sAlphaNeg).toEqual({ remainingMs: 21_000, at: 1000 });
   });
 });
 
