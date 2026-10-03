@@ -35,10 +35,17 @@ export class SupabaseAuxRemediationAdapter {
   }
 
   /**
-   * True when a system-funded (cochran) run already exists for this
-   * analysis. Backs enqueueSystemCommentSampleRun's skip check: the
-   * persist-route finalize paths re-fire on every persist retry, and
-   * each system run is paid (~$0.003), so a duplicate must never enqueue.
+   * True when a system-funded (cochran) run that is still live (status
+   * <> 'failed': pending, sampling, or completed — values from the
+   * comment_sample_runs status check constraint in
+   * supabase/migrations/20260724130000_comments_sampling_engine.sql:104)
+   * already exists for this analysis. Failed runs are ignored so a past
+   * failure does not block a new system retry, matching the partial unique
+   * index uq_comment_sample_runs_system_per_analysis
+   * (where mode='cochran' and status <> 'failed'). Backs
+   * enqueueSystemCommentSampleRun's skip check: the persist-route finalize
+   * paths re-fire on every persist retry, and each system run is paid
+   * (~$0.003), so a duplicate must never enqueue.
    */
   static async hasSystemSampleRun(analysisId: string): Promise<boolean> {
     const service = getSupabaseServiceClient();
@@ -47,6 +54,7 @@ export class SupabaseAuxRemediationAdapter {
       .select('id')
       .eq('analysis_id', analysisId)
       .eq('mode', 'cochran')
+      .neq('status', 'failed')
       .limit(1)
       .maybeSingle();
     if (error) throw error;

@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const insertResult = vi.hoisted(() => ({ data: null as { id: string } | null, error: null as { code?: string; message: string } | null }));
 const probeResult = vi.hoisted(() => ({ data: null as { id: string } | null, error: null as { message: string } | null }));
 const payloadResult = vi.hoisted(() => ({ data: null as { analysis_payload: unknown } | null, error: null as { message: string } | null }));
+const lastProbeFilters = vi.hoisted(() => ({ value: null as null | { eq1: [string, unknown]; eq2: [string, unknown]; neq: [string, unknown] } }));
 
 const analysisBuilder = {
   select: () => ({
@@ -21,13 +22,19 @@ const analysisBuilder = {
 
 function builderFor(table: string) {
   if (table === 'analyses') return analysisBuilder;
+  const filters = lastProbeFilters;
   return {
     select: () => ({
-      eq: () => ({
-        eq: () => ({
-          limit: () => ({
-            maybeSingle: () => Promise.resolve(probeResult),
-          }),
+      eq: (col1: string, val1: unknown) => ({
+        eq: (col2: string, val2: unknown) => ({
+          neq: (col3: string, val3: unknown) => {
+            filters.value = { eq1: [col1, val1], eq2: [col2, val2], neq: [col3, val3] };
+            return {
+              limit: () => ({
+                maybeSingle: () => Promise.resolve(probeResult),
+              }),
+            };
+          },
         }),
       }),
     }),
@@ -54,6 +61,7 @@ const params = { analysisId: 'an-1', userId: 'u-1', totalCommentCount: 3937 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  lastProbeFilters.value = null;
   insertResult.data = null;
   insertResult.error = null;
   probeResult.data = null;
@@ -93,9 +101,16 @@ describe('insertSystemCommentSampleRun', () => {
 });
 
 describe('hasSystemSampleRun', () => {
-  it('is true when a cochran run row exists for the analysis', async () => {
+  it('is true when a non-failed cochran run row exists for the analysis (pending blocks)', async () => {
     probeResult.data = { id: 'run-1' };
     expect(await SupabaseAuxRemediationAdapter.hasSystemSampleRun('an-1')).toBe(true);
+    expect(lastProbeFilters.value).toEqual({ eq1: ['analysis_id', 'an-1'], eq2: ['mode', 'cochran'], neq: ['status', 'failed'] });
+  });
+
+  it('is false when only failed cochran runs exist (failed does not block)', async () => {
+    probeResult.data = null;
+    expect(await SupabaseAuxRemediationAdapter.hasSystemSampleRun('an-1')).toBe(false);
+    expect(lastProbeFilters.value).toEqual({ eq1: ['analysis_id', 'an-1'], eq2: ['mode', 'cochran'], neq: ['status', 'failed'] });
   });
 
   it('is false when none exists', async () => {

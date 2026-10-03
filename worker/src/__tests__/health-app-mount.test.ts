@@ -27,25 +27,38 @@ import worker from '../worker';
 
 describe('GET /health/providers (app-level mount)', () => {
   it('serves the providers report at exactly /health/providers through the real app', async () => {
-    const res = await worker.fetch(
-      new Request('https://yt-intel.hex-tech-lab.workers.dev/health/providers'),
-      { TRANSCRIPTAPI_API_KEY: 'k', YOUTUBE_API_KEY: '', COMMENTS_TIER3_QUEUE: {} as never } as never,
-      {} as never,
-    );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, boolean>;
-    expect(body.transcriptapi).toBe(true);
-    expect(body.youtube).toBe(false);
+    let status = 0;
+    let body: Record<string, boolean> | undefined;
+    try {
+      const res = await worker.fetch(
+        new Request('https://yt-intel.hex-tech-lab.workers.dev/health/providers'),
+        { TRANSCRIPTAPI_API_KEY: 'k', YOUTUBE_API_KEY: '', COMMENTS_TIER3_QUEUE: {} as never } as never,
+        {} as never,
+      );
+      status = res.status;
+      body = (await res.json()) as Record<string, boolean>;
+    } finally {
+      // Response fully consumed above; mock runtime holds no resources to release.
+    }
+    expect(status).toBe(200);
+    expect(body?.transcriptapi).toBe(true);
+    expect(body?.youtube).toBe(false);
     // Booleans only, never values.
-    expect(Object.values(body).every((v) => typeof v === 'boolean')).toBe(true);
+    expect(Object.values(body ?? {}).every((v) => typeof v === 'boolean')).toBe(true);
   });
 
   it('does NOT serve a doubled /health/health/providers prefix', async () => {
-    const res = await worker.fetch(
-      new Request('https://yt-intel.hex-tech-lab.workers.dev/health/health/providers'),
-      {} as never,
-      {} as never,
-    );
-    expect(res.status).toBe(404);
+    let status = 0;
+    try {
+      const res = await worker.fetch(
+        new Request('https://yt-intel.hex-tech-lab.workers.dev/health/health/providers'),
+        {} as never,
+        {} as never,
+      );
+      status = res.status;
+    } finally {
+      // 404 body intentionally unread; mock runtime holds no resources to release.
+    }
+    expect(status).toBe(404);
   });
 });
