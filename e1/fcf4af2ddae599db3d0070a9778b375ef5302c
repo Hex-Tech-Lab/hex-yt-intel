@@ -1,0 +1,29 @@
+web/lib/__tests__/stream-fragment-resilience.test.ts
+  s_3c29bcb7cb358e::t_91c2303febb513 1-111
+web/lib/adapters/stream-delta-handler.ts
+  s_3c29bcb7cb358e::t_3123126e3ec707 4,191-192,194-196
+web/lib/services/stitch-analysis-chunks.ts
+  s_3c29bcb7cb358e::t_e64309b15d4d10 630-638,640
+web/lib/types/classification.ts
+  s_3c29bcb7cb358e::t_fae7fdccd0c478 12-16
+web/lib/utils/markdown-reconstructor.ts
+  s_3c29bcb7cb358e::t_549f252388fef0 52,55,58,61,64
+web/lib/validators/synthesis.ts
+  s_3c29bcb7cb358e::t_cecebd751cea02 129-133,286-295,297-341
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e1fcf4af2ddae599db3d0070a9778b375ef5302c",
+  "prompts": {},
+  "sessions": {
+    "s_3c29bcb7cb358e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42143085-22b2-466e-806a-a7d97ffd1a0b",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
