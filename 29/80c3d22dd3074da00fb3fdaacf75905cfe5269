@@ -1,0 +1,19 @@
+docs/architecture/ADR-038-analysis-model-cascade.md
+  s_71981e252ebeb0::t_7edf8c98160aac 103-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2980c3d22dd3074da00fb3fdaacf75905cfe5269",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
