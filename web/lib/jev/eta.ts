@@ -35,13 +35,19 @@ export function smoothEta(
 
   if (rawMs === null && prev === null) return null;
   if (prev === null) {
-    return { remainingMs: rawMs!, at: now };
+    if (rawMs === null) return null;
+    return { remainingMs: rawMs, at: now };
   }
 
-  const countdown = Math.max(0, prev.remainingMs - (now - prev.at));
+  const elapsed = Math.max(0, now - prev.at);
+  const countdown = Math.max(0, prev.remainingMs - elapsed);
 
   if (rawMs === null) {
     return { remainingMs: countdown, at: now };
+  }
+
+  if (countdown === 0 || Math.abs(rawMs - countdown) >= Math.max(10_000, 0.5 * countdown)) {
+    return { remainingMs: rawMs, at: now };
   }
 
   return {

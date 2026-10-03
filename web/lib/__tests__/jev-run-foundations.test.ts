@@ -36,17 +36,28 @@ describe('estimateRemainingMs / formatEta', () => {
     expect(s3).toEqual({ remainingMs: 57_500, at: 3500 });
   });
 
-  it('a raw jump from 60000 to 120000 one second later moves the shown value by at most 20% of the gap (≈ 59000 + 0.2·61000)', () => {
-    const s1 = smoothEta(null, 60_000, 1000);
-    expect(s1).toEqual({ remainingMs: 60_000, at: 1000 });
-    // countdown at 2000 is 60_000 - 1000 = 59_000
-    // new raw is 120_000
-    // gap is 120_000 - 59_000 = 61_000
-    // blended is 59_000 + 0.2 * 61_000 = 71_200 (or 0.2 * 120000 + 0.8 * 59000 = 24000 + 47200 = 71200)
-    const s2 = smoothEta(s1, 120_000, 2000, 0.2);
-    expect(s2).toEqual({ remainingMs: 71_200, at: 2000 });
-    // Verification: movement from countdown (59_000) toward raw (120_000) is at most 20% of gap
-    expect(s2!.remainingMs - 59_000).toBeLessThanOrEqual(0.2 * (120_000 - 59_000) + 1);
+  it('blends below the cutoff and bypasses at its boundary', () => {
+    const previous = { remainingMs: 20_000, at: 1_000 };
+    expect(smoothEta(previous, 29_999, 1_000)).toEqual({ remainingMs: 22_000, at: 1_000 });
+    expect(smoothEta(previous, 30_000, 1_000)).toEqual({ remainingMs: 30_000, at: 1_000 });
+  });
+
+  it('bypasses smoothing for a qualifying large change', () => {
+    const previous = smoothEta(null, 60_000, 1_000);
+    expect(smoothEta(previous, 120_000, 2_000)).toEqual({ remainingMs: 120_000, at: 2_000 });
+  });
+
+  it('uses a fresh estimate directly after the countdown reaches zero', () => {
+    const initial = smoothEta(null, 1_000, 1_000);
+    const expired = smoothEta(initial, null, 2_000);
+    expect(expired).toEqual({ remainingMs: 0, at: 2_000 });
+    expect(smoothEta(expired, 5_000, 2_000)).toEqual({ remainingMs: 5_000, at: 2_000 });
+  });
+
+  it('backward clock (now < prev.at) never increases the ETA', () => {
+    const previous = { remainingMs: 20_000, at: 5_000 };
+    const steppedBack = smoothEta(previous, null, 3_000);
+    expect(steppedBack).toEqual({ remainingMs: 20_000, at: 3_000 });
   });
 
   it('countdown never goes below 0', () => {
@@ -56,13 +67,13 @@ describe('estimateRemainingMs / formatEta', () => {
   });
 
   it('alpha 0 / NaN treated as 0.2', () => {
-    const s1 = smoothEta(null, 60_000, 1000);
-    const sAlpha0 = smoothEta(s1, 120_000, 2000, 0);
-    expect(sAlpha0).toEqual({ remainingMs: 71_200, at: 2000 });
-    const sAlphaNaN = smoothEta(s1, 120_000, 2000, Number.NaN);
-    expect(sAlphaNaN).toEqual({ remainingMs: 71_200, at: 2000 });
-    const sAlphaNeg = smoothEta(s1, 120_000, 2000, -0.5);
-    expect(sAlphaNeg).toEqual({ remainingMs: 71_200, at: 2000 });
+    const s1 = smoothEta(null, 20_000, 1000);
+    const sAlpha0 = smoothEta(s1, 25_000, 1000, 0);
+    expect(sAlpha0).toEqual({ remainingMs: 21_000, at: 1000 });
+    const sAlphaNaN = smoothEta(s1, 25_000, 1000, Number.NaN);
+    expect(sAlphaNaN).toEqual({ remainingMs: 21_000, at: 1000 });
+    const sAlphaNeg = smoothEta(s1, 25_000, 1000, -0.5);
+    expect(sAlphaNeg).toEqual({ remainingMs: 21_000, at: 1000 });
   });
 });
 

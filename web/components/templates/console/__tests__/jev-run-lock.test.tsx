@@ -93,7 +93,7 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
       });
       const match = banner().textContent?.match(/ETA:\s*(\d+)s/);
       expect(match).not.toBeNull();
-      const currentEta = parseInt(match![1]!, 10);
+      const currentEta = parseInt(match?.[1] ?? '0', 10);
       expect(currentEta).toBe(prevEta - 1);
       prevEta = currentEta;
     }
@@ -129,5 +129,26 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
     useJevRunStore.getState().finishRun([5]);
     render(<DimensionDrawer dimension={DIMENSION} onClose={vi.fn()} />);
     expect(screen.queryByText('Based on part of the video')).toBeNull();
+  });
+
+  it('stops the ticker interval when the run completes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    act(() => {
+      useJevRunStore.getState().startRun(4, 0);
+    });
+    render(<DimensionDrawer dimension={DIMENSION} onClose={vi.fn()} />);
+
+    // While run is in progress, the 1s ticker interval is active
+    const runningTimers = vi.getTimerCount();
+    expect(runningTimers).toBeGreaterThan(0);
+
+    // Complete the run
+    act(() => {
+      useJevRunStore.getState().finishRun([]);
+    });
+
+    // Run completed: ticker interval was cleaned up (timer count drops by 1)
+    expect(vi.getTimerCount()).toBe(runningTimers - 1);
   });
 });

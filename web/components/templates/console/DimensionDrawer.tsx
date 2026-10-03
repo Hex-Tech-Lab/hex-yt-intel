@@ -33,21 +33,21 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     if (!jevRun || jevRun.settled >= jevRun.total) {
       setEta(null);
     } else {
-      const t = Date.now();
-      setEta((prev) => smoothEta(prev, estimateRemainingMs(jevRun, t), t));
+      const nowTimestamp = Date.now();
+      setEta((prev) => smoothEta(prev, estimateRemainingMs(jevRun, nowTimestamp), nowTimestamp));
     }
   // Keyed on the run's identity + counts only: re-seed on settlement or a new run, never on unrelated store updates.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jevRun?.startedAt, jevRun?.settled, jevRun?.total]);
 
   useEffect(() => {
-    if (!jevRun) return;
+    if (!jevRun || jevRun.settled >= jevRun.total) return;
     const ticker = setInterval(() => {
-      const t = Date.now();
-      setEta((prev) => smoothEta(prev, null, t));
+      const nowTimestamp = Date.now();
+      setEta((prev) => smoothEta(prev, null, nowTimestamp));
     }, 1000);
     return () => clearInterval(ticker);
-  }, [jevRun]);
+  }, [jevRun, jevRun?.settled, jevRun?.total]);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -126,8 +126,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         if (focusable.length === 0) return;
-        const first = focusable[0]!;
-        const last = focusable[focusable.length - 1]!;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
         if (e.shiftKey) {
           if (document.activeElement === first) { last.focus(); e.preventDefault(); }
         } else {
