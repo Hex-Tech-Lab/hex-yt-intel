@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_b70cf5106ad39d::t_85978604d587b1 1467-1475
+.memory/SESSION_TODO.md
+  s_b70cf5106ad39d::t_514cc2028af586 1-14
+docs/agent-prompts/2026-09-24-agy-payments-hex-expan-lessons.md
+  s_b70cf5106ad39d::t_71fcbff19d1c27 1-233
+docs/history/THOS_2026-10-03_CRUCIBLE_P2.6_TIMESYNC_HANDOVER.md
+  s_b70cf5106ad39d::t_5f3016e1065cef 1-307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4246d5c318a89f3029103a164f708e79468ed303",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
