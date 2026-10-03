@@ -66,7 +66,9 @@ export class StreamDeltaHandler {
       return healed;
     } catch (healErr) {
       // Expected on every partial chunk; the caller falls back to plaintext.
-      console.debug('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
+      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+        console.debug('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
+      }
       return null;
     }
   }
@@ -106,7 +108,9 @@ export class StreamDeltaHandler {
         obj = JSON.parse(healed);
       } catch (parseErr) {
         // Expected parsing failures on incomplete JSON stream
-        console.debug('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
+        if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+          console.debug('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
+        }
         return isJsonStream;
       }
 
