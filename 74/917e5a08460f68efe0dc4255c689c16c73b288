@@ -1,0 +1,19 @@
+docs/architecture/DESIGN-036-phase-b-layer0-layer1.md
+  s_70ad355668d07f::t_000f2546bba66f 1-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "74917e5a08460f68efe0dc4255c689c16c73b288",
+  "prompts": {},
+  "sessions": {
+    "s_70ad355668d07f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd16220ffe6qGYAaS0T95ml4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
