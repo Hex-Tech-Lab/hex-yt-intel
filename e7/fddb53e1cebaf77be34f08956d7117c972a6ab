@@ -1,0 +1,85 @@
+docs/history/BAKEOFF_L2_GATE_1791055564863.html
+  s_70ad355668d07f::t_77923b3aebf64a 1-19
+scripts/bakeoff-l2-evaluator.ts
+  s_70ad355668d07f::t_327994cf703d2b 151-153
+  s_70ad355668d07f::t_bb834b260d9829 3,5-24,26-30,32,34-36,42,64,72-73,78-106,108,116,123-141,143-145,157,223-228,269,273,276-277,279-291,300,305,313,320-322,324-325,339-341,343-346,356-365,367-369,380-383,385-389,392-393,395-396,400,415,420-425,432,439-468,470-608,610-637,639-688,690-698,700-704,706,708-709,711-723,725,727-728,733-741,744-745,747,753-754,760,762,765-766,768,770-772,774-799,801-812,814-815,817-822,825-831
+  s_70ad355668d07f::t_9b72ed0d873aa0 429
+  s_70ad355668d07f::t_1b9b4e68cbd968 469
+  s_70ad355668d07f::t_4c9ce36b844d76 397-399
+  s_70ad355668d07f::t_6039784b0fce4d 177
+  s_70ad355668d07f::t_dae91fa3daefeb 370-377,384,390
+  s_70ad355668d07f::t_83741e07f28629 230-268,270
+  s_70ad355668d07f::t_ac81ac46dde8aa 391
+scripts/bakeoff-gate.ts
+  s_70ad355668d07f::t_eb137241e61f2b 1-71,73-78,80,82-100,102-128
+  s_70ad355668d07f::t_b6bc4e6724023e 101
+  s_70ad355668d07f::t_73280908f4c5d3 72,79,81
+docs/history/BAKEOFF_L2_GATE_LATEST.html
+  s_70ad355668d07f::t_70ab980bd472c7 1-9,12-13,15-16,19
+  s_70ad355668d07f::t_77923b3aebf64a 10-11,14,17-18
+docs/history/BAKEOFF_L2_GATE_1791055564863.json
+  s_70ad355668d07f::t_77923b3aebf64a 1-449
+docs/history/BAKEOFF_L2_PERVIDEO_1791055564863.json
+  s_70ad355668d07f::t_77923b3aebf64a 1-78
+docs/architecture/ADR-038-analysis-model-cascade.md
+  s_70ad355668d07f::t_e7e597bb70c9d0 103
+scripts/quality-engine/bakeoff-gate.test.ts
+  s_70ad355668d07f::t_86015c039e81a1 2
+  s_893eeca0e6b614::t_8c867e3809c23f 1,3-94
+docs/history/BAKEOFF_L2_GATE_LATEST.json
+  s_70ad355668d07f::t_1e4a91c0c2de0f 21,27-28,37,43-44,68,88,99,101,114,121-123,143-145,152,158-161,171,173,179,198,205-207,225,228,251,253-255,261-263,279,282,305,334,341,357,360,373,386,394,401-403,414,416,422,424
+  s_70ad355668d07f::t_77923b3aebf64a 3,22-23,38-42,46,54-59,63,69,72-73,85,93-94,96,100,102,111,119-120,124,127-132,141,149-150,154,157,162,177-178,180,183-184,186,195,203-204,208,211-216,233-234,236,239-240,242,259-260,264,267-270,287-288,290,293-296,311-316,319-320,322,331,339-340,342,345-346,348,365-368,371-372,374,383,391-392,396,399-400,404,415,417,419,423,425-426,433-436,438,441-444,448
+  s_70ad355668d07f::t_70ab980bd472c7 1-2,4-20,24-26,29-36,45,47-53,60-62,64-67,70-71,74-84,86-87,89-92,95,97-98,103-110,112-113,115-118,125-126,133-140,142,146-148,151,153,155-156,163-170,172,174-176,181-182,185,187-194,196-197,199-202,209-210,217-224,226-227,229-232,235,237-238,241,243-250,252,256-258,265-266,271-278,280-281,283-286,289,291-292,297-304,306-310,317-318,321,323-330,332-333,335-338,343-344,347,349-356,358-359,361-364,369-370,375-382,384-385,387-390,393,395,397-398,405-413,418,420-421,427-432,437,439-440,445-447,449
+docs/history/BAKEOFF_L2_PERVIDEO_LATEST.json
+  s_70ad355668d07f::t_1e4a91c0c2de0f 20,26-27,36,42-43,67
+  s_70ad355668d07f::t_77923b3aebf64a 21-22,37-41,45,53-58,62,68,71-72
+  s_70ad355668d07f::t_70ab980bd472c7 1-19,23-25,28-35,44,46-52,59-61,63-66,69-70,73-78
+scripts/bakeoff-v54-prompt-legacy.ts
+  s_bfac37e6f33058::t_92e159a2abad4a 1-811
+.memory/AGENT_LEDGER.md
+  s_71981e252ebeb0::t_68dab94b4af2cf 1478
+scripts/bakeoff-inputs/articulation-exercise.mts
+  s_71981e252ebeb0::t_8ba067ea862198 1-99
+scripts/bakeoff-inputs/pool_classification.json
+  s_71981e252ebeb0::t_e739b4ff95ab48 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e7fddb53e1cebaf77be34f08956d7117c972a6ab",
+  "prompts": {},
+  "sessions": {
+    "s_70ad355668d07f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd16220ffe6qGYAaS0T95ml4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_893eeca0e6b614": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd0b144ffe4gMtEMKH9p8UVZ",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_bfac37e6f33058": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd9ae8effecMs5HPi0lNvCrr",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
