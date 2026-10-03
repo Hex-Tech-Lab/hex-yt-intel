@@ -29,8 +29,8 @@ export {
  * ['classification','monetizationVerdict']). The worker already imports that
  * module for PromptBuilder (same shared-code pattern as
  * TranscriptTimeMarkers/TranscriptSlice), so we reuse it instead of
-  * duplicating the dimension number — no drift risk.
-  */
+ * duplicating the dimension number — no drift risk.
+ */
 export const needsCleanTranscript = (dimensions: readonly number[]): boolean => {
   return dimensions.some((d) => {
     const cfg = DIMENSION_CONFIGS[d];
