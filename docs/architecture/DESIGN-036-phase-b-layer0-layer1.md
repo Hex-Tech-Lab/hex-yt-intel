@@ -20,7 +20,7 @@
 
 **Vercel (Fluid Compute), not the worker.** Layer 0 and Layer 1 are multi-call, parse-heavy stages (Jev decisions, chunked GLM map-reduce, evidence merge, Gate A audit). The worker's 10 ms CPU budget cannot hold them (ADR 032). Phase B runs as a server-side orchestration step that the browser triggers exactly like today's analysis start, and whose output (classification + evidenceLedger) is persisted before any Phase C bundle runs.
 
-> Open question Q1 (needs the user): Phase B adds a pre-stream stage of roughly 10–60 s (GLM chunked extraction for a 1–5 h transcript). Either (a) a separate POST that returns when the ledger is persisted, then the existing stream dispatch starts, or (b) a QStash job + the existing progress UI. (a) is simpler; (b) survives tab close. Recommendation: (b), since ADR 021/032 already require persistence never to depend on the browser.
+**Trigger (decided 2026-10-03): a QStash job.** Phase B runs as a QStash-delivered job, so a closed or refreshed tab never kills a multi-minute map-reduce, each job stays inside Vercel's execution ceiling, and failures are isolated per job. The job flushes partial state to Supabase as chunks settle; the client hydrates progress from that state, not from a held-open request.
 
 ## 3. The `analysis.pipeline.mode` gate
 
@@ -102,7 +102,7 @@ export interface EvidenceAuditPort {
 }
 ```
 
-- Thresholds (ADR 036 Gate C bands reused unless the user sets Gate A bands): `score ≥ 0.90` PASS, `0.70–0.89` REPAIR (one targeted re-extraction of the flagged chunks, then re-audit once), `< 0.70` ESCALATE. All three are registry keys `analysis.gateA.*`. `gateStrictness: 'strict'` from Layer 0 raises the PASS bar (registry).
+- Thresholds (decided 2026-10-03: the same ADR 036 bands for Gates A, B and C, to avoid drift between gates): `score ≥ 0.90` PASS, `0.70–0.89` REPAIR (one targeted re-extraction of the flagged chunks, then re-audit once), `< 0.70` ESCALATE. All three are registry keys `analysis.gateA.*`. `gateStrictness: 'strict'` from Layer 0 raises the PASS bar (registry).
 - Unsupported claims are **removed** from the ledger before Phase C (never passed on), and counted in telemetry — this is the mechanism that addresses the Haiku-baseline contamination ADR 036 §2 names.
 - `applicability: 'absent'` for a dimension means Phase C must render "not covered in this video" for it, never invent (directly targets the invented-implementation-system failure on Dim 7).
 - ESCALATE in Phase B = mark the analysis `layered_status = 'escalated'` and continue on legacy output (shadow mode); Phase D defines the real escalation path.
@@ -137,6 +137,6 @@ export interface EvidenceAuditPort {
 
 ## 7. Open questions for the user
 
-- **Q1** — Phase B trigger: synchronous pre-stream POST vs QStash job (§2). Recommendation: QStash.
-- **Q2** — Gate A bands: reuse ADR 036's Gate C bands (0.90 / 0.70) or set Gate A-specific ones?
-- **Q3** — S1–S6 criteria: the 2026-09-26 POC criteria are not in the repo. Where is the keyed criteria record (ledger lines 1423–1424 reference the POC)? Phase B cannot be built without committing it.
+- ~~Q1~~ — decided 2026-10-03: QStash job (§2).
+- ~~Q2~~ — decided 2026-10-03: ADR 036 bands (0.90 / 0.70) for every gate (§4.3).
+- **Q3** — S1–S6 criteria: the POC's keyed criteria text was never saved (only per-video labels in `/tmp/opencode/pool_classification.json`). A v1 taxonomy (user-approved 2026-10-03) is being committed as `docs/architecture/S1_S6_TAXONOMY.md` + `web/lib/jev/taxonomy.ts`, with a re-classification check against the POC labels before Phase B relies on it.
