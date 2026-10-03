@@ -1,0 +1,35 @@
+supabase/migrations/20261003200000_system_sample_run_unique_per_analysis.sql
+  s_b419cae571990a::t_a3fd845f2d49dc 38-58
+web/lib/__tests__/aux-remediation-enqueue-orphan.test.ts
+  s_b419cae571990a::t_e7288815720c36 71-75,97-102
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_b419cae571990a::t_3e1d1a12ec49a7 71,80
+web/lib/services/aux-remediation.ts
+  s_b419cae571990a::t_65adef8eb6a81d 274-281
+web/lib/__tests__/aux-remediation-adapter-idempotency.test.ts
+  s_71981e252ebeb0::t_ebe8fc3d97009f 6,132-133,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e9a4fd79d940b072571f5b58a254d781183bbcf8",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b419cae571990a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd4261a2ffeRf2w7DSzJvnQdh",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
