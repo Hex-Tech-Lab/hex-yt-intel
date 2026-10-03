@@ -1120,6 +1120,17 @@ function buildStreamResponse(
   // handler below; defaults to req.segments (almost always empty from the browser)
   // so an interrupted/timeout persist firing before resolution still has a value.
   let resolvedSegments: TranscriptSegment[] | undefined = req.segments;
+  // Phase 2.6 provenance guard (#417 P1): segments the worker did NOT obtain
+  // itself (request-body segments survive when the transcript already exists
+  // and fetchTranscriptIfMissing short-circuits) are client-controlled — the
+  // HMAC v2 token signs only the slice (sha256,startWord,endWord), not
+  // segment times, so untrusted times could be presented to the model as
+  // real [HH:MM:SS] markers and upserted into the SHARED `transcripts` row
+  // (video_id primary key) poisoning the transcript cache for every user.
+  // Trusted sources ONLY: the extractor's own fetch, or the worker's own
+  // Upstash transcript cache (transcript:*, written exclusively from fetch
+  // results). True iff resolvedSegments was assigned from fetchResult.
+  let segmentsTrusted = false;
   // Flat transcript text, kept alongside segments so the persist call can write
   // a `transcripts` row even when the video has a transcript but no timed
   // segments (e.g. it arrived pre-fetched from initial ingestion and
@@ -1227,7 +1238,11 @@ function buildStreamResponse(
         // is the signed stream count (K x G + P), not the 5-bundle total.
         totalChunks: req.tokenVersion === 2 ? req.streamCount : req.totalChunks,
         jevChunkIndex: req.tokenVersion === 2 ? req.jevChunkIndex : undefined,
-        segments: resolvedSegments,
+        // Phase 2.6 provenance guard (#417 P1): untrusted segments never
+        // reach the shared `transcripts` row (video_id PK) — an empty array
+        // tells the persist route to skip the segments columns entirely
+        // rather than erasing a previously-stored good value.
+        segments: segmentsTrusted ? resolvedSegments : [],
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
@@ -1345,6 +1360,12 @@ function buildStreamResponse(
       // whatever the request already carried.
       if (fetchResult.status === 'fulfilled' && fetchResult.value.segments) {
         resolvedSegments = fetchResult.value.segments;
+        // Segments from the worker's own fetch/cache path (fetchTranscriptIfMissing
+        // covers both: its cache HIT parses a payload the worker itself wrote from
+        // a fetch result) are the only trusted source — see the segmentsTrusted
+        // contract above. A request-supplied transcript skips the fetch entirely
+        // and stays untrusted.
+        segmentsTrusted = true;
       }
       if (resolvedTranscript) {
         resolvedTranscriptText = resolvedTranscript;
@@ -1464,12 +1485,21 @@ function buildStreamResponse(
         // first), so markers never cost coverage; the prompt builder is then
         // handed the annotated text's own length so it never cuts again.
         const transcriptBudget = req.transcriptBudgetChars ?? 48000;
-        const timeAnnotated = annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
+        // Phase 2.6 provenance guard (#417 P1): only worker-fetched segments may
+        // drive [HH:MM:SS] markers — request-supplied segments carry unsigned
+        // times (the HMAC v2 token signs only the slice hash/word range), so
+        // presenting them as real video times would let a client forge markers.
+        // Untrusted segments: plain text, one info breadcrumb (no Sentry —
+        // this is expected client behaviour, not an alignment failure).
+        const timeAnnotated = segmentsTrusted ? annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
           startWord: cellTranscript.startWord,
           durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration),
           intervalSeconds: req.timeMarkerIntervalSeconds,
           maxChars: transcriptBudget,
-        });
+        }) : null;
+        if (!segmentsTrusted) {
+          console.info('[analyze-llm-stream] time markers skipped: segments not worker-fetched (untrusted provenance)', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, reason: 'untrusted_segments' });
+        }
         if (!timeAnnotated && (resolvedSegments?.length ?? 0) > 0 && !hasEstimatedTimes(resolvedSegments)) {
           // Segments exist (with real timing) but their words do not line up
           // with the text (different provider or normalization): the model

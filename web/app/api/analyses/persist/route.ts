@@ -659,20 +659,32 @@ export async function POST(request: NextRequest) {
         // content is what's actually persisted. Do not remove this call to "avoid
         // duplication" — partial/interrupted analyses would silently stop getting a
         // transcript row at all, regressing the original P3 fix this exists for.
+        // (#417 P1 provenance guard) When the chunk carries NO segments, skip the
+        // `segments`/`content` columns on the upsert: the worker deliberately sends
+        // an empty segments array when its segments are not worker-fetched
+        // (untrusted provenance), and an unconditional upsert here would overwrite
+        // a previously-stored GOOD row's timed segments (and its segment-derived
+        // content) with segment-less values — erasing the shared transcript cache
+        // for every user of that video instead of poisoning it.
         const hasSegments = segments && segments.length > 0;
         const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
         if (hasSegments || hasFlatTranscript) {
           const segmentsText = hasSegments ? segments!.map((s: any) => s.text || '').join(' ').trim() : '';
-          await SupabaseTranscriptAdapter.upsertTranscript({
-            videoId,
-            content: segmentsText || transcript || markdown,
-            segments: segments || [],
-            language: 'en',
-            hash: row.transcriptHash || undefined,
-          }).catch(e => {
-            Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript_chunk', analysisId } } });
-            console.warn('[analyses/persist] Failed to upsert transcript segments in chunk path', { analysisId, error: String(e) });
-          });
+          const preserveStoredSegments = !hasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId));
+          if (preserveStoredSegments) {
+            console.info('[analyses/persist] chunk upsert with empty segments: preserving existing row segments/content (provenance guard)', { analysisId, videoId });
+          } else {
+            await SupabaseTranscriptAdapter.upsertTranscript({
+              videoId,
+              content: segmentsText || transcript || markdown,
+              segments: segments || [],
+              language: 'en',
+              hash: row.transcriptHash || undefined,
+            }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript_chunk', analysisId } } });
+              console.warn('[analyses/persist] Failed to upsert transcript segments in chunk path', { analysisId, error: String(e) });
+            });
+          }
         }
 
         // Same safety-net pattern as the transcript write above (P0-1 placement
@@ -1477,16 +1489,23 @@ export async function POST(request: NextRequest) {
       const finalHasSegments = segments && segments.length > 0;
       const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
       if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
-        await SupabaseTranscriptAdapter.upsertTranscript({
-          videoId,
-          content: transcript || stitchedMarkdown || markdown,
-          segments: segments || [],
-          language: 'en',
-          hash: row.transcriptHash || undefined,
-        }).catch(e => {
-          Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript', analysisId } } });
-          console.warn('[analyses/persist] Failed to upsert transcript segments', { analysisId, error: String(e) });
-        });
+        // Same #417 P1 provenance guard as the chunk path above: empty incoming
+        // segments must not erase an existing row's stored segments/content.
+        const finalPreserveStoredSegments = !finalHasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId));
+        if (finalPreserveStoredSegments) {
+          console.info('[analyses/persist] finalize upsert with empty segments: preserving existing row segments/content (provenance guard)', { analysisId, videoId });
+        } else {
+          await SupabaseTranscriptAdapter.upsertTranscript({
+            videoId,
+            content: transcript || stitchedMarkdown || markdown,
+            segments: segments || [],
+            language: 'en',
+            hash: row.transcriptHash || undefined,
+          }).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript', analysisId } } });
+            console.warn('[analyses/persist] Failed to upsert transcript segments', { analysisId, error: String(e) });
+          });
+        }
       }
 
       // Chapters (Gap 2): persist the parsed chapter markers when the worker

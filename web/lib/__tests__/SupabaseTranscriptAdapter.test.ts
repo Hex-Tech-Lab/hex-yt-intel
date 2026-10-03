@@ -134,3 +134,62 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — chunk-path / finalize-p
     ).rejects.toBeTruthy();
   });
 });
+
+// ─── #417 P1 provenance guard: empty incoming segments must not erase a
+// stored row's segments/content. The persist route (both chunk path and
+// finalize path) calls hasTranscriptRow() first and skips the segments/
+// content columns when the row already exists; when it does NOT exist the
+// segment-less flat-transcript upsert still goes through (original P3 fix
+// preserved — interrupted analyses still get a row).
+describe('SupabaseTranscriptAdapter.hasTranscriptRow — #417 empty-segments guard support', () => {
+  const selectMaybeSingleGuardMock = vi.fn();
+
+  beforeEach(() => {
+    selectMaybeSingleGuardMock.mockReset();
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.doUnmock('@/lib/supabase');
+    vi.resetModules();
+  });
+
+  it('reports row existence without touching last_accessed_at (no update call)', async () => {
+    const updateMock = vi.fn().mockResolvedValue({ error: null });
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: selectMaybeSingleGuardMock,
+            }),
+          }),
+          update: updateMock,
+          upsert: vi.fn(),
+        }),
+      }),
+    }));
+    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
+    selectMaybeSingleGuardMock.mockResolvedValue({ data: { video_id: 'vid-5' } });
+    await expect(FreshAdapter.hasTranscriptRow('vid-5')).resolves.toBe(true);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('returns false when the row does not exist (flat-transcript upsert still allowed)', async () => {
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: selectMaybeSingleGuardMock,
+            }),
+          }),
+          upsert: vi.fn(),
+        }),
+      }),
+    }));
+    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
+    selectMaybeSingleGuardMock.mockResolvedValue({ data: null });
+    await expect(FreshAdapter.hasTranscriptRow('vid-6')).resolves.toBe(false);
+  });
+});

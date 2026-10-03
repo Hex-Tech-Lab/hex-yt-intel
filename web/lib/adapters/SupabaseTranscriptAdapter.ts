@@ -1,5 +1,5 @@
-import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 
 export interface TranscriptRow {
   video_id: string;
@@ -86,8 +86,28 @@ export class SupabaseTranscriptAdapter {
     }
   }
 
-  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {
+  /**
+   * Existence probe for the persist route's #417 P1 provenance guard: a
+   * persist chunk that carries no segments (worker-fetched-provenance guard
+   * sends `segments: []`) must not erase an existing row's stored timed
+   * segments. Deliberately NOT getTranscript — that touches
+   * last_accessed_at, and this call fires on every chunk persist.
+   */
+  static async hasTranscriptRow(videoId: string): Promise<boolean> {
     const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('transcripts')
+      .select('video_id')
+      .eq('video_id', videoId)
+      .maybeSingle();
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'hasTranscriptRow' }, extra: { videoId } });
+      return false;
+    }
+    return !!data;
+  }
+
+  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {    const service = getSupabaseServiceClient();
     const { data, error } = await service.from('transcripts').select('*').eq('video_id', videoId).maybeSingle();
     if (error) throw error;
     if (data) {
