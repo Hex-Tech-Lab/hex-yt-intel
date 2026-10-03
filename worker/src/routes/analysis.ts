@@ -6,7 +6,7 @@ import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
-import { annotateWithTimeMarkers, timeAnnotatedReasons } from "../services/TranscriptTimeMarkers";
+import { annotateWithTimeMarkers, timeAnnotatedReasons, needsCleanTranscript } from "../services/TranscriptTimeMarkers";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
@@ -1490,19 +1490,25 @@ function buildStreamResponse(
         // first), so markers never cost coverage; the prompt builder is then
         // handed the annotated text's own length so it never cuts again.
         const transcriptBudget = req.transcriptBudgetChars ?? 48000;
+        // Phase 2.6 Route A/B: the classification cell (dims incl. 11) reads
+        // CLEAN text — markers are factual-grounding scaffolding that would
+        // leak numeric noise into persona/intent classification.
         // #417 P1 (trusted by construction): `resolvedSegments` is assigned
         // ONLY from the worker's own fetch/cache result, so no trust flag is
         // needed — annotating whenever segments exist is safe. When they are
         // absent (request carried its own transcript, fetch skipped) plain
         // text is used; the "do not align" path below explains a real
         // misalignment of worker-fetched segments only.
-        const timeAnnotated = annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
+        const routeB = needsCleanTranscript(req.dimensions ?? []);
+        const timeAnnotated = routeB ? null : annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
           startWord: cellTranscript.startWord,
           durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration),
           intervalSeconds: req.timeMarkerIntervalSeconds,
           maxChars: transcriptBudget,
         });
-        if (resolvedSegments && !timeAnnotated) {
+        if (routeB) {
+          console.info('[analyze-llm-stream] Route B: classification cell gets clean transcript (no time markers)', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, route: 'B' });
+        } else if (resolvedSegments && !timeAnnotated) {
           // Worker-fetched segments exist but produced no annotation — the
           // annotator's own `reason` (estimated / invalid_timing /
           // misaligned) replaces the recomputation the worker used to do.

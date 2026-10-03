@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sliceDigest } from '../services/TranscriptSlice';
 import { hmacHex } from '../crypto';
+import { isProjectiveBundle } from '../../../web/lib/config/synthesis';
 
 vi.mock('@sentry/cloudflare', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 
@@ -334,3 +335,162 @@ describe('analyze-llm-stream #417 segment provenance (route-level)', () => {
   });
 });
 
+describe('Phase 2.6 Route B: classification cell gets a clean transcript', () => {
+  const originalFetch = globalThis.fetch;
+  let route: typeof import('../routes/analysis')['default'];
+  let openRouterBodies: string[];
+  let pending: Promise<unknown>[];
+
+  beforeEach(async () => {
+    openRouterBodies = [];
+    pending = [];
+    sharedFetchMock.mockClear();
+    activeFetchHandler = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === PLAN_URL) return Promise.resolve(new Response(JSON.stringify({ cached: true, plan: null }), { status: 200 }));
+      if (url === OPENROUTER_URL) {
+        openRouterBodies.push(String(init?.body ?? ''));
+        return Promise.resolve(sse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']));
+      }
+      if (url.startsWith('https://cache.example.test/get/transcript:')) {
+        // Trusted (#417): segments arrive via the worker's own cache hit, so
+        // Route A WOULD annotate — RB-a proves Route B still sends clean text.
+        return Promise.resolve(new Response(JSON.stringify({ result: JSON.stringify({ transcript: TRANSCRIPT, segments: SEGMENTS }) }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    };
+    globalThis.fetch = sharedFetch;
+    route = (await import('../routes/analysis')).default;
+  });
+
+  afterEach(async () => {
+    globalThis.fetch = originalFetch;
+    await Promise.allSettled(pending);
+  });
+
+  // The cell's signed bundle is chosen per test; transcript + segments come
+  // from the worker cache (trusted path), never from the request.
+  async function runWithBundle(bundle: number[]): Promise<string> {
+    const bundleList = [bundle, ...BUNDLE_LIST.slice(1)];
+    // Keep the structural stream-count invariant true: bundle 0's
+    // grounded/projective class may change with the test bundle.
+    const groundedBundles = bundleList.filter((b) => !isProjectiveBundle(b)).length;
+    const routeStreamCount = JEV_CHUNK_COUNT * groundedBundles + (bundleList.length - groundedBundles);
+    const hash = await sliceDigest(TRANSCRIPT, 2, 6);
+    const prev = { secret: process.env.STREAM_HMAC_SECRET, nodeEnv: process.env.NODE_ENV };
+    process.env.STREAM_HMAC_SECRET = SECRET;
+    process.env.NODE_ENV = 'development';
+    let sig: string; let exp: number;
+    try {
+      ({ sig, exp } = await (await import('../../../web/lib/stream-token')).signStreamTokenV2({
+        videoId: VIDEO_ID, analysisId: ANALYSIS_ID, models: [], streamCount: routeStreamCount,
+        jevChunkIndex: 0, jevChunkCount: JEV_CHUNK_COUNT, chunkIndex: 1, bundleList,
+        slice: { sha256: hash, startWord: 2, endWord: 6 },
+      }));
+    } finally {
+      if (prev.secret === undefined) delete process.env.STREAM_HMAC_SECRET; else process.env.STREAM_HMAC_SECRET = prev.secret;
+      if (prev.nodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = prev.nodeEnv;
+    }
+    const req = new Request(`${APP_URL}/analyze-llm-stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId: VIDEO_ID, analysisId: ANALYSIS_ID, metadata: { title: 'T', duration: 110 },
+        sig, exp, models: [], cascade: CASCADE, dimensions: bundle,
+        tokenVersion: 2, streamCount: routeStreamCount, jevChunkIndex: 0, jevChunkCount: JEV_CHUNK_COUNT,
+        chunkIndex: 1, bundleList, sliceSha256: hash, startWord: 2, endWord: 6,
+      }),
+    });
+    const env = { ENVIRONMENT: 'test', STREAM_HMAC_SECRET: SECRET, OPENROUTER_API_KEY: 'k', APP_URL, UPSTASH_REDIS_REST_URL: 'https://cache.example.test', UPSTASH_REDIS_REST_TOKEN: 'tok' };
+    const res = await route.request(req, undefined, env, { waitUntil: (task: Promise<unknown>) => pending.push(task) } as unknown as ExecutionContext);
+    expect(res.status).toBe(200);
+    await res.text();
+    const body = JSON.parse(openRouterBodies[0] ?? '{}') as { messages?: Array<{ content: unknown }> };
+    return (body.messages ?? [])
+      .map((message) => (typeof message.content === 'string' ? message.content
+        : Array.isArray(message.content) ? message.content.map((block: { text?: string }) => block.text ?? '').join('\n') : ''))
+      .join('\n');
+  }
+
+  it('(RB-a) a classification cell (dims incl. 11) sends CLEAN text even with trusted segments: no [HH:MM:SS], no [TIMELINE]', async () => {
+    const prompt = await runWithBundle([9, 11]);
+    expect(prompt).not.toMatch(/\[\d{2}:\d{2}:\d{2}\]/);
+    expect(prompt).not.toContain('[TIMELINE]');
+    expect(prompt).toContain('two three four five');
+  });
+
+  it('(RB-b) a grounded cell with the same trusted segments still gets markers (Route A unchanged)', async () => {
+    const prompt = await runWithBundle([1, 2, 3]);
+    expect(prompt).toContain('[TIMELINE]');
+    expect(prompt).toMatch(/\[00:00:20\] two/);
+  });
+
+  // v2 dimension-mismatch guard (route-level): req.dimensions is the UNSIGNED
+  // field Route B's needsCleanTranscript reads; verifyStreamToken must reject
+  // a mismatch BEFORE any prompt is built or OpenRouter call is made, or an
+  // attacker could flip Route A<->B by editing the body list.
+  it('(RB-c) signed bundle [1,2,3] but dimensions [9,11]: 401 rejection, NO OpenRouter call', async () => {
+    const hash = await sliceDigest(TRANSCRIPT, 2, 6);
+    const { sig, exp } = await signV2(2, 6, hash); // signed bundleList[0] = [1,2,3]
+    const res = await postRoute({ dimensions: [9, 11], sig, exp, sliceSha256: hash });
+    expect(res.status).toBe(401); // analysis.ts:1780 — c.json({ error, reason }, 401) on !isValid
+    await res.text();
+    expect(openRouterBodies).toEqual([]);
+  });
+
+  it('(RB-d) the reverse: signed bundle [9,11] but dimensions [1,2,3]: 401 rejection, NO OpenRouter call', async () => {
+    const hash = await sliceDigest(TRANSCRIPT, 2, 6);
+    // Re-sign with bundle [9,11] in slot 0 (same structural stream count as
+    // [1,2,3] — both grounded, groundedBundles unchanged).
+    const bundleList = [[9, 11], ...BUNDLE_LIST.slice(1)];
+    const prev = { secret: process.env.STREAM_HMAC_SECRET, nodeEnv: process.env.NODE_ENV };
+    process.env.STREAM_HMAC_SECRET = SECRET;
+    process.env.NODE_ENV = 'development';
+    let sig: string; let exp: number;
+    try {
+      ({ sig, exp } = await (await import('../../../web/lib/stream-token')).signStreamTokenV2({
+        videoId: VIDEO_ID, analysisId: ANALYSIS_ID, models: [], streamCount: STREAM_COUNT,
+        jevChunkIndex: 0, jevChunkCount: JEV_CHUNK_COUNT, chunkIndex: 1, bundleList,
+        slice: { sha256: hash, startWord: 2, endWord: 6 },
+      }));
+    } finally {
+      if (prev.secret === undefined) delete process.env.STREAM_HMAC_SECRET; else process.env.STREAM_HMAC_SECRET = prev.secret;
+      if (prev.nodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = prev.nodeEnv;
+    }
+    const res = await postRoute({ dimensions: [1, 2, 3], sig, exp, sliceSha256: hash, bundleList });
+    expect(res.status).toBe(401);
+    await res.text();
+    expect(openRouterBodies).toEqual([]);
+  });
+
+  /** Minimal authenticated-shape request helper for the mismatch guards. */
+  async function postRoute(overrides: Record<string, unknown>): Promise<Response> {
+    const hashDefault = await sliceDigest(TRANSCRIPT, 2, 6);
+    const body: Record<string, unknown> = {
+      videoId: VIDEO_ID, analysisId: ANALYSIS_ID, metadata: { title: 'T', duration: 110 },
+      models: [], cascade: CASCADE, dimensions: [1, 2, 3],
+      tokenVersion: 2, streamCount: STREAM_COUNT, jevChunkIndex: 0, jevChunkCount: JEV_CHUNK_COUNT,
+      chunkIndex: 1, bundleList: BUNDLE_LIST, sliceSha256: hashDefault, startWord: 2, endWord: 6,
+      ...overrides,
+    };
+    const req = new Request(`${APP_URL}/analyze-llm-stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const env = { ENVIRONMENT: 'test', STREAM_HMAC_SECRET: SECRET, OPENROUTER_API_KEY: 'k', APP_URL, UPSTASH_REDIS_REST_URL: 'https://cache.example.test', UPSTASH_REDIS_REST_TOKEN: 'tok' };
+    return route.request(req, undefined, env, { waitUntil: (task: Promise<unknown>) => pending.push(task) } as unknown as ExecutionContext);
+  }
+});
+
+describe('needsCleanTranscript (unit)', () => {
+  it('[9, 11] -> true (classification dimension present)', async () => {
+    expect((await import('../services/TranscriptTimeMarkers')).needsCleanTranscript([9, 11])).toBe(true);
+  });
+  it('[1, 2] -> false', async () => {
+    expect((await import('../services/TranscriptTimeMarkers')).needsCleanTranscript([1, 2])).toBe(false);
+  });
+  it('[] -> false', async () => {
+    expect((await import('../services/TranscriptTimeMarkers')).needsCleanTranscript([])).toBe(false);
+  });
+});
