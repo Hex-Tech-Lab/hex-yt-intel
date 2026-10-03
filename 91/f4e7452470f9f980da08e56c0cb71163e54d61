@@ -1,0 +1,41 @@
+scripts/jev-classify-pool.ts
+  s_7048b6816aaca0::t_b7727e39a3ee0b 52-56,58
+  s_7048b6816aaca0::t_1f7ca8c6ec94af 51
+  s_7048b6816aaca0::t_86a2e80f39798f 1-50,57,59-227
+web/lib/jev/taxonomy.ts
+  s_7048b6816aaca0::t_36ac0939ab8dfc 1-53
+docs/architecture/S1_S6_TAXONOMY.md
+  s_7048b6816aaca0::t_902768cb848a82 56-86,91-100
+  s_7048b6816aaca0::t_40062ad9dec867 1-55,101-108
+  s_7048b6816aaca0::t_e7dc2cd3f1115c 87-90
+web/lib/__tests__/taxonomy.test.ts
+  s_7048b6816aaca0::t_1470067209ecab 1-48
+docs/architecture/DESIGN-036-phase-b-layer0-layer1.md
+  s_7048b6816aaca0::t_a958e195aca2c9 143
+docs/architecture/S1_S6_POOL_RECLASSIFICATION.json
+  s_70ad355668d07f::t_f433c1da22e3d0 1-376
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "91f4e7452470f9f980da08e56c0cb71163e54d61",
+  "prompts": {},
+  "sessions": {
+    "s_7048b6816aaca0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcc714b1ffeSzsFGsN36uR7e5",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_70ad355668d07f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd16220ffe6qGYAaS0T95ml4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
