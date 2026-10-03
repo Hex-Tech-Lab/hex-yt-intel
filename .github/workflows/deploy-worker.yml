@@ -74,9 +74,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if ! pnpm --filter youtube-intelligence-worker exec wrangler deployments list --env production >/dev/null 2>&1; then
-            echo "::warning::first deploy — secret gate skipped; bind TRANSCRIPTAPI_API_KEY with wrangler secret put --env production immediately after"
-            exit 0
+          # Only CF error 10007 ("This Worker does not exist on your account")
+          # means first deploy; any other failure (auth 9106, network) fails.
+          if ! probe=$(pnpm --filter youtube-intelligence-worker exec wrangler deployments list --env production 2>&1); then
+            if echo "$probe" | grep -q 'code: 10007'; then
+              echo "::warning::first deploy — secret gate skipped; bind TRANSCRIPTAPI_API_KEY with wrangler secret put --env production immediately after"
+              exit 0
+            fi
+            echo "::error::wrangler deployments list --env production failed (not a first deploy) — cannot verify secret bindings"
+            echo "$probe" | tail -5
+            exit 1
           fi
           secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list --env production 2>&1) \
             || { echo "::error::wrangler secret list --env production failed (auth/network?) — cannot verify secret bindings"; exit 1; }
