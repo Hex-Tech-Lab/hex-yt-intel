@@ -1,0 +1,19 @@
+docs/architecture/ADR-038-analysis-model-cascade.md
+  s_cca9fcbe8ccf2e::t_eaed5d5f85449b 87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c05544dc6b6258e8a7c912f6761f69def50f1d4b",
+  "prompts": {},
+  "sessions": {
+    "s_cca9fcbe8ccf2e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd4985e2ffe2SsNmDwWt5bkR6",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
