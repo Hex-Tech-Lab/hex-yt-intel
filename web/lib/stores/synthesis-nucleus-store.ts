@@ -16,6 +16,7 @@ import {
   type RestoreAnalysisPayload,
   computePersonaProjection,
 } from '@/lib/types/synthesis-nucleus';
+import { parseClassification } from '@/lib/validators/synthesis';
 
 function readSubStores() {
   const as = useAnalysisStateStore.getState();
@@ -78,7 +79,10 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
         useAnalysisMetadataStore.getState().setRawAnalysisPayload(ap, payload.id ?? null);
         if (ap.persona) useAnalysisMetadataStore.getState().setPersonaConfig(ap.persona);
         if (ap.knowledgeGraph) useAnalysisMetadataStore.getState().setKnowledgeGraph(ap.knowledgeGraph);
-        if (ap.classification) useAnalysisMetadataStore.getState().setClassification(ap.classification);
+        // Rows saved before the tolerant schema may carry aliases or string
+        // booleans: restore through the same schema as the stream.
+        const classification = ap.classification ? parseClassification(ap.classification, 'restore') : null;
+        if (classification) useAnalysisMetadataStore.getState().setClassification(classification);
         if (ap.monetizationVerdict) useAnalysisMetadataStore.getState().setMonetizationVerdict(ap.monetizationVerdict);
       }
     },

@@ -1,3 +1,17 @@
+# Session TODO — see docs/history/THOS_2026-10-03_CRUCIBLE_P2.6_TIMESYNC_HANDOVER.md §1–§2 (authoritative)
+
+## Open (2026-10-03)
+- [ ] #417 Phase 2.6 time-sync — ready, core CI green (e23cb4f7); one more medium /code-review, then merge + confirm migration 20261003120000 on main + admin run
+- [ ] Phase 2.6 step 2: deterministic KG merge + persona/classification from projective cell (dispatch AGY Flash)
+- [ ] Phase 2.6 step 3: QStash per-dimension LLM merge (gpt-oss tier) + browser 3-min wait (dispatch AGY Pro)
+- [ ] Re-run Carmack (admin) and compare to the 2026-10-02 crucible
+- [ ] 2.6-ux-polish (AGY Flash): ETA EWMA, ticker Framer Motion, real swoosh + volume tied to player, DimensionAccordion edge spin, INP on Analyze
+- [ ] kg/classification SSE fragments rejected in browser (untraced)
+- [ ] Rows overwritten by the old validation webhook are not repaired (decide: leave or backfill)
+- [ ] Worktrees kept for user decision (THOS §1.7); hex-yt-intel-hotfix stray folder
+- [x] Jev ON for admin only (enabled=true, maxChunks=16, cap 5000); TranscriptAPI secret fixed + /health/providers gate
+- [x] Merged: #410 #412 #413 #414 #415 #416
+
 # Session TODO — see docs/history/THOS_2026-10-02_R3B_2.3.5_2.5_MAPREDUCE.md §1.6–§2 (authoritative)
 
 ## Open (2026-10-01 session 2)

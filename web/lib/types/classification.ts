@@ -9,10 +9,10 @@
  * Classification data — v2.0 interface
  */
 export interface ClassificationData {
-  authoritative: boolean;
-  practicallyActionable: boolean;
-  knowledgeGraphReady: boolean;
-  safe: boolean;
-  personaOptimised: boolean;
+  authoritative?: boolean | null;
+  practicallyActionable?: boolean | null;
+  knowledgeGraphReady?: boolean | null;
+  safe?: boolean | null;
+  personaOptimised?: boolean | null;
   recommendation: 'highly_recommended' | 'recommended' | 'conditional' | 'skip';
 }

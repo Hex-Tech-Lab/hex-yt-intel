@@ -1,10 +1,12 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { parseClassification } from '@/lib/validators/synthesis';
 import { type StreamAdapterOptions } from './synthesis-stream-adapter';
 
 export class StreamDeltaHandler {
   private rawSink = '';
+  private lastClassificationKey = '';
   private synthStore = useSynthesisNucleus;
   private analysisStore = useAnalysisStore;
 
@@ -19,6 +21,7 @@ export class StreamDeltaHandler {
   }
 
   clear() {
+    this.lastClassificationKey = '';
     this.rawSink = '';
   }
 
@@ -61,7 +64,11 @@ export class StreamDeltaHandler {
     try {
       JSON.parse(healed);
       return healed;
-    } catch {
+    } catch (healErr) {
+      // Expected on every partial chunk; the caller falls back to plaintext.
+      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+        console.debug('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
+      }
       return null;
     }
   }
@@ -78,10 +85,8 @@ export class StreamDeltaHandler {
 
     let cleanSink = this.rawSink.trim();
     if (cleanSink.startsWith('```')) {
-      const braceIndex = cleanSink.indexOf('{');
-      if (braceIndex !== -1) {
-        cleanSink = cleanSink.slice(braceIndex);
-      }
+      // Drop any prefix (e.g. a markdown fence) before the first '{'; no-op without one.
+      cleanSink = cleanSink.replace(/^[^{]*(?=\{)/, '');
     }
     // Only strip markdown code fence closers, not stray backticks in JSON strings
     if (cleanSink.endsWith('```')) {
@@ -101,8 +106,11 @@ export class StreamDeltaHandler {
       let obj: any;
       try {
         obj = JSON.parse(healed);
-      } catch {
+      } catch (parseErr) {
         // Expected parsing failures on incomplete JSON stream
+        if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+          console.debug('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
+        }
         return isJsonStream;
       }
 
@@ -134,17 +142,17 @@ export class StreamDeltaHandler {
 
           // 1. Validate and set Persona
           if (obj.persona && typeof obj.persona === 'object') {
-            const p = obj.persona;
+            const persona = obj.persona;
             if (
-              p.primary &&
-              typeof p.primary === 'object' &&
-              typeof p.primary.id === 'string' &&
-              typeof p.primary.label === 'string' &&
-              typeof p.primary.weight === 'number' &&
-              Array.isArray(p.cognitiveLenses) &&
-              typeof p.selectionRationale === 'string'
+              persona.primary &&
+              typeof persona.primary === 'object' &&
+              typeof persona.primary.id === 'string' &&
+              typeof persona.primary.label === 'string' &&
+              typeof persona.primary.weight === 'number' &&
+              Array.isArray(persona.cognitiveLenses) &&
+              typeof persona.selectionRationale === 'string'
             ) {
-              this.synthStore.getState().setPersonaConfig(p);
+              this.synthStore.getState().setPersonaConfig(persona);
             }
           }
 
@@ -187,16 +195,15 @@ export class StreamDeltaHandler {
           }
 
           // 4. Validate and set Classification
+          // Same schema as the SSE classification frame. The healed object
+          // repeats the same classification on every later delta, so only
+          // re-validate (and re-set) when it actually changed.
           if (obj.classification && typeof obj.classification === 'object') {
-            const c = obj.classification;
-            if (
-              typeof c.authoritative === 'boolean' &&
-              typeof c.recommendation === 'string' &&
-              typeof c.practicallyActionable === 'boolean' &&
-              typeof c.knowledgeGraphReady === 'boolean' &&
-              typeof c.safe === 'boolean'
-            ) {
-              this.synthStore.getState().setClassification(c);
+            const key = JSON.stringify(obj.classification);
+            if (key !== this.lastClassificationKey) {
+              this.lastClassificationKey = key;
+              const classification = parseClassification(obj.classification, 'Adapter', !(typeof window !== 'undefined' && window.__CHAT_DEBUG));
+              if (classification) this.synthStore.getState().setClassification(classification);
             }
           }
 
