@@ -1,0 +1,19 @@
+worker/src/services/TranscriptTimeMarkers.ts
+  s_70ad355668d07f::t_a972aa7c37007e 32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "25c60274760084f3ed2a76863eed22b4f404b0e6",
+  "prompts": {},
+  "sessions": {
+    "s_70ad355668d07f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd16220ffe6qGYAaS0T95ml4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
