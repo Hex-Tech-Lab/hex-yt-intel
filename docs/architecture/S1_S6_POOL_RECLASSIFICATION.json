@@ -1,259 +1,217 @@
 {
-  "generatedAt": "2026-10-03T21:39:52.123Z",
+  "generatedAt": "2026-10-03T21:46:53.047Z",
   "poolSize": 14,
   "videosClassified": 14,
   "skipped": [],
-  "agreement": "3/14",
-  "agreementPct": 21,
+  "agreement": "9/14",
+  "agreementPct": 64,
   "disagreements": [
     {
       "videoId": "Z6l4HpuyyP0",
       "pocClass": "S1",
       "newClass": "S6",
-      "multiSpeakerPoc": 0.04,
-      "multiSpeakerNew": 0.04
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.06
     },
     {
       "videoId": "ymgH8jS6Wb8",
       "pocClass": "S1",
       "newClass": "S4",
-      "multiSpeakerPoc": 0.05,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.05
-    },
-    {
-      "videoId": "MoBr0nQtOnA",
-      "pocClass": "S3",
-      "newClass": "S2",
-      "multiSpeakerPoc": 0.84,
-      "multiSpeakerNew": 0.99
-    },
-    {
-      "videoId": "_LCeJZFIsd4",
-      "pocClass": "S6",
-      "newClass": "S2",
-      "multiSpeakerPoc": 0.31,
-      "multiSpeakerNew": 0.97
-    },
-    {
-      "videoId": "DlNWYzaL_F0",
-      "pocClass": "S3",
-      "newClass": "S2",
-      "multiSpeakerPoc": 0.85,
-      "multiSpeakerNew": 0.93
-    },
-    {
-      "videoId": "LTNVA2iP9YU",
-      "pocClass": "S3",
-      "newClass": "S2",
-      "multiSpeakerPoc": 0.92,
-      "multiSpeakerNew": 0.95
     },
     {
       "videoId": "1U8-4N1HNtU",
       "pocClass": "S1",
       "newClass": "S6",
-      "multiSpeakerPoc": 0.61,
-      "multiSpeakerNew": 0.12
-    },
-    {
-      "videoId": "yB92mx97A8s",
-      "pocClass": "S5",
-      "newClass": "S3",
-      "multiSpeakerPoc": 0.59,
-      "multiSpeakerNew": 0.99
-    },
-    {
-      "videoId": "EoKdX13w7SI",
-      "pocClass": "S5",
-      "newClass": "S1",
-      "multiSpeakerPoc": 0.5,
-      "multiSpeakerNew": 0.75
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.88
     },
     {
       "videoId": "uZ5kJ9CBbv0",
-      "pocClass": "S3",
+      "pocClass": "S1",
       "newClass": "S4",
-      "multiSpeakerPoc": 0.87,
-      "multiSpeakerNew": 0.07
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.1
     },
     {
       "videoId": "39hqY3nH5ug",
-      "pocClass": "S4",
+      "pocClass": "S3",
       "newClass": "S2",
-      "multiSpeakerPoc": 0.96,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.99
     }
   ],
   "multiSpeakerDelta": [
     {
       "videoId": "Z6l4HpuyyP0",
-      "poc": 0.04,
-      "new": 0.04,
-      "absDelta": 0
+      "poc": null,
+      "new": 0.06,
+      "absDelta": null
     },
     {
       "videoId": "ymgH8jS6Wb8",
-      "poc": 0.05,
+      "poc": null,
       "new": 0.05,
-      "absDelta": 0
+      "absDelta": null
     },
     {
       "videoId": "MoBr0nQtOnA",
-      "poc": 0.84,
+      "poc": null,
       "new": 0.99,
-      "absDelta": 0.15
+      "absDelta": null
     },
     {
       "videoId": "_LCeJZFIsd4",
-      "poc": 0.31,
-      "new": 0.97,
-      "absDelta": 0.66
+      "poc": null,
+      "new": 0.99,
+      "absDelta": null
     },
     {
       "videoId": "DlNWYzaL_F0",
-      "poc": 0.85,
-      "new": 0.93,
-      "absDelta": 0.08
+      "poc": null,
+      "new": 0.99,
+      "absDelta": null
     },
     {
       "videoId": "LTNVA2iP9YU",
-      "poc": 0.92,
-      "new": 0.95,
-      "absDelta": 0.03
+      "poc": null,
+      "new": 0.6,
+      "absDelta": null
     },
     {
       "videoId": "1U8-4N1HNtU",
-      "poc": 0.61,
-      "new": 0.12,
-      "absDelta": 0.49
+      "poc": null,
+      "new": 0.88,
+      "absDelta": null
     },
     {
       "videoId": "yB92mx97A8s",
-      "poc": 0.59,
-      "new": 0.99,
-      "absDelta": 0.4
+      "poc": null,
+      "new": 0.98,
+      "absDelta": null
     },
     {
       "videoId": "gneNjQuLv88",
-      "poc": 0.05,
-      "new": 0.04,
-      "absDelta": 0.01
+      "poc": null,
+      "new": 0.05,
+      "absDelta": null
     },
     {
       "videoId": "GOLgLU54b5s",
-      "poc": 0.11,
+      "poc": null,
       "new": 0.04,
-      "absDelta": 0.07
+      "absDelta": null
     },
     {
       "videoId": "EoKdX13w7SI",
-      "poc": 0.5,
-      "new": 0.75,
-      "absDelta": 0.25
+      "poc": null,
+      "new": 0.98,
+      "absDelta": null
     },
     {
       "videoId": "pjGvA-D0Fcs",
-      "poc": 0.24,
-      "new": 0.31,
-      "absDelta": 0.07
+      "poc": null,
+      "new": 0.94,
+      "absDelta": null
     },
     {
       "videoId": "uZ5kJ9CBbv0",
-      "poc": 0.87,
-      "new": 0.07,
-      "absDelta": 0.8
+      "poc": null,
+      "new": 0.1,
+      "absDelta": null
     },
     {
       "videoId": "39hqY3nH5ug",
-      "poc": 0.96,
+      "poc": null,
       "new": 0.99,
-      "absDelta": 0.03
+      "absDelta": null
     }
   ],
   "inventRiskDelta": [
     {
       "videoId": "Z6l4HpuyyP0",
-      "poc": 2.49,
-      "new": 0.03,
-      "absDelta": 2.46
+      "poc": null,
+      "new": 0.07,
+      "absDelta": null
     },
     {
       "videoId": "ymgH8jS6Wb8",
-      "poc": 1.53,
-      "new": 0.14,
-      "absDelta": 1.39
+      "poc": null,
+      "new": 0.08,
+      "absDelta": null
     },
     {
       "videoId": "MoBr0nQtOnA",
-      "poc": 1.9,
+      "poc": null,
       "new": 0.04,
-      "absDelta": 1.86
+      "absDelta": null
     },
     {
       "videoId": "_LCeJZFIsd4",
-      "poc": 1.46,
-      "new": 0.12,
-      "absDelta": 1.34
+      "poc": null,
+      "new": 0.08,
+      "absDelta": null
     },
     {
       "videoId": "DlNWYzaL_F0",
-      "poc": 2.4,
-      "new": 0.06,
-      "absDelta": 2.34
+      "poc": null,
+      "new": 0.1,
+      "absDelta": null
     },
     {
       "videoId": "LTNVA2iP9YU",
-      "poc": 2.12,
-      "new": 0.02,
-      "absDelta": 2.1
+      "poc": null,
+      "new": 0.05,
+      "absDelta": null
     },
     {
       "videoId": "1U8-4N1HNtU",
-      "poc": 3.21,
-      "new": 0.17,
-      "absDelta": 3.04
+      "poc": null,
+      "new": 0.15,
+      "absDelta": null
     },
     {
       "videoId": "yB92mx97A8s",
-      "poc": 1.72,
-      "new": 0.09,
-      "absDelta": 1.63
+      "poc": null,
+      "new": 0.13,
+      "absDelta": null
     },
     {
       "videoId": "gneNjQuLv88",
-      "poc": 1.06,
-      "new": 0.06,
-      "absDelta": 1
+      "poc": null,
+      "new": 0.04,
+      "absDelta": null
     },
     {
       "videoId": "GOLgLU54b5s",
-      "poc": 1.95,
-      "new": 0.1,
-      "absDelta": 1.85
+      "poc": null,
+      "new": 0.04,
+      "absDelta": null
     },
     {
       "videoId": "EoKdX13w7SI",
-      "poc": 2.91,
-      "new": 0.08,
-      "absDelta": 2.83
+      "poc": null,
+      "new": 0.09,
+      "absDelta": null
     },
     {
       "videoId": "pjGvA-D0Fcs",
-      "poc": 2.36,
-      "new": 0.05,
-      "absDelta": 2.31
+      "poc": null,
+      "new": 0.12,
+      "absDelta": null
     },
     {
       "videoId": "uZ5kJ9CBbv0",
-      "poc": 2.14,
-      "new": 0.12,
-      "absDelta": 2.02
+      "poc": null,
+      "new": 0.05,
+      "absDelta": null
     },
     {
       "videoId": "39hqY3nH5ug",
-      "poc": 1.93,
-      "new": 0.04,
-      "absDelta": 1.89
+      "poc": null,
+      "new": 0.14,
+      "absDelta": null
     }
   ],
   "totalCostUsd": 0.004,
@@ -263,154 +221,154 @@
       "pocClass": "S1",
       "newClass": "S6",
       "agree": false,
-      "multiSpeakerPoc": 0.04,
-      "multiSpeakerNew": 0.04,
-      "inventRiskPoc": 2.49,
-      "inventRiskNew": 0.03,
-      "costUsd": 0.000124
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.06,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.07,
+      "costUsd": 0.000125
     },
     {
       "videoId": "ymgH8jS6Wb8",
       "pocClass": "S1",
       "newClass": "S4",
       "agree": false,
-      "multiSpeakerPoc": 0.05,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.05,
-      "inventRiskPoc": 1.53,
-      "inventRiskNew": 0.14,
-      "costUsd": 0.000239
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.08,
+      "costUsd": 0.00024
     },
     {
       "videoId": "MoBr0nQtOnA",
-      "pocClass": "S3",
+      "pocClass": "S2",
       "newClass": "S2",
-      "agree": false,
-      "multiSpeakerPoc": 0.84,
+      "agree": true,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.99,
-      "inventRiskPoc": 1.9,
+      "inventRiskPoc": null,
       "inventRiskNew": 0.04,
-      "costUsd": 0.000283
+      "costUsd": 0.000285
     },
     {
       "videoId": "_LCeJZFIsd4",
-      "pocClass": "S6",
+      "pocClass": "S2",
       "newClass": "S2",
-      "agree": false,
-      "multiSpeakerPoc": 0.31,
-      "multiSpeakerNew": 0.97,
-      "inventRiskPoc": 1.46,
-      "inventRiskNew": 0.12,
-      "costUsd": 0.000264
+      "agree": true,
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.99,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.08,
+      "costUsd": 0.000265
     },
     {
       "videoId": "DlNWYzaL_F0",
-      "pocClass": "S3",
+      "pocClass": "S2",
       "newClass": "S2",
-      "agree": false,
-      "multiSpeakerPoc": 0.85,
-      "multiSpeakerNew": 0.93,
-      "inventRiskPoc": 2.4,
-      "inventRiskNew": 0.06,
-      "costUsd": 0.000266
+      "agree": true,
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.99,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.1,
+      "costUsd": 0.000268
     },
     {
       "videoId": "LTNVA2iP9YU",
-      "pocClass": "S3",
+      "pocClass": "S2",
       "newClass": "S2",
-      "agree": false,
-      "multiSpeakerPoc": 0.92,
-      "multiSpeakerNew": 0.95,
-      "inventRiskPoc": 2.12,
-      "inventRiskNew": 0.02,
-      "costUsd": 0.000253
+      "agree": true,
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.6,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.05,
+      "costUsd": 0.000255
     },
     {
       "videoId": "1U8-4N1HNtU",
       "pocClass": "S1",
       "newClass": "S6",
       "agree": false,
-      "multiSpeakerPoc": 0.61,
-      "multiSpeakerNew": 0.12,
-      "inventRiskPoc": 3.21,
-      "inventRiskNew": 0.17,
-      "costUsd": 0.000517
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.88,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.15,
+      "costUsd": 0.000519
     },
     {
       "videoId": "yB92mx97A8s",
-      "pocClass": "S5",
+      "pocClass": "S3",
       "newClass": "S3",
-      "agree": false,
-      "multiSpeakerPoc": 0.59,
-      "multiSpeakerNew": 0.99,
-      "inventRiskPoc": 1.72,
-      "inventRiskNew": 0.09,
-      "costUsd": 0.000709
+      "agree": true,
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.98,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.13,
+      "costUsd": 0.00071
     },
     {
       "videoId": "gneNjQuLv88",
       "pocClass": "S1",
       "newClass": "S1",
       "agree": true,
-      "multiSpeakerPoc": 0.05,
-      "multiSpeakerNew": 0.04,
-      "inventRiskPoc": 1.06,
-      "inventRiskNew": 0.06,
-      "costUsd": 0.000201
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.05,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.04,
+      "costUsd": 0.000203
     },
     {
       "videoId": "GOLgLU54b5s",
       "pocClass": "S1",
       "newClass": "S1",
       "agree": true,
-      "multiSpeakerPoc": 0.11,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.04,
-      "inventRiskPoc": 1.95,
-      "inventRiskNew": 0.1,
-      "costUsd": 0.000154
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.04,
+      "costUsd": 0.000156
     },
     {
       "videoId": "EoKdX13w7SI",
-      "pocClass": "S5",
+      "pocClass": "S1",
       "newClass": "S1",
-      "agree": false,
-      "multiSpeakerPoc": 0.5,
-      "multiSpeakerNew": 0.75,
-      "inventRiskPoc": 2.91,
-      "inventRiskNew": 0.08,
-      "costUsd": 0.000263
+      "agree": true,
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.98,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.09,
+      "costUsd": 0.000264
     },
     {
       "videoId": "pjGvA-D0Fcs",
       "pocClass": "S1",
       "newClass": "S1",
       "agree": true,
-      "multiSpeakerPoc": 0.24,
-      "multiSpeakerNew": 0.31,
-      "inventRiskPoc": 2.36,
-      "inventRiskNew": 0.05,
-      "costUsd": 0.000258
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.94,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.12,
+      "costUsd": 0.000259
     },
     {
       "videoId": "uZ5kJ9CBbv0",
-      "pocClass": "S3",
+      "pocClass": "S1",
       "newClass": "S4",
       "agree": false,
-      "multiSpeakerPoc": 0.87,
-      "multiSpeakerNew": 0.07,
-      "inventRiskPoc": 2.14,
-      "inventRiskNew": 0.12,
-      "costUsd": 0.000224
+      "multiSpeakerPoc": null,
+      "multiSpeakerNew": 0.1,
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.05,
+      "costUsd": 0.000226
     },
     {
       "videoId": "39hqY3nH5ug",
-      "pocClass": "S4",
+      "pocClass": "S3",
       "newClass": "S2",
       "agree": false,
-      "multiSpeakerPoc": 0.96,
+      "multiSpeakerPoc": null,
       "multiSpeakerNew": 0.99,
-      "inventRiskPoc": 1.93,
-      "inventRiskNew": 0.04,
-      "costUsd": 0.000255
+      "inventRiskPoc": null,
+      "inventRiskNew": 0.14,
+      "costUsd": 0.000256
     }
   ]
 }

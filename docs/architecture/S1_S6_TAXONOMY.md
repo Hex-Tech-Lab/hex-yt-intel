@@ -63,13 +63,23 @@ reconstructed criteria and the POC labels was measured on 2026-10-03 — see
 
 ## Re-run under the text-observable rubrics (2026-10-03)
 
-14/14 videos classified (transcripts re-fetched via the worker), total cost $0.004.
-**Agreement with the POC labels: 3/14 (21%)** vs the retired v1 baseline of 4/12 (33%).
-Agreeing: gneNjQuLv88, GOLgLU54b5s, pjGvA-D0Fcs (all S1). Raw per-video results:
-`docs/architecture/S1_S6_POOL_RECLASSIFICATION.json` (overwritten by this run).
-The POC labels are themselves unreliable (see the night handover), so low agreement
-is not by itself proof the rubrics are wrong; it does mean the classifier is not
-yet validated for Phase B routing.
+**Ground truth replaced.** The 14 POC labels are discarded (they carried audio-visual
+intuition). The pool was re-labelled from transcript text only, by one annotator
+(Claude), reading the head, middle and tail of each transcript plus turn-marker and
+question counts: `docs/architecture/S1_S6_POOL_GROUND_TRUTH.json` (label, confidence,
+rationale per video). Caveats: single annotator, sampled reading, and the annotator is
+itself an LLM, so this is a consistency check, not an independent human gold set.
+The pool contains no S4, S5 or S6 labels, so those classes are untested.
+
+**Side-prompts sealed.** `multi_speaker` and `extrapolation_risk` in
+`scripts/jev-classify-pool.ts` now ask only for text cues (structural dialogue tags or
+alternating Q&A; abrupt semantic shifts lacking conversational flow). The main
+`structural_class` instruction still says "spoken and produced"; left unchanged pending a decision.
+
+**Result: agreement 9/14 (64%)** (14/14 classified, $0.004). Against the discarded POC
+labels the same rubrics scored 3/14 (21%). Remaining disagreements:
+Z6l4HpuyyP0 S1→S6, ymgH8jS6Wb8 S1→S4, 1U8-4N1HNtU S1→S6, uZ5kJ9CBbv0 S1→S4,
+39hqY3nH5ug S3→S2. Per-video results: `S1_S6_POOL_RECLASSIFICATION.json`.
 
 ## Pool re-classification result (2026-10-03) — STALE
 
