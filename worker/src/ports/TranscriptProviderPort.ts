@@ -9,6 +9,8 @@ export interface TranscriptSegment {
   start: number;
   duration: number;
   text: string;
+  /** True when the provider had no timing and invented `start` (3 s per caption event). */
+  estimated?: boolean;
 }
 
 export interface TranscriptResult {

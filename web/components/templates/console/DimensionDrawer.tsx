@@ -7,7 +7,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 import { STACKED_LAYOUT_QUERY } from '@/hooks/useIsStackedLayout';
 import { useJevRunStore } from '@/store/useJevRunStore';
-import { estimateRemainingMs, formatEta } from '@/lib/jev/eta';
+import { estimateRemainingMs, formatEta, smoothEta, type EtaState } from '@/lib/jev/eta';
 
 export interface DimensionDrawerProps {
   /** `number` drives the K>1 "based on part of the video" badge. */
@@ -27,12 +27,31 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   // text only; Copy stays locked until the server's reduced result lands.
   const jevRun = useJevRunStore((s) => s.run);
   const isPartialDimension = useJevRunStore((s) => dimension?.number !== undefined && s.partialDimensions.includes(dimension.number));
-  const [now, setNow] = useState(() => Date.now());
+  const [eta, setEta] = useState<EtaState | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (!jevRun) return;
-    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    if (!jevRun || jevRun.settled >= jevRun.total) {
+      startedAtRef.current = null;
+      setEta(null);
+    } else {
+      const isNewRun = jevRun.startedAt !== startedAtRef.current;
+      startedAtRef.current = jevRun.startedAt;
+      const nowTimestamp = Date.now();
+      setEta((prev) => smoothEta(isNewRun ? null : prev, estimateRemainingMs(jevRun, nowTimestamp), nowTimestamp));
+    }
+  // Keyed on the run's identity + counts only: re-seed on settlement or a new run, never on unrelated store updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jevRun?.startedAt, jevRun?.settled, jevRun?.total]);
+
+  useEffect(() => {
+    if (!jevRun || jevRun.settled >= jevRun.total) return;
+    const ticker = setInterval(() => {
+      const nowTimestamp = Date.now();
+      setEta((prev) => smoothEta(prev, null, nowTimestamp));
+    }, 1000);
     return () => clearInterval(ticker);
-  }, [jevRun]);
+  }, [jevRun, jevRun?.settled, jevRun?.total]);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -111,8 +130,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         if (focusable.length === 0) return;
-        const first = focusable[0]!;
-        const last = focusable[focusable.length - 1]!;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
         if (e.shiftKey) {
           if (document.activeElement === first) { last.focus(); e.preventDefault(); }
         } else {
@@ -226,7 +246,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               <Icon icon="solar:magic-stick-3-linear" size={14} />
               Applying intelligence…
             </span>
-            <span className="text-[var(--ink-secondary)]">{formatEta(estimateRemainingMs(jevRun, now))}</span>
+            <span className="text-[var(--ink-secondary)]">{formatEta(eta?.remainingMs ?? null)}</span>
           </div>
         ) : isPartialDimension ? (
           <div className="px-3 py-1.5 border-b border-[var(--line)] font-mono text-[11px] text-[var(--ink-secondary)]">

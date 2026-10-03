@@ -20,7 +20,7 @@ const selectMaybeSingleMock = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
-    from: (_table: string) => ({
+    from: () => ({
       select: () => ({
         eq: () => ({
           maybeSingle: selectMaybeSingleMock,
@@ -32,6 +32,8 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 vi.mock('@sentry/nextjs', () => ({
+  __esModule: true,
+  default: { captureException: vi.fn() },
   captureException: vi.fn(),
 }));
 
@@ -132,5 +134,145 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — chunk-path / finalize-p
         language: 'en',
       })
     ).rejects.toBeTruthy();
+  });
+});
+
+// ─── #417 /simplify: preserve-on-empty moved INTO the adapter ────────────────
+// The route no longer probes with hasTranscriptRow — upsertTranscript owns
+// the rule: empty/absent segments + existing row → segments/content are
+// NEVER overwritten; empty segments + no row → insert-if-absent flat
+// transcript row (original P3 fix preserved). hasTranscriptRow itself was
+// deleted (no remaining callers); these tests assert the BEHAVIOUR at the
+// adapter boundary.
+describe('SupabaseTranscriptAdapter.upsertTranscript — preserve-on-empty (#417)', () => {
+  /** Patch objects passed to `.update(...)` (closure-captured per test via doMock factory). */
+  let updateArgs: Record<string, unknown>[] = [];
+
+  beforeEach(() => {
+    vi.resetModules();
+    upsertMock.mockReset();
+    selectMaybeSingleMock.mockReset();
+    updateArgs = [];
+    upsertMock.mockResolvedValue({ error: null });
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: selectMaybeSingleMock,
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => {
+            updateArgs.push(patch);
+            return { eq: () => ({ select: () => Promise.resolve({ error: null }) }) };
+          },
+          upsert: upsertMock,
+        }),
+      }),
+    }));
+  });
+
+  afterEach(() => {
+    vi.doUnmock('@/lib/supabase');
+    vi.resetModules();
+  });
+
+  async function freshAdapter() {
+    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
+    return FreshAdapter;
+  }
+
+  it('existing row + empty segments: updates WITHOUT segments/content — stored values can never be erased', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-preserve' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-preserve',
+      content: 'fresh flat text that must NOT overwrite',
+      segments: [],
+      language: 'en',
+    })).resolves.toBeUndefined();
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(1);
+    // Supabase update().eq() needs a terminalizer (.select) to execute; the
+    // mock's own chaining is asserted implicitly by the call above.
+    const patch = updateArgs[0] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty('segments');
+    expect(patch).not.toHaveProperty('content');
+    expect(patch.last_accessed_at).toBeDefined();
+  });
+
+  it('existing row + omitted segments (undefined): same preserve behaviour', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-preserve-2' } });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({ videoId: 'vid-preserve-2', content: 'flat', language: 'en' });
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(1);
+    expect(updateArgs[0]).not.toHaveProperty('segments');
+  });
+
+  it('NO row + empty segments: insert-if-absent flat-transcript row carries content but NO segments column', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({
+      videoId: 'vid-new-empty',
+      content: 'flat transcript from interrupted analysis',
+      segments: [],
+      language: 'en',
+    });
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const [payload, opts] = upsertMock.mock.calls[0];
+    expect(payload.content).toBe('flat transcript from interrupted analysis');
+    expect(payload).not.toHaveProperty('segments');
+    expect(opts.ignoreDuplicates).toBe(true);
+    expect(opts.onConflict).toBe('video_id');
+  });
+
+  it('segments present: full upsert (authoritative overwrite) is unchanged', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-full' } });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({
+      videoId: 'vid-full',
+      content: 'real content',
+      segments: [{ start: 0, duration: 5, text: 'real' }],
+      language: 'en',
+    });
+    expect(updateArgs).toHaveLength(0);
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const payload = upsertMock.mock.calls[0][0];
+    expect(payload.segments).toHaveLength(1);
+    expect(payload.content).toBe('real content');
+  });
+
+  it('probe error + empty segments: STILL THROWS (uncertain state must not authorize a preserve-on-empty write)', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-err',
+      content: 'text',
+      segments: [],
+      language: 'en',
+    })).rejects.toBeTruthy();
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(0);
+  });
+
+  it('probe error + real segments: Sentry-captured, write proceeds as EXISTING (no created_at/expires_at, no throw)', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-err-segments',
+      content: 'real worker-fetched content',
+      segments: [{ start: 0, duration: 5, text: 'real' }],
+      language: 'en',
+    })).resolves.toBeUndefined();
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const [payload, opts] = upsertMock.mock.calls[0];
+    expect(payload.content).toBe('real worker-fetched content');
+    expect(payload.segments).toHaveLength(1);
+    expect(payload).not.toHaveProperty('created_at');
+    expect(payload).not.toHaveProperty('expires_at');
+    expect(opts.onConflict).toBe('video_id');
+    const { captureException } = await import('@sentry/nextjs');
+    expect(vi.mocked(captureException)).toHaveBeenCalled();
   });
 });

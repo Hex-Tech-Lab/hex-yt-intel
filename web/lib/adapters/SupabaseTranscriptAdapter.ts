@@ -1,5 +1,5 @@
-import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 
 export interface TranscriptRow {
   video_id: string;
@@ -37,32 +37,107 @@ export interface ChapterRow {
 
 
 export class SupabaseTranscriptAdapter {
+  /**
+   * Upsert a transcripts row. #417 /simplify: the preserve-on-empty rule
+   * lives HERE (single source), not in the persist route's two call sites —
+   * when `segments` is empty/absent the write is performed WITHOUT the
+   * `segments`/`content` columns, so an existing row's stored timed segments
+   * and segment-derived content can never be overwritten by an empty write.
+   * Semantics by case:
+   * - segments present        → full upsert (authoritative overwrite).
+   * - segments empty, row     → column-omit update (preserve segments AND
+   *   exists                    content; no destructive write possible, so
+   *                             the old check-then-write probe race is gone).
+   * - segments empty, no row  → INSERT-if-absent (`ignoreDuplicates`) with
+   *                             content so an interrupted analysis still
+   *                             gets a flat-transcript row (original P3
+   *                             fix); if a row appeared concurrently the
+   *                             insert is skipped rather than clobbering it.
+   */
   static async upsertTranscript(params: {
     videoId: string;
     content: string;
-    segments: any[];
+    segments?: any[];
     language: string;
     hash?: string;
   }): Promise<void> {
     const service = getSupabaseServiceClient();
+    const hasSegments = !!(params.segments && params.segments.length > 0);
 
     // Check if row already exists to preserve retention timestamps on update
-    const { data: existing } = await service
+    const { data: existing, error: probeError } = await service
       .from('transcripts')
       .select('video_id')
       .eq('video_id', params.videoId)
       .maybeSingle();
+    // #417 P1 (amended per /code-review): fail closed ONLY on the
+    // preserve-on-empty path — an uncertain probe must not authorize a
+    // destructive write, so `!hasSegments` + probe error throws. When real
+    // segments ARE present the write is an authoritative full overwrite and
+    // does not need the probe for safety; a transient probe error there must
+    // not drop a valid write. In that case we proceed treating the row as
+    // EXISTING (created_at/expires_at NOT set — DB defaults at
+    // 20260718000000_add_transcripts_and_markers.sql:8-9 are
+    // `created_at default now()` and `expires_at not null default
+    // now() + interval '72 hours'`, so even a brand-new insert lands inside
+    // the 72h retention window; expires_at can never be NULL).
+    if (probeError && !hasSegments) {
+      Sentry.captureException(probeError, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
+      throw probeError;
+    }
+    if (probeError && hasSegments) {
+      Sentry.captureException(probeError, {
+        tags: { method: 'upsertTranscript', degraded: 'probe-error-proceed' },
+        extra: { videoId: params.videoId },
+      });
+      // Probe uncertain → treat as EXISTING: never set created_at/expires_at.
+      const { error } = await service
+        .from('transcripts')
+        .upsert({
+          video_id: params.videoId,
+          content: params.content,
+          segments: params.segments,
+          transcript_hash: params.hash,
+          language: params.language,
+          last_accessed_at: new Date().toISOString(),
+        }, { onConflict: 'video_id' });
+      if (error) {
+        Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
+        throw error;
+      }
+      return;
+    }
 
-    // Build upsert payload, conditionally including timestamp fields
-    // 72h compliance retention must anchor to the row's true first-seen time — do not reset on update
+    // Segments empty + row exists: update WITHOUT segments/content — the
+    // row's stored values survive untouched no matter what raced in between.
+    if (!hasSegments && existing) {
+      const { error } = await service
+        .from('transcripts')
+        .update({
+          language: params.language,
+          last_accessed_at: new Date().toISOString(),
+        })
+        .eq('video_id', params.videoId)
+        .select('video_id');
+      if (error) {
+        Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
+        throw error;
+      }
+      return;
+    }
+
+    // Build upsert payload. Omit `segments` when empty so the DB default
+    // ('[]') applies on INSERT but an UPDATE never overwrites stored ones.
     const upsertPayload: any = {
       video_id: params.videoId,
-      content: params.content,
-      segments: params.segments,
       language: params.language,
-      transcript_hash: params.hash,
       last_accessed_at: new Date().toISOString(),
     };
+    if (hasSegments) {
+      upsertPayload.content = params.content;
+      upsertPayload.segments = params.segments;
+      upsertPayload.transcript_hash = params.hash;
+    }
 
     // Only set creation and expiration timestamps on first insert, not on subsequent updates.
     // Known limitation: this is check-then-upsert, not atomic — two concurrent first-ever
@@ -75,6 +150,22 @@ export class SupabaseTranscriptAdapter {
     if (!existing) {
       upsertPayload.created_at = new Date().toISOString();
       upsertPayload.expires_at = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+      // Segments empty + no row: INSERT-if-absent. The flat transcript still
+      // lands (interrupted-analysis P3 fix), but if a concurrent writer
+      // inserted the row between the probe and here, this insert is SKIPPED
+      // instead of overwriting its segments/content.
+      if (!hasSegments) {
+        // content must be present for the flat-transcript row.
+        upsertPayload.content = params.content;
+        const { error } = await service
+          .from('transcripts')
+          .upsert(upsertPayload, { onConflict: 'video_id', ignoreDuplicates: true });
+        if (error) {
+          Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
+          throw error;
+        }
+        return;
+      }
     }
 
     const { error } = await service
@@ -86,8 +177,7 @@ export class SupabaseTranscriptAdapter {
     }
   }
 
-  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {
-    const service = getSupabaseServiceClient();
+  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {    const service = getSupabaseServiceClient();
     const { data, error } = await service.from('transcripts').select('*').eq('video_id', videoId).maybeSingle();
     if (error) throw error;
     if (data) {

@@ -1657,5 +1657,47 @@
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseTranscriptAdapter.ts",
+    "severity": "low",
+    "title": "Risk: non-null assertion on array index after sort/filter",
+    "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
+    "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseTranscriptAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'L'",
+    "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
+    "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseTranscriptAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
+    "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseTranscriptAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
+    "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseTranscriptAdapter.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'm'",
+    "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
+    "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/jev/transcript-time-markers.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   }
 ]
