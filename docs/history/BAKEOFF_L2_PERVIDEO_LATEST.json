@@ -1,0 +1,78 @@
+{
+  "promptVersion": "UCIS v5.4 (c4125116, 2026-09-25) — unmodified",
+  "records": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "promptVersion": "UCIS v5.4 (c4125116, 2026-09-25) — unmodified",
+      "transcriptChars": 8764,
+      "strata": {
+        "class": "S1",
+        "language": "en",
+        "durationBucket": "5-20m",
+        "classSource": "/tmp/opencode/pool_classification.json (Jev Layer 0, precomputed 2026-09-27; payload.classification holds only boolean flags — Step 0a)"
+      },
+      "arms": {
+        "haiku": {
+          "model": [
+            "anthropic/claude-haiku-4.5"
+          ],
+          "reasoningEffort": "n/a (baseline)",
+          "factualMedian": 55.5,
+          "factualP25": 38.5,
+          "factualP75": 65.5,
+          "styleMedian": 100,
+          "styleP25": 100,
+          "styleP75": 100,
+          "unsupportedCount": 10,
+          "unsupportedRate": 0.8333333333333334,
+          "dimsGraded": 12,
+          "costUsd": 0
+        },
+        "glm-only": {
+          "model": [
+            "z-ai/glm-5.3-flash"
+          ],
+          "reasoningEffort": "minimal",
+          "factualMedian": 79.5,
+          "factualP25": 75,
+          "factualP75": 84,
+          "styleMedian": 72,
+          "styleP25": 66,
+          "styleP75": 74.5,
+          "unsupportedCount": 6,
+          "unsupportedRate": 0.5,
+          "dimsGraded": 12,
+          "costUsd": 0.007961290000000001
+        },
+        "glm-oss": {
+          "model": [
+            "z-ai/glm-5.3-flash",
+            "openai/gpt-oss-120b"
+          ],
+          "reasoningEffort": "minimal",
+          "factualMedian": 80.5,
+          "factualP25": 74.75,
+          "factualP75": 85,
+          "styleMedian": 67.5,
+          "styleP25": 60.25,
+          "styleP75": 69,
+          "unsupportedCount": 4,
+          "unsupportedRate": 0.3333333333333333,
+          "dimsGraded": 12,
+          "costUsd": 0.003987
+        }
+      },
+      "pairedDiffsVsHaiku": {
+        "glm-only": {
+          "factual": -24,
+          "style": 28
+        },
+        "glm-oss": {
+          "factual": -25,
+          "style": 32.5
+        }
+      },
+      "costNote": "haiku arm = existing DB baseline (no incremental cost); glm costs from OpenRouter usage.cost when reported; judge (Jev) costs not attributed per arm"
+    }
+  ]
+}

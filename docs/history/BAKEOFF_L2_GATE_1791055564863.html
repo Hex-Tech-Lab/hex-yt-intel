@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Bake-off v3 — ADR 038 §4b gate</title>
+<style>body{font-family:-apple-system,sans-serif;padding:2rem;color:#1a1a1a}h1,h2{border-bottom:2px solid #2563eb;padding-bottom:.5rem}table{border-collapse:collapse;width:100%;font-size:.85rem;margin-bottom:2rem}th{background:#1e3a5f;color:#fff;padding:8px 10px;text-align:left}td{padding:6px 10px;border-bottom:1px solid #e5e7eb}</style></head>
+<body>
+<h1>Bake-off v3 — ADR 038 §4b frozen-pool gate</h1>
+<p>promptVersion: UCIS v5.4 (c4125116, 2026-09-25) — unmodified · Judge: ~typesafe/jev-latest · Haiku style-vs-itself = 100 by definition (*).
+FactualParity = transcript-truth adherence + unsupported-claim penalty (baseline inventions penalized); StyleParity = composition vs Haiku prose.</p>
+<h2>Gate verdicts (per arm, independent)</h2>
+<table><tr><th>Arm</th><th>Verdict</th><th>Joint pass</th><th>medF</th><th>medS</th><th>worstF</th><th>worstS</th><th>Worst regression F/S</th><th>Failures</th></tr>
+<tr><td>glm-only</td><td>❌ FAIL</td><td>0/1</td><td>80</td><td>72</td><td>80</td><td>72</td><td>0 / 28</td><td>joint pass 0/1 < 12/14 (need factual>=90 AND style>=85); median factual 79.5 < 90; median style 72 < 85; worst-case factual 79.5 < 80; worst-case style 72 < 75; style regression vs haiku 28 > 10</td></tr>
+<tr><td>glm-oss</td><td>❌ FAIL</td><td>0/1</td><td>81</td><td>68</td><td>81</td><td>68</td><td>0 / 33</td><td>joint pass 0/1 < 12/14 (need factual>=90 AND style>=85); median factual 80.5 < 90; median style 67.5 < 85; worst-case style 67.5 < 75; style regression vs haiku 32.5 > 10</td></tr></table>
+<h2>Per-video scores</h2>
+<table><tr><th>Video</th><th>Class</th><th colspan="3">Haiku 4.5</th><th colspan="3">GLM-5.3-Flash</th><th colspan="3">GLM→OSS</th></tr><tr><th>medF</th><th>medS</th><th>unsup</th><th>medF</th><th>medS</th><th>unsup</th><th>medF</th><th>medS</th><th>unsup</th></tr>
+<tr><td>Z6l4HpuyyP0</td><td>S1</td><td>56</td><td>100*</td><td>10</td><td>80</td><td>72</td><td>6</td><td>81</td><td>68</td><td>4</td></tr></table>
+<h2>Strata (median across videos in stratum)</h2>
+<table><tr><th>Stratum</th><th>N</th><th colspan="3">Haiku 4.5</th><th colspan="3">GLM-5.3-Flash</th><th colspan="3">GLM→OSS</th></tr><tr><th>medF</th><th>medS</th><th>unsup</th><th>medF</th><th>medS</th><th>unsup</th><th>medF</th><th>medS</th><th>unsup</th></tr>
+<tr><td>class=S1 · dur=5-20m · lang=en</td><td>1</td><td>ref</td><td>ref</td><td>80</td><td>72</td><td>81</td><td>68</td></tr></table>
+<p>Total arm spend (this run): $0.0119</p>
+</body></html>

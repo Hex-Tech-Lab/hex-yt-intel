@@ -1,0 +1,449 @@
+{
+  "promptVersion": "UCIS v5.4 (c4125116, 2026-09-25) — unmodified",
+  "tsRun": 1791055564863,
+  "records": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "promptVersion": "UCIS v5.4 (c4125116, 2026-09-25) — unmodified",
+      "transcriptChars": 8764,
+      "strata": {
+        "class": "S1",
+        "language": "en",
+        "durationBucket": "5-20m",
+        "classSource": "/tmp/opencode/pool_classification.json (Jev Layer 0, precomputed 2026-09-27; payload.classification holds only boolean flags — Step 0a)"
+      },
+      "arms": {
+        "haiku": {
+          "model": [
+            "anthropic/claude-haiku-4.5"
+          ],
+          "reasoningEffort": "n/a (baseline)",
+          "factualMedian": 55.5,
+          "factualP25": 38.5,
+          "factualP75": 65.5,
+          "styleMedian": 100,
+          "styleP25": 100,
+          "styleP75": 100,
+          "unsupportedCount": 10,
+          "unsupportedRate": 0.8333333333333334,
+          "dimsGraded": 12,
+          "costUsd": 0
+        },
+        "glm-only": {
+          "model": [
+            "z-ai/glm-5.3-flash"
+          ],
+          "reasoningEffort": "minimal",
+          "factualMedian": 79.5,
+          "factualP25": 75,
+          "factualP75": 84,
+          "styleMedian": 72,
+          "styleP25": 66,
+          "styleP75": 74.5,
+          "unsupportedCount": 6,
+          "unsupportedRate": 0.5,
+          "dimsGraded": 12,
+          "costUsd": 0.007961290000000001
+        },
+        "glm-oss": {
+          "model": [
+            "z-ai/glm-5.3-flash",
+            "openai/gpt-oss-120b"
+          ],
+          "reasoningEffort": "minimal",
+          "factualMedian": 80.5,
+          "factualP25": 74.75,
+          "factualP75": 85,
+          "styleMedian": 67.5,
+          "styleP25": 60.25,
+          "styleP75": 69,
+          "unsupportedCount": 4,
+          "unsupportedRate": 0.3333333333333333,
+          "dimsGraded": 12,
+          "costUsd": 0.003987
+        }
+      },
+      "pairedDiffsVsHaiku": {
+        "glm-only": {
+          "factual": -24,
+          "style": 28
+        },
+        "glm-oss": {
+          "factual": -25,
+          "style": 32.5
+        }
+      },
+      "costNote": "haiku arm = existing DB baseline (no incremental cost); glm costs from OpenRouter usage.cost when reported; judge (Jev) costs not attributed per arm"
+    }
+  ],
+  "allResults": [
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 0: Executive Digest",
+      "grades": {
+        "haiku": {
+          "factual": 64,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 85,
+          "style": 73,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.63 style=6.61 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 84,
+          "style": 68,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.55 style=6.14 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 1: Apex Intelligence",
+      "grades": {
+        "haiku": {
+          "factual": 44,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 77,
+          "style": 76,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.92 style=6.86 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 74,
+          "style": 69,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.63 style=6.21 unsupported=1 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 2: Provenance, Metadata & Virality Profile",
+      "grades": {
+        "haiku": {
+          "factual": 39,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 70,
+          "style": 71,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.34 style=6.41 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 67,
+          "style": 69,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.06 style=6.2 unsupported=1 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 3: Content Architecture & First Principles",
+      "grades": {
+        "haiku": {
+          "factual": 75,
+          "style": 100,
+          "unsupported": [],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 84,
+          "style": 72,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.55 style=6.5 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 85,
+          "style": 58,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.67 style=5.19 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 4: Psychological & Rhetorical Layer",
+      "grades": {
+        "haiku": {
+          "factual": 63,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 76,
+          "style": 66,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.87 style=5.97 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 75,
+          "style": 61,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.74 style=5.47 unsupported=1 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 5: Core Intelligence Extraction",
+      "grades": {
+        "haiku": {
+          "factual": 60,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 87,
+          "style": 74,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.86 style=6.63 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 87,
+          "style": 73,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.87 style=6.56 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 6: Comparative & Quantitative Analysis",
+      "grades": {
+        "haiku": {
+          "factual": 70,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 72,
+          "style": 72,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=6.46 style=6.47 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 88,
+          "style": 69,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.9 style=6.25 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 7: Implementation Systems & Workflows",
+      "grades": {
+        "haiku": {
+          "factual": 51,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 83,
+          "style": 61,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.47 style=5.47 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 83,
+          "style": 44,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.45 style=3.96 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 8: Semantic & Knowledge Graph Foundation",
+      "grades": {
+        "haiku": {
+          "factual": 78,
+          "style": 100,
+          "unsupported": [],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 79,
+          "style": 77,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=7.07 style=6.96 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 85,
+          "style": 67,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.69 style=6.01 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 9: Forward Intelligence & Strategic Foresight",
+      "grades": {
+        "haiku": {
+          "factual": 25,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 84,
+          "style": 54,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.56 style=4.9 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 78,
+          "style": 68,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.01 style=6.1 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 10: Credibility, Risk & Meta-Assessment",
+      "grades": {
+        "haiku": {
+          "factual": 37,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 80,
+          "style": 78,
+          "unsupported": [],
+          "reasoning": "Jev factual=7.23 style=6.99 unsupported=0 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 75,
+          "style": 61,
+          "unsupported": [],
+          "reasoning": "Jev factual=6.72 style=5.48 unsupported=0 (0-9)"
+        }
+      }
+    },
+    {
+      "videoId": "Z6l4HpuyyP0",
+      "dimName": "Dim 11: Commercial Yield & Monetization Profiling",
+      "grades": {
+        "haiku": {
+          "factual": 21,
+          "style": 100,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "factual judged vs transcript; style=100 (self-reference, not judged)"
+        },
+        "glm-only": {
+          "factual": 65,
+          "style": 66,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=5.82 style=5.98 unsupported=1 (0-9)"
+        },
+        "glm-oss": {
+          "factual": 61,
+          "style": 47,
+          "unsupported": [
+            "[jev] unsupported claims present (binary choice)"
+          ],
+          "reasoning": "Jev factual=5.47 style=4.23 unsupported=1 (0-9)"
+        }
+      }
+    }
+  ],
+  "gates": {
+    "glm-only": {
+      "pass": false,
+      "jointPassCount": 0,
+      "totalVideos": 1,
+      "medianFactual": 79.5,
+      "medianStyle": 72,
+      "worstFactual": 79.5,
+      "worstStyle": 72,
+      "worstFactualRegression": 0,
+      "worstStyleRegression": 28,
+      "failures": [
+        "joint pass 0/1 < 12/14 (need factual>=90 AND style>=85)",
+        "median factual 79.5 < 90",
+        "median style 72 < 85",
+        "worst-case factual 79.5 < 80",
+        "worst-case style 72 < 75",
+        "style regression vs haiku 28 > 10"
+      ]
+    },
+    "glm-oss": {
+      "pass": false,
+      "jointPassCount": 0,
+      "totalVideos": 1,
+      "medianFactual": 80.5,
+      "medianStyle": 67.5,
+      "worstFactual": 80.5,
+      "worstStyle": 67.5,
+      "worstFactualRegression": 0,
+      "worstStyleRegression": 32.5,
+      "failures": [
+        "joint pass 0/1 < 12/14 (need factual>=90 AND style>=85)",
+        "median factual 80.5 < 90",
+        "median style 67.5 < 85",
+        "worst-case style 67.5 < 75",
+        "style regression vs haiku 32.5 > 10"
+      ]
+    }
+  },
+  "totalSpendUsd": 0.01194829
+}
