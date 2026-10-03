@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { annotateWithTimeMarkers, formatClock, hasEstimatedTimes } from '@/lib/jev/transcript-time-markers';
+import { annotateWithTimeMarkers, formatClock, hasEstimatedTimes, timeAnnotatedReasons } from '@/lib/jev/transcript-time-markers';
 import { sliceText, tokenizeTranscript } from '@/lib/jev/transcript-slice';
 
 // 2-word segments every 10 s: "w0 w1" @0, "w2 w3" @10, ... 200 words over ~1000 s.
@@ -111,6 +111,35 @@ describe('annotateWithTimeMarkers', () => {
     const invented = SEGMENTS.map((segment, index) => (index === 3 ? { ...segment, estimated: true } : segment));
     expect(annotateWithTimeMarkers(FULL, invented, { startWord: 0 })).toBeNull();
     expect([hasEstimatedTimes(invented), hasEstimatedTimes(SEGMENTS), hasEstimatedTimes(undefined)]).toEqual([true, false, false]);
+  });
+
+  // #417 /simplify D: the annotator returns its own normalized plain-word
+  // length so callers don't re-tokenize, and timeAnnotatedReasons classifies
+  // a null annotation with the SAME guard order the annotator uses.
+  it('returns normalizedLength: whitespace-normalized plain-word length, independent of markers and raw whitespace', () => {
+    // FULL is 200 single-space words -> normalized length 200 words joined.
+    const expected = FULL.split(' ').length - 1 + FULL.split(' ').reduce((sum, word) => sum + word.length, 0);
+    const spaced = FULL.split(' ').join('  ');
+    const out = annotateWithTimeMarkers(spaced, SEGMENTS, { startWord: 0 });
+    expect(out?.normalizedLength).toBe(expected);
+    expect(out?.normalizedLength).toBeLessThan(spaced.length); // raw whitespace not counted
+    // Budget cut: normalizedLength stays the FULL plain-word length (the cut
+    // is in emitted text, not in the measured length).
+    const cut = annotateWithTimeMarkers(FULL, SEGMENTS, { startWord: 0, maxChars: 30 });
+    expect(cut?.normalizedLength).toBe(expected);
+  });
+
+  it('timeAnnotatedReasons mirrors the annotator guard order', () => {
+    const broken = SEGMENTS.map((segment) => ({ ...segment, start: Number.NaN }));
+    const decreasing = SEGMENTS.map((segment, index) => ({ ...segment, start: SEGMENTS.length - index }));
+    const invented = SEGMENTS.map((segment) => ({ ...segment, estimated: true }));
+    expect(timeAnnotatedReasons(undefined)).toBe('estimated');
+    expect(timeAnnotatedReasons([])).toBe('estimated');
+    expect(timeAnnotatedReasons(invented)).toBe('estimated');
+    expect(timeAnnotatedReasons(broken)).toBe('invalid_timing');
+    expect(timeAnnotatedReasons(decreasing)).toBe('invalid_timing');
+    expect(timeAnnotatedReasons(SEGMENTS.map((segment) => ({ ...segment, text: `x${segment.text}` })))).toBe('misaligned');
+    expect(timeAnnotatedReasons(SEGMENTS)).toBe('misaligned'); // aligned-but-passed-in list still classified by guards
   });
 });
 

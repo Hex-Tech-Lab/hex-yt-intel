@@ -298,7 +298,11 @@ export class PersistService {
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
             jevChunkIndex: params.jevChunkIndex,
-            segments: params.segments,
+            // #417 /simplify: omit the key entirely when segments are absent —
+            // the persist route treats an OMITTED key as "preserve the stored
+            // row's segments/content", while a present `[]` would be a
+            // meaningful empty array.
+            ...(params.segments ? { segments: params.segments } : {}),
             transcript: params.transcript,
             channelMeta: params.channelMeta,
             comments: params.comments,
@@ -401,7 +405,8 @@ export class PersistService {
             contentSig,
             exp,
             status: options.status,
-            segments: options.segments,
+            // #417 /simplify: omit when absent (preserve-on-empty, see above).
+            ...(options.segments ? { segments: options.segments } : {}),
             transcript: options.transcript,
             channelMeta: options.channelMeta,
             comments: options.comments,

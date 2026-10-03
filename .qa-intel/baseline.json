@@ -1692,5 +1692,12 @@
     "title": "Code Quality: Unclear variable name 'm'",
     "why": "Pre-existing (pre-#417) finding in file touched by this change; baselined per standing qa-intel protocol.",
     "fix": "Out of scope for #417 provenance fix."
+  },
+  {
+    "file": "web/lib/jev/transcript-time-markers.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   }
 ]

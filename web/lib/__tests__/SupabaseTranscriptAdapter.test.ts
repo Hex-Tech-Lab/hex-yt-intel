@@ -135,18 +135,39 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — chunk-path / finalize-p
   });
 });
 
-// ─── #417 P1 provenance guard: empty incoming segments must not erase a
-// stored row's segments/content. The persist route (both chunk path and
-// finalize path) calls hasTranscriptRow() first and skips the segments/
-// content columns when the row already exists; when it does NOT exist the
-// segment-less flat-transcript upsert still goes through (original P3 fix
-// preserved — interrupted analyses still get a row).
-describe('SupabaseTranscriptAdapter.hasTranscriptRow — #417 empty-segments guard support', () => {
-  const selectMaybeSingleGuardMock = vi.fn();
+// ─── #417 /simplify: preserve-on-empty moved INTO the adapter ────────────────
+// The route no longer probes with hasTranscriptRow — upsertTranscript owns
+// the rule: empty/absent segments + existing row → segments/content are
+// NEVER overwritten; empty segments + no row → insert-if-absent flat
+// transcript row (original P3 fix preserved). hasTranscriptRow itself was
+// deleted (no remaining callers); these tests assert the BEHAVIOUR at the
+// adapter boundary.
+describe('SupabaseTranscriptAdapter.upsertTranscript — preserve-on-empty (#417)', () => {
+  /** Patch objects passed to `.update(...)` (closure-captured per test via doMock factory). */
+  let updateArgs: Record<string, unknown>[] = [];
 
   beforeEach(() => {
-    selectMaybeSingleGuardMock.mockReset();
     vi.resetModules();
+    upsertMock.mockReset();
+    selectMaybeSingleMock.mockReset();
+    updateArgs = [];
+    upsertMock.mockResolvedValue({ error: null });
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: selectMaybeSingleMock,
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => {
+            updateArgs.push(patch);
+            return { eq: () => ({ select: () => Promise.resolve({ error: null }) }) };
+          },
+          upsert: upsertMock,
+        }),
+      }),
+    }));
   });
 
   afterEach(() => {
@@ -154,60 +175,82 @@ describe('SupabaseTranscriptAdapter.hasTranscriptRow — #417 empty-segments gua
     vi.resetModules();
   });
 
-  it('reports row existence without touching last_accessed_at (no update call)', async () => {
-    const updateMock = vi.fn().mockResolvedValue({ error: null });
-    vi.doMock('@/lib/supabase', () => ({
-      getSupabaseServiceClient: () => ({
-        from: (_table: string) => ({
-          select: () => ({
-            eq: () => ({
-              maybeSingle: selectMaybeSingleGuardMock,
-            }),
-          }),
-          update: updateMock,
-          upsert: vi.fn(),
-        }),
-      }),
-    }));
+  async function freshAdapter() {
     const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
-    selectMaybeSingleGuardMock.mockResolvedValue({ data: { video_id: 'vid-5' } });
-    await expect(FreshAdapter.hasTranscriptRow('vid-5')).resolves.toBe(true);
-    expect(updateMock).not.toHaveBeenCalled();
+    return FreshAdapter;
+  }
+
+  it('existing row + empty segments: updates WITHOUT segments/content — stored values can never be erased', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-preserve' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-preserve',
+      content: 'fresh flat text that must NOT overwrite',
+      segments: [],
+      language: 'en',
+    })).resolves.toBeUndefined();
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(1);
+    // Supabase update().eq() needs a terminalizer (.select) to execute; the
+    // mock's own chaining is asserted implicitly by the call above.
+    const patch = updateArgs[0] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty('segments');
+    expect(patch).not.toHaveProperty('content');
+    expect(patch.last_accessed_at).toBeDefined();
   });
 
-  it('returns false when the row does not exist (flat-transcript upsert still allowed)', async () => {
-    vi.doMock('@/lib/supabase', () => ({
-      getSupabaseServiceClient: () => ({
-        from: (_table: string) => ({
-          select: () => ({
-            eq: () => ({
-              maybeSingle: selectMaybeSingleGuardMock,
-            }),
-          }),
-          upsert: vi.fn(),
-        }),
-      }),
-    }));
-    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
-    selectMaybeSingleGuardMock.mockResolvedValue({ data: null });
-    await expect(FreshAdapter.hasTranscriptRow('vid-6')).resolves.toBe(false);
+  it('existing row + omitted segments (undefined): same preserve behaviour', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-preserve-2' } });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({ videoId: 'vid-preserve-2', content: 'flat', language: 'en' });
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(1);
+    expect(updateArgs[0]).not.toHaveProperty('segments');
   });
 
-  it('#417 P1: THROWS (not returns false) when the probe query errors — an uncertain probe must not authorize the write', async () => {
-    vi.doMock('@/lib/supabase', () => ({
-      getSupabaseServiceClient: () => ({
-        from: (_table: string) => ({
-          select: () => ({
-            eq: () => ({
-              maybeSingle: selectMaybeSingleGuardMock,
-            }),
-          }),
-          upsert: vi.fn(),
-        }),
-      }),
-    }));
-    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
-    selectMaybeSingleGuardMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
-    await expect(FreshAdapter.hasTranscriptRow('vid-7')).rejects.toBeTruthy();
+  it('NO row + empty segments: insert-if-absent flat-transcript row carries content but NO segments column', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({
+      videoId: 'vid-new-empty',
+      content: 'flat transcript from interrupted analysis',
+      segments: [],
+      language: 'en',
+    });
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const [payload, opts] = upsertMock.mock.calls[0];
+    expect(payload.content).toBe('flat transcript from interrupted analysis');
+    expect(payload).not.toHaveProperty('segments');
+    expect(opts.ignoreDuplicates).toBe(true);
+    expect(opts.onConflict).toBe('video_id');
+  });
+
+  it('segments present: full upsert (authoritative overwrite) is unchanged', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: { video_id: 'vid-full' } });
+    const Adapter = await freshAdapter();
+    await Adapter.upsertTranscript({
+      videoId: 'vid-full',
+      content: 'real content',
+      segments: [{ start: 0, duration: 5, text: 'real' }],
+      language: 'en',
+    });
+    expect(updateArgs).toHaveLength(0);
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const payload = upsertMock.mock.calls[0][0];
+    expect(payload.segments).toHaveLength(1);
+    expect(payload.content).toBe('real content');
+  });
+
+  it('probe error THROWS (uncertain state must not authorize a write)', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-err',
+      content: 'text',
+      segments: [],
+      language: 'en',
+    })).rejects.toBeTruthy();
+    expect(upsertMock).not.toHaveBeenCalled();
+    expect(updateArgs).toHaveLength(0);
   });
 });

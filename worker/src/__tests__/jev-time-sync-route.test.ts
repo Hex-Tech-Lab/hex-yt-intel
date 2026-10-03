@@ -276,7 +276,9 @@ describe('analyze-llm-stream #417 segment provenance (route-level)', () => {
     return { prompt, persistBodies };
   }
 
-  it('(untrusted-a) request carries transcript + altered-time segments, no worker fetch: plain text, no markers, persist carries segments: []', async () => {
+  it('(untrusted-a) request carries transcript + altered-time segments, no worker fetch: plain text, no markers, persist OMITS segments (preserve-on-empty, /simplify)', async () => {
+    const Sentry = await import('@sentry/cloudflare');
+    vi.mocked(Sentry.captureMessage).mockClear();
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     try {
       // Times altered: same words as the transcript slice, shifted starts.
@@ -286,13 +288,19 @@ describe('analyze-llm-stream #417 segment provenance (route-level)', () => {
       expect(prompt).not.toContain('[00:');
       expect(prompt).toContain('two three four five');
       expect(persistBodies.length).toBeGreaterThan(0);
+      // /simplify: segments are OMITTED (undefined), not [] — the persist
+      // route's adapter rule preserves the stored row's segments/content.
       for (const body of persistBodies) {
-        expect(body.segments).toEqual([]);
+        expect(body.segments).toBeUndefined();
+        expect(Object.prototype.hasOwnProperty.call(body, 'segments')).toBe(false);
       }
-      const crumb = infoSpy.mock.calls.find((call) => String(call[0]).includes('untrusted provenance'));
-      expect(crumb).toBeDefined();
-      const payload = crumb?.[1] as { reason?: string } | undefined;
-      expect(payload?.reason).toBe('untrusted_segments');
+      // /simplify: request-supplied segments are never assigned to
+      // resolvedSegments at all (trusted by construction), so the untrusted
+      // case is now a silent plain-text fallback — no "untrusted" info crumb
+      // AND no "do not align" warning (only WORKER-fetched segments that
+      // misalign may fire that channel).
+      const warning = vi.mocked(Sentry.captureMessage).mock.calls.find(([message]) => String(message).includes('do not align'));
+      expect(warning).toBeUndefined();
     } finally {
       infoSpy.mockRestore();
     }

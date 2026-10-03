@@ -26,19 +26,56 @@ export interface TimeAnnotated {
   endSeconds: number;
   /** True when maxChars cut the excerpt (only the visible words are annotated). */
   truncated: boolean;
+  /**
+   * The whitespace-normalized (single-space-joined) plain-word length the
+   * budget cut was computed on. Callers report truncation against THIS
+   * number when annotating ran — recomputing it by re-tokenizing the text
+   * duplicated the annotator's own measurement (and could drift).
+   */
+  normalizedLength: number;
 }
 
-/** Fallback only; the live value is the registry key analysis.jev.timeMarkerIntervalSeconds. */
-export const TIME_MARKER_INTERVAL_SECONDS = 30;
-export const TIME_MARKER_INTERVAL_MIN_SECONDS = 5;
-export const TIME_MARKER_INTERVAL_MAX_SECONDS = 300;
+/**
+ * Fallback only; the live value is the registry key
+ * `analysis.jev.timeMarkerIntervalSeconds` — bounds and fallback live in
+ * `web/lib/config/jev.ts` (`JEV_BOUNDS.timeMarkerIntervalSeconds`,
+ * `JEV_TIME_MARKER_INTERVAL_FALLBACK`) so there is exactly one source.
+ */
+export { JEV_TIME_MARKER_INTERVAL_FALLBACK as TIME_MARKER_INTERVAL_SECONDS, JEV_BOUNDS } from '../config/jev';
+import { JEV_BOUNDS, JEV_TIME_MARKER_INTERVAL_FALLBACK } from '../config/jev';
+const TIME_MARKER_INTERVAL_MIN_SECONDS = JEV_BOUNDS.timeMarkerIntervalSeconds.min;
+const TIME_MARKER_INTERVAL_MAX_SECONDS = JEV_BOUNDS.timeMarkerIntervalSeconds.max;
 
 /** True when any segment's start was invented by the provider (no caption timing). */
 export function hasEstimatedTimes(segments: readonly TimedSegment[] | undefined): boolean {
   return (segments ?? []).some((segment) => segment.estimated === true);
 }
 
-/** 3725.4 -> "01:02:05". */
+/** Failure reasons for a null annotation, mirroring the guard order in `annotateWithTimeMarkers`. */
+export type TimeMarkerFailureReason = 'invalid_timing' | 'estimated' | 'misaligned';
+
+/**
+ * Which guard would reject a null annotation. Guards run in the same order
+ * as in `annotateWithTimeMarkers` so the reported reason matches what the
+ * annotator would actually have failed on. Empty segments => 'estimated'
+ * (nothing to annotate; the worker logs the softer info line, not a
+ * misalignment warning).
+ */
+export function timeAnnotatedReasons(
+  segments: readonly TimedSegment[] | undefined,
+): TimeMarkerFailureReason {
+  if (!segments || segments.length === 0 || hasEstimatedTimes(segments)) return 'estimated';
+  let previous = -1;
+  for (const segment of segments) {
+    const start = segment.start;
+    if (typeof start !== 'number' || !Number.isFinite(start) || start < 0) return 'invalid_timing';
+    if (previous >= 0 && start < previous) return 'invalid_timing';
+    previous = start;
+  }
+  return 'misaligned';
+}
+
+/** 3725.4 -> "01:02:05". Intentionally ALWAYS padded HH:MM:SS for the prompt, unlike `formatTimestamp` in web/lib/utils/entity-time-seek.ts (which renders variable-precision clock times for UI seek links). */
 export function formatClock(totalSeconds: number): string {
   const whole = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(whole / 3600);
@@ -82,10 +119,26 @@ export function annotateWithTimeMarkers(
   segments: readonly TimedSegment[] | undefined,
   options: { startWord: number; durationSeconds?: number; intervalSeconds?: number; maxChars?: number },
 ): TimeAnnotated | null {
+  // (1) Absent segments: nothing to annotate.
   if (!segments || segments.length === 0) return null;
-  // A provider that had no caption timing invents start times; the header
-  // calls markers "real video times", so plain text beats confident guesses.
+  // (2) Fabricated-time guard FIRST (#417 P2): a provider-invented
+  // `estimated` start, a non-finite or negative start, or a start that
+  // DECREASES relative to the previous segment means the segment timing is
+  // not trustworthy chronological data. Deliberately checked BEFORE
+  // `wordTimes` and the word-compare loop — an invalid-timing list must fail
+  // with that reason (see `timeAnnotatedReasons`), and wordTimes would
+  // otherwise substitute the previous timestamp (or 0) and emit it as a real
+  // marker. Plain text is safer than invented time.
   if (hasEstimatedTimes(segments)) return null;
+  let previous = -1;
+  for (const segment of segments) {
+    const start = segment.start;
+    if (typeof start !== 'number' || !Number.isFinite(start) || start < 0) return null;
+    if (previous >= 0 && start < previous) return null;
+    previous = start;
+  }
+  // (3) Word alignment: the text's words must match the segments' words at
+  // this offset (different provider/normalization => plain text is safer).
   const sliceWords = tokenizeTranscript(text);
   if (sliceWords.length === 0) return null;
   const { words, starts, ends } = wordTimes(segments);
@@ -95,45 +148,36 @@ export function annotateWithTimeMarkers(
     if (words[startWord + index] !== sliceWords[index]) return null;
   }
 
-  // Fabricated-time guard (#417 P2): a non-finite or negative segment start,
-  // or a start that DECREASES relative to the previous segment, means the
-  // segment timing is not trustworthy chronological data. wordTimes would
-  // substitute the previous timestamp (or 0) and emit it as a real marker —
-  // plain text is safer than invented time.
-  let previous = -1;
-  for (const segment of segments) {
-    const start = segment.start;
-    if (typeof start !== 'number' || !Number.isFinite(start) || start < 0) return null;
-    if (previous >= 0 && start < previous) return null;
-    previous = start;
-  }
-
   // The prompt budget is spent on the PLAIN words, never on markers: cut at a
   // word boundary first, then annotate only what the model will see.
+  // Oversized single tokens (#417 P2) are CLAMPED ONCE, up front, so the
+  // measuring list and the emitting list are the same — no token is counted
+  // short and then emitted long.
   const maxChars = options.maxChars ?? 0;
-  let visible = sliceWords.length;
+  // substring (not slice) + no ellipsis ON PURPOSE: this is a prompt-budget
+  // cut of model-readable transcript text (ellipsis omitted by design, not a
+  // display truncation -- an ellipsis suffix would corrupt the text).
+  const effectiveWords = maxChars > 0 ? sliceWords.map((token) => token.substring(0, maxChars) /* prompt-budget cut, ellipsis omitted by design: ... is NOT appended */) : sliceWords;
+  let visible = effectiveWords.length;
   if (maxChars > 0) {
     let length = -1;
-    for (let index = 0; index < sliceWords.length; index += 1) {
-      // Oversized single token (#417 P2): a token longer than the whole
-      // remaining budget must still be CUT (never emitted whole, which would
-      // return text longer than maxChars and skip the truncation warning).
-      const token = sliceWords[index] as string;
-      length += Math.min(token.length, maxChars) + 1;
+    for (let index = 0; index < effectiveWords.length; index += 1) {
+      length += (effectiveWords[index] as string).length + 1;
       if (length > maxChars) {
         visible = Math.max(1, index);
         break;
       }
     }
   }
-  const truncated = visible < sliceWords.length;
+  const truncated = visible < effectiveWords.length;
+  const normalizedLength = effectiveWords.join(' ').length;
 
   // Clamped here too: the value arrives unsigned in the stream request, and a
   // tiny interval would put a marker before almost every word (prompt 2-3x).
   const requested = options.intervalSeconds;
   const interval = typeof requested === 'number' && Number.isFinite(requested)
     ? Math.min(TIME_MARKER_INTERVAL_MAX_SECONDS, Math.max(TIME_MARKER_INTERVAL_MIN_SECONDS, requested))
-    : TIME_MARKER_INTERVAL_SECONDS;
+    : JEV_TIME_MARKER_INTERVAL_FALLBACK;
   const out: string[] = [];
   let nextBoundary = -Infinity;
   for (let index = 0; index < visible; index += 1) {
@@ -142,12 +186,7 @@ export function annotateWithTimeMarkers(
       out.push(`[${formatClock(time)}]`);
       nextBoundary = (Math.floor(time / interval) + 1) * interval;
     }
-    // Emit the token. When a budget is configured (maxChars > 0), a token
-    // longer than the whole budget is emitted at EXACTLY maxChars chars —
-    // a prompt-budget cut, not a display truncation (an ellipsis suffix
-    // would corrupt the transcript text the model reads).
-    const token = sliceWords[index] as string;
-    out.push(maxChars > 0 && token.length > maxChars ? token.substring(0, maxChars) /* ellipsis omitted by design: prompt-budget cut, not display truncation */ : token);
+    out.push(effectiveWords[index] as string);
   }
 
   const startSeconds = starts[startWord] as number;
@@ -162,5 +201,5 @@ export function annotateWithTimeMarkers(
   const notice = truncated
     ? `\n\n[...excerpt truncated to fit the prompt budget: the model sees ${formatClock(startSeconds)}–${formatClock(endSeconds)} only; anything later in this excerpt is not analyzed]`
     : '';
-  return { text: `${header}\n\n${out.join(' ')}${notice}`, startSeconds, endSeconds, truncated };
+  return { text: `${header}\n\n${out.join(' ')}${notice}`, startSeconds, endSeconds, truncated, normalizedLength };
 }
