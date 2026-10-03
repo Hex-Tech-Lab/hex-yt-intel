@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const insertSystemCommentSampleRun = vi.hoisted(() => vi.fn());
 const markSampleRunFailed = vi.hoisted(() => vi.fn());
+const hasSystemSampleRun = vi.hoisted(() => vi.fn());
+const analysisHasUsableComments = vi.hoisted(() => vi.fn());
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 vi.mock('@/lib/env', () => ({ env: { cloudflareWorkerUrl: 'https://worker.test', appUrl: 'https://www.getvintel.com' } }));
@@ -17,7 +19,7 @@ vi.mock('@/lib/stream-token', () => ({
 vi.mock('@/lib/adapters', () => ({ SupabasePersistenceAdapter: class {} }));
 vi.mock('@/lib/qstash-client', () => ({ publishEmbeddingTask: vi.fn() }));
 vi.mock('@/lib/adapters/SupabaseAuxRemediationAdapter', () => ({
-  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed },
+  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed, hasSystemSampleRun, analysisHasUsableComments },
 }));
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   SupabaseSettingsAdapter: { getRegistrySettings: vi.fn((_keys: string[], fallback: Record<string, unknown>) => Promise.resolve(fallback)) },
@@ -29,7 +31,9 @@ const params = { analysisId: 'an-1', userId: 'u-1', videoId: 'vid', validationRe
 
 beforeEach(() => {
   vi.clearAllMocks();
-  insertSystemCommentSampleRun.mockResolvedValue({ id: 'run-1' });
+  insertSystemCommentSampleRun.mockResolvedValue({ id: 'run-1', alreadyQueued: false });
+  hasSystemSampleRun.mockResolvedValue(false);
+  analysisHasUsableComments.mockResolvedValue(false);
 });
 
 describe('enqueueSystemCommentSampleRun', () => {
@@ -50,5 +54,48 @@ describe('enqueueSystemCommentSampleRun', () => {
   it('inserts nothing when the comment count is unknown', async () => {
     expect(await enqueueSystemCommentSampleRun({ ...params, validationReport: {} })).toBe(false);
     expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+  });
+
+  it('skips entirely when the analysis already has a system sample run (repeat finalize, #416 follow-up)', async () => {
+    hasSystemSampleRun.mockResolvedValue(true);
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
+    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+  });
+
+  it('skips entirely when the analysis already has usable comments (#416 follow-up)', async () => {
+    analysisHasUsableComments.mockResolvedValue(true);
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
+    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+  });
+
+  it('treats a unique-violation insert (lost race) as already-queued: no enqueue, no error, no failure marking', async () => {
+    insertSystemCommentSampleRun.mockResolvedValue({ id: '', alreadyQueued: true });
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
+    expect(markSampleRunFailed).not.toHaveBeenCalled();
+  });
+
+  it('marks the run failed when token signing throws (orphaned-pending bug, #416 follow-up)', async () => {
+    vi.doMock('@/lib/stream-token', () => ({
+      signCommentsTier3Token: vi.fn().mockRejectedValue(new Error('hmac secret missing')),
+      signChannelMetaToken: vi.fn(),
+    }));
+    vi.resetModules();
+    const { enqueueSystemCommentSampleRun: enqueueFresh } = await import('@/lib/services/aux-remediation');
+    expect(await enqueueFresh(params)).toBe(false);
+    expect(markSampleRunFailed).toHaveBeenCalledWith('run-1');
+    vi.doUnmock('@/lib/stream-token');
+    vi.resetModules();
+  });
+
+  it('marks the run failed when the registry settings lookup throws (orphaned-pending bug, #416 follow-up)', async () => {
+    vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
+      SupabaseSettingsAdapter: { getRegistrySettings: vi.fn().mockRejectedValue(new Error('db down')) },
+    }));
+    vi.resetModules();
+    const { enqueueSystemCommentSampleRun: enqueueFresh } = await import('@/lib/services/aux-remediation');
+    expect(await enqueueFresh(params)).toBe(false);
+    expect(markSampleRunFailed).toHaveBeenCalledWith('run-1');
+    vi.doUnmock('@/lib/adapters/SupabaseSettingsAdapter');
+    vi.resetModules();
   });
 });

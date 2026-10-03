@@ -45,6 +45,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Pre-deploy gate: the transcript chain's paid/optional providers must
+      # be bound as CF secrets BEFORE deploying. `wrangler secret list`
+      # returns NAMES ONLY (no values exist client-side), so this can never
+      # leak credentials into the log — and because it reads the management
+      # API (not the worker), it works on the worker that is ABOUT to be
+      # deployed. Previously this check ran after `Deploy worker`, so a
+      # missing key deployed broken code and could only fail the job
+      # post-hoc. A missing binding means TranscriptApiProvider/
+      # SupadataTranscriptProvider silently skip their tier
+      # (`... not configured`) — chain still answers via fallbacks, but the
+      # deploy must flag the drift loudly and stop.
+      # Bootstrap case: on the very first setup of a fresh worker there are
+      # no secrets yet — that is the one scenario where failing here is the
+      # correct behavior; the operator uploads secrets (wrangler secret put
+      # --env production) before the first automated deploy can succeed.
+      - name: Verify transcript-provider secrets bound (pre-deploy)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list 2>/dev/null \
+            || pnpm exec wrangler secret list 2>/dev/null || true)
+          echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
+            || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker — deploy blocked"; exit 1; }
+          echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
+            || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
+          echo "transcript-provider secrets bound: OK"
+
       # `wrangler deploy` runs the esbuild build (wrangler.toml [build]) which bundles
       # the web/lib imports, then uploads. Secrets already on the worker persist.
       - name: Deploy worker
@@ -60,29 +88,14 @@ jobs:
           echo "worker GET / → $code"
           test "$code" = "200"
 
-      # Smoke check: the transcript chain's paid/optional providers are bound
-      # as CF secrets. `wrangler secret list` returns NAMES ONLY (no values
-      # exist client-side), so this can never leak credentials into the log.
-      # A missing binding means TranscriptApiProvider/SupadataTranscriptProvider
-      # silently skip their tier (`... not configured`) — chain still answers
-      # via fallbacks, but the deploy should flag the drift loudly.
-      - name: Verify transcript-provider secrets bound
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          sleep 5
-          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list 2>/dev/null \
-            || pnpm exec wrangler secret list 2>/dev/null || true)
-          echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
-            || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker"; exit 1; }
-          echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
-            || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
-          echo "transcript-provider secrets bound: OK"
-
       # A bound NAME can still hold an EMPTY value (TRANSCRIPTAPI_API_KEY was
       # bound-but-empty 2026-09-26..10-02, sending every fresh transcript to
-      # Apify). /health/providers reports usable (non-blank) keys as booleans.
+      # Apify). `wrangler secret list` proves names only — emptiness is only
+      # observable where the value is actually read, i.e. inside the running
+      # worker via /health/providers. So this probe is necessarily POST-deploy
+      # (the pre-deploy name check above still blocks unbound secrets); here
+      # it fails loudly and marks the deploy job failed so a bad deploy is
+      # never silently "green".
       - name: Verify transcript-provider secrets are non-empty
         run: |
           body=$(curl -s --fail-with-body https://yt-intel.hex-tech-lab.workers.dev/health/providers)
