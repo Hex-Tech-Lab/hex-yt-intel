@@ -1,0 +1,21 @@
+docs/agent-prompts/TEMPLATE.md
+  s_71981e252ebeb0::t_e24b8514bd3836 221
+docs/agent-prompts/UNIVERSAL_EXECUTOR_DNA.md
+  s_71981e252ebeb0::t_428e1a43529ea8 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "603bff831f78103085f77d865e352baf6e6073b0",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
