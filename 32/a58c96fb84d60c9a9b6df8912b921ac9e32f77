@@ -1,0 +1,19 @@
+docs/history/THOS_2026-10-03_NIGHT_CLOUD_HANDOVER.md
+  s_71981e252ebeb0::t_f86c7bf0cabb84 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "32a58c96fb84d60c9a9b6df8912b921ac9e32f77",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
