@@ -7,14 +7,22 @@ bake-off).
 
 ## Classes
 
+**Text-observable criteria only (user-specified 2026-10-03, permanent).** The
+Definition column is observable from transcript text alone; the earlier
+audio-dependent wording (speaker counts, overlapping dialogue, voiceovers,
+ambient clips, noise) is retired. The Definition column is verbatim the
+user's; it supersedes the "reconstruction" caveat below for wording, but the
+pool agreement numbers further down were measured under the OLD wording and
+must be re-run (`scripts/jev-classify-pool.ts`, owned by another thread).
+
 | Code | Id | Definition | Action (PROPOSED) |
 |------|----|------------|-------------------|
-| S1 | `S1_monologue_direct` | One primary speaker. | Maximize chunk size (W=500, S=250); skip expensive speaker diarization. |
-| S2 | `S2_interview_qa` | Two distinct speakers with clear turn-taking. | Enforce speaker-attribution tracking; moderate chunk sizes. |
-| S3 | `S3_panel_multi_speaker` | Highly dynamic, overlapping dialogue. | Reduce chunk size to prevent context mixing; enforce turn attribution. |
-| S4 | `S4_procedural_screen_share` | Highly sequential "how-to" steps. | Enforce strict chronological preservation; forbid step merging/reordering. |
-| S5 | `S5_narrative_documentary` | Heavily edited voiceovers mixed with ambient clips. | Flag high extrapolation risk and missing visual context. |
-| S6 | `S6_unstructured_vlog` | Stream of consciousness, high noise-to-signal ratio. | Apply aggressive pre-filtering and sponsor/fluff pruning. |
+| S1 | `S1_monologue_direct` | Long, unbroken paragraphs; single continuous narrative flow; lack of explicit question/answer pairs. | Maximize chunk size (W=500, S=250); skip expensive speaker diarization. |
+| S2 | `S2_interview_qa` | Clear, alternating turn-taking; explicit Q&A phrasing ("Tell me about...", "My next question..."). | Enforce speaker-attribution tracking; moderate chunk sizes. |
+| S3 | `S3_panel_multi_speaker` | High frequency of short, fragmented sentences; rapid topic switching; multiple distinct viewpoints actively debating. | Reduce chunk size to prevent context mixing; enforce turn attribution. |
+| S4 | `S4_procedural_screen_share` | Heavy use of sequential markers ("first", "next step", "click here"); UI/screen/menu references. | Enforce strict chronological preservation; forbid step merging/reordering. |
+| S5 | `S5_narrative_documentary` | Disjointed scenes; abrupt contextual shifts without conversational bridging; quotes from multiple disconnected subjects. | Flag high extrapolation risk and missing visual context. |
+| S6 | `S6_unstructured_vlog` | Stream of consciousness; direct audience address ("Hey guys", "Leave a comment"); frequent tangents and high fluff-to-signal ratio. | Apply aggressive pre-filtering and sponsor/fluff pruning. |
 
 **All numeric Action parameters are PROPOSED and must become `analysis.layer0.*`
 Settings Registry keys when Phase B is built — never constants
