@@ -1,0 +1,32 @@
+web/lib/__tests__/aux-remediation-adapter-idempotency.test.ts
+  s_34bdc4b7c3e301::t_277314cc47e076 25,28-32,36-37
+  s_34bdc4b7c3e301::t_cc55386ebc1cb2 33-35
+  s_34bdc4b7c3e301::t_66b490e0563011 13
+  s_34bdc4b7c3e301::t_768887d3e74dff 64
+  s_34bdc4b7c3e301::t_1dcb4e97231295 104,108-112
+  s_34bdc4b7c3e301::t_a0e065f84b9835 107,113
+supabase/migrations/20261003200000_system_sample_run_unique_per_analysis.sql
+  s_34bdc4b7c3e301::t_bfa1f9bc7e1cd0 9-30,37
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_34bdc4b7c3e301::t_5366a7c4fcafd9 38-48
+  s_34bdc4b7c3e301::t_f8954c27579098 57
+worker/src/__tests__/health-app-mount.test.ts
+  s_34bdc4b7c3e301::t_6f6934274542d3 30-31,33-39,41,43-45,47,51,53-58,60,62
+  s_34bdc4b7c3e301::t_3135c2f020e1a5 32,40,42,52,59,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e9566340eb94cfb57d39196cc73f3fa85394e96b",
+  "prompts": {},
+  "sessions": {
+    "s_34bdc4b7c3e301": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd61de5bffey09JftlLi8SdLd",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
