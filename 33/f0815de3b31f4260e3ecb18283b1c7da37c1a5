@@ -1,0 +1,19 @@
+docs/architecture/DESIGN-036-phase-b-layer0-layer1.md
+  s_71981e252ebeb0::t_2a48f45596b1ef 23,105,140-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "33f0815de3b31f4260e3ecb18283b1c7da37c1a5",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
