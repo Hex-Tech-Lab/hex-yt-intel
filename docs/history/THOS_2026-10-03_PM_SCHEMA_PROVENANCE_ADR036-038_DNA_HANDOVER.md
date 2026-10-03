@@ -1,0 +1,48 @@
+# THOS — 2026-10-03 PM: schema resilience merged, segment provenance, ADR 036/038, Executor DNA
+
+**Read first.** Repo `~/projects/hex-yt-intel`. Previous handover: `docs/history/THOS_2026-10-03_CRUCIBLE_P2.6_TIMESYNC_HANDOVER.md`.
+**Prompt template (always use it):** `docs/agent-prompts/TEMPLATE.md` — §5 is now the **4 Development Tenets / Universal Executor DNA**, canonical text in `docs/agent-prompts/UNIVERSAL_EXECUTOR_DNA.md` (merged #422, `160b9cfd`). Save every filled prompt as `docs/agent-prompts/<date>-<agent>-<name>.md`.
+
+---
+
+## 1. State at handover
+
+### 1.1 Merged this session
+| PR | Merge | What |
+|---|---|---|
+| #419 | `e390a77c` | Stream fragment schema resilience. Live drift accepted: KG nodes without `keyTerms`, `personaIndicatorIdentified`→`personaOptimised`, case-insensitive string booleans, nullish qualifiers, shared `parseClassification` (stream + restore), store setter compares all 6 fields (CodeRabbit major), per-delta logs behind `window.__CHAT_DEBUG`. Accepted red analyzers: CodeFactor complex-method `handleDelta` (pre-existing), Codacy Qwik-rule false positive, DeepSource JS (fails on every recent merge). |
+| #422 | `160b9cfd` | Universal Executor DNA → TEMPLATE §5. |
+
+### 1.2 Open PRs and in-flight agent runs (may still be running when you read this)
+| PR / branch | Worktree | State | Your next action |
+|---|---|---|---|
+| **#417** `feat/p2-6-time-sync` (time-sync + segment provenance) | `../hex-yt-intel-p26-prov` | Head `4f8b4fc6` (main merged in). Commits this session: `697c1777` provenance (only worker-fetched segments drive markers + persist), review round (probe throws → no overwrite, invalid/decreasing starts → plain text, oversized token cut, cache key `transcript:v2:`, normalized truncation length). CC-verified: full suite 2695 pass, worker tsc 0, qa-intel 0, neg controls fail as expected. **OC `/simplify` round running** — prompt `docs/agent-prompts/2026-10-03-oc-417-simplify-round.md` (A: `resolvedSegments` starts undefined, drop `segmentsTrusted`; B: preserve-on-empty moves into `SupabaseTranscriptAdapter`, drop `hasTranscriptRow`; C: interval bounds from `config/jev.ts`; D: annotator returns `normalizedLength`+`reason`; E: monotonic check first, clamp once, trim comments). Log: scratchpad `oc-417s.log`. | Verify OC's commit (its 2 neg controls + your own), gates, then `/code-review` **exactly once**, fix, CI green, merge. |
+| **#420** `feature/2.6-routing-and-synthesis` (ADR 036 + 038) | `../hex-yt-intel-routing` | Head `602eb0d7`. Review round done + CC-verified: LLMCascade is first-success only (cannot stage) → orchestrator is a hard prerequisite; registry = `setting_definitions`+`setting_values` (not `app_settings`); unsigned `cascade` field documented; preregistered go/no-go (≥12/14 at 90/85, none <80/75, ≤10-pt regression vs Haiku) + holdout gate (≥150 effective videos, ≥50 clusters, strata floors 20/30, cluster-bootstrap one-sided 95% LB ≥85%); 95/95 stays the Haiku-drop bar. CC fixed "Luna Pro 2×" (same price). | `/pr-review-workflow` harvest, `/code-review` once, merge (docs only). |
+| **#421** `feat/p26-ux-eta-smoothing` (ETA) | `../hex-yt-intel-ux-eta` | **AGY running** (`docs/agent-prompts/2026-10-03-agy-421-eta-cutoff.md`): bypass blend when `|raw−countdown| ≥ max(10s, 0.5·countdown)` or countdown=0, `max(0, elapsed)`, ticker stops on completion, remove `!` assertions (CI Lint/DeepSource failing). Log `agy-421.log`. Built from the OLD template (Three Tenets). | Verify (cutoff neg control, drawer `ETA: 29s` test unchanged, lint), `/simplify`, `/code-review` once, merge. |
+| (no PR yet) `fix/sample-run-idempotency-deploy-gate` | `../hex-yt-intel-infra` | **OC running** (`docs/agent-prompts/2026-10-03-oc-sample-run-deploy-gate.md`): one system-funded comment sample run per analysis (partial unique index migration — ADR 018 naming), skip when comments/run exist, post-insert failures mark run failed, TranscriptAPI credential check must block the worker deploy (`.github/workflows/deploy-worker.yml`), verify `/health/providers` mount. OC opens the PR itself. OLD template. | Verify CONFIRMED/NOT-A-BUG table, migration name vs `list_migrations` (ADR 018), gates, `/code-review` once, merge. |
+| (no PR yet) `feature/2.6-route-ab` `3b5acf63` | `../hex-yt-intel-route-ab` | Route B: classification cell (dim 11 via `extraFields`) gets clean text, no markers/`[TIMELINE]`. CC-verified (neg control). Built on OLD #417 head. | After #417 merges: rebase onto main, rerun tests, open PR, gates, merge. |
+
+### 1.3 Verified facts you must not re-derive
+- **OC key is fine**: OpenRouter `/api/v1/key` → limit $110/month, $104.78 remaining (Oct). The THOS-era "monthly limit" claim was stale. AGY quota hit once (429 "Individual quota reached", ~24 min reset) and is back.
+- **`/simplify` and `/verify` are built-in Claude Code skills**; a placeholder folder had shadowed `/simplify` (moved to `~/.claude/skills-disabled/`). `/verify` is user-invocable only. `/refactor-safely` = code-review-graph bundled skill (shows as `code-refactor`). OC has `refactor-safely`, `qa-intel`, `simplify`, `code-reviewer`.
+- **Production routing today**: `app_settings.model_config.testOverride.enabled = true` → analysis `[anthropic/claude-haiku-4.5, nemotron free]`; every recent run is Haiku 4.5 (Vertex); Carmack K=11 cost $1.128.
+- **5-layer research** (was "lost"): `.memory/ADRS.md:29` (confirmed 2026-09-27), `docs/history/HANDOVER_2026-09-27-OC-BAKEOFF-PIPELINE-REENGINEERING.md`, ledger lines 1423–1424, `docs/history/BAKEOFF_L2_TRENDS_LATEST.json`, `/tmp/opencode/articulation-exercise.mts` (local only). Summary page: https://claude.ai/artifact/No53aHh3ARPSvCtjHtG4Ty
+- **qa-intel `--ci --compare` scans whole touched files** and compares against main: merge `origin/main` into a branch before judging its findings.
+- **Shared transcript cache** `transcripts` is keyed by `video_id` only (shared across users) — anything persisted there must be worker-fetched.
+
+## 2. Next steps, in order
+1. Land #417 (§1.2), then rebase + open Route A/B, then #420, #421, infra PR — one merge at a time, merge `main` into the next branch after each.
+2. Run the **14-video frozen-pool bake-off now, in parallel** with the orchestrator design (`scripts/bakeoff-l2-evaluator.ts`, Haiku vs GLM-only vs GLM→OSS). Prerequisite: create Haiku baselines for the 5 pool videos lacking them (yB92mx97A8s, _LCeJZFIsd4, DlNWYzaL_F0, uZ5kJ9CBbv0, 39hqY3nH5ug). If GLM→OSS misses 12/14 at 90/85, stop before building.
+3. **Orchestrator (ADR 036 Phases B–D)** as phased PRs behind `analysis.pipeline.mode`: B = Layer 0 Jev classification + Layer 1 GLM extraction + Gate A; C = bundles + Gate B; D = synthesis + OSS render + Gate C + quality-triggered escalation. Multi-hop → AGY Pro or OC on a stronger tier.
+4. Holdout set selection/labelling (ADR 038 §4c) — its own task; blocks production, not the bake-off.
+5. Tech debt logged: 5 LOW qa-intel findings baselined in #417 (`SupabaseTranscriptAdapter.ts`) → `docs/TECH_DEBT_LEDGER.md` (via #420). Worker `ZodSchemas.ts` classification/KG still strict (non-chunked fallback). Phase 2.6 steps 2/3 (KG merge, QStash LLM merge) may be superseded by ADR 036 — decide before building.
+
+## 3. Mandatory pipeline (user directive, every PR)
+1. Scope with code-review-graph → 2. mutations via `/refactor-safely` delegated to OC/AGY (CC does micro-patches <3 lines only; two-strike rule) → 3. validate: `qa-intel` diff + full, `/verify` (user types it), `/simplify`, 1–5 task-relevant skills chosen from SKILL.md → 4. `/pr-review-workflow` → 5. `/code-review` **exactly once** as the final gate. Every dispatch built from TEMPLATE.md (now with DNA). Watch agents live; verify every claim with your own negative control. Reports as published HTML pages for anything shareable.
+
+## 4. Last 5 user messages (verbatim, abridged only where marked)
+1. "The moment you finish the tasks in hand, create a THOS for LLM session handover as I need to create this context right away. Sorry, to clear this context right away. And do share the URL to the template to the prompt template, sorry, the path to the prompt template. And at the same time, I think you should update it with a new DNA."
+2. "what do you think about this? makes sense? any mods? any improvs.? [pasted punch list: merge #417, rebase Route A/B, merge #421, commit ADR 036/038, build 5-layer orchestrator Phases B–D, paid-run idempotency, CI deploy trap, ETA 24–36h to bake-off] … also, always remember to use the prompt template. [pasted GCW directive: create docs/agent-prompts/UNIVERSAL_EXECUTOR_DNA.md with the 4 tenets and prepend it to every OC/AGY dispatch]"
+3. [pasted GCW directive + external reviews] "EXECUTIVE AUDIT: MERGE AUTHORIZATION & ADR REALITY CHECK … ADR 038 must state the multi-stage orchestration (Phases B–D) is a hard prerequisite … preregistered go/no-go 12 of 14 at 90/85, none below 80/75 … PROCEED with #417 … ETA cutoff max(10s, 0.5·countdown), expired 0s seeds from fresh estimate (AGY #421) … paid run idempotency (OC) … move TranscriptAPI check before deploy (OC)." Plus user decisions: accept OSS's weaker style conditionally (full frozen-pool must clear 90/85; keep Haiku escalation; never relax the factual bar); prohibit unsupported facts — cross-domain context only in a separate, labelled, sourced section; holdout ≥150 effective videos, ≥50 clusters, quotas/sample-size method locked before selection.
+4. "[pasted LAYER 3 mandatory skill pipeline: /code-review-graph → /refactor-safely → qa-intel full+diff, /verify, /simplify, specialised skills → /pr-review-workflow → /code-review EXACTLY ONCE]"
+5. "do you need to run one final /code-review or/and /code-reviewer and /simplify before merge?"
