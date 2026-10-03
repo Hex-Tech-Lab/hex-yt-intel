@@ -1,0 +1,33 @@
+web/lib/validators/synthesis.ts
+  s_2a380c3c09f821::t_d8599eb8150275 325-333
+  s_2a380c3c09f821::t_3f3a39580ab9b3 136-137,139
+  s_2a380c3c09f821::t_5cca4dd1e85da1 130-135,138,140-142
+web/lib/stores/synthesis-nucleus-store.ts
+  s_2a380c3c09f821::t_553d9d9f88b97f 82-92
+  s_2a380c3c09f821::t_bed1f070b3e3ae 19
+web/lib/adapters/stream-delta-handler.ts
+  s_2a380c3c09f821::t_3813094905821f 200-203
+  s_2a380c3c09f821::t_4eec743f40577e 65-68
+  s_2a380c3c09f821::t_e014c5581412a6 85-87
+  s_2a380c3c09f821::t_4491429575c34b 107,109
+  s_2a380c3c09f821::t_a968277b00ad5e 141,143-149,151
+web/lib/__tests__/stream-fragment-resilience.test.ts
+  s_2a380c3c09f821::t_6ec56dc7eeb6e9 81-155
+  s_2a380c3c09f821::t_b07524b5f93992 19-23,30-35,49-53,58-59,63-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "30e6763fc61b8a0986844ca39101f0a37b7832c5",
+  "prompts": {},
+  "sessions": {
+    "s_2a380c3c09f821": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efdc614bcffe93WUs9f1rnFocc",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
