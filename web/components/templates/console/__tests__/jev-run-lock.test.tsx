@@ -12,6 +12,7 @@ import { render, screen, cleanup, act } from '@testing-library/react';
 import { DimensionCard } from '@/components/templates/console/StreamingGrid';
 import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { useJevRunStore } from '@/store/useJevRunStore';
+import * as etaModule from '@/lib/jev/eta';
 
 const DIMENSION = { label: 'Core Thesis', content: 'Chunk 0 live text for the core thesis.', icon: 'solar:document-linear', number: 3 };
 const CARD = { key: 'dim-3', label: 'Core Thesis', icon: 'solar:document-linear', status: 'done' as const, content: 'Chunk 0 live text.' };
@@ -134,21 +135,34 @@ describe('K>1 run UI lock (R3b 2.5e)', () => {
   it('stops the ticker interval when the run completes', () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
+    const etaSpy = vi.spyOn(etaModule, 'smoothEta');
+
     act(() => {
-      useJevRunStore.getState().startRun(4, 0);
+      useJevRunStore.getState().startRun(2, 0);
     });
     render(<DimensionDrawer dimension={DIMENSION} onClose={vi.fn()} />);
 
-    // While run is in progress, the 1s ticker interval is active
-    const runningTimers = vi.getTimerCount();
-    expect(runningTimers).toBeGreaterThan(0);
-
-    // Complete the run
+    // In-flight run: ticker interval fires smoothEta every second with null rawMs
+    etaSpy.mockClear();
     act(() => {
-      useJevRunStore.getState().finishRun([]);
+      vi.advanceTimersByTime(2000);
+    });
+    expect(etaSpy).toHaveBeenCalledTimes(2);
+
+    // Settle all cells to complete the run: jevRun.settled >= jevRun.total
+    act(() => {
+      useJevRunStore.getState().markCellSettled();
+      useJevRunStore.getState().markCellSettled();
     });
 
-    // Run completed: ticker interval was cleaned up (timer count drops by 1)
-    expect(vi.getTimerCount()).toBe(runningTimers - 1);
+    // Run completed (run is still non-null, but settled >= total):
+    // ticker interval must be cleared and no further ticker callbacks fire.
+    etaSpy.mockClear();
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(etaSpy).not.toHaveBeenCalled();
+
+    etaSpy.mockRestore();
   });
 });
