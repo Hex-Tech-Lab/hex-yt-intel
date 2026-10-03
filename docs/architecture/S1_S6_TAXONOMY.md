@@ -74,12 +74,20 @@ The pool contains no S4, S5 or S6 labels, so those classes are untested.
 **Side-prompts sealed.** `multi_speaker` and `extrapolation_risk` in
 `scripts/jev-classify-pool.ts` now ask only for text cues (structural dialogue tags or
 alternating Q&A; abrupt semantic shifts lacking conversational flow). The main
-`structural_class` instruction still says "spoken and produced"; left unchanged pending a decision.
+`structural_class` instruction originally said "spoken and produced"; see the follow-up below.
 
 **Result: agreement 9/14 (64%)** (14/14 classified, $0.004). Against the discarded POC
 labels the same rubrics scored 3/14 (21%). Remaining disagreements:
 Z6l4HpuyyP0 S1→S6, ymgH8jS6Wb8 S1→S4, 1U8-4N1HNtU S1→S6, uZ5kJ9CBbv0 S1→S4,
 39hqY3nH5ug S3→S2. Per-video results: `S1_S6_POOL_RECLASSIFICATION.json`.
+
+**Follow-up: main instruction made text-only (user directive).** `structural_class` now
+reads "Analyze this document strictly through its textual flow, semantic structure,
+turn-taking markers (>>), and typographic formatting. Do not infer audio, video, or
+production quality." Result: **8/14 (57%)**, one point WORSE than 9/14. Disagreements:
+Z6l4HpuyyP0 S1→S6, ymgH8jS6Wb8 S1→S6, 1U8-4N1HNtU S1→S6, EoKdX13w7SI S1→S6 (new),
+uZ5kJ9CBbv0 S1→S4, 39hqY3nH5ug S3→S2. The "spoken and produced" wording was not the
+sole cause of the S1 misses; the hypothesis it would lift agreement past 85% did not hold.
 
 ## Pool re-classification result (2026-10-03) — STALE
 

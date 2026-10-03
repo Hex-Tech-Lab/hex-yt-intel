@@ -142,7 +142,7 @@ const questions = {
   structural_class: {
     type: 'choice',
     instructions:
-      'Classify this YouTube transcript into exactly one structural class describing how the content is spoken and produced.',
+      'Analyze this document strictly through its textual flow, semantic structure, turn-taking markers (>>), and typographic formatting. Do not infer audio, video, or production quality. Classify it into exactly one structural class.',
     criteria: { ...JEV_STRUCTURAL_CRITERIA },
   },
   multi_speaker: {
