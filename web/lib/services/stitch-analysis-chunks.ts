@@ -627,9 +627,17 @@ export function stitchChunksIntoPayload(
     };
   }
 
-  const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+  // Persist the schema-normalized classification and graph (alias keys
+  // mapped, string booleans coerced, missing keyTerms defaulted), not the raw
+  // chunk copy that only the validator saw normalized.
+  const normalizedPayload = {
+    ...stitchedPayload,
+    classification: parseResult.data.classification,
+    knowledgeGraph: parseResult.data.knowledgeGraph,
+  };
+  const stitchedMarkdown = reconstructMarkdown(normalizedPayload);
   return {
-    payload: stitchedPayload,
+    payload: normalizedPayload,
     markdown: stitchedMarkdown,
     validationPassed: true,
   };
