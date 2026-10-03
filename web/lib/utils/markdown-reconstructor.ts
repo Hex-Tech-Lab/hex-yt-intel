@@ -49,19 +49,19 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   if (payload.classification) {
     lines.push('#### Classification');
     lines.push('');
-    if (payload.classification.authoritative !== undefined) {
+    if (payload.classification.authoritative != null) {
       lines.push(`- **Authoritative:** ${payload.classification.authoritative}`);
     }
-    if (payload.classification.practicallyActionable !== undefined) {
+    if (payload.classification.practicallyActionable != null) {
       lines.push(`- **Practically Actionable:** ${payload.classification.practicallyActionable}`);
     }
-    if (payload.classification.knowledgeGraphReady !== undefined) {
+    if (payload.classification.knowledgeGraphReady != null) {
       lines.push(`- **Knowledge Graph Ready:** ${payload.classification.knowledgeGraphReady}`);
     }
-    if (payload.classification.safe !== undefined) {
+    if (payload.classification.safe != null) {
       lines.push(`- **Safe:** ${payload.classification.safe}`);
     }
-    if (payload.classification.personaOptimised !== undefined) {
+    if (payload.classification.personaOptimised != null) {
       lines.push(`- **Persona Optimised:** ${payload.classification.personaOptimised}`);
     }
     if (payload.classification.recommendation !== undefined) {
