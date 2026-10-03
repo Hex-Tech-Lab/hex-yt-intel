@@ -1,0 +1,23 @@
+.github/workflows/deploy-worker.yml
+  s_cca9fcbe8ccf2e::t_794caec9f02d17 59-71,77-82
+web/lib/services/aux-remediation.ts
+  s_cca9fcbe8ccf2e::t_279852a5be144e 262-272,274-282
+web/lib/__tests__/aux-remediation-enqueue-orphan.test.ts
+  s_cca9fcbe8ccf2e::t_77451f86484a5c 101-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e863d0f5c9f195cfe522e3ce3e3e043893a1b770",
+  "prompts": {},
+  "sessions": {
+    "s_cca9fcbe8ccf2e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd4985e2ffe2SsNmDwWt5bkR6",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
