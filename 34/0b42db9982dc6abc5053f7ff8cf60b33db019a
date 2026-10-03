@@ -1,0 +1,25 @@
+web/lib/__tests__/SupabaseTranscriptAdapter.test.ts
+  s_b419cae571990a::t_8207f9bf9039f5 35-36
+  s_b419cae571990a::t_5ddc0aff898e05 246,258-274
+  s_b419cae571990a::t_6312ae6185550d 275-276
+  s_b419cae571990a::t_2521771c890457 277
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_b419cae571990a::t_851fe4fed74dbf 73-84,88-108
+  s_b419cae571990a::t_3510049774d3ef 109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "340b42db9982dc6abc5053f7ff8cf60b33db019a",
+  "prompts": {},
+  "sessions": {
+    "s_b419cae571990a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd4261a2ffeRf2w7DSzJvnQdh",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
