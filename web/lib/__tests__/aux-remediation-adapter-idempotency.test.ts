@@ -42,7 +42,7 @@ function builderFor(table: string) {
 }
 
 const insertBuilder = {
-  insert: vi.fn((_row: Record<string, unknown>) => ({
+  insert: vi.fn(() => ({
     select: () => ({
       single: () => Promise.resolve(insertResult),
     }),
