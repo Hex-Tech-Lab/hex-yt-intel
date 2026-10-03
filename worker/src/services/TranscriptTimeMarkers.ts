@@ -4,6 +4,8 @@
  * as TranscriptSlice.ts.
  */
 
+import { DIMENSION_CONFIGS } from '../../../web/lib/config/synthesis';
+
 export {
   annotateWithTimeMarkers,
   formatClock,
@@ -27,13 +29,11 @@ export {
  * ['classification','monetizationVerdict']). The worker already imports that
  * module for PromptBuilder (same shared-code pattern as
  * TranscriptTimeMarkers/TranscriptSlice), so we reuse it instead of
- * duplicating the dimension number — no drift risk.
- */
-import { DIMENSION_CONFIGS } from '../../../web/lib/config/synthesis';
-
-export function needsCleanTranscript(dimensions: readonly number[]): boolean {
+  * duplicating the dimension number — no drift risk.
+  */
+export const needsCleanTranscript = (dimensions: readonly number[]): boolean => {
   return dimensions.some((d) => {
     const cfg = DIMENSION_CONFIGS[d];
     return Array.isArray(cfg?.extraFields) && (cfg.extraFields as readonly string[]).includes('classification');
   });
-}
+};
