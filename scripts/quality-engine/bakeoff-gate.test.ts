@@ -18,6 +18,13 @@ describe('evaluateGate (ADR 038 §4b)', () => {
     expect(r.jointPassCount).toBe(14);
   });
 
+  it('fails when the run scored fewer than the frozen 14 videos, even if every returned video passes', () => {
+    const { haiku, arm } = fixture(95, 90, 93, 88);
+    const r = evaluateGate({ arm: arm.slice(0, 12), haiku: haiku.slice(0, 12) });
+    expect(r.pass).toBe(false);
+    expect(r.failures.some(f => f.includes('only 12/14 pool videos scored'))).toBe(true);
+  });
+
   it('fails when fewer than 12/14 videos jointly pass', () => {
     // 11 videos pass, 3 sit just under the joint bar
     const { haiku, arm } = fixture(95, 90, 93, 88);

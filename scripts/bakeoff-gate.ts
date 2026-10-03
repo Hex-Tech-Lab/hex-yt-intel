@@ -99,6 +99,8 @@ export function evaluateGate(input: GateInput): GateResult {
 
   const failures: string[] = [];
   if (missing.length > 0) failures.push(`missing per-video scores for: ${missing.join(', ')}`);
+  // The bar is 12 of the frozen 14: a run that returns fewer videos cannot pass on a smaller denominator.
+  if (videoIds.length < GATE_TOTAL) failures.push(`only ${videoIds.length}/${GATE_TOTAL} pool videos scored`);
   if (jointPassCount < GATE_JOINT_MIN) {
     failures.push(`joint pass ${jointPassCount}/${videoIds.length} < ${GATE_JOINT_MIN}/${GATE_TOTAL} (need factual>=${GATE_FACTURAL_MIN} AND style>=${GATE_STYLE_MIN})`);
   }

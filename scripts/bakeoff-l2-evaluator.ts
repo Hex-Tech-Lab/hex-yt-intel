@@ -517,7 +517,7 @@ async function generateLegacyBaselines(): Promise<void> {
     const prompt = buildLegacyV54Prompt(
       UCIS_V5_4_SYSTEM_LEGACY,
       UCIS_PERSON_CREDIBILITY_GROUNDING_LEGACY,
-      metadata, transcript, 'investor', 'UTC', meta?.duration,
+      metadata, transcript, 'creator', 'UTC', meta?.duration,
     );
     console.log(`[baselines] ${videoId}: prompt ${prompt.length} chars, transcript ${transcript.length} chars — calling anthropic/claude-haiku-4.5...`);
     const ledger: CostLedger = {};

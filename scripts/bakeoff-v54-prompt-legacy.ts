@@ -763,7 +763,7 @@ export interface LegacyV54Metadata {
   publishedAt: string;
 }
 
-const TOTAL_DIMENSIONS_LEGACY = 12;
+const TOTAL_DIMENSIONS_LEGACY = 11;
 
 /** Legacy-path prompt assembly (systemPrompt === embedded constant branch). */
 export function buildLegacyV54Prompt(
