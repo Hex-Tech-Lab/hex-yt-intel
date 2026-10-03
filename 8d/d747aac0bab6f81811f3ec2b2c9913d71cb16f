@@ -1,0 +1,19 @@
+web/lib/__tests__/SupabaseTranscriptAdapter.test.ts
+  s_71981e252ebeb0::t_44247d33c2a3d6 23,159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8dd747aac0bab6f81811f3ec2b2c9913d71cb16f",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
