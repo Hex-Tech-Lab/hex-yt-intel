@@ -1,0 +1,48 @@
+web/lib/jev/transcript-time-markers.ts
+  s_9273e9ba4f6ab3::t_a74745df4c44ec 145
+  s_9273e9ba4f6ab3::t_00b607f4d68590 146-148
+  s_9273e9ba4f6ab3::t_8893c56e28c33c 113
+  s_9273e9ba4f6ab3::t_eb1dcb4b974577 98-110
+  s_9273e9ba4f6ab3::t_25d21301d3936d 123
+  s_9273e9ba4f6ab3::t_618106062f417d 118-119,121
+  s_9273e9ba4f6ab3::t_e4a42e410c71dd 120
+  s_9273e9ba4f6ab3::t_7a16ead58c5b32 149
+  s_9273e9ba4f6ab3::t_e5649e61c8a7f4 150
+  s_9273e9ba4f6ab3::t_7f91290c8efc0f 115
+  s_9273e9ba4f6ab3::t_1d364f61027a42 122
+web/lib/__tests__/transcript-time-markers.test.ts
+  s_9273e9ba4f6ab3::t_205552c9a471ac 56-57,59-70,73,77-79,83
+  s_9273e9ba4f6ab3::t_7c75716f3130bb 71-72,74-75
+  s_9273e9ba4f6ab3::t_bc09f40d9b91af 80-82,84-89
+web/app/api/analyses/persist/route.ts
+  s_9273e9ba4f6ab3::t_d9656bf7058c99 673-676
+  s_9273e9ba4f6ab3::t_a850171ebf5e42 1497-1499
+supabase/migrations/20261003120000_jev_time_marker_interval_setting.sql
+  s_9273e9ba4f6ab3::t_8843b0df821530 6-7
+worker/src/routes/analysis.ts
+  s_9273e9ba4f6ab3::t_d5af878be32ff4 1102-1109
+  s_9273e9ba4f6ab3::t_cac1f445f52174 854
+  s_9273e9ba4f6ab3::t_883b4346f91639 1533-1540
+web/lib/__tests__/SupabaseTranscriptAdapter.test.ts
+  s_9273e9ba4f6ab3::t_766277ce8fdd53 195-212
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_9273e9ba4f6ab3::t_9090969ca04669 321-326
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_9273e9ba4f6ab3::t_b6286ede89e48a 105-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3223c8092d03f25878435affde2d19f958956bc3",
+  "prompts": {},
+  "sessions": {
+    "s_9273e9ba4f6ab3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd91b62cffeRySzygSET8Isjd",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": null
+    }
+  }
+}
