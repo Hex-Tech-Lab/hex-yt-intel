@@ -1,0 +1,29 @@
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_b419cae571990a::t_81af4cfc197865 166-197
+web/components/templates/console/DimensionDrawer.tsx
+  s_71981e252ebeb0::t_9062eecc802b75 31,35,38-39,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "063de5e670776931eaef3bf94df29c5903a73fcf",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b419cae571990a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd4261a2ffeRf2w7DSzJvnQdh",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
