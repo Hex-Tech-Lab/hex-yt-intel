@@ -20,7 +20,7 @@ const selectMaybeSingleMock = vi.fn();
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
-    from: (_table: string) => ({
+    from: () => ({
       select: () => ({
         eq: () => ({
           maybeSingle: selectMaybeSingleMock,
@@ -156,7 +156,7 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — preserve-on-empty (#417
     upsertMock.mockResolvedValue({ error: null });
     vi.doMock('@/lib/supabase', () => ({
       getSupabaseServiceClient: () => ({
-        from: (_table: string) => ({
+        from: () => ({
           select: () => ({
             eq: () => ({
               maybeSingle: selectMaybeSingleMock,
