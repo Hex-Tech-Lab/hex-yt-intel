@@ -1,0 +1,26 @@
+web/lib/adapters/stream-delta-handler.ts
+  s_4746929ff2437c::t_a6ebd1ae3b20dd 69-71
+  s_4746929ff2437c::t_c161b8a9e7a8fb 111-113
+web/lib/__tests__/analysis-metadata-store.test.ts
+  s_4746929ff2437c::t_d7161391363e52 68,70,77-78
+  s_4746929ff2437c::t_9e9a2e7efc3dec 2-67,69,71-76,79-82
+  s_4746929ff2437c::t_2542545c5dae14 1
+web/lib/stores/analysis-metadata-store.ts
+  s_4746929ff2437c::t_f7e03760cccc69 85-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c8f30f67fe3fd94caa1839bda2a31f42b5b50afd",
+  "prompts": {},
+  "sessions": {
+    "s_4746929ff2437c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd924fadffex6FQ0Xq4CCJW24",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
