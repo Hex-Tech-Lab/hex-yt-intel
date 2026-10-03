@@ -6,6 +6,9 @@
  * when Phase B is built they become `analysis.layer0.*` Settings Registry
  * keys (no-hardcoded-tunables), never constants.
  *
+ * Criteria are TEXT-OBSERVABLE ONLY (transcript text, no audio/visual cues),
+ * user-specified 2026-10-03, replacing the earlier audio-dependent wording.
+ *
  * `JEV_STRUCTURAL_CRITERIA` is the keyed criteria record in the verified
  * Decisions API shape (see worker/src/services/JevCommentClassifier.ts:63 —
  * `choice` questions take a criteria RECORD; a choices array or legend object
@@ -44,10 +47,16 @@ export const CLASS_ID_BY_CODE: Record<'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6', S
 };
 
 export const JEV_STRUCTURAL_CRITERIA: Record<StructuralClass, string> = {
-  S1_monologue_direct: 'One primary speaker presenting directly to the audience',
-  S2_interview_qa: 'Two distinct speakers with clear turn-taking',
-  S3_panel_multi_speaker: 'Highly dynamic, overlapping dialogue among multiple speakers',
-  S4_procedural_screen_share: 'Highly sequential step-by-step how-to demonstration',
-  S5_narrative_documentary: 'Heavily edited voiceovers mixed with ambient clips',
-  S6_unstructured_vlog: 'Stream of consciousness with high noise-to-signal ratio',
+  S1_monologue_direct:
+    'Long, unbroken paragraphs; single continuous narrative flow; lack of explicit question/answer pairs.',
+  S2_interview_qa:
+    'Clear, alternating turn-taking; explicit Q&A phrasing ("Tell me about...", "My next question...").',
+  S3_panel_multi_speaker:
+    'High frequency of short, fragmented sentences; rapid topic switching; multiple distinct viewpoints actively debating.',
+  S4_procedural_screen_share:
+    'Heavy use of sequential markers ("first", "next step", "click here"); UI/screen/menu references.',
+  S5_narrative_documentary:
+    'Disjointed scenes; abrupt contextual shifts without conversational bridging; quotes from multiple disconnected subjects.',
+  S6_unstructured_vlog:
+    'Stream of consciousness; direct audience address ("Hey guys", "Leave a comment"); frequent tangents and high fluff-to-signal ratio.',
 };

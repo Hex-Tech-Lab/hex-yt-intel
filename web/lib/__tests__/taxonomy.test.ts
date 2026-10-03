@@ -41,6 +41,13 @@ describe('S1–S6 structural taxonomy', () => {
     expect(Object.keys(keyTypeCheck)).toHaveLength(6);
   });
 
+  it('uses text-observable criteria only (no audio-dependent wording)', () => {
+    const text = JSON.stringify(JEV_STRUCTURAL_CRITERIA);
+    expect(text).not.toMatch(/overlapping|voiceover|ambient|noise-to-signal|two distinct speakers|one primary speaker/i);
+    expect(JEV_STRUCTURAL_CRITERIA.S4_procedural_screen_share).toContain('click here');
+    expect(JEV_STRUCTURAL_CRITERIA.S6_unstructured_vlog).toContain('Hey guys');
+  });
+
   it('keeps action parameters out of code', () => {
     const moduleText = JSON.stringify(JEV_STRUCTURAL_CRITERIA) + STRUCTURAL_CLASSES.join('');
     expect(moduleText).not.toMatch(/500|250/);
