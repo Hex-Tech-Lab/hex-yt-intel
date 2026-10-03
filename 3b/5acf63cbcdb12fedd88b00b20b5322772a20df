@@ -1,0 +1,28 @@
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_a3cc8bcb62ad08::t_d3c1bae05838e4 201-204
+  s_a3cc8bcb62ad08::t_161e6ee3b46b79 12
+  s_a3cc8bcb62ad08::t_1af77671f01ebf 212
+  s_a3cc8bcb62ad08::t_4841f64a9545dd 172-200,205-211,213-225,227-266
+  s_a3cc8bcb62ad08::t_517beb81903e5e 226
+worker/src/services/TranscriptTimeMarkers.ts
+  s_a3cc8bcb62ad08::t_ed6f0f0599d790 8-34
+worker/src/routes/analysis.ts
+  s_a3cc8bcb62ad08::t_23e1c39560f2eb 1467-1474,1480-1482
+  s_a3cc8bcb62ad08::t_33327f708ac1c1 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3b5acf63cbcdb12fedd88b00b20b5322772a20df",
+  "prompts": {},
+  "sessions": {
+    "s_a3cc8bcb62ad08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efe0325cdffext6f4o0pRjxOvV",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
