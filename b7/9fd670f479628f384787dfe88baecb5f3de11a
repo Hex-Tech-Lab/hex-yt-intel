@@ -1,0 +1,19 @@
+web/components/templates/console/__tests__/jev-run-lock.test.tsx
+  s_c2a25f37023b9d::t_bc9b1d1c5aabf0 15,138-139,141,145-156,158-160,162,164,166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b79fd670f479628f384787dfe88baecb5f3de11a",
+  "prompts": {},
+  "sessions": {
+    "s_c2a25f37023b9d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efd700c49ffeodP77J9aUbyptK",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
