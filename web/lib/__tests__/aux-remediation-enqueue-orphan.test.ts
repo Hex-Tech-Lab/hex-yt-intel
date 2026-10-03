@@ -98,4 +98,22 @@ describe('enqueueSystemCommentSampleRun', () => {
     vi.doUnmock('@/lib/adapters/SupabaseSettingsAdapter');
     vi.resetModules();
   });
+
+  it('contains a hasSystemSampleRun probe rejection: logs + Sentry, returns false, no insert (probe containment, #424 r3)', async () => {
+    const { captureException } = await import('@sentry/nextjs');
+    const err = new Error('probe db down');
+    hasSystemSampleRun.mockRejectedValue(err);
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
+    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+    expect(captureException).toHaveBeenCalledWith(err, expect.objectContaining({ contexts: expect.objectContaining({ auxRemediation: expect.objectContaining({ phase: 'comments_enqueue_probe' }) }) }));
+  });
+
+  it('contains an analysisHasUsableComments probe rejection: logs + Sentry, returns false, no insert (probe containment, #424 r3)', async () => {
+    const { captureException } = await import('@sentry/nextjs');
+    const err = new Error('probe db down');
+    analysisHasUsableComments.mockRejectedValue(err);
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
+    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+    expect(captureException).toHaveBeenCalledWith(err, expect.objectContaining({ contexts: expect.objectContaining({ auxRemediation: expect.objectContaining({ phase: 'comments_enqueue_probe' }) }) }));
+  });
 });

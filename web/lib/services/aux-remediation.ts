@@ -259,15 +259,27 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   // enqueue a second one. This covers the common repeated-finalize case
   // cheaply; the DB unique index (uq_comment_sample_runs_system_per_analysis)
   // covers the true race between concurrent finalizes.
-  if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
-    console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
-    return false;
-  }
+  //
+  // The two probe lookups run BEFORE the insert, so a probe failure must be
+  // contained here, not thrown into the caller: both persist-route call
+  // sites (.catch()) and the harness per-gap loop do catch, but fail-closed
+  // in the service guarantees no paid run is ever started on an uncertain
+  // probe — and the error is still reported (log + Sentry).
+  try {
+    if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
+      console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
+      return false;
+    }
 
-  // Skip: the analysis already has usable comments (non-empty array) —
-  // a second sample run would buy nothing (#416 external review).
-  if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId)) {
-    console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
+    // Skip: the analysis already has usable comments (non-empty array) —
+    // a second sample run would buy nothing (#416 external review).
+    if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId)) {
+      console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
+      return false;
+    }
+  } catch (err) {
+    console.error('[aux-remediation] enqueue probe failed; failing closed (no paid run)', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue_probe', analysisId: params.analysisId } } });
     return false;
   }
 
