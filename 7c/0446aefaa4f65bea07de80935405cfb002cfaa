@@ -1,0 +1,23 @@
+web/lib/adapters/stream-delta-handler.ts
+  s_3c29bcb7cb358e::t_1152ea0cf531d1 4,9,24,68-69,86-87,109,194-196,198-202
+web/lib/stores/synthesis-nucleus-store.ts
+  s_3c29bcb7cb358e::t_a220ec0405b2ef 19,82-85
+web/lib/validators/synthesis.ts
+  s_3c29bcb7cb358e::t_2ec252d007b34f 129-134,286-290,292-307,318-319,327-338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7c0446aefaa4f65bea07de80935405cfb002cfaa",
+  "prompts": {},
+  "sessions": {
+    "s_3c29bcb7cb358e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42143085-22b2-466e-806a-a7d97ffd1a0b",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
