@@ -1,0 +1,19 @@
+web/lib/__tests__/aux-remediation-adapter-idempotency.test.ts
+  s_71981e252ebeb0::t_9b2ac7c02fae62 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5bb7ef3ea2b7346aef26f5a078af0ca096640b6a",
+  "prompts": {},
+  "sessions": {
+    "s_71981e252ebeb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e93a0a44-f85d-4f4a-af1d-40d2d6e3a25d",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
