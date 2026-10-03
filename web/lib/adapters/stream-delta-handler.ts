@@ -1,11 +1,12 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import { ClassificationDataSchema } from '@/lib/validators/synthesis';
+import { parseClassification } from '@/lib/validators/synthesis';
 import { type StreamAdapterOptions } from './synthesis-stream-adapter';
 
 export class StreamDeltaHandler {
   private rawSink = '';
+  private lastClassificationKey = '';
   private synthStore = useSynthesisNucleus;
   private analysisStore = useAnalysisStore;
 
@@ -20,6 +21,7 @@ export class StreamDeltaHandler {
   }
 
   clear() {
+    this.lastClassificationKey = '';
     this.rawSink = '';
   }
 
@@ -63,9 +65,8 @@ export class StreamDeltaHandler {
       JSON.parse(healed);
       return healed;
     } catch (healErr) {
-      // Not display truncation: healJson returns null on failure and the
-      // caller falls back to plaintext markdown, so no ellipsis applies.
-      console.error('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
+      // Expected on every partial chunk; the caller falls back to plaintext.
+      console.debug('[Adapter] JSON heal failed:', healErr instanceof Error ? healErr.message : healErr);
       return null;
     }
   }
@@ -82,9 +83,8 @@ export class StreamDeltaHandler {
 
     let cleanSink = this.rawSink.trim();
     if (cleanSink.startsWith('```')) {
-      // Strip everything before the first '{' (markdown fence prefix) — this
-      // is JSON-sink normalization, not display truncation, so no ellipsis.
-      cleanSink = cleanSink.replace(/^[^{]*/, '');
+      // Drop any prefix (e.g. a markdown fence) before the first '{'; no-op without one.
+      cleanSink = cleanSink.replace(/^[^{]*(?=\{)/, '');
     }
     // Only strip markdown code fence closers, not stray backticks in JSON strings
     if (cleanSink.endsWith('```')) {
@@ -106,7 +106,7 @@ export class StreamDeltaHandler {
         obj = JSON.parse(healed);
       } catch (parseErr) {
         // Expected parsing failures on incomplete JSON stream
-        console.error('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
+        console.debug('[Adapter] healed JSON still unparseable:', parseErr instanceof Error ? parseErr.message : parseErr);
         return isJsonStream;
       }
 
@@ -191,16 +191,15 @@ export class StreamDeltaHandler {
           }
 
           // 4. Validate and set Classification
-          // Same schema as the SSE classification frame, so aliases and
-          // missing qualifiers are handled identically on both paths.
+          // Same schema as the SSE classification frame. The healed object
+          // repeats the same classification on every later delta, so only
+          // re-validate (and re-set) when it actually changed.
           if (obj.classification && typeof obj.classification === 'object') {
-            const parsed = ClassificationDataSchema.safeParse(obj.classification);
-            if (parsed.success) {
-              this.synthStore.getState().setClassification(parsed.data);
-            } else {
-              // Log paths/codes only -- never the raw values, which can carry
-              // transcript-derived content into the console/Sentry.
-              console.warn('[Adapter] classification rejected', parsed.error.issues.map((i) => i.path.join('.') + ':' + i.code));
+            const key = JSON.stringify(obj.classification);
+            if (key !== this.lastClassificationKey) {
+              this.lastClassificationKey = key;
+              const classification = parseClassification(obj.classification, 'Adapter');
+              if (classification) this.synthStore.getState().setClassification(classification);
             }
           }
 

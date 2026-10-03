@@ -16,7 +16,7 @@ import {
   type RestoreAnalysisPayload,
   computePersonaProjection,
 } from '@/lib/types/synthesis-nucleus';
-import { ClassificationDataSchema } from '@/lib/validators/synthesis';
+import { parseClassification } from '@/lib/validators/synthesis';
 
 function readSubStores() {
   const as = useAnalysisStateStore.getState();
@@ -79,17 +79,10 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
         useAnalysisMetadataStore.getState().setRawAnalysisPayload(ap, payload.id ?? null);
         if (ap.persona) useAnalysisMetadataStore.getState().setPersonaConfig(ap.persona);
         if (ap.knowledgeGraph) useAnalysisMetadataStore.getState().setKnowledgeGraph(ap.knowledgeGraph);
-        // Rows saved before stream-fragment-schema-resilience may still carry
-        // the personaIndicatorIdentified alias and string booleans -- restore
-        // through the same normalization the SSE path uses, never raw.
-        if (ap.classification) {
-          const parsed = ClassificationDataSchema.safeParse(ap.classification);
-          if (parsed.success) {
-            useAnalysisMetadataStore.getState().setClassification(parsed.data);
-          } else {
-            console.warn('[restore] classification rejected', parsed.error.issues.map((i) => i.path.join('.') + ':' + i.code));
-          }
-        }
+        // Rows saved before the tolerant schema may carry aliases or string
+        // booleans: restore through the same schema as the stream.
+        const classification = ap.classification ? parseClassification(ap.classification, 'restore') : null;
+        if (classification) useAnalysisMetadataStore.getState().setClassification(classification);
         if (ap.monetizationVerdict) useAnalysisMetadataStore.getState().setMonetizationVerdict(ap.monetizationVerdict);
       }
     },

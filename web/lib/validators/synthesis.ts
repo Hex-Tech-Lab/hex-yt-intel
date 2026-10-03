@@ -126,20 +126,12 @@ const normalizeKgNodeFields = (val: unknown): unknown => {
   out.dimension = Math.min(TOTAL_DIMENSIONS, Math.max(0, dimNum));
   out.weight = clampNumber(out.weight, 0.1, 10, 5);
   out.polarity = clampNumber(out.polarity, -1, 1, 0);
-  // Missing keyTerms (15 of 555 live nodes, 2026-10-03) used to reject the
-  // ENTIRE kg fragment/graph; an empty list is the honest default. A single
-  // string is preserved as a one-element list (provenance kept, not silently
-  // dropped); any other non-array type degrades to [].
-  if (out.keyTerms === undefined || out.keyTerms === null) {
-    out.keyTerms = [];
-  } else if (typeof out.keyTerms === "string") {
-    const trimmedTerm = out.keyTerms.trim();
-    out.keyTerms = trimmedTerm ? [trimmedTerm] : [];
-  } else if (Array.isArray(out.keyTerms)) {
-    out.keyTerms = out.keyTerms.filter((term): term is string => typeof term === "string").slice(0, 10);
-  } else {
-    out.keyTerms = [];
-  }
+  // A missing keyTerms used to reject the whole graph; a lone string is kept
+  // as a one-element list, any other non-array becomes [].
+  const terms = out.keyTerms;
+  out.keyTerms = Array.isArray(terms)
+    ? terms.filter((term): term is string => typeof term === "string").slice(0, 10)
+    : typeof terms === "string" && terms.trim() ? [terms.trim()] : [];
   if (typeof out.label === "string") out.label = out.label.slice(0, 200);
   if (typeof out.id === "string") out.id = out.id.slice(0, 100);
   if (out.content !== undefined && typeof out.content !== "string") delete out.content;
@@ -291,46 +283,40 @@ export const PersonaConfigSchema = z.preprocess(
 export const UCISDimensionV2Schema = UCISDimensionSchema;
 
 /**
- * Classification data for the analysis.
- *
- * Tolerant normalization (2026-10-03, Carmack crucible): live cells emitted
- * `personaIndicatorIdentified` in place of `personaOptimised`, and `.strict()`
- * rejected the whole block (browser "Fragment validation failed" on every
- * classification frame from those cells). Known aliases are mapped, "true"/
- * "false" strings coerced, unknown keys dropped. The five boolean qualifiers
- * are nullish (never invented: a missing qualifier stays absent and the web
- * markdown reconstructor skips null/undefined; the worker keeps its own
- * strict schema in worker/src/services/ZodSchemas.ts); `recommendation` is
- * the core verdict and stays required.
+ * Classification data for the analysis. Tolerant of live LLM drift: known key
+ * aliases are mapped (canonical key wins), "true"/"false" strings coerced in
+ * any case, unknown keys dropped. The five qualifiers are nullish and never
+ * invented; `recommendation` stays required. The worker keeps its own strict
+ * copy in worker/src/services/ZodSchemas.ts.
  */
+const ClassificationDataShape = z
+  .object({
+    authoritative: z.boolean().nullish(),
+    practicallyActionable: z.boolean().nullish(),
+    knowledgeGraphReady: z.boolean().nullish(),
+    safe: z.boolean().nullish(),
+    personaOptimised: z.boolean().nullish(),
+    recommendation: z.enum([
+      "highly_recommended",
+      "recommended",
+      "conditional",
+      "skip",
+    ]),
+  })
+  .strict();
+const CLASSIFICATION_KEYS: readonly string[] = Object.keys(ClassificationDataShape.shape);
 const CLASSIFICATION_KEY_ALIASES: Record<string, string> = {
   personaIndicatorIdentified: "personaOptimised",
   personaOptimized: "personaOptimised",
 };
-const CLASSIFICATION_KEYS = [
-  "authoritative",
-  "practicallyActionable",
-  "knowledgeGraphReady",
-  "safe",
-  "personaOptimised",
-  "recommendation",
-];
 const normalizeClassificationFields = (val: unknown): unknown => {
   if (!val || typeof val !== "object" || Array.isArray(val)) return val;
   const out: Record<string, unknown> = {};
   for (const [rawKey, v] of Object.entries(val as Record<string, unknown>)) {
     const key = CLASSIFICATION_KEY_ALIASES[rawKey] ?? rawKey;
-    // A canonical key always wins over its alias, whichever comes first.
     if (!CLASSIFICATION_KEYS.includes(key) || (key in out && rawKey !== key)) continue;
-    // Live LLM drift ships booleans as "True" / " FALSE " (case + padding);
-    // only exact true/false strings after normalization are coerced — any
-    // other string ("maybe") stays as-is so the schema still rejects it.
-    if (typeof v === "string") {
-      const s = v.trim().toLowerCase();
-      out[key] = s === "true" ? true : s === "false" ? false : v;
-    } else {
-      out[key] = v;
-    }
+    const s = typeof v === "string" ? v.trim().toLowerCase() : null;
+    out[key] = s === "true" ? true : s === "false" ? false : v;
   }
   if (typeof out.recommendation === "string") {
     out.recommendation = out.recommendation.trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -338,24 +324,18 @@ const normalizeClassificationFields = (val: unknown): unknown => {
   return out;
 };
 
-export const ClassificationDataSchema = z.preprocess(
-  normalizeClassificationFields,
-  z
-    .object({
-      authoritative: z.boolean().nullish(),
-      practicallyActionable: z.boolean().nullish(),
-      knowledgeGraphReady: z.boolean().nullish(),
-      safe: z.boolean().nullish(),
-      personaOptimised: z.boolean().nullish(),
-      recommendation: z.enum([
-        "highly_recommended",
-        "recommended",
-        "conditional",
-        "skip",
-      ]),
-    })
-    .strict(),
-);
+export const ClassificationDataSchema = z.preprocess(normalizeClassificationFields, ClassificationDataShape);
+
+/**
+ * Validate a classification from any path (stream, restore). Logs only issue
+ * paths and codes, never values, and returns null on rejection.
+ */
+export function parseClassification(raw: unknown, tag: string): z.infer<typeof ClassificationDataShape> | null {
+  const parsed = ClassificationDataSchema.safeParse(raw);
+  if (parsed.success) return parsed.data;
+  console.warn(`[${tag}] classification rejected`, parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.code}`));
+  return null;
+}
 
 /**
  * Monetization verdicts for different persona types.
