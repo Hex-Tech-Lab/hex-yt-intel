@@ -192,4 +192,22 @@ describe('SupabaseTranscriptAdapter.hasTranscriptRow — #417 empty-segments gua
     selectMaybeSingleGuardMock.mockResolvedValue({ data: null });
     await expect(FreshAdapter.hasTranscriptRow('vid-6')).resolves.toBe(false);
   });
+
+  it('#417 P1: THROWS (not returns false) when the probe query errors — an uncertain probe must not authorize the write', async () => {
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: selectMaybeSingleGuardMock,
+            }),
+          }),
+          upsert: vi.fn(),
+        }),
+      }),
+    }));
+    const { SupabaseTranscriptAdapter: FreshAdapter } = await import('../adapters/SupabaseTranscriptAdapter');
+    selectMaybeSingleGuardMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
+    await expect(FreshAdapter.hasTranscriptRow('vid-7')).rejects.toBeTruthy();
+  });
 });

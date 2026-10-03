@@ -53,10 +53,40 @@ describe('annotateWithTimeMarkers', () => {
   });
 
   it('a segment with a bad start keeps its words aligned and inherits the previous time', () => {
+    // #417 P2: bad segment timing is no longer papered over — annotation
+    // returns null (plain text) instead of fabricating a time.
     const broken = SEGMENTS.map((segment, index) => (index === 5 ? { ...segment, start: Number.NaN } : segment));
-    const out = annotateWithTimeMarkers(FULL, broken, { startWord: 0 });
+    expect(annotateWithTimeMarkers(FULL, broken, { startWord: 0 })).toBeNull();
+  });
+
+  it('#417 P2: a negative or decreasing segment start => null (never fabricate a time)', () => {
+    const negative = SEGMENTS.map((segment, index) => (index === 5 ? { ...segment, start: -3 } : segment));
+    expect(annotateWithTimeMarkers(FULL, negative, { startWord: 0 })).toBeNull();
+    const decreasing = SEGMENTS.map((segment, index) => (index === 5 ? { ...segment, start: 5 } : segment));
+    expect(annotateWithTimeMarkers(FULL, decreasing, { startWord: 0 })).toBeNull();
+    expect(annotateWithTimeMarkers(FULL, [{ start: Number.POSITIVE_INFINITY, text: 'w0 w1' }], { startWord: 0 })).toBeNull();
+  });
+
+  it('#417 P2: a single token longer than maxChars is cut, never emitted whole', () => {
+    // 60_000-char token followed by more words: the giant token alone fits
+    // the 48_000 budget only after clamping, and the tail is cut.
+    const giant = 'a'.repeat(60_000);
+    const segments = [{ start: 0, text: `${giant} tail1 tail2` }];
+    const out = annotateWithTimeMarkers(`${giant} tail1 tail2`, segments, { startWord: 0, maxChars: 48_000 });
     expect(out).not.toBeNull();
-    expect(out?.endSeconds).toBe(990);
+    expect(out?.truncated).toBe(true);
+    const body = out?.text.split('\n\n')[1] ?? '';
+    const emitted = body.replace(/\[\d\d:\d\d:\d\d\] /g, '');
+    // Unclamped accounting: 60000+1+6+1+6 = 60009 > 48000 budget even though
+    // the single giant token alone fits after clamping -> still cut, but the
+    // first token must NOT exceed the budget when emitted.
+    expect(emitted.length).toBeLessThanOrEqual(48_000);
+    // The decisive property: unclamped accounting treats the giant token as
+    // 60001 chars long, which alone busts the budget and cuts EVERYTHING
+    // after it -> emitted would contain tail1 too. With correct clamped
+    // accounting the giant token counts as 48001 and busts the budget at
+    // index 1, cutting tail2 only.
+    expect(emitted).not.toContain('tail1');
   });
 
   it('maxChars: the budget is spent on PLAIN words; only the visible words are annotated, with a notice', () => {

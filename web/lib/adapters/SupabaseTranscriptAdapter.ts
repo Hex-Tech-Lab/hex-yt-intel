@@ -102,7 +102,12 @@ export class SupabaseTranscriptAdapter {
       .maybeSingle();
     if (error) {
       Sentry.captureException(error, { tags: { method: 'hasTranscriptRow' }, extra: { videoId } });
-      return false;
+      // #417 P1: an uncertain probe must not authorize the write. Returning
+      // false here read as "row absent" and let the empty-segments upsert
+      // clobber an existing row's segments/content. Throw instead so callers
+      // treat the failure as "do not overwrite" and skip the destructive
+      // columns (still writing whatever is safe).
+      throw error;
     }
     return !!data;
   }

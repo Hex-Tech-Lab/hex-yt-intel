@@ -670,7 +670,10 @@ export async function POST(request: NextRequest) {
         const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
         if (hasSegments || hasFlatTranscript) {
           const segmentsText = hasSegments ? segments!.map((s: any) => s.text || '').join(' ').trim() : '';
-          const preserveStoredSegments = !hasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId));
+          // #417 P1: hasTranscriptRow THROWS on a probe error — an uncertain
+          // answer must not authorize the destructive empty-segments upsert,
+          // so a throw falls into the preserve branch (no overwrite).
+          const preserveStoredSegments = !hasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId).catch(() => true));
           if (preserveStoredSegments) {
             console.info('[analyses/persist] chunk upsert with empty segments: preserving existing row segments/content (provenance guard)', { analysisId, videoId });
           } else {
@@ -1491,7 +1494,9 @@ export async function POST(request: NextRequest) {
       if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
         // Same #417 P1 provenance guard as the chunk path above: empty incoming
         // segments must not erase an existing row's stored segments/content.
-        const finalPreserveStoredSegments = !finalHasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId));
+        // hasTranscriptRow throws on a probe error — treat "unknown" the same
+        // as "row exists": skip the overwrite, never destroy on uncertainty.
+        const finalPreserveStoredSegments = !finalHasSegments && (await SupabaseTranscriptAdapter.hasTranscriptRow(videoId).catch(() => true));
         if (finalPreserveStoredSegments) {
           console.info('[analyses/persist] finalize upsert with empty segments: preserving existing row segments/content (provenance guard)', { analysisId, videoId });
         } else {

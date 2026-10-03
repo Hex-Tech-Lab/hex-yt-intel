@@ -318,5 +318,11 @@ describe('analyze-llm-stream #417 segment provenance (route-level)', () => {
     const segmentsPersisted = persistBodies.some((body) => Array.isArray(body.segments) && (body.segments as unknown[]).length > 0);
     expect(segmentsPersisted).toBe(true);
   });
+
+  it('#417 P2: the transcript cache key is versioned (v2) so legacy entries without segment provenance miss', async () => {
+    const { transcriptCacheKey } = await import('../routes/analysis');
+    expect(transcriptCacheKey('abc123')).toBe('transcript:v2:abc123');
+    expect(transcriptCacheKey('abc123')).not.toBe(`transcript:abc123`);
+  });
 });
 

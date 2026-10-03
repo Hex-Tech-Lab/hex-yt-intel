@@ -3,6 +3,8 @@
 -- Registry-driven per the no-hardcoded-tunables directive. 30 s: fine enough
 -- that the nearest marker at or before a claim is within half a minute,
 -- coarse enough to cost ~3% extra prompt characters (~11 chars per ~400).
+-- NOTE (Cubic PR #417 P2, documented not fixed): the 30 s default is a
+-- projected estimate pending prompt-cost/telemetry data, not empirically derived.
 insert into public.setting_definitions (key, tier, data_type, validation, default_value, description, owner_role)
 values
   (

@@ -851,7 +851,7 @@ async function fetchTranscriptIfMissing(
 
     // L1 Redis transcript cache: 72h TTL (3-day compliance window)
     const CACHE_TTL = 259200;
-    const cacheKey = `transcript:${videoId}`;
+    const cacheKey = transcriptCacheKey(videoId);
 
     if (cache) {
       try {
@@ -1097,6 +1097,14 @@ async function resolveCellTranscript(params: {
   }
   if (computedHash !== sliceSha256) return fallBack('slice_hash_mismatch', computedHash);
   return { text: sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord), startWord };
+}
+
+/** Upstash transcript-cache key. v2: entries written before segments carried
+ * an `estimated` provenance flag (pre #417) have no marker, so provider-invented
+ * times on a cache hit would be presented as real — the version bump makes
+ * legacy entries miss and be refetched with provenance. */
+export function transcriptCacheKey(videoId: string): string {
+  return `transcript:v2:${videoId}`;
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -1522,7 +1530,14 @@ function buildStreamResponse(
         // getUCISPrompt's legacy 48000).
         {
           const budget = transcriptBudget;
-          const transcriptLen = cellTranscript.text.length;
+          // The annotator cut on whitespace-NORMALIZED words (single-space
+          // joined), so when annotation ran the status must report the same
+          // normalized length the cut actually used — the raw text length
+          // with runs of whitespace would overstate what was trimmed.
+          // Raw length stays for the plain-text fallback (its cut IS raw).
+          const transcriptLen = timeAnnotated
+            ? tokenizeTranscript(cellTranscript.text).join(' ').length
+            : cellTranscript.text.length;
           // The annotator made the actual cut on single-space-joined words; trust
           // its verdict (raw whitespace runs must not fake a truncation).
           const wasTruncated = timeAnnotated ? timeAnnotated.truncated : transcriptLen > budget;

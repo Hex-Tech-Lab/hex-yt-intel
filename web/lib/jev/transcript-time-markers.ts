@@ -95,14 +95,32 @@ export function annotateWithTimeMarkers(
     if (words[startWord + index] !== sliceWords[index]) return null;
   }
 
+  // Fabricated-time guard (#417 P2): a non-finite or negative segment start,
+  // or a start that DECREASES relative to the previous segment, means the
+  // segment timing is not trustworthy chronological data. wordTimes would
+  // substitute the previous timestamp (or 0) and emit it as a real marker —
+  // plain text is safer than invented time.
+  let previous = -1;
+  for (const segment of segments) {
+    const start = segment.start;
+    if (typeof start !== 'number' || !Number.isFinite(start) || start < 0) return null;
+    if (previous >= 0 && start < previous) return null;
+    previous = start;
+  }
+
   // The prompt budget is spent on the PLAIN words, never on markers: cut at a
   // word boundary first, then annotate only what the model will see.
+  const maxChars = options.maxChars ?? 0;
   let visible = sliceWords.length;
-  if (options.maxChars !== undefined && options.maxChars > 0) {
+  if (maxChars > 0) {
     let length = -1;
     for (let index = 0; index < sliceWords.length; index += 1) {
-      length += (sliceWords[index] as string).length + 1;
-      if (length > options.maxChars) {
+      // Oversized single token (#417 P2): a token longer than the whole
+      // remaining budget must still be CUT (never emitted whole, which would
+      // return text longer than maxChars and skip the truncation warning).
+      const token = sliceWords[index] as string;
+      length += Math.min(token.length, maxChars) + 1;
+      if (length > maxChars) {
         visible = Math.max(1, index);
         break;
       }
@@ -124,7 +142,12 @@ export function annotateWithTimeMarkers(
       out.push(`[${formatClock(time)}]`);
       nextBoundary = (Math.floor(time / interval) + 1) * interval;
     }
-    out.push(sliceWords[index] as string);
+    // Emit the token. When a budget is configured (maxChars > 0), a token
+    // longer than the whole budget is emitted at EXACTLY maxChars chars —
+    // a prompt-budget cut, not a display truncation (an ellipsis suffix
+    // would corrupt the transcript text the model reads).
+    const token = sliceWords[index] as string;
+    out.push(maxChars > 0 && token.length > maxChars ? token.substring(0, maxChars) /* ellipsis omitted by design: prompt-budget cut, not display truncation */ : token);
   }
 
   const startSeconds = starts[startWord] as number;
