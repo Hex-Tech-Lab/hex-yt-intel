@@ -528,6 +528,7 @@ export function useSSEStream() {
                   promptCaching: job.promptCaching,
                   cacheWarmTimeoutMs: job.cacheWarmTimeoutMs,
                   transcriptBudgetChars: job.transcriptBudgetChars,
+                  timeMarkerIntervalSeconds: job.timeMarkerIntervalSeconds,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,

@@ -223,6 +223,9 @@ export async function POST(request: NextRequest) {
         start: z.number(),
         duration: z.number(),
         text: z.string(),
+        // Phase 2.6: provider-invented caption time; kept so a stored
+        // transcript is never presented to the model as real timing.
+        estimated: z.boolean().optional(),
       })).optional(),
       // Flat transcript text carried alongside segments so a `transcripts` row
       // can still be written when the video's transcript arrived pre-fetched
@@ -656,6 +659,13 @@ export async function POST(request: NextRequest) {
         // content is what's actually persisted. Do not remove this call to "avoid
         // duplication" — partial/interrupted analyses would silently stop getting a
         // transcript row at all, regressing the original P3 fix this exists for.
+        // (#417 P1 provenance guard — /simplify round) When the chunk carries
+        // NO segments, send `segments: undefined` (OMIT the key, not `[]`) and
+        // let the adapter's preserve-on-empty rule own the write semantics:
+        // existing row → segments/content untouched; no row → insert-if-absent
+        // flat-transcript row (original P3 fix preserved). The old route-level
+        // hasTranscriptRow probe (check-then-write race, duplicated at both
+        // call sites) is gone — the rule lives in SupabaseTranscriptAdapter.
         const hasSegments = segments && segments.length > 0;
         const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
         if (hasSegments || hasFlatTranscript) {
@@ -663,7 +673,7 @@ export async function POST(request: NextRequest) {
           await SupabaseTranscriptAdapter.upsertTranscript({
             videoId,
             content: segmentsText || transcript || markdown,
-            segments: segments || [],
+            segments: hasSegments ? segments : undefined,
             language: 'en',
             hash: row.transcriptHash || undefined,
           }).catch(e => {
@@ -1471,13 +1481,16 @@ export async function POST(request: NextRequest) {
       // overwrites whatever partial content the safety-net write left behind.
       // See the comment at the chunk-path call site (~line 475) for the full
       // relationship — the two calls are deliberately not consolidated into one.
+      // Same preserve-on-empty contract as the chunk path: empty incoming
+      // segments are sent as `undefined` (omitted) and the ADAPTER owns the
+      // no-erase guarantee; no route-level probe.
       const finalHasSegments = segments && segments.length > 0;
       const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
       if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
         await SupabaseTranscriptAdapter.upsertTranscript({
           videoId,
           content: transcript || stitchedMarkdown || markdown,
-          segments: segments || [],
+          segments: finalHasSegments ? segments : undefined,
           language: 'en',
           hash: row.transcriptHash || undefined,
         }).catch(e => {

@@ -6,6 +6,7 @@ import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
+import { annotateWithTimeMarkers, timeAnnotatedReasons } from "../services/TranscriptTimeMarkers";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
@@ -168,6 +169,8 @@ interface StreamRequest {
   // a v2 request without a well-formed bundleList is rejected (fail closed),
   // never guessed from STREAM_BUNDLES.
   bundleList?: number[][];
+  /** R3b Phase 2.6: seconds between real [HH:MM:SS] prompt markers (registry analysis.jev.timeMarkerIntervalSeconds). */
+  timeMarkerIntervalSeconds?: number;
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
@@ -848,7 +851,7 @@ async function fetchTranscriptIfMissing(
 
     // L1 Redis transcript cache: 72h TTL (3-day compliance window)
     const CACHE_TTL = 259200;
-    const cacheKey = `transcript:${videoId}`;
+    const cacheKey = transcriptCacheKey(videoId);
 
     if (cache) {
       try {
@@ -1048,17 +1051,18 @@ async function resolveCellTranscript(params: {
   req: StreamRequest;
   resolvedTranscript: string;
   send: (obj: Record<string, unknown>) => void;
-}): Promise<string> {
+}): Promise<{ text: string; startWord: number }> {
   const { req, resolvedTranscript, send } = params;
+  const full = { text: resolvedTranscript, startWord: 0 };
 
   // Not v2 (tokenVersion absent or 1) -> unchanged, byte for byte
   if (req.tokenVersion !== 2) {
-    return resolvedTranscript;
+    return full;
   }
 
   // v2 + projective bundle (empty slice) -> unchanged
   if (isProjectiveBundle(req.dimensions ?? [])) {
-    return resolvedTranscript;
+    return full;
   }
 
   // v2 + grounded: startWord, endWord, sliceSha256 guaranteed by verifyStreamToken
@@ -1066,7 +1070,7 @@ async function resolveCellTranscript(params: {
   const endWord = req.endWord ?? 0;
   const sliceSha256 = req.sliceSha256 ?? "";
 
-  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): string => {
+  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): { text: string; startWord: number } => {
     Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
       level: 'warning',
       tags: { operation: 'jev-slice-verify', reason },
@@ -1081,7 +1085,7 @@ async function resolveCellTranscript(params: {
       },
     });
     send({ type: 'status', stage: 'jev-fallback', reason });
-    return resolvedTranscript;
+    return full;
   };
 
   let computedHash: string;
@@ -1092,7 +1096,15 @@ async function resolveCellTranscript(params: {
     return fallBack('slice_out_of_range', null);
   }
   if (computedHash !== sliceSha256) return fallBack('slice_hash_mismatch', computedHash);
-  return sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord);
+  return { text: sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord), startWord };
+}
+
+/** Upstash transcript-cache key. v2: entries written before segments carried
+ * an `estimated` provenance flag (pre #417) have no marker, so provider-invented
+ * times on a cache hit would be presented as real — the version bump makes
+ * legacy entries miss and be refetched with provenance. */
+export function transcriptCacheKey(videoId: string): string {
+  return `transcript:v2:${videoId}`;
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -1112,10 +1124,21 @@ function buildStreamResponse(
   let finalText = "";
   let modelUsed = "";
   let settled = false;
-  // Populated once fetchTranscriptIfMissing resolves inside the stream's start()
-  // handler below; defaults to req.segments (almost always empty from the browser)
-  // so an interrupted/timeout persist firing before resolution still has a value.
-  let resolvedSegments: TranscriptSegment[] | undefined = req.segments;
+  // Populated ONLY from fetchTranscriptIfMissing inside the stream's start()
+  // handler below — request-supplied req.segments are never assigned here.
+  // Phase 2.6 provenance guard (#417 P1, /simplify round): "trusted by
+  // construction" — `resolvedSegments` staying undefined IS the trust signal,
+  // so no separate `segmentsTrusted` flag is needed. A request carrying its
+  // own transcript short-circuits the fetch (fetchTranscriptIfMissing only
+  // enters the fetch/cache branch when the transcript is missing/placeholder),
+  // so trusted sources are exactly: the extractor's own fetch, or the
+  // worker's own Upstash transcript cache (transcript:*, written exclusively
+  // from fetch results — fetchTranscriptIfMissing reads that cache itself).
+  // The HMAC v2 token signs only the slice (sha256,startWord,endWord), not
+  // segment times, so untrusted times could be presented to the model as
+  // real [HH:MM:SS] markers and upserted into the SHARED `transcripts` row
+  // (video_id primary key) poisoning the transcript cache for every user.
+  let resolvedSegments: TranscriptSegment[] | undefined;
   // Flat transcript text, kept alongside segments so the persist call can write
   // a `transcripts` row even when the video has a transcript but no timed
   // segments (e.g. it arrived pre-fetched from initial ingestion and
@@ -1223,7 +1246,12 @@ function buildStreamResponse(
         // is the signed stream count (K x G + P), not the 5-bundle total.
         totalChunks: req.tokenVersion === 2 ? req.streamCount : req.totalChunks,
         jevChunkIndex: req.tokenVersion === 2 ? req.jevChunkIndex : undefined,
-        segments: resolvedSegments,
+        // #417 P1: segments are persisted ONLY when worker-fetched — when
+        // `resolvedSegments` is still undefined the key is OMITTED entirely
+        // (not `[]`), so the persist route's preserve-on-empty rule in
+        // SupabaseTranscriptAdapter.upsertTranscript keeps an existing row's
+        // stored segments/content intact.
+        ...(resolvedSegments ? { segments: resolvedSegments } : {}),
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
@@ -1336,9 +1364,11 @@ function buildStreamResponse(
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;
-      // Only overwrite the req.segments default when the fetch actually produced
-      // timed segments — an interrupted fetch (rejected settle) must not wipe out
-      // whatever the request already carried.
+      // Only assign from the fetch result — request-supplied segments are
+      // never trusted (see the provenance contract above). An interrupted
+      // fetch (rejected settle, or a fulfilled result without segments) leaves
+      // `resolvedSegments` undefined: an interrupted persist then omits
+      // `segments` entirely instead of sending untrusted req.segments.
       if (fetchResult.status === 'fulfilled' && fetchResult.value.segments) {
         resolvedSegments = fetchResult.value.segments;
       }
@@ -1376,26 +1406,6 @@ function buildStreamResponse(
         }
         controller.close();
         return;
-      }
-
-      // Truncation guardrail (2026-09-27, user directive — no success-washing):
-      // when the assembled prompt will slice the transcript, SAY SO in the
-      // client's own log stream. The prompt's in-band notice tells the model;
-      // this status frame tells the human. Budget mirrors
-      // analysis.transcriptBudgetChars (registry-resolved client-side,
-      // forwarded per request; fallback matches getUCISPrompt's legacy 48000).
-      {
-        const budget = req.transcriptBudgetChars ?? 48000;
-        const transcriptLen = resolvedTranscriptText?.length ?? 0;
-        if (transcriptLen > budget) {
-          send({
-            type: "status",
-            stage: "transcript-truncated",
-            message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
-            transcriptLength: transcriptLen,
-            budget,
-          } as unknown as Record<string, unknown>);
-        }
       }
 
       // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
@@ -1473,6 +1483,74 @@ function buildStreamResponse(
           send,
         });
 
+        // R3b Phase 2.6 time-sync: insert REAL video times ([HH:MM:SS] every
+        // analysis.jev.timeMarkerIntervalSeconds, from the timed segments)
+        // into the text the model reads, AFTER the slice hash check. The
+        // prompt budget is spent on plain words (cut at a word boundary
+        // first), so markers never cost coverage; the prompt builder is then
+        // handed the annotated text's own length so it never cuts again.
+        const transcriptBudget = req.transcriptBudgetChars ?? 48000;
+        // #417 P1 (trusted by construction): `resolvedSegments` is assigned
+        // ONLY from the worker's own fetch/cache result, so no trust flag is
+        // needed — annotating whenever segments exist is safe. When they are
+        // absent (request carried its own transcript, fetch skipped) plain
+        // text is used; the "do not align" path below explains a real
+        // misalignment of worker-fetched segments only.
+        const timeAnnotated = annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
+          startWord: cellTranscript.startWord,
+          durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration),
+          intervalSeconds: req.timeMarkerIntervalSeconds,
+          maxChars: transcriptBudget,
+        });
+        if (resolvedSegments && !timeAnnotated) {
+          // Worker-fetched segments exist but produced no annotation — the
+          // annotator's own `reason` (estimated / invalid_timing /
+          // misaligned) replaces the recomputation the worker used to do.
+          // Never silent: the model falls back to guessed timestamps.
+          const reason = timeAnnotatedReasons(resolvedSegments);
+          if (reason === 'misaligned') {
+            console.warn('[analyze-llm-stream] time markers skipped: segments do not align with the transcript', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex });
+            Sentry.captureMessage('time markers skipped: segments do not align with transcript', {
+              level: 'warning',
+              tags: { operation: 'time-markers' },
+              extra: { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, segments: resolvedSegments.length },
+            });
+          } else {
+            console.info(`[analyze-llm-stream] time markers skipped: ${reason}`, { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, reason });
+          }
+        }
+        const promptTranscript = timeAnnotated?.text ?? cellTranscript.text;
+
+        // Truncation guardrail (2026-09-27, user directive — no success-washing):
+        // when the assembled prompt will cut the transcript, SAY SO in the
+        // client's own log stream. Measured on THIS cell's prompt text (a K>1
+        // cell's slice, not the whole video — Phase 2.6 false-positive fix).
+        // Budget mirrors analysis.transcriptBudgetChars (fallback matches
+        // getUCISPrompt's legacy 48000).
+        {
+          const budget = transcriptBudget;
+          // The annotator cut on whitespace-NORMALIZED words (single-space
+          // joined), so when annotation ran the status must report the same
+          // normalized length — returned directly by the annotator (it
+          // already computed it) instead of re-tokenizing here. Raw length
+          // stays for the plain-text fallback (its cut IS raw).
+          const transcriptLen = timeAnnotated
+            ? timeAnnotated.normalizedLength
+            : cellTranscript.text.length;
+          // The annotator made the actual cut on single-space-joined words; trust
+          // its verdict (raw whitespace runs must not fake a truncation).
+          const wasTruncated = timeAnnotated ? timeAnnotated.truncated : transcriptLen > budget;
+          if (wasTruncated) {
+            send({
+              type: "status",
+              stage: "transcript-truncated",
+              message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
+              transcriptLength: transcriptLen,
+              budget,
+            } as unknown as Record<string, unknown>);
+          }
+        }
+
         const result = await engine.executeAndStream(
           {
             // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
@@ -1481,11 +1559,11 @@ function buildStreamResponse(
             // for these fields explicitly (Dimension 2.3/11.1/11.6) and got
             // Insufficient Data every time because they never arrived here.
             metadata: { ...req.metadata, ...(resolvedChannelMeta || {}) },
-            transcript: cellTranscript,
+            transcript: promptTranscript,
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
-            transcriptBudgetChars: req.transcriptBudgetChars,
+            transcriptBudgetChars: timeAnnotated ? timeAnnotated.text.length : req.transcriptBudgetChars,
             prior_payload: priorPayload,
           },
           {

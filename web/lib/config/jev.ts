@@ -53,9 +53,19 @@ export const JEV_BOUNDS = {
   acronymMinLength: { min: 2, max: 6 },
   contentWordMinLength: { min: 1, max: 12 },
   maxParallelStreams: { min: 1, max: 32 },
+  timeMarkerIntervalSeconds: { min: 5, max: 300 },
 } as const;
 
 export const JEV_MAX_PARALLEL_STREAMS_FALLBACK = 6;
+export const JEV_TIME_MARKER_INTERVAL_FALLBACK = 30;
+
+/** Registry value of `analysis.jev.timeMarkerIntervalSeconds` → an integer in [min, max]; non-numeric → fallback. */
+export function resolveJevTimeMarkerIntervalSeconds(raw: unknown): number {
+  const value = registryNumber(raw);
+  if (value === null) return JEV_TIME_MARKER_INTERVAL_FALLBACK;
+  const { min, max } = JEV_BOUNDS.timeMarkerIntervalSeconds;
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
 
 /**
  * R3b admin gate: K>1 planning needs the registry flag AND an admin
@@ -68,10 +78,20 @@ export async function gateJevForUser(config: JevConfig, isAdmin: () => Promise<b
   return (await isAdmin()) ? config : { ...config, enabled: false };
 }
 
+/** A registry value as a finite number, or null. null/''/booleans are "unset", never 0 or 1. */
+function registryNumber(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+  return null;
+}
+
 /** Registry value of `analysis.jev.maxParallelStreams` → an integer in [min, max]; non-numeric → fallback. */
 export function resolveJevMaxParallelStreams(raw: unknown): number {
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return JEV_MAX_PARALLEL_STREAMS_FALLBACK;
+  const value = registryNumber(raw);
+  if (value === null) return JEV_MAX_PARALLEL_STREAMS_FALLBACK;
   const { min, max } = JEV_BOUNDS.maxParallelStreams;
   return Math.max(min, Math.min(max, Math.floor(value)));
 }

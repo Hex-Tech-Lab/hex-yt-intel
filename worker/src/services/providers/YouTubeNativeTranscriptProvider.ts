@@ -139,7 +139,7 @@ export class YouTubeNativeTranscriptProvider implements TranscriptProviderPort {
         const start = typeof event.tStartMs === 'number' ? event.tStartMs / 1000 : cumulative * 3;
         const duration = typeof event.dDurationMs === 'number' ? event.dDurationMs / 1000 : 3;
         cumulative++;
-        return { start, duration, text };
+        return typeof event.tStartMs === 'number' ? { start, duration, text } : { start, duration, text, estimated: true };
       }).filter(segment => segment.text.length > 0)
         .filter(segment => {
           return !isNaN(segment.start) && !isNaN(segment.duration) && segment.start >= 0 && segment.duration > 0 && segment.start < 86400;

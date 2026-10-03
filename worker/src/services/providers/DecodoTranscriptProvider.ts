@@ -72,10 +72,11 @@ export class DecodoTranscriptProvider implements TranscriptProviderPort {
       const segments = events.map(event => {
         const segs = event.segs ?? [];
         const text = segs.map(seg => seg.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+        const timed = typeof event.tStartMs === 'number' || typeof event.tStart === 'number';
         const start = typeof event.tStartMs === 'number' ? event.tStartMs / 1000 : typeof event.tStart === 'number' ? event.tStart : cumulative * 3;
         const duration = typeof event.dDurationMs === 'number' ? event.dDurationMs / 1000 : typeof event.dDuration === 'number' ? event.dDuration : 3;
         cumulative++;
-        return { start, duration, text };
+        return timed ? { start, duration, text } : { start, duration, text, estimated: true };
       }).filter(segment => segment.text.length > 0)
         .filter(segment => {
           return !isNaN(segment.start) && !isNaN(segment.duration) && segment.start >= 0 && segment.duration > 0 && segment.start < 86400;
