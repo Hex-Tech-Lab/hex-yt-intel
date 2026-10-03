@@ -32,6 +32,8 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 vi.mock('@sentry/nextjs', () => ({
+  __esModule: true,
+  default: { captureException: vi.fn() },
   captureException: vi.fn(),
 }));
 
@@ -241,7 +243,7 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — preserve-on-empty (#417
     expect(payload.content).toBe('real content');
   });
 
-  it('probe error THROWS (uncertain state must not authorize a write)', async () => {
+  it('probe error + empty segments: STILL THROWS (uncertain state must not authorize a preserve-on-empty write)', async () => {
     selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
     const Adapter = await freshAdapter();
     await expect(Adapter.upsertTranscript({
@@ -252,5 +254,25 @@ describe('SupabaseTranscriptAdapter.upsertTranscript — preserve-on-empty (#417
     })).rejects.toBeTruthy();
     expect(upsertMock).not.toHaveBeenCalled();
     expect(updateArgs).toHaveLength(0);
+  });
+
+  it('probe error + real segments: Sentry-captured, write proceeds as EXISTING (no created_at/expires_at, no throw)', async () => {
+    selectMaybeSingleMock.mockResolvedValue({ data: null, error: { message: 'connection reset' } });
+    const Adapter = await freshAdapter();
+    await expect(Adapter.upsertTranscript({
+      videoId: 'vid-err-segments',
+      content: 'real worker-fetched content',
+      segments: [{ start: 0, duration: 5, text: 'real' }],
+      language: 'en',
+    })).resolves.toBeUndefined();
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const [payload, opts] = upsertMock.mock.calls[0];
+    expect(payload.content).toBe('real worker-fetched content');
+    expect(payload.segments).toHaveLength(1);
+    expect(payload).not.toHaveProperty('created_at');
+    expect(payload).not.toHaveProperty('expires_at');
+    expect(opts.onConflict).toBe('video_id');
+    const { captureException } = await import('@sentry/nextjs');
+    expect(vi.mocked(captureException)).toHaveBeenCalled();
   });
 });

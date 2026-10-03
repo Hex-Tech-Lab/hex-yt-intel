@@ -70,12 +70,42 @@ export class SupabaseTranscriptAdapter {
       .select('video_id')
       .eq('video_id', params.videoId)
       .maybeSingle();
-    // #417 P1: an uncertain probe must not authorize a destructive write.
-    // The legacy hasTranscriptRow probe threw here; the same fail-closed
-    // posture is kept — on a probe error, throw (no write at all).
-    if (probeError) {
+    // #417 P1 (amended per /code-review): fail closed ONLY on the
+    // preserve-on-empty path — an uncertain probe must not authorize a
+    // destructive write, so `!hasSegments` + probe error throws. When real
+    // segments ARE present the write is an authoritative full overwrite and
+    // does not need the probe for safety; a transient probe error there must
+    // not drop a valid write. In that case we proceed treating the row as
+    // EXISTING (created_at/expires_at NOT set — DB defaults at
+    // 20260718000000_add_transcripts_and_markers.sql:8-9 are
+    // `created_at default now()` and `expires_at not null default
+    // now() + interval '72 hours'`, so even a brand-new insert lands inside
+    // the 72h retention window; expires_at can never be NULL).
+    if (probeError && !hasSegments) {
       Sentry.captureException(probeError, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
       throw probeError;
+    }
+    if (probeError && hasSegments) {
+      Sentry.captureException(probeError, {
+        tags: { method: 'upsertTranscript', degraded: 'probe-error-proceed' },
+        extra: { videoId: params.videoId },
+      });
+      // Probe uncertain → treat as EXISTING: never set created_at/expires_at.
+      const { error } = await service
+        .from('transcripts')
+        .upsert({
+          video_id: params.videoId,
+          content: params.content,
+          segments: params.segments,
+          transcript_hash: params.hash,
+          language: params.language,
+          last_accessed_at: new Date().toISOString(),
+        }, { onConflict: 'video_id' });
+      if (error) {
+        Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
+        throw error;
+      }
+      return;
     }
 
     // Segments empty + row exists: update WITHOUT segments/content — the
