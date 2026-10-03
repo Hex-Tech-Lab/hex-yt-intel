@@ -75,11 +75,15 @@ if (!OR_KEY) {
 async function loadTranscript(videoId: string): Promise<string | null> {
   const cachePath = nodePath.join(TRANSCRIPT_DIR, `${videoId}.txt`);
   if (fs.existsSync(cachePath)) return fs.readFileSync(cachePath, 'utf8');
-  const res = await fetch(`${WORKER_URL}/fetch-transcript`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: WORKER_ORIGIN },
-    body: JSON.stringify({ videoId }),
-  });
+  const res = await timedFetch(
+    `${WORKER_URL}/fetch-transcript`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: WORKER_ORIGIN },
+      body: JSON.stringify({ videoId }),
+    },
+    90000,
+  );
   if (!res.ok) {
     console.warn(`[classify] fetch-transcript ${videoId} → HTTP ${res.status}`);
     return null;
@@ -98,21 +102,38 @@ async function jevDecisions(state: Record<string, unknown>, questions: Record<st
   answers?: Record<string, { choice?: string; noul?: number; score?: number; confidence?: number }>;
   usage?: { cost?: number };
 }> {
-  const res = await fetch('https://openrouter.ai/api/alpha/decisions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OR_KEY}`,
-      'Content-Type': 'application/json',
-      'X-Title': 'hex-yt-intel/jev-classify-pool',
+  const res = await timedFetch(
+    'https://openrouter.ai/api/alpha/decisions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OR_KEY}`,
+        'Content-Type': 'application/json',
+        'X-Title': 'hex-yt-intel/jev-classify-pool',
+      },
+      body: JSON.stringify({ model: '~typesafe/jev-latest', state, questions }),
     },
-    body: JSON.stringify({ model: '~typesafe/jev-latest', state, questions }),
-    signal: AbortSignal.timeout(60000),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    60000,
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${clip(await res.text(), 200)}`);
   return (await res.json()) as {
     answers?: Record<string, { choice?: string; noul?: number; score?: number; confidence?: number }>;
     usage?: { cost?: number };
   };
+}
+
+/** Truncate with an ellipsis so clipped text is never silently incomplete. */
+const clip = (text: string, max: number) => text.length > max ? `${text.slice(0, max)}...` : text;
+
+/** fetch with a hard deadline; the timer is always released. */
+async function timedFetch(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const to9 = (risk0to100: number) => Math.max(0, Math.min(9, (risk0to100 / 100) * 9));
@@ -170,7 +191,7 @@ for (const id of POOL_VIDEO_IDS) {
     continue;
   }
 
-  const transcript = rawTranscript.replace(/\s+/g, ' ').trim().slice(0, 24000);
+  const transcript = clip(rawTranscript.replace(/\s+/g, ' ').trim(), 24000);
   const call = await jevDecisions({ transcript }, questions);
   const cost = call.usage?.cost ?? 0;
   if (cost > MAX_CALL_COST) {
