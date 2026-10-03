@@ -330,10 +330,10 @@ export const ClassificationDataSchema = z.preprocess(normalizeClassificationFiel
  * Validate a classification from any path (stream, restore). Logs only issue
  * paths and codes, never values, and returns null on rejection.
  */
-export function parseClassification(raw: unknown, tag: string): z.infer<typeof ClassificationDataShape> | null {
+export function parseClassification(raw: unknown, tag: string, quiet = false): z.infer<typeof ClassificationDataShape> | null {
   const parsed = ClassificationDataSchema.safeParse(raw);
   if (parsed.success) return parsed.data;
-  console.warn(`[${tag}] classification rejected`, parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.code}`));
+  if (!quiet) console.warn(`[${tag}] classification rejected`, parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.code}`));
   return null;
 }
 

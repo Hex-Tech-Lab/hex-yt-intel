@@ -202,7 +202,7 @@ export class StreamDeltaHandler {
             const key = JSON.stringify(obj.classification);
             if (key !== this.lastClassificationKey) {
               this.lastClassificationKey = key;
-              const classification = parseClassification(obj.classification, 'Adapter');
+              const classification = parseClassification(obj.classification, 'Adapter', !(typeof window !== 'undefined' && window.__CHAT_DEBUG));
               if (classification) this.synthStore.getState().setClassification(classification);
             }
           }
