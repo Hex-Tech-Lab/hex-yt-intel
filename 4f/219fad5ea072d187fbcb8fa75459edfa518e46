@@ -1,0 +1,27 @@
+web/lib/__tests__/transcript-time-markers.test.ts
+  s_b70cf5106ad39d::t_5ef21855703d0c 79-83
+worker/src/ports/TranscriptProviderPort.ts
+  s_b70cf5106ad39d::t_d4576b799cbbb6 12-13
+worker/src/services/providers/DecodoTranscriptProvider.ts
+  s_b70cf5106ad39d::t_b4fadb52e51203 75,79
+worker/src/services/providers/YouTubeNativeTranscriptProvider.ts
+  s_b70cf5106ad39d::t_bd9fa4b9d6d2b2 142
+web/lib/jev/transcript-time-markers.ts
+  s_b70cf5106ad39d::t_ca2103e4fafe4f 19-20,81-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4f219fad5ea072d187fbcb8fa75459edfa518e46",
+  "prompts": {},
+  "sessions": {
+    "s_b70cf5106ad39d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f22e8fe-611e-4bf2-a104-0bcb450e0503",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
