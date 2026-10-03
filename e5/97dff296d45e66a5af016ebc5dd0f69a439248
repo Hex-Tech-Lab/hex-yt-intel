@@ -1,0 +1,24 @@
+.memory/AGENT_LEDGER.md
+  s_893eeca0e6b614::t_d870e81d371e83 1478
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_893eeca0e6b614::t_7c7e26f3ff033a 427-483
+worker/src/services/TranscriptTimeMarkers.ts
+  s_893eeca0e6b614::t_f57cda09da58d7 7-8
+  s_893eeca0e6b614::t_2a9acfe99e512d 32-34,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e597dff296d45e66a5af016ebc5dd0f69a439248",
+  "prompts": {},
+  "sessions": {
+    "s_893eeca0e6b614": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_efcd0b144ffe4gMtEMKH9p8UVZ",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
