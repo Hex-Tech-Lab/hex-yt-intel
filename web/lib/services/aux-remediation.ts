@@ -255,6 +255,45 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
     return false;
   }
 
+  // Skip fast: an analysis that already has a system-funded run must never
+  // enqueue a second one. This covers the common repeated-finalize case
+  // cheaply; the DB unique index (uq_comment_sample_runs_system_per_analysis)
+  // covers the true race between concurrent finalizes.
+  //
+  // The two probe lookups run BEFORE the insert, so a probe failure must be
+  // contained here, not thrown into the caller: both persist-route call
+  // sites (.catch()) and the harness per-gap loop do catch, but fail-closed
+  // in the service guarantees no paid run is ever started on an uncertain
+  // probe — and the error is still reported (log + Sentry).
+  try {
+    const {
+      'comments.system.minUsableComments': minUsableComments,
+      'comments.system.staleRunMinutes': staleRunMinutes,
+    } = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.system.minUsableComments', 'comments.system.staleRunMinutes'],
+      { 'comments.system.minUsableComments': 10, 'comments.system.staleRunMinutes': 30 }
+    );
+    // A run stuck pending/sampling past the cutoff would otherwise hold the
+    // unique index forever; release it before the existence check.
+    await SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns(params.analysisId, Number(staleRunMinutes));
+    if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
+      console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
+      return false;
+    }
+
+    // Skip: the analysis already has usable comments (at least
+    // comments.system.minUsableComments, default 10) — below that the run is
+    // needed for data density (directive 2026-10-03).
+    if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId, Number(minUsableComments))) {
+      console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
+      return false;
+    }
+  } catch (err) {
+    console.error('[aux-remediation] enqueue probe failed; failing closed (no paid run)', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue_probe', analysisId: params.analysisId } } });
+    return false;
+  }
+
   const runRow = await SupabaseAuxRemediationAdapter.insertSystemCommentSampleRun({
     analysisId: params.analysisId,
     userId: params.userId,
@@ -263,8 +302,33 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   if (!runRow) {
     return false;
   }
+  if (runRow.alreadyQueued) {
+    // Lost the insert race (unique index): the winning path owns the enqueue.
+    return false;
+  }
 
-  const token = await signCommentsTier3Token(runRow.id, params.userId);
+  // Everything between the pending insert and the worker enqueue is wrapped:
+  // an exception here (token signing, settings lookup, config validation)
+  // must mark the run failed, never leave it orphaned 'pending' forever
+  // (external review of #416, P2). The enqueue fetch's own catch below
+  // covers the network leg.
+  try {
+    return await enqueueInsertedSystemSampleRun(params, runRow.id, totalCommentCount);
+  } catch (err) {
+    console.error('[aux-remediation] post-insert enqueue preparation threw', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue_prep', analysisId: params.analysisId, sampleRunId: runRow.id } } });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
+    return false;
+  }
+}
+
+async function enqueueInsertedSystemSampleRun(
+  params: { analysisId: string; userId: string; videoId: string },
+  runRowId: string,
+  totalCommentCount: number
+): Promise<boolean> {
+
+  const token = await signCommentsTier3Token(runRowId, params.userId);
 
   // Cochran-mode sampling config (Comments Dispatch A, 2026-09-30): all
   // values are registry-driven, resolved HERE (Vercel) and carried inside
@@ -320,7 +384,7 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
       level: 'error',
       extra: { analysisId: params.analysisId, errors: validation.errors },
     });
-    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRowId);
     return false;
   }
 
@@ -329,7 +393,7 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sampleRunId: runRow.id,
+        sampleRunId: runRowId,
         videoId: params.videoId,
         userId: params.userId,
         totalCommentCount,
@@ -346,7 +410,7 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   } catch (err) {
     console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: params.analysisId } } });
-    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRowId);
     return false;
   }
 }

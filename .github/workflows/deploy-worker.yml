@@ -45,6 +45,54 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Pre-deploy gate: the transcript chain's paid/optional providers must
+      # be bound as CF secrets BEFORE deploying. `wrangler secret list`
+      # returns NAMES ONLY (no values exist client-side), so this can never
+      # leak credentials into the log — and because it reads the management
+      # API (not the worker), it works on the worker that is ABOUT to be
+      # deployed. Previously this check ran after `Deploy worker`, so a
+      # missing key deployed broken code and could only fail the job
+      # post-hoc. A missing binding means TranscriptApiProvider/
+      # SupadataTranscriptProvider silently skip their tier
+      # (`... not configured`) — chain still answers via fallbacks, but the
+      # deploy must flag the drift loudly and stop.
+      # Bootstrap case: on the very first deploy the production worker does
+      # not exist yet, so `wrangler secret list --env production` fails with
+      # "worker not found" (wrangler exits 1 with a 404 from the CF API
+      # `GET /accounts/{account_id}/workers/scripts/{script_name}` — the
+      # secret list management call targets the script itself). We detect
+      # that explicitly via `wrangler deployments list --env production`
+      # (same not-found failure shape) and skip the gate with a warning
+      # telling the operator to bind secrets right after the first deploy;
+      # the post-deploy non-empty probe below still catches an unbound/empty
+      # key on that first deploy. Any OTHER `secret list` failure (bad
+      # CLOUDFLARE_API_TOKEN, network) must FAIL the gate — an empty capture
+      # output would otherwise look exactly like "secret missing" and either
+      # block a healthy deploy (auth error) or, worse, mask the check.
+      - name: Verify transcript-provider secrets bound (pre-deploy)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Only CF error 10007 ("This Worker does not exist on your account")
+          # means first deploy; any other failure (auth 9106, network) fails.
+          if ! probe=$(pnpm --filter youtube-intelligence-worker exec wrangler deployments list --env production 2>&1); then
+            if echo "$probe" | grep -q 'code: 10007'; then
+              echo "::warning::first deploy — secret gate skipped; bind TRANSCRIPTAPI_API_KEY with wrangler secret put --env production immediately after"
+              exit 0
+            fi
+            echo "::error::wrangler deployments list --env production failed (not a first deploy) — cannot verify secret bindings"
+            echo "$probe" | tail -5
+            exit 1
+          fi
+          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list --env production 2>&1) \
+            || { echo "::error::wrangler secret list --env production failed (auth/network?) — cannot verify secret bindings"; exit 1; }
+          echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
+            || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker — deploy blocked"; exit 1; }
+          echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
+            || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
+          echo "transcript-provider secrets bound: OK"
+
       # `wrangler deploy` runs the esbuild build (wrangler.toml [build]) which bundles
       # the web/lib imports, then uploads. Secrets already on the worker persist.
       - name: Deploy worker
@@ -60,29 +108,14 @@ jobs:
           echo "worker GET / → $code"
           test "$code" = "200"
 
-      # Smoke check: the transcript chain's paid/optional providers are bound
-      # as CF secrets. `wrangler secret list` returns NAMES ONLY (no values
-      # exist client-side), so this can never leak credentials into the log.
-      # A missing binding means TranscriptApiProvider/SupadataTranscriptProvider
-      # silently skip their tier (`... not configured`) — chain still answers
-      # via fallbacks, but the deploy should flag the drift loudly.
-      - name: Verify transcript-provider secrets bound
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          sleep 5
-          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list 2>/dev/null \
-            || pnpm exec wrangler secret list 2>/dev/null || true)
-          echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
-            || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker"; exit 1; }
-          echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
-            || { echo "::warning::SUPADATA_API_KEY is NOT bound to the worker (Supadata tier disabled)"; }
-          echo "transcript-provider secrets bound: OK"
-
       # A bound NAME can still hold an EMPTY value (TRANSCRIPTAPI_API_KEY was
       # bound-but-empty 2026-09-26..10-02, sending every fresh transcript to
-      # Apify). /health/providers reports usable (non-blank) keys as booleans.
+      # Apify). `wrangler secret list` proves names only — emptiness is only
+      # observable where the value is actually read, i.e. inside the running
+      # worker via /health/providers. So this probe is necessarily POST-deploy
+      # (the pre-deploy name check above still blocks unbound secrets); here
+      # it fails loudly and marks the deploy job failed so a bad deploy is
+      # never silently "green".
       - name: Verify transcript-provider secrets are non-empty
         run: |
           body=$(curl -s --fail-with-body https://yt-intel.hex-tech-lab.workers.dev/health/providers)
