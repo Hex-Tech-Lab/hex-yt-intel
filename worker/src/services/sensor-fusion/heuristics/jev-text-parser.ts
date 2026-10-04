@@ -80,13 +80,14 @@ export const splitTranscript = (transcript: string): string[] => {
   return blocks.filter((block) => block.trim() !== '');
 };
 
+/** True for a finite number in the 0-3 score range. */
+const isScore = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 3;
+
 /** Strict validation of a Decisions response: malformed or out-of-range answers throw; a float score is rounded to an integer. */
 export const parseJevTextScores = (response: JevResponse): JevTextScores => {
   const answers = response.answers;
   if (!answers || typeof answers !== 'object') throw new JevTextResponseError('answers missing');
-  /** True for a finite number in the 0-3 score range. */
-  const isScore = (value: unknown): value is number =>
-    typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 3;
   /** Reads one validated 0-3 score answer by question key. */
   const read = (key: keyof JevTextScores): number => {
     const answer = answers[key];
