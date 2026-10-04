@@ -311,33 +311,31 @@ describe('routeFusion', () => {
     expect(route({ uiFramesDetected: true })).toEqual({ route: 'S4', confidence: 0.95 });
     expect(route({ uiFramesDetected: true, diarizationSpeakerCount: 3, debateProsodyDetected: true }).route).toBe('S4');
   });
-  it('pre-rule: one speaker and at most 5 turn markers routes S1', () => {
-    expect(route({ turnMarkerCount: 5 }).route).toBe('S1');
-    expect(route({ turnMarkerCount: 0 }).confidence).toBe(0.85);
+  it('pre-rule S1: one speaker without UI frames routes S1 regardless of turn markers or vlog speech', () => {
+    expect(route({ turnMarkerCount: 0 })).toEqual({ route: 'S1', confidence: 0.85 });
+    expect(route({ turnMarkerCount: 70 }).route).toBe('S1');
+    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 3 }).route).toBe('S1');
   });
-  it('vlog guard: only saturated direct address AND fluff (both 3) blocks the S1 pre-rule', () => {
-    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 3 }).route).toBe('S6');
-    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 2 }).route).toBe('S1');
-    expect(route({ directAddressIntensity: 2, tangentialFluffIntensity: 3 }).route).toBe('S1');
+  it('pre-rule S2: two speakers without debate prosody routes S2 regardless of turn markers', () => {
+    expect(route({ diarizationSpeakerCount: 2, turnMarkerCount: 0 }).route).toBe('S2');
+    expect(route({ diarizationSpeakerCount: 2, turnMarkerCount: 370 }).route).toBe('S2');
   });
-  it('pre-rules: panel and interview', () => {
-    expect(route({ diarizationSpeakerCount: 4, debateProsodyDetected: true, turnMarkerCount: 30 }).route).toBe('S3');
-    expect(route({ diarizationSpeakerCount: 2, turnMarkerCount: 20 }).route).toBe('S2');
+  it('pre-rule S3: three or more speakers, or two speakers with debate prosody, routes S3', () => {
+    expect(route({ diarizationSpeakerCount: 3 }).route).toBe('S3');
+    expect(route({ diarizationSpeakerCount: 4, debateProsodyDetected: true, turnMarkerCount: 0 }).route).toBe('S3');
+    expect(route({ diarizationSpeakerCount: 2, debateProsodyDetected: true, turnMarkerCount: 0 }).route).toBe('S3');
   });
-  it('weighted: procedural intensity without UI frames routes S4', () => {
-    expect(route({ proceduralInstructionIntensity: 3, turnMarkerCount: 6 }).route).toBe('S4');
+  it('weighted: with no diarized speakers, procedural intensity routes S4', () => {
+    expect(route({ diarizationSpeakerCount: 0, proceduralInstructionIntensity: 3, turnMarkerCount: 6 }).route).toBe('S4');
   });
-  it('weighted: multi-speaker debate with few speakers routes S3', () => {
-    expect(route({ diarizationSpeakerCount: 2, debateProsodyDetected: true, turnMarkerCount: 12 }).route).toBe('S3');
-  });
-  it('weighted: many-turn single speaker with low signals falls through to a valid route with confidence in (0, 1]', () => {
-    const result = route({ turnMarkerCount: 8 });
+  it('weighted: with no diarized speakers, falls through to a valid route with confidence in (0, 1]', () => {
+    const result = route({ diarizationSpeakerCount: 0, turnMarkerCount: 8 });
     expect(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']).toContain(result.route);
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.confidence).toBeLessThanOrEqual(1);
   });
   it('is deterministic', () => {
-    const input = { ...base, turnMarkerCount: 9, directAddressIntensity: 1 };
+    const input = { ...base, diarizationSpeakerCount: 0, turnMarkerCount: 9, directAddressIntensity: 1 };
     expect(routeFusion(input)).toEqual(routeFusion({ ...input }));
   });
   it('rejects invalid input', () => {
