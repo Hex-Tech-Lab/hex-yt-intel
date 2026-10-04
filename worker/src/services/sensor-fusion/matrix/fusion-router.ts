@@ -31,9 +31,10 @@ export type FusionWeights = Record<FusionRoute, Record<Feature, number>>;
 
 export const ROUTES: readonly FusionRoute[] = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
 
-/** Single-speaker, few-turn rule: S1 is blocked when JEV reports vlog-level address or fluff. */
+/** Single-speaker rule: at most this many turn markers routes S1, unless vlog speech is saturated. */
 export const MONOLOGUE_MAX_TURN_MARKERS = 5;
-export const VLOG_SIGNAL_MIN_INTENSITY = 2;
+/** Direct address AND fluff must both reach this intensity to block S1 (calibrated 2026-10-04). */
+export const VLOG_SATURATION_INTENSITY = 3;
 /** Turn markers at which the turn-density feature saturates. */
 export const TURN_DENSITY_SATURATION = 20;
 /** Interview pre-rule: two speakers with at least this many turn markers and no debate. */
@@ -97,14 +98,14 @@ const routeByWeights = (input: FusionInput, weights: FusionWeights): FusionResul
   return { route, confidence: 1 / total };
 };
 
-/** True when JEV reports vlog-level direct address or fluff. */
+/** True only when JEV reports saturated vlog-style speech: direct address AND fluff both at the maximum. */
 const hasVlogSignals = (input: FusionInput): boolean =>
-  input.directAddressIntensity >= VLOG_SIGNAL_MIN_INTENSITY ||
-  input.tangentialFluffIntensity >= VLOG_SIGNAL_MIN_INTENSITY;
+  input.directAddressIntensity === VLOG_SATURATION_INTENSITY &&
+  input.tangentialFluffIntensity === VLOG_SATURATION_INTENSITY;
 
-/** Pre-rule S1: a single speaker with few turns and no vlog signals. */
+/** Pre-rule S1: a single speaker with few turns, unless vlog speech is saturated. */
 const isMonologue = (input: FusionInput): boolean =>
-  input.diarizationSpeakerCount === 1 && input.turnMarkerCount < MONOLOGUE_MAX_TURN_MARKERS && !hasVlogSignals(input);
+  input.diarizationSpeakerCount === 1 && input.turnMarkerCount <= MONOLOGUE_MAX_TURN_MARKERS && !hasVlogSignals(input);
 
 /** Pre-rule S3: a panel (3+ speakers) with debate prosody. */
 const isPanelDebate = (input: FusionInput): boolean =>

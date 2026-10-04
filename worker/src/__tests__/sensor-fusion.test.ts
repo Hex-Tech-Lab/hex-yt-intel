@@ -311,13 +311,14 @@ describe('routeFusion', () => {
     expect(route({ uiFramesDetected: true })).toEqual({ route: 'S4', confidence: 0.95 });
     expect(route({ uiFramesDetected: true, diarizationSpeakerCount: 3, debateProsodyDetected: true }).route).toBe('S4');
   });
-  it('pre-rule: one speaker and fewer than 5 turn markers routes S1', () => {
-    expect(route({ turnMarkerCount: 4 }).route).toBe('S1');
+  it('pre-rule: one speaker and at most 5 turn markers routes S1', () => {
+    expect(route({ turnMarkerCount: 5 }).route).toBe('S1');
     expect(route({ turnMarkerCount: 0 }).confidence).toBe(0.85);
   });
-  it('vlog guard: a single-speaker clip with high direct address or fluff is not claimed by the S1 pre-rule', () => {
-    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 2 }).route).toBe('S6');
-    expect(route({ tangentialFluffIntensity: 2, directAddressIntensity: 2 }).route).toBe('S6');
+  it('vlog guard: only saturated direct address AND fluff (both 3) blocks the S1 pre-rule', () => {
+    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 3 }).route).toBe('S6');
+    expect(route({ directAddressIntensity: 3, tangentialFluffIntensity: 2 }).route).toBe('S1');
+    expect(route({ directAddressIntensity: 2, tangentialFluffIntensity: 3 }).route).toBe('S1');
   });
   it('pre-rules: panel and interview', () => {
     expect(route({ diarizationSpeakerCount: 4, debateProsodyDetected: true, turnMarkerCount: 30 }).route).toBe('S3');

@@ -1,16 +1,22 @@
 /**
- * Phase C micro-batch bake-off (3 videos, ADR 039).
+ * Phase C 14-video bake-off (ADR 039).
  *
  * Feeds real transcripts through the 8,000-character JEV text parser, joins
- * the hardcoded mock diarization/A-V sensors, routes with the S1-S6 fusion
- * router and prints Video ID | Expected | Actual | Match.
+ * hardcoded MOCK diarization/A-V sensors, routes with the S1-S6 fusion router
+ * and prints Video ID | Expected | Actual | Match, the agreement percentage
+ * and the total JEV chunk calls.
  *
- * Cost guard: a fixed 3-video cohort; the planned JEV call count is printed
- * and the run aborts above MAX_JEV_CALLS before any paid call is made.
+ * Ground truth: the human hand labels below are the sole source (the POC
+ * labels are deprecated; S1_S6_POOL_GROUND_TRUTH.json is not in the repo).
+ * The mock sensors are set to match each video's label, so S1/S2/S3 agreement
+ * is partly decided by the mocks; only turn markers and JEV scores are real.
+ *
+ * Cost guard: the planned JEV call count is printed and the run aborts above
+ * MAX_JEV_CALLS before any paid call is made.
  * Transcripts: fetched from the worker's POST /fetch-transcript and cached
  * under the OS temp dir, never written to the repo (ADR 012).
  *
- * Run: pnpm dlx tsx scripts/phase-c-micro-bakeoff.ts
+ * Run: pnpm dlx tsx scripts/phase-c-bakeoff.ts
  */
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -26,57 +32,50 @@ import { routeFusion, type FusionRoute } from '../worker/src/services/sensor-fus
 const WORKER_URL = process.env.WORKER_URL ?? 'https://yt-intel.hex-tech-lab.workers.dev';
 const WORKER_ORIGIN = 'https://hex-yt-intel.vercel.app';
 const TRANSCRIPT_DIR = nodePath.join(os.tmpdir(), 'hex-yt-intel-pool-transcripts');
-const GROUND_TRUTH_FILE = 'S1_S6_POOL_GROUND_TRUTH.json';
-const GROUND_TRUTH_DIRS = ['docs/architecture', 'scripts/bakeoff-inputs', 'docs/research', '.'];
-const MAX_JEV_CALLS = 60;
+const MAX_JEV_CALLS = Number(process.env.MAX_JEV_CALLS ?? 200);
 const FETCH_TIMEOUT_MS = 90000;
 
-/** Simulated Diarization and A/V probe outputs for the micro-batch cohort. */
+/** Simulated Diarization and A/V probe outputs. */
 interface MockSensors {
   diarizationSpeakerCount: number;
   uiFramesDetected: boolean;
   debateProsodyDetected: boolean;
 }
 
-/** Hardcoded sensor registry: only the three cohort videos. */
-const MockSensorRegistry: Record<string, MockSensors> = {
-  // S1 monologue (targets the S1/S6 drift)
-  Z6l4HpuyyP0: { diarizationSpeakerCount: 1, uiFramesDetected: false, debateProsodyDetected: false },
-  // S2 interview
-  MoBr0nQtOnA: { diarizationSpeakerCount: 2, uiFramesDetected: false, debateProsodyDetected: false },
-  // S3 panel (targets the S2/S3 overlap)
-  '39hqY3nH5ug': { diarizationSpeakerCount: 4, uiFramesDetected: false, debateProsodyDetected: true },
-};
-
-/** Expected labels named by the cohort definition, used when the ground-truth file is not in the repo. */
-const COHORT_EXPECTED: Record<string, FusionRoute> = {
+/** Human hand-labeled ground truth for the 14-video pool (immutable). */
+const GROUND_TRUTH: Record<string, FusionRoute> = {
   Z6l4HpuyyP0: 'S1',
+  '1U8-4N1HNtU': 'S1',
+  EoKdX13w7SI: 'S1',
+  'gneNjQuLv88': 'S1',
+  GOLgLU54b5s: 'S1',
+  'pjGvA-D0Fcs': 'S1',
+  uZ5kJ9CBbv0: 'S1',
+  ymgH8jS6Wb8: 'S1',
   MoBr0nQtOnA: 'S2',
+  _LCeJZFIsd4: 'S2',
+  DlNWYzaL_F0: 'S2',
+  LTNVA2iP9YU: 'S2',
   '39hqY3nH5ug': 'S3',
+  yB92mx97A8s: 'S3',
 };
 
-const TARGET_IDS = Object.keys(MockSensorRegistry);
+const MOCK_S1: MockSensors = { diarizationSpeakerCount: 1, uiFramesDetected: false, debateProsodyDetected: false };
+const MOCK_S2: MockSensors = { diarizationSpeakerCount: 2, uiFramesDetected: false, debateProsodyDetected: false };
+const MOCK_S3: MockSensors = { diarizationSpeakerCount: 4, uiFramesDetected: false, debateProsodyDetected: true };
+
+/** Mock sensor registry: one entry per pool video, matching its hand label. */
+const MockSensorRegistry: Record<string, MockSensors> = Object.fromEntries(
+  Object.entries(GROUND_TRUTH).map(([id, label]) => [id, label === 'S1' ? MOCK_S1 : label === 'S2' ? MOCK_S2 : MOCK_S3]),
+);
+
+const TARGET_IDS = Object.keys(GROUND_TRUTH);
 
 const OR_KEY = process.env.OPENROUTER_API_KEY;
 if (!OR_KEY) {
   console.error('OPENROUTER_API_KEY not set - aborting');
   process.exit(1);
 }
-
-/** Loads expected labels for the target IDs from S1_S6_POOL_GROUND_TRUTH.json, or reports why it could not. */
-const loadExpected = (): { labels: Record<string, FusionRoute>; source: string } => {
-  const found = GROUND_TRUTH_DIRS.map((dir) => nodePath.join(dir, GROUND_TRUTH_FILE)).find((p) => fs.existsSync(p));
-  if (!found) return { labels: COHORT_EXPECTED, source: `${GROUND_TRUTH_FILE} not found; using the cohort labels from the directive` };
-  const raw = JSON.parse(fs.readFileSync(found, 'utf8')) as unknown;
-  const entries = (Array.isArray(raw) ? raw : Object.entries(raw as object).map(([id, v]) => ({ ...(typeof v === 'object' ? v : { label: v }), videoId: id }))) as Array<Record<string, string>>;
-  const labels: Record<string, FusionRoute> = {};
-  for (const entry of entries) {
-    const id = entry.videoId ?? entry.video_id ?? entry.id;
-    const label = entry.expected ?? entry.label ?? entry.class ?? entry.groundTruth;
-    if (TARGET_IDS.includes(id) && label) labels[id] = label as FusionRoute;
-  }
-  return { labels, source: found };
-};
 
 /** Cached transcript text for a video, fetched from the worker on a miss. */
 const loadTranscript = async (videoId: string): Promise<string> => {
@@ -111,15 +110,20 @@ interface Row {
   detail: string;
 }
 
-/** Runs the micro-batch and prints the Markdown results table. */
+/** Runs the bake-off and prints the Markdown results table. */
 const main = async (): Promise<void> => {
-  const { labels, source } = loadExpected();
-  console.log(`Ground truth: ${source}\n`);
-
   const transcripts = new Map<string, string>();
-  for (const id of TARGET_IDS) transcripts.set(id, await loadTranscript(id));
+  const loadErrors = new Map<string, string>();
+  for (const id of TARGET_IDS) {
+    try {
+      transcripts.set(id, await loadTranscript(id));
+    } catch (error) {
+      console.error(`[bakeoff] transcript ${id} failed:`, error);
+      loadErrors.set(id, (error as Error).message);
+    }
+  }
 
-  const plannedCalls = TARGET_IDS.reduce((sum, id) => sum + splitTranscript(transcripts.get(id) ?? '').length, 0);
+  const plannedCalls = [...transcripts.values()].reduce((sum, text) => sum + splitTranscript(text).length, 0);
   console.log(`Planned JEV calls: ${plannedCalls} (cap ${MAX_JEV_CALLS})\n`);
   if (plannedCalls > MAX_JEV_CALLS) {
     console.error('Planned JEV calls exceed the cap - aborting before any paid call');
@@ -128,11 +132,18 @@ const main = async (): Promise<void> => {
 
   const parser = new JevTextParser(OR_KEY);
   const rows: Row[] = [];
+  let jevCalls = 0;
   for (const id of TARGET_IDS) {
-    const transcript = transcripts.get(id) ?? '';
-    const expected = labels[id] ?? 'n/a';
+    const expected = GROUND_TRUTH[id];
+    const transcript = transcripts.get(id);
+    if (transcript === undefined) {
+      rows.push({ videoId: id, expected, actual: 'ERROR', match: false, detail: loadErrors.get(id) ?? 'no transcript' });
+      continue;
+    }
     try {
+      const blocks = splitTranscript(transcript).length;
       const text = await parser.analyze(transcript);
+      jevCalls += blocks;
       const sensors = MockSensorRegistry[id];
       const result = routeFusion({
         turnMarkerCount: text.turn_marker_count,
@@ -148,7 +159,7 @@ const main = async (): Promise<void> => {
         expected,
         actual: result.route,
         match: result.route === expected,
-        detail: `chars=${transcript.length} blocks=${splitTranscript(transcript).length} turns=${text.turn_marker_count} direct=${text.direct_address_intensity} proc=${text.procedural_instruction_intensity} fluff=${text.tangential_fluff_intensity} conf=${result.confidence.toFixed(2)}`,
+        detail: `chars=${transcript.length} blocks=${blocks} turns=${text.turn_marker_count} direct=${text.direct_address_intensity} proc=${text.procedural_instruction_intensity} fluff=${text.tangential_fluff_intensity} conf=${result.confidence.toFixed(2)}`,
       });
     } catch (error) {
       console.error(`[bakeoff] ${id} failed:`, error);
@@ -159,7 +170,9 @@ const main = async (): Promise<void> => {
   console.log('| Video ID | Expected | Actual | Match |');
   console.log('|---|---|---|---|');
   for (const row of rows) console.log(`| ${row.videoId} | ${row.expected} | ${row.actual} | ${row.match ? 'YES' : 'NO'} |`);
-  console.log(`\n${rows.filter((r) => r.match).length}/${rows.length} match\n`);
+  const matches = rows.filter((r) => r.match).length;
+  console.log(`\nAgreement: ${matches}/${rows.length} = ${((matches / rows.length) * 100).toFixed(1)}%`);
+  console.log(`Total JEV chunk calls: ${jevCalls}\n`);
   for (const row of rows) console.log(`${row.videoId}: ${row.detail}`);
 };
 
