@@ -13,7 +13,7 @@ export const PROBE_MINUTES_PER_SAMPLE = 12;
 export const PROBE_EDGE_EXCLUSION = 0.03;
 
 /** Returns start times (seconds) of the 15s probe chunks for a video of the given duration; [] for invalid input. */
-export function calculateProbeTimestamps(durationSeconds: number): number[] {
+export const calculateProbeTimestamps = (durationSeconds: number): number[] => {
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return [];
 
   const sampleCount = Math.max(
@@ -33,4 +33,4 @@ export function calculateProbeTimestamps(durationSeconds: number): number[] {
     starts.push(Math.round(start * 1000) / 1000);
   }
   return starts;
-}
+};

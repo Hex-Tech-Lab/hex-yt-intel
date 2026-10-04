@@ -69,14 +69,13 @@ export class JevTextResponseError extends Error {
 }
 
 /** Literal `>>` speaker-turn count: no inference spent on typographic markers. */
-export function countTurnMarkers(transcript: string): number {
-  return (transcript.match(/>>/g) || []).length;
-}
+export const countTurnMarkers = (transcript: string): number => (transcript.match(/>>/g) || []).length;
 
 /** Strict validation of a Decisions response: anything malformed throws, never defaults. */
-export function parseJevTextScores(response: JevResponse): JevTextScores {
+export const parseJevTextScores = (response: JevResponse): JevTextScores => {
   const answers = response.answers;
   if (!answers || typeof answers !== 'object') throw new JevTextResponseError('answers missing');
+  /** True for a finite number in the 0-3 score range. */
   const isScore = (value: unknown): value is number =>
     typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 3;
   /** Reads one validated 0-3 score answer by question key. */
@@ -92,7 +91,7 @@ export function parseJevTextScores(response: JevResponse): JevTextScores {
     procedural_instruction_intensity: read('procedural_instruction_intensity'),
     tangential_fluff_intensity: read('tangential_fluff_intensity'),
   };
-}
+};
 
 /** Scores a transcript chunk via the JEV Decisions API and adds the literal turn-marker count. */
 export class JevTextParser {

@@ -28,12 +28,10 @@ export interface ProbeDeps {
 export const mockProcessAv: ProbeDeps['processAv'] = () => Promise.resolve({ visual_ui_detected: false });
 
 /** R2 object key under which a video's probe extract is stored. */
-export function probeObjectKey(videoId: string): string {
-  return `probes/${videoId}`;
-}
+export const probeObjectKey = (videoId: string): string => `probes/${videoId}`;
 
 /** Runs one probe job: A/V processing, metadata write, then early-GC delete of the R2 object in `finally`. */
-export async function handleProbeJob(payload: ProbeJobPayload, deps: ProbeDeps): Promise<ProbeMetadata> {
+export const handleProbeJob = async (payload: ProbeJobPayload, deps: ProbeDeps): Promise<ProbeMetadata> => {
   const objectKey = probeObjectKey(payload.videoId);
   try {
     const metadata = await deps.processAv(payload, objectKey);
@@ -50,4 +48,4 @@ export async function handleProbeJob(payload: ProbeJobPayload, deps: ProbeDeps):
       });
     }
   }
-}
+};
