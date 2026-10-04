@@ -13,12 +13,12 @@ describe('calculateProbeTimestamps', () => {
     expect(calculateProbeTimestamps(37 * 60)).toHaveLength(4);
   });
   it('keeps every chunk inside the 3% safe zone, ascending', () => {
-    const d = 3600;
-    const t = calculateProbeTimestamps(d);
-    expect(t).toEqual([...t].sort((a, b) => a - b));
-    for (const s of t) {
-      expect(s).toBeGreaterThanOrEqual(d * 0.03);
-      expect(s + PROBE_CHUNK_SECONDS).toBeLessThanOrEqual(d * 0.97 + 1e-6);
+    const duration = 3600;
+    const starts = calculateProbeTimestamps(duration);
+    expect(starts).toEqual([...starts].sort((first, second) => first - second));
+    for (const start of starts) {
+      expect(start).toBeGreaterThanOrEqual(duration * 0.03);
+      expect(start + PROBE_CHUNK_SECONDS).toBeLessThanOrEqual(duration * 0.97 + 1e-6);
     }
   });
   it('rejects invalid durations', () => {
@@ -30,16 +30,16 @@ describe('calculateProbeTimestamps', () => {
 describe('handleProbeJob', () => {
   const payload = { videoId: 'abc', videoUrl: 'u', timestamps: [1] };
   it('deletes the R2 object after success', async () => {
-    const del = vi.fn().mockResolvedValue(undefined);
-    const write = vi.fn().mockResolvedValue(undefined);
-    await handleProbeJob(payload, { bucket: { delete: del }, processAv: async () => ({ visual_ui_detected: true }), writeMetadata: write });
+    const del = vi.fn().mockResolvedValue();
+    const write = vi.fn().mockResolvedValue();
+    await handleProbeJob(payload, { bucket: { delete: del }, processAv: () => Promise.resolve({ visual_ui_detected: true }), writeMetadata: write });
     expect(write).toHaveBeenCalledWith('abc', { visual_ui_detected: true });
     expect(del).toHaveBeenCalledWith('probes/abc');
   });
   it('still deletes on failure and surfaces the original error', async () => {
     const del = vi.fn().mockRejectedValue(new Error('r2 down'));
     await expect(
-      handleProbeJob(payload, { bucket: { delete: del }, processAv: async () => { throw new Error('av'); }, writeMetadata: vi.fn() }),
+      handleProbeJob(payload, { bucket: { delete: del }, processAv: () => Promise.reject(new Error('av')), writeMetadata: vi.fn() }),
     ).rejects.toThrow('av');
     expect(del).toHaveBeenCalled();
   });

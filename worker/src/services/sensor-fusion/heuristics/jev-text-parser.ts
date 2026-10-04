@@ -60,6 +60,7 @@ interface JevResponse {
   answers?: Record<string, JevAnswer>;
 }
 
+/** A 200 response whose answers are missing, mistyped or out of range. */
 export class JevTextResponseError extends Error {
   constructor(message: string) {
     super(message);
@@ -72,16 +73,19 @@ export function countTurnMarkers(transcript: string): number {
   return (transcript.match(/>>/g) || []).length;
 }
 
+/** Strict validation of a Decisions response: anything malformed throws, never defaults. */
 export function parseJevTextScores(response: JevResponse): JevTextScores {
   const answers = response.answers;
   if (!answers || typeof answers !== 'object') throw new JevTextResponseError('answers missing');
+  const isScore = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 3;
+  /** Reads one validated 0-3 score answer by question key. */
   const read = (key: keyof JevTextScores): number => {
     const answer = answers[key];
-    const score = answer?.score;
-    if (answer?.type !== 'score' || typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 3) {
+    if (answer?.type !== 'score' || !isScore(answer.score)) {
       throw new JevTextResponseError(`${key} must be a score in [0, 3]`);
     }
-    return score;
+    return answer.score;
   };
   return {
     direct_address_intensity: read('direct_address_intensity'),
@@ -90,12 +94,14 @@ export function parseJevTextScores(response: JevResponse): JevTextScores {
   };
 }
 
+/** Scores a transcript chunk via the JEV Decisions API and adds the literal turn-marker count. */
 export class JevTextParser {
   constructor(
     private apiKey: string,
     private config: JevTextParserConfig = JEV_TEXT_PARSER_CONFIG_DEFAULTS,
   ) {}
 
+  /** One Decisions call scoring the three heuristics for a text chunk. */
   async scoreChunk(text: string): Promise<JevTextScores> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
@@ -125,6 +131,7 @@ export class JevTextParser {
     }
   }
 
+  /** Full text heuristics for a transcript: JEV scores plus literal `>>` count. */
   async analyze(transcript: string): Promise<TextHeuristics> {
     return { ...(await this.scoreChunk(transcript)), turn_marker_count: countTurnMarkers(transcript) };
   }
