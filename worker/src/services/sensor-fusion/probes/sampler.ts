@@ -26,9 +26,11 @@ export function calculateProbeTimestamps(durationSeconds: number): number[] {
   const binWidth = (safeEnd - safeStart) / sampleCount;
   const latestStart = Math.max(safeStart, safeEnd - PROBE_CHUNK_SECONDS);
 
-  return Array.from({ length: sampleCount }, (_, i) => {
-    const centre = safeStart + binWidth * (i + 0.5);
+  const starts: number[] = [];
+  for (let index = 0; index < sampleCount; index += 1) {
+    const centre = safeStart + binWidth * (index + 0.5);
     const start = Math.min(Math.max(centre - PROBE_CHUNK_SECONDS / 2, safeStart), latestStart);
-    return Math.round(start * 1000) / 1000;
-  });
+    starts.push(Math.round(start * 1000) / 1000);
+  }
+  return starts;
 }

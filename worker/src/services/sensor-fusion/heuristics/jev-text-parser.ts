@@ -116,7 +116,7 @@ export class JevTextParser {
         },
         body: JSON.stringify({
           model: JEV_MODEL,
-          state: { text: text.slice(0, MAX_CHUNK_CHARS) },
+          state: { text: text.length > MAX_CHUNK_CHARS ? `${text.slice(0, MAX_CHUNK_CHARS - 3)}...` : text },
           questions: JEV_TEXT_HEURISTIC_QUESTIONS,
         }),
         signal: controller.signal,
