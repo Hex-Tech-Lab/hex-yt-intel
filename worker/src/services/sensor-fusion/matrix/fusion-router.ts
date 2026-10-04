@@ -102,12 +102,23 @@ const hasVlogSignals = (input: FusionInput): boolean =>
   input.directAddressIntensity >= VLOG_SIGNAL_MIN_INTENSITY ||
   input.tangentialFluffIntensity >= VLOG_SIGNAL_MIN_INTENSITY;
 
+/** Pre-rule S1: a single speaker with few turns and no vlog signals. */
+const isMonologue = (input: FusionInput): boolean =>
+  input.diarizationSpeakerCount === 1 && input.turnMarkerCount < MONOLOGUE_MAX_TURN_MARKERS && !hasVlogSignals(input);
+
+/** Pre-rule S3: a panel (3+ speakers) with debate prosody. */
+const isPanelDebate = (input: FusionInput): boolean =>
+  input.diarizationSpeakerCount >= PANEL_MIN_SPEAKERS && input.debateProsodyDetected;
+
+/** Pre-rule S2: two speakers, dense turn-taking, no debate prosody. */
+const isInterview = (input: FusionInput): boolean =>
+  input.diarizationSpeakerCount === 2 && input.turnMarkerCount >= INTERVIEW_MIN_TURN_MARKERS && !input.debateProsodyDetected;
+
 /** Deterministic pre-rules (monologue, panel, interview); null when none applies. */
 const matchPreRule = (input: FusionInput): FusionRoute | null => {
-  const speakers = input.diarizationSpeakerCount;
-  if (speakers === 1 && input.turnMarkerCount < MONOLOGUE_MAX_TURN_MARKERS && !hasVlogSignals(input)) return 'S1';
-  if (speakers >= PANEL_MIN_SPEAKERS && input.debateProsodyDetected) return 'S3';
-  if (speakers === 2 && input.turnMarkerCount >= INTERVIEW_MIN_TURN_MARKERS && !input.debateProsodyDetected) return 'S2';
+  if (isMonologue(input)) return 'S1';
+  if (isPanelDebate(input)) return 'S3';
+  if (isInterview(input)) return 'S2';
   return null;
 };
 
