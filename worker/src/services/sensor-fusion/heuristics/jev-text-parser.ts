@@ -5,14 +5,17 @@ import * as Sentry from '@sentry/cloudflare';
  *
  * Same Decisions API contract as JevCommentClassifier (`~typesafe/jev-latest`,
  * `score` questions take a `criteria` array). Four criteria labels map to
- * scores 0..3. A failed or malformed call throws; never a fabricated default.
+ * scores 0..3. Transcripts are scored in 8,000-character blocks and the block
+ * scores are averaged. A failed or malformed call throws; never a fabricated
+ * default.
  */
 
 const JEV_URL = 'https://openrouter.ai/api/alpha/decisions';
 const JEV_MODEL = '~typesafe/jev-latest';
 const HTTP_REFERER = 'https://getvintel.com';
 const X_TITLE = 'hex-yt-intel/jev-text-heuristics';
-const MAX_CHUNK_CHARS = 8000;
+/** Transcript block size sent per Decisions call. */
+export const JEV_TEXT_CHUNK_CHARS = 8000;
 const SCORE_LABELS = ['None', 'Low', 'Moderate', 'High'] as const;
 
 export const JEV_TEXT_HEURISTIC_QUESTIONS = {
@@ -71,7 +74,13 @@ export class JevTextResponseError extends Error {
 /** Literal `>>` speaker-turn count: no inference spent on typographic markers. */
 export const countTurnMarkers = (transcript: string): number => (transcript.match(/>>/g) || []).length;
 
-/** Strict validation of a Decisions response: anything malformed throws, never defaults. */
+/** Splits a transcript into consecutive blocks of at most JEV_TEXT_CHUNK_CHARS characters; [] when it is blank. */
+export const splitTranscript = (transcript: string): string[] => {
+  const blocks = transcript.match(new RegExp(`[\\s\\S]{1,${JEV_TEXT_CHUNK_CHARS}}`, 'g')) ?? [];
+  return blocks.filter((block) => block.trim() !== '');
+};
+
+/** Strict validation of a Decisions response: malformed or out-of-range answers throw; a float score is rounded to an integer. */
 export const parseJevTextScores = (response: JevResponse): JevTextScores => {
   const answers = response.answers;
   if (!answers || typeof answers !== 'object') throw new JevTextResponseError('answers missing');
@@ -84,7 +93,7 @@ export const parseJevTextScores = (response: JevResponse): JevTextScores => {
     if (answer?.type !== 'score' || !isScore(answer.score)) {
       throw new JevTextResponseError(`${key} must be a score in [0, 3]`);
     }
-    return answer.score;
+    return Math.round(answer.score);
   };
   return {
     direct_address_intensity: read('direct_address_intensity'),
@@ -100,7 +109,7 @@ export class JevTextParser {
     private config: JevTextParserConfig = JEV_TEXT_PARSER_CONFIG_DEFAULTS,
   ) {}
 
-  /** One Decisions call scoring the three heuristics for a text chunk. */
+  /** One Decisions call scoring one block of text (callers keep it within JEV_TEXT_CHUNK_CHARS). */
   async scoreChunk(text: string): Promise<JevTextScores> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
@@ -115,7 +124,7 @@ export class JevTextParser {
         },
         body: JSON.stringify({
           model: JEV_MODEL,
-          state: { text: text.length > MAX_CHUNK_CHARS ? `${text.slice(0, MAX_CHUNK_CHARS - 3)}...` : text },
+          state: { text },
           questions: JEV_TEXT_HEURISTIC_QUESTIONS,
         }),
         signal: controller.signal,
@@ -130,8 +139,26 @@ export class JevTextParser {
     }
   }
 
-  /** Full text heuristics for a transcript: JEV scores plus literal `>>` count. */
+  /** Full text heuristics: block scores averaged into integers, plus the literal `>>` count of the whole transcript. */
   async analyze(transcript: string): Promise<TextHeuristics> {
-    return { ...(await this.scoreChunk(transcript)), turn_marker_count: countTurnMarkers(transcript) };
+    const blocks = splitTranscript(transcript);
+    if (blocks.length === 0) throw new JevTextResponseError('transcript is empty');
+    const totals: JevTextScores = {
+      direct_address_intensity: 0,
+      procedural_instruction_intensity: 0,
+      tangential_fluff_intensity: 0,
+    };
+    for (const block of blocks) {
+      const scores = await this.scoreChunk(block);
+      totals.direct_address_intensity += scores.direct_address_intensity;
+      totals.procedural_instruction_intensity += scores.procedural_instruction_intensity;
+      totals.tangential_fluff_intensity += scores.tangential_fluff_intensity;
+    }
+    return {
+      direct_address_intensity: Math.round(totals.direct_address_intensity / blocks.length),
+      procedural_instruction_intensity: Math.round(totals.procedural_instruction_intensity / blocks.length),
+      tangential_fluff_intensity: Math.round(totals.tangential_fluff_intensity / blocks.length),
+      turn_marker_count: countTurnMarkers(transcript),
+    };
   }
 }
