@@ -29,6 +29,7 @@ const TRANSCRIPT_DIR = nodePath.join(os.tmpdir(), 'hex-yt-intel-pool-transcripts
 const GROUND_TRUTH_FILE = 'S1_S6_POOL_GROUND_TRUTH.json';
 const GROUND_TRUTH_DIRS = ['docs/architecture', 'scripts/bakeoff-inputs', 'docs/research', '.'];
 const MAX_JEV_CALLS = 60;
+const FETCH_TIMEOUT_MS = 90000;
 
 /** Simulated Diarization and A/V probe outputs for the micro-batch cohort. */
 interface MockSensors {
@@ -81,11 +82,19 @@ const loadExpected = (): { labels: Record<string, FusionRoute>; source: string }
 const loadTranscript = async (videoId: string): Promise<string> => {
   const cachePath = nodePath.join(TRANSCRIPT_DIR, `${videoId}.txt`);
   if (fs.existsSync(cachePath)) return fs.readFileSync(cachePath, 'utf8');
-  const res = await fetch(`${WORKER_URL}/fetch-transcript`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: WORKER_ORIGIN },
-    body: JSON.stringify({ videoId }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${WORKER_URL}/fetch-transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: WORKER_ORIGIN },
+      body: JSON.stringify({ videoId }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`fetch-transcript ${videoId} -> HTTP ${res.status}`);
   const body = (await res.json()) as { transcript?: string };
   if (!body.transcript) throw new Error(`fetch-transcript ${videoId}: empty transcript`);
@@ -142,6 +151,7 @@ const main = async (): Promise<void> => {
         detail: `chars=${transcript.length} blocks=${splitTranscript(transcript).length} turns=${text.turn_marker_count} direct=${text.direct_address_intensity} proc=${text.procedural_instruction_intensity} fluff=${text.tangential_fluff_intensity} conf=${result.confidence.toFixed(2)}`,
       });
     } catch (error) {
+      console.error(`[bakeoff] ${id} failed:`, error);
       rows.push({ videoId: id, expected, actual: 'ERROR', match: false, detail: (error as Error).message });
     }
   }
