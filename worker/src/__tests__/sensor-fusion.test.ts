@@ -96,12 +96,12 @@ describe('handleProbeJob', () => {
 
   it('deletes the R2 object only after the succeeded transition commits', async () => {
     const fake = createStore();
-    const del = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn().mockResolvedValue();
     const outcome = await handleProbeJob(payload, {
       store: fake.store,
       bucket: { delete: del },
       processAv: () => Promise.resolve(metadata),
-      writeMetadata: vi.fn().mockResolvedValue(undefined),
+      writeMetadata: vi.fn().mockResolvedValue(),
     });
     expect(outcome).toBe('succeeded');
     expect(fake.get()?.state).toBe('succeeded');
@@ -111,7 +111,7 @@ describe('handleProbeJob', () => {
 
   it('keeps the artifact on a transient A/V failure and moves to retry_wait with generation + 1', async () => {
     const fake = createStore();
-    const del = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn().mockResolvedValue();
     await expect(
       handleProbeJob(payload, {
         store: fake.store,
@@ -126,7 +126,7 @@ describe('handleProbeJob', () => {
 
   it('keeps the artifact on a transient DB write failure', async () => {
     const fake = createStore();
-    const del = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn().mockResolvedValue();
     await expect(
       handleProbeJob(payload, {
         store: fake.store,
@@ -141,12 +141,12 @@ describe('handleProbeJob', () => {
 
   it('retry after retry_wait re-acquires at the bumped generation and can then delete', async () => {
     const fake = createStore();
-    const del = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn().mockResolvedValue();
     const deps = (processAv: () => Promise<typeof metadata>) => ({
       store: fake.store,
       bucket: { delete: del },
       processAv,
-      writeMetadata: vi.fn().mockResolvedValue(undefined),
+      writeMetadata: vi.fn().mockResolvedValue(),
     });
     await expect(handleProbeJob(payload, deps(() => Promise.reject(new ProbeRetryableError('x'))))).rejects.toThrow();
     expect(await handleProbeJob(payload, deps(() => Promise.resolve(metadata)))).toBe('succeeded');
@@ -156,7 +156,7 @@ describe('handleProbeJob', () => {
 
   it('a stale lease cannot delete: superseded mid-run, success transition is rejected', async () => {
     const fake = createStore();
-    const del = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn().mockResolvedValue();
     const outcome = await handleProbeJob(payload, {
       store: fake.store,
       bucket: { delete: del },
@@ -164,7 +164,7 @@ describe('handleProbeJob', () => {
         fake.supersede('processing');
         return Promise.resolve(metadata);
       },
-      writeMetadata: vi.fn().mockResolvedValue(undefined),
+      writeMetadata: vi.fn().mockResolvedValue(),
     });
     expect(outcome).toBe('stale_lease');
     expect(del).not.toHaveBeenCalled();
@@ -221,7 +221,7 @@ describe('handleProbeJob', () => {
       store: fake.store,
       bucket: { delete: vi.fn().mockRejectedValue(new Error('r2 down')) },
       processAv: () => Promise.resolve(metadata),
-      writeMetadata: vi.fn().mockResolvedValue(undefined),
+      writeMetadata: vi.fn().mockResolvedValue(),
     });
     expect(outcome).toBe('succeeded');
   });

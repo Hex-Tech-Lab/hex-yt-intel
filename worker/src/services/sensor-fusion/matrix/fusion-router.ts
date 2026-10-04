@@ -53,18 +53,21 @@ export const DEFAULT_FUSION_WEIGHTS: FusionWeights = {
 const OVERRIDE_CONFIDENCE = 0.95;
 const PRE_RULE_CONFIDENCE = 0.85;
 
+/** Throws unless `value` is an integer JEV intensity in [0, 3]. */
 const assertIntensity = (name: string, value: number): void => {
   if (!Number.isInteger(value) || value < 0 || value > 3) {
     throw new RangeError(`${name} must be an integer in [0, 3], got ${value}`);
   }
 };
 
+/** Throws unless `value` is a non-negative integer. */
 const assertCount = (name: string, value: number): void => {
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(`${name} must be a non-negative integer, got ${value}`);
   }
 };
 
+/** Throws RangeError for any out-of-contract count or intensity. */
 const validate = (input: FusionInput): void => {
   assertCount('turnMarkerCount', input.turnMarkerCount);
   assertCount('diarizationSpeakerCount', input.diarizationSpeakerCount);
@@ -94,6 +97,20 @@ const routeByWeights = (input: FusionInput, weights: FusionWeights): FusionResul
   return { route, confidence: 1 / total };
 };
 
+/** True when JEV reports vlog-level direct address or fluff. */
+const hasVlogSignals = (input: FusionInput): boolean =>
+  input.directAddressIntensity >= VLOG_SIGNAL_MIN_INTENSITY ||
+  input.tangentialFluffIntensity >= VLOG_SIGNAL_MIN_INTENSITY;
+
+/** Deterministic pre-rules (monologue, panel, interview); null when none applies. */
+const matchPreRule = (input: FusionInput): FusionRoute | null => {
+  const speakers = input.diarizationSpeakerCount;
+  if (speakers === 1 && input.turnMarkerCount < MONOLOGUE_MAX_TURN_MARKERS && !hasVlogSignals(input)) return 'S1';
+  if (speakers >= PANEL_MIN_SPEAKERS && input.debateProsodyDetected) return 'S3';
+  if (speakers === 2 && input.turnMarkerCount >= INTERVIEW_MIN_TURN_MARKERS && !input.debateProsodyDetected) return 'S2';
+  return null;
+};
+
 /** Routes one video to S1-S6 from fused sensor signals. Throws RangeError on invalid input. */
 export const routeFusion = (input: FusionInput, weights: FusionWeights = DEFAULT_FUSION_WEIGHTS): FusionResult => {
   validate(input);
@@ -102,22 +119,8 @@ export const routeFusion = (input: FusionInput, weights: FusionWeights = DEFAULT
   if (input.uiFramesDetected) return { route: 'S4', confidence: OVERRIDE_CONFIDENCE };
 
   // 2. Deterministic pre-rules.
-  const vlogSignals =
-    input.directAddressIntensity >= VLOG_SIGNAL_MIN_INTENSITY ||
-    input.tangentialFluffIntensity >= VLOG_SIGNAL_MIN_INTENSITY;
-  if (input.diarizationSpeakerCount === 1 && input.turnMarkerCount < MONOLOGUE_MAX_TURN_MARKERS && !vlogSignals) {
-    return { route: 'S1', confidence: PRE_RULE_CONFIDENCE };
-  }
-  if (input.diarizationSpeakerCount >= PANEL_MIN_SPEAKERS && input.debateProsodyDetected) {
-    return { route: 'S3', confidence: PRE_RULE_CONFIDENCE };
-  }
-  if (
-    input.diarizationSpeakerCount === 2 &&
-    input.turnMarkerCount >= INTERVIEW_MIN_TURN_MARKERS &&
-    !input.debateProsodyDetected
-  ) {
-    return { route: 'S2', confidence: PRE_RULE_CONFIDENCE };
-  }
+  const preRule = matchPreRule(input);
+  if (preRule) return { route: preRule, confidence: PRE_RULE_CONFIDENCE };
 
   // 3. Weighted sum for everything else.
   return routeByWeights(input, weights);

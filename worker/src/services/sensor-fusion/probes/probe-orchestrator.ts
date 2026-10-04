@@ -81,9 +81,31 @@ const earlyGc = async (bucket: ProbeDeps['bucket'], videoId: string, objectKey: 
 };
 
 /**
- * Runs one probe job. Retryable failures move the job to `retry_wait`
- * (generation + 1), keep the R2 object and rethrow so QStash redelivers.
- * Other failures move it to `failed` and also keep the object for the TTL.
+ * Records a failed attempt under this worker's lease. Retryable failures move
+ * to `retry_wait` (generation + 1) and are rethrown for QStash redelivery;
+ * others move to `failed`. A stale lease changes nothing.
+ */
+const recordFailure = async (
+  deps: ProbeDeps,
+  lease: ProbeJobState,
+  videoId: string,
+  error: unknown,
+): Promise<ProbeJobOutcome> => {
+  const retryable = error instanceof ProbeRetryableError;
+  const moved = await deps.store.transition(lease, {
+    state: retryable ? 'retry_wait' : 'failed',
+    generation: retryable ? lease.generation + 1 : lease.generation,
+  });
+  if (!moved) return 'stale_lease';
+  if (retryable) throw error;
+  Sentry.captureException(error, { tags: { operation: 'probe-job-failed' }, extra: { videoId } });
+  return 'failed';
+};
+
+/**
+ * Runs one probe job. The R2 object is kept on every outcome except a
+ * committed `succeeded`, so retries still have their input and the 24-hour
+ * bucket TTL is the backstop.
  */
 export const handleProbeJob = async (payload: ProbeJobPayload, deps: ProbeDeps): Promise<ProbeJobOutcome> => {
   const objectKey = probeObjectKey(payload.videoId);
@@ -94,15 +116,8 @@ export const handleProbeJob = async (payload: ProbeJobPayload, deps: ProbeDeps):
     const metadata = await deps.processAv(payload, objectKey);
     await deps.writeMetadata(payload.videoId, metadata, lease);
   } catch (error) {
-    const retryable = error instanceof ProbeRetryableError;
-    const moved = await deps.store.transition(lease, {
-      state: retryable ? 'retry_wait' : 'failed',
-      generation: retryable ? lease.generation + 1 : lease.generation,
-    });
-    if (!moved) return 'stale_lease';
-    if (retryable) throw error;
-    Sentry.captureException(error, { tags: { operation: 'probe-job-failed' }, extra: { videoId: payload.videoId } });
-    return 'failed';
+    console.warn('[probe-orchestrator] attempt failed', payload.videoId, error instanceof Error ? error.message : String(error));
+    return recordFailure(deps, lease, payload.videoId, error);
   }
 
   const committed = await deps.store.transition(lease, { state: 'succeeded', generation: lease.generation });
