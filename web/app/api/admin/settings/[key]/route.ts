@@ -51,7 +51,7 @@ export async function PUT(
       return NextResponse.json({ error: `Unknown setting key: ${key}` }, { status: 404 });
     }
 
-    const validationError = validateAgainstContract(parsed.data.value, def.data_type, (def.validation ?? {}) as Record<string, unknown>);
+    const validationError = validateAgainstContract(parsed.data.value, def.data_type, (def.validation ?? {}) as Record<string, unknown>, key);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
@@ -78,7 +78,12 @@ export async function PUT(
   }
 }
 
-function validateAgainstContract(value: unknown, dataType: string, validation: Record<string, unknown>): string | null {
+function validateAgainstContract(
+  value: unknown,
+  dataType: string,
+  validation: Record<string, unknown>,
+  key?: string,
+): string | null {
   switch (dataType) {
     case 'number': {
       if (typeof value !== 'number' || !Number.isFinite(value)) return 'Expected a finite number';
@@ -103,9 +108,9 @@ function validateAgainstContract(value: unknown, dataType: string, validation: R
       return Array.isArray(value) ? null : 'Expected an array';
     case 'json': {
       if (value === null || typeof value !== 'object') return 'Expected a JSON object or array';
-      // ADR 040: cascade.* rows carry the {"kind":"cascadeRegistry"} marker —
-      // dispatch to the code-derived zod validator (structure + model allowlist).
-      if ((validation as { kind?: string }).kind === 'cascadeRegistry') {
+      // ADR 040: cascade.* rows carry the {"kind":"cascadeRegistry"} marker,
+      // but also enforce for any key prefixed with 'cascade.' defensively.
+      if ((validation as { kind?: string }).kind === 'cascadeRegistry' || (key && key.startsWith('cascade.'))) {
         return validateCascadeRegistryValue(value);
       }
       return null;
