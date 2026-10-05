@@ -1,0 +1,20 @@
+worker/src/__tests__/multimodal-probe-runner.test.ts
+  h_60000122af7b55 53,69-70,74
+worker/src/__tests__/sensor-registry.test.ts
+  h_60000122af7b55 1-94
+worker/src/services/sensor-fusion/SensorRegistry.ts
+  h_60000122af7b55 1-112
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  h_60000122af7b55 86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "caa4e24fe7a464b7c6b02b687416fe87ed31d91a",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
