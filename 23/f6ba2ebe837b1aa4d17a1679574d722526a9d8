@@ -1,0 +1,40 @@
+supabase/migrations/20261005010000_cascade_registry_validation.sql
+  s_ac3316c5d98e57::t_113bb4e77de90a 1-23
+web/app/api/admin/settings/[key]/route.ts
+  s_ac3316c5d98e57::t_9aa4c1ca271d81 104-112
+  s_ac3316c5d98e57::t_18bb5ce9e173da 8
+web/lib/__tests__/cascade-validation.test.ts
+  s_ac3316c5d98e57::t_d848e1a648eae4 1-44
+web/lib/config/cascade.ts
+  s_ac3316c5d98e57::t_0617c1bb668b45 108-123
+web/lib/__tests__/cascade-settings-route.test.ts
+  s_ac3316c5d98e57::t_48b51d0c8b2034 1-72
+web/lib/config/cascade-validation.ts
+  s_ac3316c5d98e57::t_d215569c17ec0a 1-49
+.memory/ADRS.md
+  s_30b47ccda9f069::t_3c924aa63c89b1 34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "23f6ba2ebe837b1aa4d17a1679574d722526a9d8",
+  "prompts": {},
+  "sessions": {
+    "s_30b47ccda9f069": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef5267a47ffeiHUtWzqG6FQ3wp",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ac3316c5d98e57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef74cc00effeVeS7VLWeJVBD7N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
