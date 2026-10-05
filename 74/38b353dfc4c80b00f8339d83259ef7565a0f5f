@@ -1,0 +1,24 @@
+web/app/api/webhooks/validate/__tests__/route.test.ts
+  s_e074e66ae32ba7::t_3fdbfe5b538776 65-97,106
+  s_e074e66ae32ba7::t_b7749c5c5f8286 13,22
+  s_e074e66ae32ba7::t_83993a6ad1007c 45
+  s_e074e66ae32ba7::t_df8b9148c943d4 98-105
+web/app/api/webhooks/validate/route.ts
+  s_e074e66ae32ba7::t_5ea8be6b95f49c 114-121,125-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7438b353dfc4c80b00f8339d83259ef7565a0f5f",
+  "prompts": {},
+  "sessions": {
+    "s_e074e66ae32ba7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73de8f6ffetPf0PtON3APA1P",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
