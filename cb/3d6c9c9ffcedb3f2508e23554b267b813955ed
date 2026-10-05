@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_c2bb5a5d6f7923::t_d320d57d8cbe76 1481-1482
+worker/src/adapters/AssemblyAIAdapter.ts
+  s_c2bb5a5d6f7923::t_161e3d13e35b92 1-327
+worker/src/services/ProjectiveSynthesisEngine.ts
+  s_c2bb5a5d6f7923::t_3a3bcecf1382d2 114-115,119,129-132,135,137-140,142-143
+worker/src/services/sensor-fusion/probes/DiarizationFactory.ts
+  s_c2bb5a5d6f7923::t_b550095fdccd3c 1-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb3d6c9c9ffcedb3f2508e23554b267b813955ed",
+  "prompts": {},
+  "sessions": {
+    "s_c2bb5a5d6f7923": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef43b105fffevRLfKBVDbL0gWm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
