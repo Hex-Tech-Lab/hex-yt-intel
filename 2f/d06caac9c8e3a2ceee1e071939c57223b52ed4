@@ -1,0 +1,30 @@
+web/app/api/webhooks/embed/route.ts
+  s_e074e66ae32ba7::t_0915d2bd6e1319 10-11,192-204,206-219,223,227-234,239-244
+web/lib/__tests__/embed-webhook-coverage.test.ts
+  s_e074e66ae32ba7::t_e38510fe8968e5 27-30,36,104-107,171-229,233-234,236,238-241
+  s_ac3316c5d98e57::t_191c4916cc7ff8 230-232,235,237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2fd06caac9c8e3a2ceee1e071939c57223b52ed4",
+  "prompts": {},
+  "sessions": {
+    "s_ac3316c5d98e57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef74cc00effeVeS7VLWeJVBD7N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e074e66ae32ba7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73de8f6ffetPf0PtON3APA1P",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
