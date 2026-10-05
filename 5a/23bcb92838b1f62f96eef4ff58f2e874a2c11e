@@ -1,0 +1,23 @@
+web/app/api/health/route.ts
+  s_ac3316c5d98e57::t_78c4b7a63cf0ba 16-19
+web/lib/__tests__/api-health.test.ts
+  s_ac3316c5d98e57::t_f856e1313ae98d 1-32
+worker/src/routes/health.ts
+  s_ac3316c5d98e57::t_e13c5c71e690f2 10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a23bcb92838b1f62f96eef4ff58f2e874a2c11e",
+  "prompts": {},
+  "sessions": {
+    "s_ac3316c5d98e57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef74cc00effeVeS7VLWeJVBD7N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
