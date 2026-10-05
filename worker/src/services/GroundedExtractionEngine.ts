@@ -120,7 +120,8 @@ export class GroundedExtractionEngine {
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(cleanJson);
-    } catch {
+    } catch (parseError) {
+      console.warn('[GroundedExtractionEngine] JSON parse failed on raw extraction:', parseError);
       throw new GroundedExtractionError('Output from extraction LLM is not valid JSON.', rawText);
     }
 
@@ -131,8 +132,8 @@ export class GroundedExtractionEngine {
     const claims = Array.isArray(parsed.claims) ? parsed.claims : [];
     const unknowns = Array.isArray(parsed.unknowns) ? parsed.unknowns.filter((u): u is string => typeof u === 'string') : [];
 
-    const validatedClaims = claims.map((c, index) => {
-      const claimObj = c as Record<string, unknown>;
+    const validatedClaims = claims.map((rawClaim, index) => {
+      const claimObj = rawClaim as Record<string, unknown>;
       const id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
       const speaker = typeof claimObj.speaker === 'string' ? claimObj.speaker : undefined;
       const range = Array.isArray(claimObj.timestampRange) && claimObj.timestampRange.length === 2
