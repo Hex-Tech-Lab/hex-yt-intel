@@ -26,4 +26,8 @@ export interface PromptBuilderPort {
       classification: 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6';
     },
   ): { systemPrompt: string; userPrompt: string };
+  buildProjectiveSynthesisPrompt(
+    payload: import('../types/grounded-extraction').GroundedExtractionPayload,
+    persona?: string,
+  ): { systemPrompt: string; userPrompt: string };
 }

@@ -238,4 +238,45 @@ Extract all verifiable atomic claims with exact timestamp ranges and verbatim qu
 
     return { systemPrompt, userPrompt };
   }
+
+  buildProjectiveSynthesisPrompt(
+    payload: import('../types/grounded-extraction').GroundedExtractionPayload,
+    persona?: string,
+  ): { systemPrompt: string; userPrompt: string } {
+    const systemPrompt = `You are a strategic intelligence analyst performing projective synthesis.
+You operate EXCLUSIVELY over the provided Grounded Claims JSON payload.
+You DO NOT have access to the raw transcript, and you must NOT speculate beyond the provided evidence.
+
+CRITICAL CITATION CONSTRAINT:
+Every strategic assertion, market projection, and implication you produce MUST explicitly cite one or more source Claim IDs from the payload (e.g., "[claim_01]", "[claim_04]").
+Assertions that fail to cite a Grounded Claim ID are strictly prohibited.
+
+Output format must be valid, raw JSON conforming to this layout:
+{
+  "schemaVersion": "2.0",
+  "persona": "${persona || 'creator'}",
+  "synthesis": {
+    "coreThesis": "Strategic thesis statement explicitly citing [claim_xx]",
+    "projections": [
+      {
+        "id": "proj_01",
+        "citedClaimIds": ["claim_01"],
+        "implication": "Strategic forward-looking projection",
+        "marketHorizon": "near-term" | "mid-term" | "long-term",
+        "confidence": 0.9
+      }
+    ],
+    "unsupportedQuestions": []
+  }
+}
+
+Do NOT output markdown code blocks or explanatory text. Emit strictly parseable JSON.`;
+
+    const userPrompt = `Grounded Claims Payload:
+${JSON.stringify(payload, null, 2)}
+
+Perform projective synthesis and strategic analysis. Ensure every projection explicitly cites the source Claim IDs:`;
+
+    return { systemPrompt, userPrompt };
+  }
 }
