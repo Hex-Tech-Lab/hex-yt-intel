@@ -44,6 +44,50 @@ const PAGE_SIZE = 100; // YouTube Data API v3's documented maxResults ceiling fo
 // hits this ceiling reports its partial count rather than failing silently.
 const MAX_PAGES = 400;
 
+// S2S persist-channel tuning (dispatch brief 2026-10-05 T1, findings A/B).
+// The worker cannot read the Settings Registry (no Supabase binding); the
+// established pattern for registry-driven worker tunables is Vercel resolving
+// and signing them into the queue message, which this bug fix does not extend
+// — values here are the brief-prescribed ones, matching the pre-existing
+// inline persist timeout/TTL below.
+const PERSIST_TIMEOUT_MS = 10_000;
+const PERSIST_SIG_TTL_MS = 300_000;
+// Finding B: bounded retry on the persist-sample-run write — 1 initial
+// attempt + 2 retries, ~1s then ~2s backoff.
+const PERSIST_MAX_ATTEMPTS = 3;
+const PERSIST_RETRY_BACKOFF_MS = [1_000, 2_000] as const;
+
+type SampleRunStatus = 'pending' | 'sampling' | 'completed' | 'failed';
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Signed read-only probe for the run's current status (consume-side
+ * redelivery pre-check, Finding A). The verifier is the persist-sample-run
+ * route's GET handler (same bound-content scheme as the POST bodies).
+ * Returns null when the row is missing; throws on any transport, signature
+ * or parse failure so the caller can fail closed.
+ */
+async function readSampleRunStatus(
+  env: QueueConsumerEnv,
+  appUrl: string,
+  sampleRunId: string,
+  userId: string,
+): Promise<SampleRunStatus | null> {
+  const exp = Date.now() + PERSIST_SIG_TTL_MS;
+  const content = canonicalJson({ sampleRunId, userId });
+  const sig = await signBoundContent(env.STREAM_HMAC_SECRET, "comments-tier3", sampleRunId, exp, content);
+  const url = `${appUrl}/api/comments/persist-sample-run?sampleRunId=${encodeURIComponent(sampleRunId)}&userId=${encodeURIComponent(userId)}&exp=${exp}&sig=${encodeURIComponent(sig)}`;
+  const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS) });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`sample-run status probe non-ok: ${res.status}`);
+  const body = (await res.json()) as { status?: unknown };
+  if (body.status !== 'pending' && body.status !== 'sampling' && body.status !== 'completed' && body.status !== 'failed') {
+    throw new Error(`sample-run status probe returned an unrecognized status: ${JSON.stringify(body.status)}`);
+  }
+  return body.status;
+}
+
 export interface PersistClassificationRow {
   commentExternalId: string;
   commentText: string;
@@ -83,15 +127,16 @@ export interface SampleRunResult {
   cochran?: CochranPersistPayload;
 }
 
-async function reportSampleRunResult(
+/** One persist-sample-run write attempt (no retry, no escalation). */
+async function postSampleRunResult(
   env: QueueConsumerEnv,
   appUrl: string,
   sampleRunId: string,
   userId: string,
   mode: "uncapped" | "cochran",
   result: SampleRunResult,
-): Promise<void> {
-  const exp = Date.now() + 300_000;
+): Promise<{ ok: true } | { ok: false; httpStatus: number }> {
+  const exp = Date.now() + PERSIST_SIG_TTL_MS;
   // #378 review P1: the signature covers the ENTIRE write body (canonical
   // JSON, keys sorted), so classifications/insights/comments/mode cannot be
   // altered under a valid signature. `mode` is sent on EVERY callback
@@ -107,26 +152,73 @@ async function reportSampleRunResult(
   };
   const sig = await signBoundContent(env.STREAM_HMAC_SECRET, "comments-tier3", sampleRunId, exp, canonicalJson(writeBody));
 
-  try {
-    const res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...writeBody, sig, exp }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) {
+  const res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...writeBody, sig, exp }),
+    signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
+  });
+  return res.ok ? { ok: true } : { ok: false, httpStatus: res.status };
+}
+
+async function reportSampleRunResult(
+  env: QueueConsumerEnv,
+  appUrl: string,
+  sampleRunId: string,
+  userId: string,
+  mode: "uncapped" | "cochran",
+  result: SampleRunResult,
+): Promise<void> {
+  let lastError: unknown = null;
+  let lastHttpStatus: number | null = null;
+  for (let attempt = 0; attempt < PERSIST_MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      const backoff = PERSIST_RETRY_BACKOFF_MS[attempt - 1];
+      if (backoff !== undefined) await sleep(backoff);
+    }
+    try {
+      const outcome = await postSampleRunResult(env, appUrl, sampleRunId, userId, mode, result);
+      if (outcome.ok) return;
+      lastHttpStatus = outcome.httpStatus;
       // skipcq: JS-0827
-      console.error(`[comments-tier3-consumer] persist-sample-run non-ok: ${res.status}`);
-      Sentry.captureMessage("comments-tier3 persist-sample-run failed", {
-        level: "error",
-        tags: { operation: "comments-tier3-persist", status: String(res.status) },
-        extra: { sampleRunId },
+      console.error(`[comments-tier3-consumer] persist-sample-run non-ok (attempt ${attempt + 1}/${PERSIST_MAX_ATTEMPTS}): ${outcome.httpStatus}`);
+    } catch (err) {
+      lastError = err;
+      lastHttpStatus = null;
+      // skipcq: JS-0827
+      console.error(`[comments-tier3-consumer] persist-sample-run threw (attempt ${attempt + 1}/${PERSIST_MAX_ATTEMPTS}):`, err instanceof Error ? err.message : String(err));
+    }
+  }
+  // Total failure (Finding B): the write is lost. An unfinalized run sits in
+  // 'sampling' until the 30-min stale-release
+  // (comments.system.staleRunMinutes) marks it failed and the next finalize
+  // re-enqueues a FULL re-run — so report the failure NOW, best effort. A
+  // late 'failed' report can never regress a write that did land: the
+  // route's finalizeSampleRun only transitions pending/sampling rows.
+  const escalationError = lastError instanceof Error
+    ? lastError
+    : new Error(lastHttpStatus !== null ? `persist-sample-run non-ok: ${lastHttpStatus}` : "persist-sample-run failed");
+  // skipcq: JS-0827
+  console.error(`[comments-tier3-consumer] persist-sample-run failed after ${PERSIST_MAX_ATTEMPTS} attempts`, { sampleRunId, attemptedStatus: result.status, lastHttpStatus });
+  Sentry.captureException(escalationError, {
+    tags: { operation: "comments_tier3_persist_sample_run" },
+    extra: { sampleRunId, attemptedStatus: result.status, lastHttpStatus },
+  });
+  if (result.status === "completed") {
+    try {
+      const failedOutcome = await postSampleRunResult(env, appUrl, sampleRunId, userId, mode, {
+        sampledCount: result.sampledCount,
+        status: "failed",
+      });
+      if (!failedOutcome.ok) throw new Error(`best-effort failed-status report non-ok: ${failedOutcome.httpStatus}`);
+    } catch (err) {
+      // skipcq: JS-0827
+      console.error("[comments-tier3-consumer] best-effort failed-status report threw:", err instanceof Error ? err.message : String(err));
+      Sentry.captureException(err, {
+        tags: { operation: "comments_tier3_persist_sample_run" },
+        extra: { sampleRunId, phase: "best_effort_failed_report" },
       });
     }
-  } catch (err) {
-    // skipcq: JS-0827
-    console.error("[comments-tier3-consumer] persist-sample-run threw:", err instanceof Error ? err.message : String(err));
-    Sentry.captureException(err, { tags: { operation: "comments-tier3-persist" }, extra: { sampleRunId } });
   }
 }
 
@@ -249,6 +341,40 @@ export async function handleCommentsTier3Message(
 ): Promise<void> {
   const { sampleRunId, videoId, userId, totalCommentCount, appUrl } = message;
   const mode = message.mode === "cochran" ? "cochran" : "uncapped";
+
+  // Finding A (dispatch brief 2026-10-05 T1): Cloudflare Queues is
+  // at-least-once, so a redelivered message must not re-run paid work for a
+  // run that already progressed. A status that cannot be determined fails
+  // CLOSED: the rethrow reaches worker.ts's queue handler, which calls
+  // message.retry() — the consumer's existing on-throw semantics — rather
+  // than risking a double-spend on an unknown state.
+  let priorStatus: SampleRunStatus | null;
+  try {
+    priorStatus = await readSampleRunStatus(env, appUrl, sampleRunId, userId);
+  } catch (err) {
+    // skipcq: JS-0827
+    console.error(`[comments-tier3-consumer] run-status pre-check failed for ${videoId}:`, err instanceof Error ? err.message : String(err));
+    Sentry.captureException(err, { tags: { operation: "comments-tier3-precheck" }, extra: { sampleRunId, videoId } });
+    throw err;
+  }
+  if (priorStatus === null) {
+    // The row is created before enqueue, so a missing row at consume time is
+    // permanent (e.g. the analysis was deleted, cascading the run row).
+    // Failing the queue message would only spin retries into the DLQ.
+    // skipcq: JS-0827
+    console.error(`[comments-tier3-consumer] sample run row missing at consume time; skipping`, { sampleRunId, videoId });
+    Sentry.captureMessage("comments-tier3 sample run row missing at consume time", {
+      level: "warning",
+      tags: { operation: "comments-tier3-precheck" },
+      extra: { sampleRunId, videoId },
+    });
+    return;
+  }
+  if (priorStatus === "sampling" || priorStatus === "completed") {
+    // skipcq: JS-0827
+    console.info(`[comments-tier3-consumer] redelivery guard: run already ${priorStatus}; skipping paid work`, { sampleRunId, videoId });
+    return;
+  }
 
   if (message.mode === "cochran") {
     // Contract (Dispatch A §1.4): pending -> sampling -> completed|failed.
