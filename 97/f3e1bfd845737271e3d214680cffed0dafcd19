@@ -1,0 +1,22 @@
+worker/src/__tests__/projective-synthesis-engine.test.ts
+  h_60000122af7b55 1-106
+worker/src/ports/PromptBuilderPort.ts
+  h_60000122af7b55 29-32
+worker/src/services/GroundedExtractionEngine.ts
+  h_60000122af7b55 123-124,135-136
+worker/src/services/ProjectiveSynthesisEngine.ts
+  h_60000122af7b55 1-164
+worker/src/services/PromptBuilder.ts
+  h_60000122af7b55 241-281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "97f3e1bfd845737271e3d214680cffed0dafcd19",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
