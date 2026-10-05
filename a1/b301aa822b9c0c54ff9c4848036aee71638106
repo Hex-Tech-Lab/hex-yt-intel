@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1482-1483
+scripts/phase-c-micro-bakeoff.ts
+  h_60000122af7b55 1-285
+worker/src/__tests__/assemblyai-adapter.test.ts
+  h_60000122af7b55 81,93,103,131,147,157
+worker/src/__tests__/epistemic-pipeline-dispatcher.test.ts
+  h_60000122af7b55 1-317
+worker/src/services/EpistemicPipelineDispatcher.ts
+  h_60000122af7b55 1-242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1b301aa822b9c0c54ff9c4848036aee71638106",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
