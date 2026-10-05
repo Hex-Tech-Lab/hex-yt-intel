@@ -100,7 +100,15 @@ function classifiedFor(comment: VideoComment, overrides: Partial<ClassifiedComme
 beforeEach(() => {
   scraperInstances.length = 0;
   nextScraperStub = null;
-  globalFetch.mockReset().mockResolvedValue(new Response('{}', { status: 200 }));
+  // The consume-side redelivery pre-check (Finding A, 2026-10-05) probes the
+  // run status via signed GET before any work; a fresh run is 'pending' and
+  // proceeds. POST callbacks (heartbeat/terminal reports) get the plain 200.
+  globalFetch.mockReset().mockImplementation((unusedUrl: RequestInfo | URL, init?: RequestInit) => {
+    if ((init as { method?: string } | undefined)?.method === 'GET') {
+      return Promise.resolve(new Response(JSON.stringify({ status: 'pending' }), { status: 200 }));
+    }
+    return Promise.resolve(new Response('{}', { status: 200 }));
+  });
   vi.stubGlobal('fetch', globalFetch);
   classifierMock = vi.fn();
   // default: empty classification (no results, no failures)
@@ -121,7 +129,9 @@ describe('handleCommentsTier3Message — mode cochran', () => {
     expect(orders).toContain('relevance');
     expect(orders).toContain('time');
 
-    const bodies = globalFetch.mock.calls.map(([, init]) => JSON.parse((init as { body: string }).body));
+    const bodies = globalFetch.mock.calls
+      .filter(([, init]) => (init as { body?: string }).body !== undefined)
+      .map(([, init]) => JSON.parse((init as { body: string }).body));
     const statuses = bodies.map((body) => body.status);
     // #378 P1: mode travels on EVERY callback (heartbeat, success, failure).
     expect(bodies.every((body) => body.mode === 'cochran')).toBe(true);
@@ -149,7 +159,9 @@ describe('handleCommentsTier3Message — mode cochran', () => {
 
     await handleCommentsTier3Message(makeMessage(), ENV);
 
-    const bodies = globalFetch.mock.calls.map(([, init]) => JSON.parse((init as { body: string }).body));
+    const bodies = globalFetch.mock.calls
+      .filter(([, init]) => (init as { body?: string }).body !== undefined)
+      .map(([, init]) => JSON.parse((init as { body: string }).body));
     const final = bodies[bodies.length - 1];
     expect(final.status).toBe('completed');
     const cochran: CochranPersistPayload = final.cochran;
@@ -190,7 +202,9 @@ describe('handleCommentsTier3Message — mode cochran', () => {
     const message = makeMessage({ sampling: { ...SAMPLING, likeBucketCount: undefined as unknown as number } });
     await handleCommentsTier3Message(message, ENV);
 
-    const bodies = globalFetch.mock.calls.map(([, init]) => JSON.parse((init as { body: string }).body));
+    const bodies = globalFetch.mock.calls
+      .filter(([, init]) => (init as { body?: string }).body !== undefined)
+      .map(([, init]) => JSON.parse((init as { body: string }).body));
     const statuses = bodies.map((body) => body.status);
     // #378 P1: mode travels on EVERY callback (heartbeat, success, failure).
     expect(bodies.every((body) => body.mode === 'cochran')).toBe(true);

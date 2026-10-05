@@ -105,6 +105,22 @@ export const CASCADE_FALLBACKS = {
   reasoningPro: REASONING_CASCADE_PRO_FALLBACK,
 } as const;
 
+/**
+ * ADR 040 (2026-10-05): every model ID the code-side registry actually uses.
+ * The settings save path (validateAgainstContract's cascadeRegistry marker)
+ * rejects any cascade.* value referencing a model outside this list, so a
+ * typo'd/deprecated ID (e.g. claude-3-5-haiku, zero code references) fails
+ * at SAVE time instead of shipping silently as runtime OpenRouter 404s.
+ * Derived from CASCADE_FALLBACKS so the two cannot drift; adding a model to
+ * a fallback automatically extends the allowlist. Updated via the same PR
+ * flow as code changes — deliberately NOT stored in the DB.
+ */
+export const CASCADE_MODEL_ALLOWLIST: readonly string[] = Array.from(
+  new Set(
+    Object.values(CASCADE_FALLBACKS).flatMap((cascade) => cascade.map((item) => item.model)),
+  ),
+).sort();
+
 async function resolveCascade(key: string, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
     [key],

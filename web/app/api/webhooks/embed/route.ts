@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { generateEmbedding, generateSparseVector } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
 import { initializeVectorIndex } from '@/lib/upstash-vector';
-import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
   addBreadcrumb,
@@ -98,6 +99,13 @@ export async function POST(request: NextRequest) {
       }
 
       console.warn('[embed-webhook] Upstash Vector index is not configured or is a placeholder. Skipping embedding generation in non-production to avoid duplicate failures/retries.');
+      // PR #438 C3: the skip must be Sentry-visible (same tag contract as the
+      // upsert-phase skip) — previously console-only.
+      Sentry.captureMessage('Embedding generation skipped: Upstash Vector credentials are not configured', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+        contexts: { analysis: { analysisId: analysisId ?? null } },
+      });
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -154,17 +162,76 @@ export async function POST(request: NextRequest) {
       console.log('[embed-webhook] vector presence probe settled', { analysisId });
     }
 
+    // 4. Fetch analysis metadata for vector metadata BEFORE any embedding
+    // spend (PR #438 C2): a transient DB failure must return 503 (QStash
+    // retries) and a missing analysis row 400 WITHOUT having already paid
+    // for the OpenRouter embedding call. Service role: user RLS policies do
+    // not apply to service-role access.
+    let analysis;
+    try {
+      const supabase = getSupabaseServiceClient();
+      const { data, error: fetchError } = await supabase
+        .from('analyses')
+        .select('title, video_id, analysis_payload')
+        .eq('id', analysisId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('[embed-webhook] Metadata fetch transient error', {
+          analysisId,
+          error: fetchError.message,
+        });
+        Sentry.captureException(fetchError, {
+          tags: { service: 'webhook', operation: 'embed', phase: 'metadata_fetch' },
+          contexts: { analysis: { analysisId } },
+        });
+        return NextResponse.json(
+          { error: `Database error fetching analysis metadata: ${fetchError.message}`, success: false },
+          { status: 503 }
+        );
+      }
+
+      if (!data) {
+        console.warn('[embed-webhook] Metadata fetch not found (analysis row missing)', { analysisId });
+        Sentry.captureMessage('Analysis metadata not found for embedding (permanent error)', {
+          level: 'warning',
+          tags: { service: 'webhook', operation: 'embed', phase: 'metadata_not_found' },
+          contexts: { analysis: { analysisId } },
+        });
+        return NextResponse.json(
+          { error: `Analysis metadata not found: ${analysisId}`, success: false },
+          { status: 400 }
+        );
+      }
+
+      analysis = data;
+    } catch (metadataError) {
+      const message = metadataError instanceof Error ? metadataError.message : String(metadataError);
+      console.error('[embed-webhook] Metadata fetch unexpected exception', {
+        analysisId,
+        error: message,
+      });
+      Sentry.captureException(metadataError, {
+        tags: { service: 'webhook', operation: 'embed', phase: 'metadata_fetch' },
+        contexts: { analysis: { analysisId } },
+      });
+      return NextResponse.json(
+        { error: `Unexpected error fetching analysis metadata: ${message}`, success: false },
+        { status: 503 }
+      );
+    }
+
     console.log('[embed-webhook] Processing embedding', {
       analysisId,
       userId,
       markdownLength: markdown.length,
     });
 
-    // 4. Set context for monitoring
+    // 5. Set context for monitoring
     addBreadcrumb('Embedding generation starting', { analysisId, userId });
     setUserContext(userId, '', 'pro'); // Assume pro tier for background tasks if needed
 
-    // 5. Generate embedding via OpenRouter (text-embedding-3-small)
+    // 6. Generate embedding via OpenRouter (text-embedding-3-small)
     const embeddingResult = await trackExternalCall(
       'openai',
       'text-embedding-3-small',
@@ -177,35 +244,14 @@ export async function POST(request: NextRequest) {
       costUsd: embeddingResult.costUsd,
     });
 
-    // 6. Fetch analysis metadata for vector metadata (service role: user
-    // RLS policies do not apply to service-role access)
-    let analysis;
-    try {
-      const supabase = getSupabaseServiceClient();
-      const { data, error: fetchError } = await supabase
-        .from('analyses')
-        .select('title, video_id, analysis_payload')
-        .eq('id', analysisId)
-        .maybeSingle();
-
-      if (fetchError || !data) {
-        throw new Error(`Failed to fetch analysis metadata: ${fetchError?.message || 'Not found'}`);
-      }
-      analysis = data;
-    } catch (metadataError) {
-      const message = metadataError instanceof Error ? metadataError.message : String(metadataError);
-      console.error('[embed-webhook] Metadata fetch failed', {
-        analysisId,
-        error: message,
-      });
-      addBreadcrumb('Metadata fetch failed (continuing with partial data)', { analysisId, error: message }, 'error');
-      // Continue without metadata rather than failing completely
-      analysis = { title: 'Analysis', video_id: 'unknown', analysis_payload: null };
-    }
-
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
     if (!vectorIndex) {
-      console.warn('[embed-webhook] Vector index not configured, skipping upsert');
+      console.warn('[embed-webhook] Vector index not configured, skipping upsert', { analysisId });
+      Sentry.captureMessage('Vector index not configured, skipping upsert', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+        contexts: { analysis: { analysisId } },
+      });
     } else {
       // Extract LLM Knowledge Graph nodes & key terms for 3.5x term signal boosting
       const kg = (analysis.analysis_payload as any)?.knowledgeGraph;

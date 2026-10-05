@@ -7,6 +7,11 @@ type ProviderEnv = {
   SUPADATA_API_KEY?: string;
   YOUTUBE_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
+  // NOTE: no UPSTASH_VECTOR_* here on purpose. The Upstash Vector index is a
+  // Vercel-side capability (web/lib/upstash-vector.ts); the worker env has no
+  // such binding, so a vectorIndex boolean here would report false forever
+  // in production (10X scan T4 sink correction — the honest signal lives on
+  // GET /api/health on Vercel).
 };
 
 const health = new Hono<{ Bindings: ProviderEnv }>();

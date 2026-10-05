@@ -79,6 +79,64 @@ const PersistRequestSchema = z.object({
   exp: z.number(),
 });
 
+const StatusProbeRequestSchema = z.object({
+  sampleRunId: z.string().uuid(),
+  userId: z.string().uuid(),
+  exp: z.coerce.number(),
+  sig: z.string(),
+});
+
+/**
+ * GET /api/comments/persist-sample-run — signed consume-side redelivery
+ * pre-check (queue dispatch brief 2026-10-05 T1, Finding A): Cloudflare
+ * Queues is at-least-once, so the worker reads the run's current status
+ * BEFORE any paid fetch/classify work and acks with zero work when the run
+ * already progressed (sampling/completed). Read-only: the POST contract
+ * below is unchanged. The signature uses the same bound-content scheme as
+ * the POST bodies (worker/src/crypto.ts#signBoundContent), bound to
+ * sampleRunId with purpose 'comments-tier3' — replaying a probe signature
+ * into the POST fails PersistRequestSchema (400) before any sig check could
+ * matter, and vice versa.
+ */
+export async function GET(request: NextRequest) {
+  const params = Object.fromEntries(new URL(request.url).searchParams);
+  const parsed = StatusProbeRequestSchema.safeParse(params);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+  const { sampleRunId, userId, exp, sig } = parsed.data;
+
+  const isValid = await verifyContentSig(canonicalJson({ sampleRunId, userId }), sig, {
+    purpose: 'comments-tier3' as const,
+    id: sampleRunId,
+    exp,
+  });
+  if (!isValid) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const service = getSupabaseServiceClient();
+  const { data: runRow, error } = await service
+    .from('comment_sample_runs')
+    .select('status')
+    .eq('id', sampleRunId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { operation: 'comments_tier3_status_probe' },
+      extra: { sampleRunId },
+    });
+    return NextResponse.json({ error: 'Failed to load sample run' }, { status: 500 });
+  }
+  if (!runRow) {
+    return NextResponse.json({ error: 'Sample run not found' }, { status: 404 });
+  }
+
+  return NextResponse.json({ status: runRow.status });
+}
+
 /**
  * POST /api/comments/persist-sample-run — Worker->Vercel S2S callback once
  * the Tier 3 run finishes (or fails). Two modes (Comments Dispatch A,

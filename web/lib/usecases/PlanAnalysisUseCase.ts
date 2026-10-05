@@ -48,6 +48,24 @@ export interface AnalysisPlan {
   estimateCents: number;
   /** True when even K=1 exceeds the cost cap — the caller falls back to today's transcriptBudgetChars truncation path. */
   truncatedFallback: boolean;
+  /**
+   * The resolved `analysis.jev.maxCostUsdCentsPerVideo` cap this plan was
+   * planned under (T3, 10X PR scan). Carried so the worker — which has no
+   * registry/DB access (ADR 005) — can re-check the budget before a
+   * slice-fallback full-transcript re-run without inventing a second source
+   * for the cap.
+   */
+  costCapCents: number;
+  /**
+   * A6 worst-case cost of ONE full-transcript grounded call at this plan's
+   * pricing — the same `estimateCentsFor` formula applied to a single chunk
+   * spanning the whole transcript with one grounded bundle. This is the
+   * marginal cost the worker charges against the cap for each slice-fallback
+   * full-transcript re-run (T3). Additive accounting: the planned slice call
+   * is already inside `estimateCents`, so adding the full call slightly
+   * over-counts — the safe direction for a spend guard.
+   */
+  fullTranscriptCallCents: number;
 }
 
 export interface PlanAnalysisInput {
@@ -137,6 +155,16 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
   const words = tokenize(input.transcript);
   const withinCharBudget = input.transcript.length <= input.transcriptBudgetChars;
 
+  // T3: A6 cost of ONE full-transcript grounded call — the marginal cost of a
+  // slice-fallback re-run. Computed with the same estimateCentsFor formula the
+  // cap enforcement uses, so planner and fallback guard can never drift.
+  const fullTranscriptCallCents = estimateCentsFor(
+    [{ startWord: 0, endWord: words.length, wordCount: words.length, text: '' }],
+    1,
+    0,
+    input,
+  );
+
   // K = 1 when Jev is disabled or the transcript fits today's budget (A1).
   if (!input.jevConfig.enabled || withinCharBudget) {
     const text = sliceText(words, 0, words.length);
@@ -173,6 +201,8 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
       cells,
       estimateCents,
       truncatedFallback: estimateCents > input.costCapCents,
+      costCapCents: input.costCapCents,
+      fullTranscriptCallCents,
     };
   }
 
@@ -221,5 +251,7 @@ export async function planAnalysis(input: PlanAnalysisInput): Promise<AnalysisPl
     cells,
     estimateCents,
     truncatedFallback,
+    costCapCents: input.costCapCents,
+    fullTranscriptCallCents,
   };
 }
