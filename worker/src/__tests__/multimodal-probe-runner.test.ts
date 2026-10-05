@@ -50,7 +50,7 @@ describe('MultimodalProbeRunner (Phase 2 Sensor Fusion)', () => {
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockResponse,
+      json: () => Promise.resolve(mockResponse),
     } as Response);
 
     const runner = new MultimodalProbeRunner(config);
@@ -66,12 +66,12 @@ describe('MultimodalProbeRunner (Phase 2 Sensor Fusion)', () => {
   });
 
   it('fails closed when API request hangs past timeout', async () => {
-    globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
-      return new Promise((_, reject) => {
+    globalThis.fetch = vi.fn().mockImplementation((_requestUrl, options) => {
+      return new Promise((resolvePromise, rejectPromise) => {
         options?.signal?.addEventListener('abort', () => {
           const err = new Error('The operation was aborted');
           err.name = 'AbortError';
-          reject(err);
+          rejectPromise(err);
         });
       });
     });

@@ -83,9 +83,9 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
     }
 
     // Process chunk inspections in parallel with individual fail-closed timeouts
-    const chunkPromises = chunks.map(async (chunk) => {
-      return this.inspectSingleChunk(videoId, chunk.chunkIndex, chunk.startTimeSeconds, chunk.mediaUrl);
-    });
+    const chunkPromises = chunks.map((chunk) =>
+      this.inspectSingleChunk(videoId, chunk.chunkIndex, chunk.startTimeSeconds, chunk.mediaUrl),
+    );
 
     const inspectedChunks = await Promise.all(chunkPromises);
 
