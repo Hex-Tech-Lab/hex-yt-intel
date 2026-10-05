@@ -1,0 +1,18 @@
+scripts/phase-c-live-smoke-test.ts
+  h_60000122af7b55 1-182
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  h_60000122af7b55 61
+worker/wrangler.toml
+  h_60000122af7b55 52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b0b220761eb8792e9667ab7cff5807516887cd8",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
