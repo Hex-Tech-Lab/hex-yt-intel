@@ -23,18 +23,18 @@ vi.mock('@/lib/supabase', () => ({
         return {
           select: () => ({
             eq: () => ({
-              maybeSingle: async () => {
+              maybeSingle: () => {
                 const lastKey = Object.keys(defRows)[0];
-                return { data: lastKey ? defRows[lastKey] : null, error: null };
+                return Promise.resolve({ data: lastKey ? defRows[lastKey] : null, error: null });
               },
             }),
           }),
         };
       }
       return {
-        upsert: async (row: unknown) => {
+        upsert: (row: unknown) => {
           upserts.push(row);
-          return { error: null };
+          return Promise.resolve({ error: null });
         },
       };
     },
