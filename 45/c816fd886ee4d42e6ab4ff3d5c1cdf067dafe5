@@ -1,0 +1,48 @@
+web/lib/types/contracts.ts
+  s_4fda180f111dae::t_7eb2900cd4c9a2 339-343
+worker/src/__tests__/jev-fallback-budget.test.ts
+  s_02aea578e6012f::t_1beb8d504ab48b 372
+  s_02aea578e6012f::t_8329efc61476a4 284-285
+  s_02aea578e6012f::t_6a3417643e9ba4 26
+  s_02aea578e6012f::t_5c12ddb4cfd71c 338
+  s_02aea578e6012f::t_400860d17928ac 1-11,16-25,27-33,39-48,50-62,64-132,134,137-140,142-144,148-149,153,157,160,162-164,166,168-169,171-173,175-244,246-251,253-267,269-283,286-300,302-303,312-315,317-334,340-347,352-357,362-363,374-384,386-403,405,407-428,430-433,435-443,454-455
+  s_02aea578e6012f::t_0926107e6b3e45 12-15,34-38,49,63,133,135-136,141,145-147,150-152,154-156,158-159,161,165,167,170,174,245,252,268,335-337,339,348-350,359-361,364-371,373,385,404,406,429,434,449
+  s_02aea578e6012f::t_7a51f26af7fa8b 358
+  s_02aea578e6012f::t_07c54645e0ae67 444-448,450-453
+  s_02aea578e6012f::t_569824399d45dd 351
+  s_02aea578e6012f::t_bbc0df45263f98 304-311
+  s_02aea578e6012f::t_5d412bd2e40850 301,316
+web/lib/usecases/PlanAnalysisUseCase.ts
+  s_4fda180f111dae::t_7eb2900cd4c9a2 51-68,158-167,204-205,254-255
+worker/src/services/JevFallbackBudget.ts
+  s_02aea578e6012f::t_8bb92bed6f100e 111-113,124-126,130,135,139
+  s_02aea578e6012f::t_2a1bf5c8966309 1-35,37,40-110,114-123,127-129,131-134,136-138,140-143
+  s_02aea578e6012f::t_8328abd434fd73 36,38-39
+worker/src/routes/analysis.ts
+  s_4fda180f111dae::t_7eb2900cd4c9a2 17,190-192,945-949,975-979,1062-1069,1071-1074,1079-1086,1105-1107,1121-1133,1135-1159,1408-1412,1415-1416,1495-1498,1561-1565,1570-1572,1574-1578
+  s_02aea578e6012f::t_9dccc2702ccf27 1134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45c816fd886ee4d42e6ab4ff3d5c1cdf067dafe5",
+  "prompts": {},
+  "sessions": {
+    "s_02aea578e6012f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73ddb2fffeIRlqFJ73zGhX1c",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4fda180f111dae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73df190ffeGn1XBOmq5uG003",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
