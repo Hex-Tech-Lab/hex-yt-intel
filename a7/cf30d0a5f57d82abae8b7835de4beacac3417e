@@ -1,0 +1,44 @@
+web/app/api/comments/persist-sample-run/route.ts
+  s_4fda180f111dae::t_c5636883302d4c 82-139
+worker/src/queue-consumers/comments-tier3.ts
+  s_02aea578e6012f::t_e4bf67cfccd355 172-214,216-219
+  s_4fda180f111dae::t_443c6ed6394958 378
+  s_4fda180f111dae::t_8c66109e1240c5 47-90,130-131,138-139,155-171,345-377
+worker/src/__tests__/comments-tier3-cochran.test.ts
+  s_4fda180f111dae::t_c8ae007b50065b 103-111
+  s_4fda180f111dae::t_76980126070f26 132-134,162-164,205-207
+web/app/api/comments/persist-sample-run/__tests__/route.test.ts
+  s_4fda180f111dae::t_d1a7f7fed639ef 126,145-192
+  s_4fda180f111dae::t_7869e462e14431 25,32,45
+  s_4fda180f111dae::t_b8d9eb61076f9b 193
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  s_4fda180f111dae::t_a8eda4e0e0622b 1-15,17-142,145-232,237-246,248-251,255-263
+  s_4fda180f111dae::t_40cd881b94802f 143-144
+  s_4fda180f111dae::t_48eca407d92aed 233-236,252-254
+  s_4fda180f111dae::t_2bc02ce7db9ef7 16
+  s_4fda180f111dae::t_adb4a43515a358 247
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a7cf30d0a5f57d82abae8b7835de4beacac3417e",
+  "prompts": {},
+  "sessions": {
+    "s_02aea578e6012f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73ddb2fffeIRlqFJ73zGhX1c",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4fda180f111dae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef73df190ffeGn1XBOmq5uG003",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
