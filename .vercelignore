@@ -25,7 +25,7 @@ web/playwright/.cache/
 tests/
 coverage/
 docs/
-scripts/
+/scripts/
 .github/
 .memory/
 *.mp4
