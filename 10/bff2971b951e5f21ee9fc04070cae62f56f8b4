@@ -1,0 +1,19 @@
+.vercelignore
+  s_86c8d664f8d42a::t_f8147e9c4e6ccb 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10bff2971b951e5f21ee9fc04070cae62f56f8b4",
+  "prompts": {},
+  "sessions": {
+    "s_86c8d664f8d42a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef1e10724ffe6q3r1sCA5ublMy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
