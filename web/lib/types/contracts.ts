@@ -358,3 +358,29 @@ export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
  * Contains validated success and cancel URLs on app domain.
  */
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
+
+// ─── Epistemic Schism / Part A: Grounded Extraction ──────────────────────────
+export const ExtractedClaimSchema = z.object({
+  id: z.string().min(1),
+  speaker: z.string().optional(),
+  timestampRange: z.tuple([z.number().min(0), z.number().min(0)]),
+  verbatimQuote: z.string().min(1),
+  atomicAssertion: z.string().min(1),
+  confidence: z.number().min(0).max(1),
+});
+
+export const GroundedExtractionMetadataSchema = z.object({
+  speakerCount: z.number().int().min(0),
+  durationSeconds: z.number().min(0),
+  classification: z.enum(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']),
+});
+
+export const GroundedExtractionPayloadSchema = z.object({
+  claims: z.array(ExtractedClaimSchema),
+  unknowns: z.array(z.string()),
+  metadata: GroundedExtractionMetadataSchema,
+});
+
+export type ExtractedClaim = z.infer<typeof ExtractedClaimSchema>;
+export type GroundedExtractionMetadata = z.infer<typeof GroundedExtractionMetadataSchema>;
+export type GroundedExtractionPayload = z.infer<typeof GroundedExtractionPayloadSchema>;

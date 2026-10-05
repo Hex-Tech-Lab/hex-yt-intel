@@ -185,4 +185,57 @@ Do NOT output any other dimensions. Do NOT include any other JSON root fields${i
 
     return { sharedPrefix: basePrompt, segmentInstruction: '' };
   }
+
+  buildGroundedExtractionPrompt(
+    transcriptChunks: Array<{ text: string; start: number; end: number; speaker?: string }>,
+    metadata: {
+      title?: string;
+      speakerCount: number;
+      durationSeconds: number;
+      classification: 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6';
+    },
+  ): { systemPrompt: string; userPrompt: string } {
+    const systemPrompt = `You are a sterile extraction engine. Your universe consists ONLY of the provided transcript. If it is not explicitly spoken, it does not exist. Zero extrapolation. You must output the requested JSON schema using exact timestamps. If evidence for a required dimension is missing, place the dimension key in the unknowns array.
+
+Output format must be valid, raw JSON conforming strictly to this layout:
+{
+  "claims": [
+    {
+      "id": "claim_01",
+      "speaker": "Speaker Name or optional identifier",
+      "timestampRange": [startSeconds, endSeconds],
+      "verbatimQuote": "exact quote from transcript",
+      "atomicAssertion": "concise factual assertion made in the quote",
+      "confidence": 1.0
+    }
+  ],
+  "unknowns": ["explicit missing items or dimensions without direct evidence"],
+  "metadata": {
+    "speakerCount": ${metadata.speakerCount},
+    "durationSeconds": ${metadata.durationSeconds},
+    "classification": "${metadata.classification}"
+  }
+}
+
+Do NOT output markdown blocks or surrounding text. Emit strictly parseable JSON.`;
+
+    const formattedTranscript = transcriptChunks
+      .map(
+        (chunk, idx) =>
+          `[${idx}] [${chunk.start.toFixed(1)}s - ${chunk.end.toFixed(1)}s]${chunk.speaker ? ` ${chunk.speaker}:` : ''} ${chunk.text}`,
+      )
+      .join('\n');
+
+    const userPrompt = `Video Metadata:
+Title: ${metadata.title || 'Unknown Title'}
+Duration: ${metadata.durationSeconds}s
+Classification: ${metadata.classification}
+
+Transcript Segments:
+${formattedTranscript}
+
+Extract all verifiable atomic claims with exact timestamp ranges and verbatim quotes. Output the JSON payload:`;
+
+    return { systemPrompt, userPrompt };
+  }
 }
