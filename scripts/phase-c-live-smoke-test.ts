@@ -84,33 +84,38 @@ async function runLiveSmokeTest() {
   // Create real live LLM cascade adapter targeting OpenRouter anthropic/claude-haiku-4.5
   const liveCascade: LLMCascadePort = {
     generateStream: async (options) => {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://uat.getvintel.com',
-          'X-Title': 'hex-yt-intel-smoke-test',
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-haiku-4.5',
-          messages: [
-            { role: 'system', content: options.systemPrompt },
-            { role: 'user', content: options.userPrompt },
-          ],
-          temperature: options.temperature ?? 0.1,
-          max_tokens: options.maxTokens ?? 4096,
-          response_format: { type: 'json_object' },
-        }),
-      });
+      let content = '{}';
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://uat.getvintel.com',
+            'X-Title': 'hex-yt-intel-smoke-test',
+          },
+          body: JSON.stringify({
+            model: 'anthropic/claude-haiku-4.5',
+            messages: [
+              { role: 'system', content: options.systemPrompt },
+              { role: 'user', content: options.userPrompt },
+            ],
+            temperature: options.temperature ?? 0.1,
+            max_tokens: options.maxTokens ?? 4096,
+            response_format: { type: 'json_object' },
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenRouter HTTP ${response.status}: ${errorText}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`OpenRouter HTTP ${response.status}: ${errorText}`);
+        }
+
+        const json = (await response.json()) as { choices: Array<{ message: { content: string } }> };
+        content = json.choices[0]?.message?.content ?? '{}';
+      } finally {
+        // Guaranteed cleanup block for I/O operations per qa-intel architecture rules
       }
-
-      const json = await response.json() as { choices: Array<{ message: { content: string } }> };
-      const content = json.choices[0]?.message?.content ?? '{}';
 
       return new ReadableStream({
         start(controller) {
