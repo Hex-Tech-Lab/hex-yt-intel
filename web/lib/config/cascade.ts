@@ -130,6 +130,29 @@ async function resolveCascade(key: string, fallback: readonly CascadeItem[]): Pr
   return Array.isArray(value) && value.length > 0 ? (value as CascadeItem[]) : [...fallback];
 }
 
+export const DIARIZATION_PROVIDER_ALLOWLIST = ['assemblyai', 'deepgram'] as const;
+export type DiarizationProviderName = (typeof DIARIZATION_PROVIDER_ALLOWLIST)[number];
+
+export interface DiarizationCascadeItem {
+  provider: DiarizationProviderName;
+  name: string;
+  timeoutMs?: number;
+}
+
+const DIARIZATION_CASCADE_FALLBACK: readonly DiarizationCascadeItem[] = [
+  { provider: 'assemblyai', name: 'AssemblyAI Universal-1', timeoutMs: 15000 },
+  { provider: 'deepgram', name: 'Deepgram Nova-2', timeoutMs: 10000 },
+];
+
+export const resolveDiarizationCascade = async (): Promise<DiarizationCascadeItem[]> => {
+  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+    ['cascade.diarization'],
+    { 'cascade.diarization': DIARIZATION_CASCADE_FALLBACK as DiarizationCascadeItem[] }
+  );
+  const value = resolved['cascade.diarization'];
+  return Array.isArray(value) && value.length > 0 ? (value as DiarizationCascadeItem[]) : [...DIARIZATION_CASCADE_FALLBACK];
+};
+
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);
 export const resolveDigestCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.digest', DIGEST_CASCADE_FALLBACK);
 export const resolveAnalysisCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.analysis', ANALYSIS_CASCADE_FALLBACK);

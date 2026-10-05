@@ -9,7 +9,10 @@
  * fuseSensors() to directly feed the deterministic matrix router.
  */
 
-import { DeepgramNova2Adapter } from '../../adapters/DeepgramNova2Adapter';
+import {
+  DiarizationFactory,
+  type DiarizationProviderName,
+} from './probes/DiarizationFactory';
 import { MultimodalProbeRunner } from './probes/MultimodalProbeRunner';
 import { routeFusion, type FusionInput, type FusionResult } from './matrix/fusion-router';
 import type { DiarizationProviderPort, DiarizationResult } from '../../ports/DiarizationProviderPort';
@@ -17,9 +20,12 @@ import type { MultimodalProbePort, MultimodalProbeResult } from '../../ports/Mul
 
 export interface SensorRegistryConfig {
   deepgramApiKey?: string;
+  assemblyaiApiKey?: string;
   openrouterApiKey?: string;
   deepgramTimeoutMs?: number;
+  assemblyaiTimeoutMs?: number;
   multimodalTimeoutMs?: number;
+  diarizationCascadeOrder?: DiarizationProviderName[];
   mockDiarization?: DiarizationProviderPort;
   mockMultimodal?: MultimodalProbePort;
 }
@@ -48,10 +54,16 @@ export class SensorRegistry {
   constructor(config: SensorRegistryConfig) {
     if (config.mockDiarization) {
       this.diarizationProvider = config.mockDiarization;
-    } else if (config.deepgramApiKey && config.deepgramApiKey.trim() !== '') {
-      this.diarizationProvider = new DeepgramNova2Adapter({
-        apiKey: config.deepgramApiKey,
-        timeoutMs: config.deepgramTimeoutMs,
+    } else if (
+      (config.assemblyaiApiKey && config.assemblyaiApiKey.trim() !== '') ||
+      (config.deepgramApiKey && config.deepgramApiKey.trim() !== '')
+    ) {
+      this.diarizationProvider = new DiarizationFactory({
+        cascadeOrder: config.diarizationCascadeOrder,
+        assemblyaiApiKey: config.assemblyaiApiKey,
+        assemblyaiTimeoutMs: config.assemblyaiTimeoutMs,
+        deepgramApiKey: config.deepgramApiKey,
+        deepgramTimeoutMs: config.deepgramTimeoutMs,
       });
     }
 

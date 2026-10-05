@@ -111,11 +111,12 @@ export class ProjectiveSynthesisEngine {
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(cleanJson);
-    } catch {
+    } catch (parseError: unknown) {
+      console.error('[ProjectiveSynthesisEngine] JSON parse failed on raw text:', parseError);
       throw new ProjectiveSynthesisError('Output from synthesis LLM is not valid JSON.', rawText);
     }
 
-    const validClaimIds = new Set(groundedPayload.claims.map((c) => c.id));
+    const validClaimIds = new Set(groundedPayload.claims.map((claimItem) => claimItem.id));
     const synthesisObj = (parsed.synthesis && typeof parsed.synthesis === 'object' ? parsed.synthesis : {}) as Record<
       string,
       unknown
@@ -125,18 +126,21 @@ export class ProjectiveSynthesisEngine {
     const rawProjections = Array.isArray(synthesisObj.projections) ? synthesisObj.projections : [];
 
     const projections: StrategicProjection[] = rawProjections.map((proj, idx) => {
-      const p = proj as Record<string, unknown>;
-      const id = typeof p.id === 'string' && p.id ? p.id : `proj_${idx + 1}`;
-      const cited = Array.isArray(p.citedClaimIds)
-        ? p.citedClaimIds.filter((cid): cid is string => typeof cid === 'string' && validClaimIds.has(cid))
+      const projRecord = proj as Record<string, unknown>;
+      const id = typeof projRecord.id === 'string' && projRecord.id ? projRecord.id : `proj_${idx + 1}`;
+      const cited = Array.isArray(projRecord.citedClaimIds)
+        ? projRecord.citedClaimIds.filter((cid): cid is string => typeof cid === 'string' && validClaimIds.has(cid))
         : [];
 
-      const implication = typeof p.implication === 'string' ? p.implication : '';
+      const implication = typeof projRecord.implication === 'string' ? projRecord.implication : '';
       const marketHorizon =
-        p.marketHorizon === 'near-term' || p.marketHorizon === 'mid-term' || p.marketHorizon === 'long-term'
-          ? p.marketHorizon
+        projRecord.marketHorizon === 'near-term' ||
+        projRecord.marketHorizon === 'mid-term' ||
+        projRecord.marketHorizon === 'long-term'
+          ? projRecord.marketHorizon
           : 'mid-term';
-      const confidence = typeof p.confidence === 'number' ? Math.max(0, Math.min(1, p.confidence)) : 0.8;
+      const confidence =
+        typeof projRecord.confidence === 'number' ? Math.max(0, Math.min(1, projRecord.confidence)) : 0.8;
 
       return {
         id,

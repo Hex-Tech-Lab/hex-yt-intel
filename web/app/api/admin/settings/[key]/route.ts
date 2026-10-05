@@ -111,7 +111,7 @@ function validateAgainstContract(
       // ADR 040: cascade.* rows carry the {"kind":"cascadeRegistry"} marker,
       // but also enforce for any key prefixed with 'cascade.' defensively.
       if ((validation as { kind?: string }).kind === 'cascadeRegistry' || (key && key.startsWith('cascade.'))) {
-        return validateCascadeRegistryValue(value);
+        return validateCascadeRegistryValue(value, key);
       }
       return null;
     }
