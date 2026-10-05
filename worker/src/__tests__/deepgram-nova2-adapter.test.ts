@@ -111,7 +111,7 @@ describe('DeepgramNova2Adapter (Phase 2 Sensor Fusion)', () => {
 
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => mockResponse,
+        json: () => Promise.resolve(mockResponse),
       } as Response);
 
       const adapter = new DeepgramNova2Adapter(config);
@@ -129,7 +129,7 @@ describe('DeepgramNova2Adapter (Phase 2 Sensor Fusion)', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: async () => 'Deepgram internal crash',
+        text: () => Promise.resolve('Deepgram internal crash'),
       } as Response);
 
       const adapter = new DeepgramNova2Adapter(config);
@@ -140,11 +140,11 @@ describe('DeepgramNova2Adapter (Phase 2 Sensor Fusion)', () => {
 
     it('fails closed with timeout error when request hangs past timeoutMs', async () => {
       globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
-        return new Promise((_, reject) => {
+        return new Promise((resolvePromise, rejectPromise) => {
           options?.signal?.addEventListener('abort', () => {
             const err = new Error('The operation was aborted');
             err.name = 'AbortError';
-            reject(err);
+            rejectPromise(err);
           });
         });
       });

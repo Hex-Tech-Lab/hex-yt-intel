@@ -202,7 +202,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     // Sort words by start timestamp to sweep overlap intervals in O(N log N)
     const sortedWords = [...words]
       .filter((w) => w.end > w.start)
-      .sort((a, b) => a.start - b.start);
+      .sort((prevWord, nextWord) => prevWord.start - nextWord.start);
 
     for (let i = 0; i < sortedWords.length; i++) {
       const current = sortedWords[i]!;
