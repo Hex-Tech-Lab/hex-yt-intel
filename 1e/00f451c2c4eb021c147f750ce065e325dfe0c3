@@ -1,0 +1,22 @@
+worker/src/__tests__/deepgram-nova2-adapter.test.ts
+  h_60000122af7b55 114,132,143,147
+worker/src/__tests__/multimodal-probe-runner.test.ts
+  h_60000122af7b55 1-86
+worker/src/adapters/DeepgramNova2Adapter.ts
+  h_60000122af7b55 205
+worker/src/ports/MultimodalProbePort.ts
+  h_60000122af7b55 1-43
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  h_60000122af7b55 1-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e00f451c2c4eb021c147f750ce065e325dfe0c3",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
