@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { generateEmbedding, generateSparseVector } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
 import { initializeVectorIndex } from '@/lib/upstash-vector';
-import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
   addBreadcrumb,
@@ -188,24 +189,59 @@ export async function POST(request: NextRequest) {
         .eq('id', analysisId)
         .maybeSingle();
 
-      if (fetchError || !data) {
-        throw new Error(`Failed to fetch analysis metadata: ${fetchError?.message || 'Not found'}`);
+      if (fetchError) {
+        console.error('[embed-webhook] Metadata fetch transient error', {
+          analysisId,
+          error: fetchError.message,
+        });
+        Sentry.captureException(fetchError, {
+          tags: { service: 'webhook', operation: 'embed', phase: 'metadata_fetch' },
+          contexts: { analysis: { analysisId } },
+        });
+        return NextResponse.json(
+          { error: `Database error fetching analysis metadata: ${fetchError.message}`, success: false },
+          { status: 503 }
+        );
       }
+
+      if (!data) {
+        console.warn('[embed-webhook] Metadata fetch not found (analysis row missing)', { analysisId });
+        Sentry.captureMessage('Analysis metadata not found for embedding (permanent error)', {
+          level: 'warning',
+          tags: { service: 'webhook', operation: 'embed', phase: 'metadata_not_found' },
+          contexts: { analysis: { analysisId } },
+        });
+        return NextResponse.json(
+          { error: `Analysis metadata not found: ${analysisId}`, success: false },
+          { status: 400 }
+        );
+      }
+
       analysis = data;
     } catch (metadataError) {
       const message = metadataError instanceof Error ? metadataError.message : String(metadataError);
-      console.error('[embed-webhook] Metadata fetch failed', {
+      console.error('[embed-webhook] Metadata fetch unexpected exception', {
         analysisId,
         error: message,
       });
-      addBreadcrumb('Metadata fetch failed (continuing with partial data)', { analysisId, error: message }, 'error');
-      // Continue without metadata rather than failing completely
-      analysis = { title: 'Analysis', video_id: 'unknown', analysis_payload: null };
+      Sentry.captureException(metadataError, {
+        tags: { service: 'webhook', operation: 'embed', phase: 'metadata_fetch' },
+        contexts: { analysis: { analysisId } },
+      });
+      return NextResponse.json(
+        { error: `Unexpected error fetching analysis metadata: ${message}`, success: false },
+        { status: 503 }
+      );
     }
 
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
     if (!vectorIndex) {
-      console.warn('[embed-webhook] Vector index not configured, skipping upsert');
+      console.warn('[embed-webhook] Vector index not configured, skipping upsert', { analysisId });
+      Sentry.captureMessage('Vector index not configured, skipping upsert', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+        contexts: { analysis: { analysisId } },
+      });
     } else {
       // Extract LLM Knowledge Graph nodes & key terms for 3.5x term signal boosting
       const kg = (analysis.analysis_payload as any)?.knowledgeGraph;

@@ -24,15 +24,16 @@ const sentryMock = vi.hoisted(() => ({
 
 vi.mock('@sentry/nextjs', () => sentryMock);
 
+const supabaseMock = vi.hoisted(() => ({
+  maybeSingle: vi.fn(),
+}));
+
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
     from: (_table: string) => ({
       select: () => ({
         eq: () => ({
-          maybeSingle: () => Promise.resolve({
-            data: { title: 'T', video_id: 'vid1', analysis_payload: null },
-            error: null,
-          }),
+          maybeSingle: () => supabaseMock.maybeSingle(),
         }),
       }),
     }),
@@ -100,6 +101,10 @@ describe('embed webhook — vector-coverage fix', () => {
     vi.clearAllMocks();
     vectorIndexMock.fetch.mockReset();
     vectorIndexMock.upsert.mockClear();
+    supabaseMock.maybeSingle.mockResolvedValue({
+      data: { title: 'T', video_id: 'vid1', analysis_payload: null },
+      error: null,
+    });
     vi.unstubAllEnvs();
     // Valid (non-placeholder) vector credentials for the normal-path tests;
     // the 503 test overrides with 'placeholder' + VERCEL_ENV=production.
@@ -162,5 +167,76 @@ describe('embed webhook — vector-coverage fix', () => {
       'Upstash Vector credentials missing in production — embed job rejected (503)',
       expect.objectContaining({ level: 'error' })
     );
+  });
+
+  it('metadata transient DB error returns 503 and reports to Sentry (never writes phantom video_id)', async () => {
+    vectorIndexMock.fetch.mockResolvedValue([null]);
+    supabaseMock.maybeSingle.mockResolvedValue({
+      data: null,
+      error: { message: 'connection timeout' },
+    });
+    const POST_ = await loadRoute();
+
+    const res = await POST_(post(PAYLOAD) as never);
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({ success: false, error: expect.stringContaining('Database error') });
+    expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'connection timeout' }),
+      expect.objectContaining({
+        tags: { service: 'webhook', operation: 'embed', phase: 'metadata_fetch' },
+      })
+    );
+  });
+
+  it('metadata row genuinely missing returns 400 and reports to Sentry (never writes phantom video_id)', async () => {
+    vectorIndexMock.fetch.mockResolvedValue([null]);
+    supabaseMock.maybeSingle.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+    const POST_ = await loadRoute();
+
+    const res = await POST_(post(PAYLOAD) as never);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body).toMatchObject({ success: false, error: expect.stringContaining('Analysis metadata not found') });
+    expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Analysis metadata not found for embedding (permanent error)',
+      expect.objectContaining({
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'metadata_not_found' },
+      })
+    );
+  });
+
+  it('in non-production without vector index, logs warning and captures Sentry message while returning 200', async () => {
+    vi.stubEnv('UPSTASH_VECTOR_REST_URL', 'placeholder');
+    vi.stubEnv('UPSTASH_VECTOR_REST_TOKEN', 'placeholder');
+    vi.stubEnv('VERCEL_ENV', 'development');
+    const POST_ = await loadRoute();
+
+    const res = await POST_(post(PAYLOAD) as never);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ success: true, skipped: true });
+    expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+  });
+
+  it('in non-production when vectorIndex is not configured at upsert phase, warns and captures Sentry message while 200', async () => {
+    // initializeVectorIndex initially returns null
+    vi.stubEnv('UPSTASH_VECTOR_REST_URL', 'placeholder');
+    vi.stubEnv('UPSTASH_VECTOR_REST_TOKEN', 'placeholder');
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    const POST_ = await loadRoute();
+
+    const res = await POST_(post(PAYLOAD) as never);
+    expect(res.status).toBe(200);
+    expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
   });
 });
