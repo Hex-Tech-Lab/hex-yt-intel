@@ -10,10 +10,10 @@
  */
 
 import { DeepgramNova2Adapter } from '../../adapters/DeepgramNova2Adapter';
-import type { DiarizationProviderPort, DiarizationResult } from '../../ports/DiarizationProviderPort';
-import type { MultimodalProbePort, MultimodalProbeResult } from '../../ports/MultimodalProbePort';
 import { MultimodalProbeRunner } from './probes/MultimodalProbeRunner';
 import { routeFusion, type FusionInput, type FusionResult } from './matrix/fusion-router';
+import type { DiarizationProviderPort, DiarizationResult } from '../../ports/DiarizationProviderPort';
+import type { MultimodalProbePort, MultimodalProbeResult } from '../../ports/MultimodalProbePort';
 
 export interface SensorRegistryConfig {
   deepgramApiKey?: string;
