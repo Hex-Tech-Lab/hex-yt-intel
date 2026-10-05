@@ -13,7 +13,10 @@ export async function GET() {
     version: packageJson.version,
     subsystems: {
       engine: 'healthy',
-      vector: 'healthy',
+      // Honest vector state (10X scan T4 sink correction): the Upstash Vector
+      // index is a Vercel-side capability (web/lib/upstash-vector.ts) — report
+      // the actual configured state instead of a hardcoded 'healthy'.
+      vector: process.env.UPSTASH_VECTOR_REST_URL && process.env.UPSTASH_VECTOR_REST_TOKEN ? 'healthy' : 'unconfigured',
       billing: 'healthy',
       persistence: 'healthy'
     },
