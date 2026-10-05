@@ -99,6 +99,13 @@ export async function POST(request: NextRequest) {
       }
 
       console.warn('[embed-webhook] Upstash Vector index is not configured or is a placeholder. Skipping embedding generation in non-production to avoid duplicate failures/retries.');
+      // PR #438 C3: the skip must be Sentry-visible (same tag contract as the
+      // upsert-phase skip) — previously console-only.
+      Sentry.captureMessage('Embedding generation skipped: Upstash Vector credentials are not configured', {
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+        contexts: { analysis: { analysisId: analysisId ?? null } },
+      });
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -155,31 +162,11 @@ export async function POST(request: NextRequest) {
       console.log('[embed-webhook] vector presence probe settled', { analysisId });
     }
 
-    console.log('[embed-webhook] Processing embedding', {
-      analysisId,
-      userId,
-      markdownLength: markdown.length,
-    });
-
-    // 4. Set context for monitoring
-    addBreadcrumb('Embedding generation starting', { analysisId, userId });
-    setUserContext(userId, '', 'pro'); // Assume pro tier for background tasks if needed
-
-    // 5. Generate embedding via OpenRouter (text-embedding-3-small)
-    const embeddingResult = await trackExternalCall(
-      'openai',
-      'text-embedding-3-small',
-      () => generateEmbedding(markdown, userId),
-      { analysisId }
-    );
-
-    console.log('[embed-webhook] Embedding generated', {
-      analysisId,
-      costUsd: embeddingResult.costUsd,
-    });
-
-    // 6. Fetch analysis metadata for vector metadata (service role: user
-    // RLS policies do not apply to service-role access)
+    // 4. Fetch analysis metadata for vector metadata BEFORE any embedding
+    // spend (PR #438 C2): a transient DB failure must return 503 (QStash
+    // retries) and a missing analysis row 400 WITHOUT having already paid
+    // for the OpenRouter embedding call. Service role: user RLS policies do
+    // not apply to service-role access.
     let analysis;
     try {
       const supabase = getSupabaseServiceClient();
@@ -233,6 +220,29 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+
+    console.log('[embed-webhook] Processing embedding', {
+      analysisId,
+      userId,
+      markdownLength: markdown.length,
+    });
+
+    // 5. Set context for monitoring
+    addBreadcrumb('Embedding generation starting', { analysisId, userId });
+    setUserContext(userId, '', 'pro'); // Assume pro tier for background tasks if needed
+
+    // 6. Generate embedding via OpenRouter (text-embedding-3-small)
+    const embeddingResult = await trackExternalCall(
+      'openai',
+      'text-embedding-3-small',
+      () => generateEmbedding(markdown, userId),
+      { analysisId }
+    );
+
+    console.log('[embed-webhook] Embedding generated', {
+      analysisId,
+      costUsd: embeddingResult.costUsd,
+    });
 
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
     if (!vectorIndex) {

@@ -183,6 +183,9 @@ describe('embed webhook — vector-coverage fix', () => {
     expect(res.status).toBe(503);
     expect(body).toMatchObject({ success: false, error: expect.stringContaining('Database error') });
     expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    // PR #438 C2 negative control: on the old order (embed first) this WOULD
+    // have been called — a transient DB failure must not spend on embeddings.
+    expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
     expect(Sentry.captureException).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'connection timeout' }),
       expect.objectContaining({
@@ -205,6 +208,8 @@ describe('embed webhook — vector-coverage fix', () => {
     expect(res.status).toBe(400);
     expect(body).toMatchObject({ success: false, error: expect.stringContaining('Analysis metadata not found') });
     expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    // PR #438 C2 negative control: a permanently-missing row must not spend either.
+    expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       'Analysis metadata not found for embedding (permanent error)',
       expect.objectContaining({
@@ -226,6 +231,14 @@ describe('embed webhook — vector-coverage fix', () => {
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ success: true, skipped: true });
     expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    // PR #438 C3: the skip must be Sentry-visible with the vector-skip tag contract.
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Embedding generation skipped: Upstash Vector credentials are not configured',
+      expect.objectContaining({
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+      })
+    );
   });
 
   it('in non-production when vectorIndex is not configured at upsert phase, warns and captures Sentry message while 200', async () => {
@@ -238,5 +251,13 @@ describe('embed webhook — vector-coverage fix', () => {
     const res = await POST_(post(PAYLOAD) as never);
     expect(res.status).toBe(200);
     expect(vectorIndexMock.upsert).not.toHaveBeenCalled();
+    // PR #438 C3: same Sentry contract, asserted independently for preview.
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Embedding generation skipped: Upstash Vector credentials are not configured',
+      expect.objectContaining({
+        level: 'warning',
+        tags: { service: 'webhook', operation: 'embed', phase: 'vector_skip_upsert' },
+      })
+    );
   });
 });

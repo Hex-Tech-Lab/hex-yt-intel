@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import packageJson from '../../../package.json';
 
+import { isVectorConfigured } from '@/lib/upstash-vector';
+
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export function GET() {
   // Return 200 JSON for all automated probes and browsers to satisfy CI/CD.
   // Visual dashboard is available at /status
   return NextResponse.json({
@@ -16,7 +18,9 @@ export async function GET() {
       // Honest vector state (10X scan T4 sink correction): the Upstash Vector
       // index is a Vercel-side capability (web/lib/upstash-vector.ts) — report
       // the actual configured state instead of a hardcoded 'healthy'.
-      vector: process.env.UPSTASH_VECTOR_REST_URL && process.env.UPSTASH_VECTOR_REST_TOKEN ? 'healthy' : 'unconfigured',
+      // PR #438 C1: same validity rule as initializeVectorIndex (placeholder/
+      // mock credentials are NOT healthy); booleans only, no credential values.
+      vector: isVectorConfigured() ? 'healthy' : 'unconfigured',
       billing: 'healthy',
       persistence: 'healthy'
     },

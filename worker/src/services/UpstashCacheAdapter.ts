@@ -10,7 +10,7 @@ import type { PersistenceRepositoryPort } from '../ports/PersistenceRepositoryPo
 
 const rawFetch = fetch;
 
-const DEFAULT_TTL_SECONDS = 604800; // 7 days
+export const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
 /**
  * Compare-and-set heal (#374 review): rewrite the key only if it still holds
@@ -133,6 +133,34 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       });
     } catch {
       console.warn('[UpstashCacheAdapter] Upstash SET failed, analysis succeeded but not cached');
+    }
+  }
+
+  /**
+   * Atomic EVAL (PR #438 C5, ADR-002 Lua pattern — same REST wiring as
+   * healIfUnchanged). Runs `script` against `key` with `args` in one
+   * indivisible Redis round-trip. Returns the result array (Upstash
+   * stringifies every value) or null on ANY failure — callers degrade
+   * fail-soft; this never blocks the request path.
+   */
+  async eval(script: string, key: string, args: string[]): Promise<string[] | null> {
+    try {
+      const response = await rawFetch(this.url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(['EVAL', script, '1', key, ...args]),
+      });
+      if (!response.ok) {
+        console.warn('[UpstashCacheAdapter] EVAL rejected', { status: response.status });
+        return null;
+      }
+      const body = (await response.json()) as { result?: unknown };
+      return Array.isArray(body.result) ? body.result.map((value) => String(value)) : null;
+    } catch (error) {
+      console.warn('[UpstashCacheAdapter] EVAL failed, degrading caller', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
     }
   }
 

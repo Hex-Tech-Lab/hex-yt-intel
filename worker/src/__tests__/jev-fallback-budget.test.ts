@@ -27,6 +27,7 @@ import { UpstashCacheAdapter } from '../services/UpstashCacheAdapter';
 import {
   evaluateFallbackBudget,
   checkAndRecordFallbackBudget,
+  ATOMIC_FALLBACK_BUDGET_LUA,
   fallbackSpendKey,
   parseCumulativeFallbackCents,
   type FallbackBudgetPlan,
@@ -133,9 +134,10 @@ describe('evaluateFallbackBudget (T3 pure decision)', () => {
 function makeStubCache(): { store: Map<string, string>; adapter: UpstashCacheAdapter } {
   const store = new Map<string, string>();
   const adapter = {
-    get: async (key: string): Promise<string | null> => store.get(key) ?? null,
-    set: async (key: string, value: string): Promise<void> => {
+    get: (key: string): Promise<string | null> => Promise.resolve(store.get(key) ?? null),
+    set: (key: string, value: string): Promise<void> => {
       store.set(key, value);
+      return Promise.resolve();
     },
   };
   return { store, adapter: adapter as unknown as UpstashCacheAdapter };
@@ -191,6 +193,54 @@ describe('checkAndRecordFallbackBudget (T3 ledger orchestration)', () => {
     expect(parseCumulativeFallbackCents('garbage')).toBe(0);
     expect(parseCumulativeFallbackCents('-5')).toBe(0);
   });
+
+  it('C5: the atomic Lua script reads the ledger and records within ONE script (no app-level gap)', () => {
+    expect(ATOMIC_FALLBACK_BUDGET_LUA).toContain("redis.call('GET'");
+    expect(ATOMIC_FALLBACK_BUDGET_LUA).toContain("redis.call('SET'");
+    // Records only when within budget (SET is inside the allow branch, before
+    // the refusal return {0,...}):
+    const refusalIdx = ATOMIC_FALLBACK_BUDGET_LUA.indexOf("return {0");
+    expect(ATOMIC_FALLBACK_BUDGET_LUA.indexOf("redis.call('SET'")).toBeGreaterThanOrEqual(0);
+    expect(ATOMIC_FALLBACK_BUDGET_LUA.indexOf("redis.call('SET'")).toBeLessThan(refusalIdx);  });
+
+  it('C5: two parallel fallback cells race the ledger — exactly ONE is granted, the loser records nothing', async () => {
+    const store = new Map<string, string>();
+    // Eval stub applying ATOMIC_FALLBACK_BUDGET_LUA's decision atomically:
+    // single-threaded JS with no await between GET and SET gives the same
+    // indivisibility Redis gives the real script. LIMITATION (documented):
+    // vitest has no real Redis, so the script text is not executed here — its
+    // structure is asserted above and the decision semantics are mirrored
+    // 1:1 from ATOMIC_FALLBACK_BUDGET_LUA (same inputs/outputs).
+    const adapter = {
+      eval: (script: string, key: string, args: string[]) => {
+        if (script !== ATOMIC_FALLBACK_BUDGET_LUA) return Promise.resolve(null);
+        const cur = Math.max(0, Number(store.get(key) ?? '0') || 0);
+        const projected = Number(args[0]) + cur + Number(args[1]);
+        if (projected <= Number(args[2])) {
+          const newCum = Math.floor((cur + Number(args[1])) * 1e6 + 0.5) / 1e6;
+          store.set(key, String(newCum));
+          return Promise.resolve(['1', String(projected), String(newCum)]);
+        }
+        return Promise.resolve(['0', String(projected), String(cur)]);
+      },
+      get: (key: string) => Promise.resolve(store.get(key) ?? null),
+      set: (key: string, value: string) => {
+        store.set(key, value);
+        return Promise.resolve();
+      },
+    };
+    const plan = { costCapCents: 81, fullTranscriptCallCents: 20 };
+    // cap 81: 42 + 0 + 20 = 62 allowed for the winner; the loser reads the
+    // winner's ledger value 20 → 42 + 20 + 20 = 82 > 81 → refused.
+    const [first, second] = await Promise.all([
+      checkAndRecordFallbackBudget({ plan, plannedCents: 42, analysisId: ANALYSIS_ID, cache: adapter as unknown as UpstashCacheAdapter }),
+      checkAndRecordFallbackBudget({ plan, plannedCents: 42, analysisId: ANALYSIS_ID, cache: adapter as unknown as UpstashCacheAdapter }),
+    ]);
+    expect([first.decision.allowed, second.decision.allowed].filter(Boolean)).toHaveLength(1);
+    expect(store.get(FALLBACK_KEY)).toBe('20');
+    const loser = first.decision.allowed ? second : first;
+    expect(loser.recordedCents).toBe(0);
+  });
 });
 
 // ─── 3. Route wiring ─────────────────────────────────────────────────────────
@@ -243,7 +293,8 @@ function extractFrames(frames: Array<{ event?: string; data: string }>, predicat
     if (f.event) return false;
     try {
       return predicate(JSON.parse(f.data) as Record<string, unknown>);
-    } catch {
+    } catch (error) {
+      console.error('[jev-fallback-budget-test]', error instanceof Error ? error.message : String(error));
       return false;
     }
   });
@@ -304,9 +355,10 @@ describe('analyze-llm-stream fallback budget gating (T3 route-level)', () => {
     // The UpstashCacheAdapter binds `fetch` at module-import time, so a
     // per-test global fetch mock cannot intercept it. Spy on the prototype
     // instead — the route constructs its own adapter instance from env vars.
-    vi.spyOn(UpstashCacheAdapter.prototype, 'get').mockImplementation(async (key: string) => upstashStore.get(key) ?? null);
-    vi.spyOn(UpstashCacheAdapter.prototype, 'set').mockImplementation(async (key: string, value: string) => {
+    vi.spyOn(UpstashCacheAdapter.prototype, 'get').mockImplementation((key: string) => Promise.resolve(upstashStore.get(key) ?? null));
+    vi.spyOn(UpstashCacheAdapter.prototype, 'set').mockImplementation((key: string, value: string) => {
       upstashStore.set(key, value);
+      return Promise.resolve();
     });
 
     globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {

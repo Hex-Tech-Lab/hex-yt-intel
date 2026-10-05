@@ -31,6 +31,8 @@
  * HMAC-verified); binding the plan into the stream token is tracked debt.
  */
 
+import * as Sentry from '@sentry/cloudflare';
+import { DEFAULT_TTL_SECONDS } from './UpstashCacheAdapter';
 import type { UpstashCacheAdapter } from './UpstashCacheAdapter';
 
 /** The two A6 budget fields the plan carries into the worker (T3). Optional: legacy stored plans and the degenerate K=1 fallback plan omit them (the decision then reports unenforceable). */
@@ -85,8 +87,8 @@ export function fallbackSpendKey(analysisId: string): string {
 /** Parse the stored counter; absent/corrupt reads as 0 (a corrupt ledger must not brick the by-design fallback). */
 export function parseCumulativeFallbackCents(raw: string | null): number {
   if (raw === null) return 0;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const parsedCents = Number(raw);
+  return Number.isFinite(parsedCents) && parsedCents >= 0 ? parsedCents : 0;
 }
 
 /** Write-side rounding so float sums stay a clean string on the wire (serialization precision, not a tunable). */
@@ -95,6 +97,27 @@ const CENT_PRECISION = 1e6;
 function serializeCents(cents: number): string {
   return String(Math.round(cents * CENT_PRECISION) / CENT_PRECISION);
 }
+
+/**
+ * Atomic budget check-and-record (PR #438 C5). The previous two-step
+ * get→evaluate→set let two parallel fallback cells both read the same
+ * cumulative value, both pass, and both record — under-counting spend past
+ * the cap. ONE Lua script now reads the ledger, evaluates projected spend
+ * against the cap, and records ONLY when within budget (same Redis round-trip
+ * count as before: one EVAL replaces the GET+SET pair). Same rounding as
+ * serializeCents so the wire value is byte-identical to the two-step writer.
+ */
+export const ATOMIC_FALLBACK_BUDGET_LUA = `
+local cur = tonumber(redis.call('GET', KEYS[1]))
+if cur == nil or cur < 0 then cur = 0 end
+local projected = tonumber(ARGV[1]) + cur + tonumber(ARGV[2])
+if projected <= tonumber(ARGV[3]) then
+  local newCum = math.floor((cur + tonumber(ARGV[2])) * ${CENT_PRECISION} + 0.5) / ${CENT_PRECISION}
+  redis.call('SET', KEYS[1], tostring(newCum), 'EX', ARGV[4])
+  return {1, tostring(projected), tostring(newCum)}
+end
+return {0, tostring(projected), tostring(cur)}
+`;
 
 export interface FallbackBudgetOutcome {
   decision: FallbackBudgetDecision;
@@ -121,6 +144,8 @@ export async function checkAndRecordFallbackBudget(params: {
   analysisId: string;
   cache?: UpstashCacheAdapter;
 }): Promise<FallbackBudgetOutcome> {
+  const atomic = await tryAtomicFallbackBudget(params);
+  if (atomic) return atomic;
   const cumulativeFallbackCents = params.cache
     ? parseCumulativeFallbackCents(await params.cache.get(fallbackSpendKey(params.analysisId)))
     : 0;
@@ -140,4 +165,65 @@ export async function checkAndRecordFallbackBudget(params: {
     );
   }
   return { decision, recordedCents: fullCall };
+}
+
+/**
+ * Atomic path (C5): a single EVAL decides and records. Used when the cache
+ * adapter supports eval and the plan is enforceable; null on ANY failure so
+ * the caller degrades to the two-step path (fail-soft — never blocks the
+ * by-design fallback).
+ */
+async function tryAtomicFallbackBudget(params: {
+  plan?: FallbackBudgetPlan;
+  plannedCents: number;
+  analysisId: string;
+  cache?: UpstashCacheAdapter;
+}): Promise<FallbackBudgetOutcome | null> {
+  const cache = params.cache;
+  const capCents = params.plan?.costCapCents;
+  const fullCallRaw = params.plan?.fullTranscriptCallCents;
+  if (
+    !cache ||
+    typeof (cache as { eval?: unknown }).eval !== 'function' ||
+    typeof capCents !== 'number' ||
+    !Number.isFinite(capCents) ||
+    typeof fullCallRaw !== 'number' ||
+    !Number.isFinite(fullCallRaw)
+  ) {
+    return null;
+  }
+  const fullCall = Math.max(0, fullCallRaw);
+  try {
+    const result = await (cache as { eval: (script: string, key: string, args: string[]) => Promise<string[] | null> }).eval(
+      ATOMIC_FALLBACK_BUDGET_LUA,
+      fallbackSpendKey(params.analysisId),
+      [
+        serializeCents(Math.max(0, params.plannedCents)),
+        serializeCents(fullCall),
+        serializeCents(capCents),
+        String(DEFAULT_TTL_SECONDS),
+      ],
+    );
+    if (!result || result.length < 3) return null;
+    const allowed = result[0] === '1';
+    const projectedCents = Number(result[1]);
+    const decision: FallbackBudgetDecision = {
+      enforceable: true,
+      allowed,
+      projectedCents: Number.isFinite(projectedCents) ? projectedCents : Number.NaN,
+      capCents,
+    };
+    return { decision, recordedCents: allowed ? fullCall : 0 };
+  } catch (error) {
+    console.error('[jev-fallback-budget]', {
+      message: error instanceof Error ? error.message : String(error),
+      analysisId: params.analysisId,
+    });
+    Sentry.captureMessage('jev fallback budget: atomic ledger check unavailable; degraded to two-step', {
+      level: 'warning',
+      tags: { operation: 'jev-fallback-budget' },
+      contexts: { analysis: { analysisId: params.analysisId } },
+    });
+    return null;
+  }
 }

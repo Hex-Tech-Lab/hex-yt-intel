@@ -13,7 +13,13 @@
  * Stubbed YouTube (fetchCommentsPage) + stubbed Jev classifier + stubbed
  * global fetch; no network.
  */
+import * as Sentry from '@sentry/cloudflare';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { canonicalJson } from '../../../web/lib/utils/canonical-json';
+import { verifyContentSig } from '../../../web/lib/stream-token';
+import { handleCommentsTier3Message } from '../queue-consumers/comments-tier3';
+import type { VideoComment } from '../ports/CommentIngestionPort';
+import type { CommentsTier3QueueMessage } from '../routes/comments';
 
 vi.mock('@sentry/cloudflare', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock('../services/JevCommentClassifier', () => ({
@@ -21,20 +27,6 @@ vi.mock('../services/JevCommentClassifier', () => ({
     classifyBatchWithCost = classifierMock;
   },
 }));
-
-import * as Sentry from '@sentry/cloudflare';
-import { canonicalJson } from '../../../web/lib/utils/canonical-json';
-import { verifyContentSig } from '../../../web/lib/stream-token';
-import { handleCommentsTier3Message } from '../queue-consumers/comments-tier3';
-import type { VideoComment } from '../ports/CommentIngestionPort';
-import type { ClassifiedComment } from '../ports/CommentClassificationPort';
-import type { CommentsTier3QueueMessage } from '../routes/comments';
-
-type FetchPage = ReturnType<typeof vi.fn>;
-const scraperInstances: Array<{ fetchCommentsPage: FetchPage }> = [];
-/** Set before each test; the mocked constructor hands out this stub. */
-let nextScraperStub: { fetchCommentsPage: FetchPage } | null = null;
-
 vi.mock('../services/MetadataScraper', () => ({
   MetadataScraper: class {
     fetchCommentsPage: FetchPage;
@@ -44,6 +36,11 @@ vi.mock('../services/MetadataScraper', () => ({
     }
   },
 }));
+
+type FetchPage = ReturnType<typeof vi.fn>;
+const scraperInstances: Array<{ fetchCommentsPage: FetchPage }> = [];
+/** Set before each test; the mocked constructor hands out this stub. */
+let nextScraperStub: { fetchCommentsPage: FetchPage } | null = null;
 
 const globalFetch = vi.fn();
 let classifierMock: ReturnType<typeof vi.fn>;
@@ -88,20 +85,6 @@ function stubPool(externalIds: string[]): Array<{ comments: VideoComment[]; exha
     publishedAt: '2026-09-01T00:00:00Z',
   }));
   return [{ comments, exhausted: true }];
-}
-
-function classifiedFor(comment: VideoComment): ClassifiedComment {
-  return {
-    comment,
-    sentiment: 'positive',
-    commentType: 'praise',
-    painPoint: 0.1,
-    questionAsked: 0.1,
-    intensity: 1,
-    sentimentConfidence: 0.9,
-    lowConfidence: false,
-    modelUsed: 'jev',
-  };
 }
 
 /** Serves the status probe via GET and POST attempts per a per-call script. */
