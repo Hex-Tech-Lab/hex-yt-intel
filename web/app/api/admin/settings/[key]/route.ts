@@ -1,10 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/utils/require-admin';
-import * as Sentry from '@sentry/nextjs';
+import { validateCascadeRegistryValue } from '@/lib/config/cascade-validation';
 
 const BodySchema = z.object({ value: z.unknown() });
 
@@ -100,8 +101,15 @@ function validateAgainstContract(value: unknown, dataType: string, validation: R
     }
     case 'array':
       return Array.isArray(value) ? null : 'Expected an array';
-    case 'json':
-      return value !== null && typeof value === 'object' ? null : 'Expected a JSON object or array';
+    case 'json': {
+      if (value === null || typeof value !== 'object') return 'Expected a JSON object or array';
+      // ADR 040: cascade.* rows carry the {"kind":"cascadeRegistry"} marker —
+      // dispatch to the code-derived zod validator (structure + model allowlist).
+      if ((validation as { kind?: string }).kind === 'cascadeRegistry') {
+        return validateCascadeRegistryValue(value);
+      }
+      return null;
+    }
     default:
       return null;
   }
