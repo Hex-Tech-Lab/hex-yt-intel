@@ -98,7 +98,6 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
         body: JSON.stringify({
           audio_url: audioUrl,
           speaker_labels: true,
-          speech_model: this.speechModel,
         }),
         signal: controller.signal,
       });

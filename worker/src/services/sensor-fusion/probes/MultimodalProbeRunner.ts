@@ -58,6 +58,7 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
       throw new Error('[MultimodalProbeRunner] API key is required and cannot be empty.');
     }
     this.apiKey = config.apiKey.trim();
+    // Normalize baseUrl: default to OpenRouter chat completions endpoint
     this.baseUrl = config.baseUrl || OPENROUTER_COMPLETIONS_URL;
     this.model = config.model || MULTIMODAL_PROBE_DEFAULT_MODEL;
     this.timeoutMs = config.timeoutMs && config.timeoutMs > 0 ? config.timeoutMs : MULTIMODAL_PROBE_DEFAULT_TIMEOUT_MS;

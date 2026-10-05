@@ -49,7 +49,8 @@ head_sampling_rate = 1
 
 [env.uat]
 name = "youtube-intelligence-worker-uat"
-vars = { REGION = "eu-west-3", WORKER_NAME = "youtube-intelligence-worker-uat", ENVIRONMENT = "uat", APP_URL = "https://uat.getvintel.com", SUPABASE_POOLER_URL = "postgresql://postgres.adnmbikaqnxivalqoild@aws-0-eu-west-3.pooler.supabase.com:5432/postgres", DEEPGRAM_API_KEY = "", ASSEMBLYAI_API_KEY = "", MULTIMODAL_VISION_API_KEY = "" }
+workers_dev = true
+vars = { REGION = "eu-west-3", WORKER_NAME = "youtube-intelligence-worker-uat", ENVIRONMENT = "uat", APP_URL = "https://uat.getvintel.com", SUPABASE_POOLER_URL = "postgresql://postgres.adnmbikaqnxivalqoild@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" }
 
 [[env.uat.queues.producers]]
 queue = "yt-intel-comments-tier3-uat"
