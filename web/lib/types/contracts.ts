@@ -336,6 +336,11 @@ export const JevPlanEventSchema = z
     cells: z.array(JevPlanCellSchema),
     estimateCents: z.number().optional(),
     truncatedFallback: z.boolean(),
+    // T3 (10X PR scan): A6 budget context the worker re-checks before a
+    // slice-fallback full-transcript re-run. Optional — legacy plans (and the
+    // SSE plan event, which strips them for wire compatibility) omit both.
+    costCapCents: z.number().optional(),
+    fullTranscriptCallCents: z.number().optional(),
   })
   .strict();
 

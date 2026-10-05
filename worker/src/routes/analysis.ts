@@ -14,6 +14,7 @@ import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter
 import { PersistService } from "../services/PersistService";
 import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
+import { checkAndRecordFallbackBudget, type FallbackBudgetPlan } from "../services/JevFallbackBudget";
 import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
 import { canonicalJson } from "../../../web/lib/utils/canonical-json";
 import { tokenizeTranscript, sliceText, sliceDigest } from "../services/TranscriptSlice";
@@ -186,6 +187,9 @@ interface StreamRequest {
     cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
     estimateCents: number;
     truncatedFallback: boolean;
+    // T3: A6 budget context (see JevPlanShape); optional for legacy plans.
+    costCapCents?: number;
+    fullTranscriptCallCents?: number;
   } | null;
   // Resolved server-side (Vercel has the DB access this worker doesn't, see
   // ADR 005) from the settings registry's chat.comments.* keys and forwarded
@@ -938,6 +942,11 @@ interface JevPlanShape {
   cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
   estimateCents: number;
   truncatedFallback: boolean;
+  // T3 (10X PR scan): A6 budget context for the slice-fallback re-check.
+  // Optional: legacy stored plans and the degenerate K=1 fallback plan omit
+  // them (isValidJevPlan accepts both shapes).
+  costCapCents?: number;
+  fullTranscriptCallCents?: number;
 }
 
 /** K=1 degenerate plan emitted when planning is unavailable or failed. */
@@ -963,7 +972,11 @@ function isValidJevPlan(value: unknown): value is JevPlanShape {
       );
     }) &&
     typeof p.estimateCents === 'number' &&
-    typeof p.truncatedFallback === 'boolean'
+    typeof p.truncatedFallback === 'boolean' &&
+    // T3: budget fields are optional (legacy plans); when present they must
+    // be finite numbers so the fallback re-check never computes with NaN.
+    (p.costCapCents === undefined || (typeof p.costCapCents === 'number' && Number.isFinite(p.costCapCents))) &&
+    (p.fullTranscriptCallCents === undefined || (typeof p.fullTranscriptCallCents === 'number' && Number.isFinite(p.fullTranscriptCallCents)))
   );
 }
 
@@ -1046,12 +1059,31 @@ async function fetchJevPlan(params: {
  * the cell or the analysis. Report to Sentry, send one SSE status frame with
  * stage: 'jev-fallback' and reason: 'slice_hash_mismatch' | 'slice_out_of_range',
  * and continue with the full transcript (K=1 semantics).
+ *
+ * T3 (10X PR scan): the full-transcript re-run is a real LLM call, so before
+ * granting it the remaining A6 per-video budget (`analysis.jev.
+ * maxCostUsdCentsPerVideo`, carried on the plan) is re-checked against the
+ * planned estimate plus every fallback already granted this run. Budget
+ * exhausted ⇒ the fallback is refused and the caller fails the cell via the
+ * existing error-frame semantics; the fallback itself (2.3.5 by design) is
+ * untouched when budget remains.
  */
+type CellTranscriptResolution =
+  | { text: string; startWord: number }
+  | { budgetExhausted: true; message: string };
+
 async function resolveCellTranscript(params: {
   req: StreamRequest;
   resolvedTranscript: string;
   send: (obj: Record<string, unknown>) => void;
-}): Promise<{ text: string; startWord: number }> {
+  // T3: budget context resolved by the caller (plan + Upstash ledger). Absent
+  // when no plan was resolved (v1/projective cells never reach the fallback).
+  fallbackBudget?: {
+    plan?: FallbackBudgetPlan;
+    plannedCents: number;
+    cache?: UpstashCacheAdapter;
+  };
+}): Promise<CellTranscriptResolution> {
   const { req, resolvedTranscript, send } = params;
   const full = { text: resolvedTranscript, startWord: 0 };
 
@@ -1070,7 +1102,9 @@ async function resolveCellTranscript(params: {
   const endWord = req.endWord ?? 0;
   const sliceSha256 = req.sliceSha256 ?? "";
 
-  const fallBack = (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): { text: string; startWord: number } => {
+  const fmtCents = (n: number): string => (Number.isFinite(n) ? String(Math.round(n * 100) / 100) : "?");
+
+  const fallBack = async (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): Promise<CellTranscriptResolution> => {
     Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
       level: 'warning',
       tags: { operation: 'jev-slice-verify', reason },
@@ -1084,6 +1118,45 @@ async function resolveCellTranscript(params: {
         computedSha256,
       },
     });
+    // T3: re-check the remaining per-video budget BEFORE executing the
+    // full-transcript re-run. Unenforceable plans (legacy/degenerate, no
+    // budget fields) allow the fallback — current behavior preserved.
+    const budget = await checkAndRecordFallbackBudget({
+      plan: params.fallbackBudget?.plan,
+      plannedCents: params.fallbackBudget?.plannedCents ?? 0,
+      analysisId: req.analysisId,
+      cache: params.fallbackBudget?.cache,
+    });
+    if (!budget.decision.allowed) {
+      const { projectedCents, capCents } = budget.decision;
+      const plannedCents = Math.max(0, params.fallbackBudget?.plannedCents ?? 0);
+      const fullCallCents = Math.max(0, params.fallbackBudget?.plan?.fullTranscriptCallCents ?? 0);
+      const message = `Jev cell skipped: per-video LLM cost cap reached — planned ${fmtCents(plannedCents)}¢ + ${fmtCents(projectedCents - plannedCents - fullCallCents)}¢ earlier fallbacks with this ${fmtCents(fullCallCents)}¢ full-transcript re-run exceeds the ${fmtCents(capCents)}¢ cap.`;
+      Sentry.captureMessage('jev slice fallback refused: per-video cost budget exhausted', {
+        level: 'warning',
+        tags: { operation: 'jev-slice-verify', reason },
+        extra: {
+          analysisId: req.analysisId,
+          chunkIndex: req.chunkIndex,
+          jevChunkIndex: req.jevChunkIndex,
+          plannedCents,
+          fullTranscriptCallCents: fullCallCents,
+          capCents,
+          projectedCents,
+        },
+      });
+      console.warn('[analyze-llm-stream] jev slice fallback refused: per-video cost budget exhausted', {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        reason,
+        plannedCents,
+        fullTranscriptCallCents: fullCallCents,
+        capCents,
+        projectedCents,
+      });
+      return { budgetExhausted: true, message };
+    }
     send({ type: 'status', stage: 'jev-fallback', reason });
     return full;
   };
@@ -1332,9 +1405,15 @@ function buildStreamResponse(
       // (event: plan / data: {...}). `send()` only emits default-framed
       // data: lines; named events need the explicit event: prefix so the
       // client's EventSource-style parser can route it separately.
+      // T3: the A6 budget fields (costCapCents/fullTranscriptCallCents) are
+      // deliberately STRIPPED — JevPlanEventSchema is .strict(), so emitting
+      // them would make every client safeParse reject the plan (K>1 dispatch
+      // dies). The budget context travels on req.jevPlan / the S2S /plan
+      // response only; the event keeps today's exact wire shape.
       const sendPlanEvent = (plan: JevPlanShape, source: 'inline' | 'worker') => {
         try {
-          controller.enqueue(encoder.encode(`event: plan\ndata: ${JSON.stringify({ v: 1, source, ...plan })}\n\n`));
+          const { K, streamCount, cells, estimateCents, truncatedFallback } = plan;
+          controller.enqueue(encoder.encode(`event: plan\ndata: ${JSON.stringify({ v: 1, source, K, streamCount, cells, estimateCents, truncatedFallback })}\n\n`));
         } catch (err: any) {
           console.debug('[analyze-llm-stream] Client connection closed during plan enqueue:', err instanceof Error ? err.message : String(err));
         }
@@ -1413,8 +1492,11 @@ function buildStreamResponse(
       // planning partitions the grounded transcript only. Planning must
       // never block or fail the analysis — every failure path below emits
       // a K=1 degenerate plan and the stream proceeds unchanged.
+      // T3: hoisted so the slice-fallback budget re-check at the
+      // resolveCellTranscript call site can read the resolved plan
+      // (projective cells never reach that check — no fallback exists there).
+      let plan: JevPlanShape | undefined;
       if (!isProjectiveBundle(req.dimensions ?? [])) {
-        let plan: JevPlanShape;
         if (isValidJevPlan(req.jevPlan)) {
           // Path 1: inline plan from Vercel (transcript known at job creation).
           plan = req.jevPlan;
@@ -1476,12 +1558,24 @@ function buildStreamResponse(
         // fires before the transcript fetch and holds no cache write.
         // Client: useSSEStream awaitWarmGate releases safely on the first delta token.
 
-        // R3b 2.3.5d: resolve the signed cell transcript slice (or fallback to full transcript)
+        // R3b 2.3.5d: resolve the signed cell transcript slice (or fallback to full transcript).
+        // T3: the fallback full-transcript re-run is budget-gated — a refusal
+        // returns the sentinel and the cell fails via the EXISTING error-frame
+        // semantics (client marks the cell failed and continues the run; the
+        // check fires before any LLM call, so a refused cell costs nothing).
         const cellTranscript = await resolveCellTranscript({
           req,
           resolvedTranscript,
           send,
+          fallbackBudget: plan
+            ? { plan, plannedCents: plan.estimateCents, cache }
+            : undefined,
         });
+        if ('budgetExhausted' in cellTranscript) {
+          send({ type: "error", error: cellTranscript.message, code: "ERR_JEV_FALLBACK_BUDGET_EXCEEDED" });
+          controller.close();
+          return;
+        }
 
         // R3b Phase 2.6 time-sync: insert REAL video times ([HH:MM:SS] every
         // analysis.jev.timeMarkerIntervalSeconds, from the timed segments)
