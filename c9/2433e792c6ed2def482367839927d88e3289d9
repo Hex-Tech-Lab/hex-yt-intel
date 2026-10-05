@@ -1,0 +1,47 @@
+.vercelignore
+  s_86c8d664f8d42a::t_2b0b7498da0f77 14-35
+worker/src/services/sensor-fusion/SensorRegistry.ts
+  s_86c8d664f8d42a::t_c3b4ceca94db9d 103-124,128,134
+worker/src/services/EpistemicPipelineDispatcher.ts
+  s_86c8d664f8d42a::t_c3b4ceca94db9d 107,119-121,125,132-134,156-158
+worker/src/services/GroundedExtractionEngine.ts
+  s_86c8d664f8d42a::t_c3b4ceca94db9d 75-78,135,138-170,173-178,182
+worker/src/services/ProjectiveSynthesisEngine.ts
+  s_86c8d664f8d42a::t_c3b4ceca94db9d 81-84,122-125,135-166
+docs/UAT_ENV_MAP.md
+  s_86c8d664f8d42a::t_a3a2f72164b96c 4
+docs/architecture/decisions/ADR-039-sensor-fusion-engine.md
+  s_86c8d664f8d42a::t_59d4cac495cc96 8,10
+scripts/phase-c-live-smoke-test.ts
+  s_86c8d664f8d42a::t_7ad8293de99fc1 44-45,58,74
+scripts/phase-c-micro-bakeoff.ts
+  s_86c8d664f8d42a::t_eedadda24d6774 27,224-239
+web/lib/__tests__/cascade-validation.test.ts
+  s_86c8d664f8d42a::t_38d9da01f9a78c 67-71
+web/lib/config/cascade-validation.ts
+  s_86c8d664f8d42a::t_5f7ca457d570b5 90,92-99
+web/lib/config/cascade.ts
+  s_86c8d664f8d42a::t_475a3d81dd5472 153-177
+worker/src/__tests__/grounded-extraction-engine.test.ts
+  s_86c8d664f8d42a::t_5fa3763e6b3044 25-28
+worker/src/services/sensor-fusion/diarization-metrics.ts
+  s_86c8d664f8d42a::t_b0202f1570e39e 1-94
+worker/src/services/sensor-fusion/probes/DiarizationFactory.ts
+  s_86c8d664f8d42a::t_542dd16331a392 13,148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c92433e792c6ed2def482367839927d88e3289d9",
+  "prompts": {},
+  "sessions": {
+    "s_86c8d664f8d42a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef1e10724ffe6q3r1sCA5ublMy",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
