@@ -1,0 +1,30 @@
+scripts/phase-c-micro-bakeoff.ts
+  h_60000122af7b55 84,86-88,90,118,170-177,212-217,221-227
+worker/src/__tests__/diarization-factory.test.ts
+  h_60000122af7b55 101-131
+worker/src/__tests__/epistemic-pipeline-dispatcher.test.ts
+  h_60000122af7b55 317-362
+worker/src/adapters/AssemblyAIAdapter.ts
+  h_60000122af7b55 79-83,85,87
+worker/src/adapters/DeepgramNova2Adapter.ts
+  h_60000122af7b55 79-83,85,93
+worker/src/ports/DiarizationProviderPort.ts
+  h_60000122af7b55 42-45,53
+worker/src/services/EpistemicPipelineDispatcher.ts
+  h_60000122af7b55 70,110,133,138-144,156,179,183,208,229-230,234-239,248
+worker/src/services/sensor-fusion/matrix/fusion-router.ts
+  h_60000122af7b55 22-23,29,122-123,125-136,138-145,147
+worker/src/services/sensor-fusion/probes/DiarizationFactory.ts
+  h_60000122af7b55 20-21,24,47,54-57,97-98,100-108,112-125,133,148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b4495afcf4570e1af4c4134624b518a47d4f408",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
