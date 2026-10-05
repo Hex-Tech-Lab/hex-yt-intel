@@ -1,0 +1,26 @@
+web/lib/types/contracts.ts
+  h_60000122af7b55 361-386
+worker/src/__tests__/grounded-extraction-engine.test.ts
+  h_60000122af7b55 1-138
+worker/src/ports/PromptBuilderPort.ts
+  h_60000122af7b55 20-28
+worker/src/services/GroundedExtractionEngine.ts
+  h_60000122af7b55 1-168
+worker/src/services/PromptBuilder.ts
+  h_60000122af7b55 188-240
+worker/src/services/sensor-fusion/SensorRegistry.ts
+  h_60000122af7b55 15-16
+worker/src/types/grounded-extraction.ts
+  h_60000122af7b55 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b6557f221b380421a0489b17664d770914411c1",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
