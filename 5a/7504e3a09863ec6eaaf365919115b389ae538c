@@ -1,0 +1,71 @@
+web/lib/__tests__/embed-webhook-coverage.test.ts
+  s_4c513cbb16d4c3::t_7a9633b23e815b 186-188
+  s_4c513cbb16d4c3::t_d4b038da549c0b 211-212
+  s_4c513cbb16d4c3::t_b5b602ffd13053 234-241,254-261
+web/app/api/health/route.ts
+  s_4c513cbb16d4c3::t_876028cea39006 4-5,8,21-23
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  s_4c513cbb16d4c3::t_bf874d52f9ba0a 16,18-22,40-43
+  s_4c513cbb16d4c3::t_7efb18797e6a40 44
+worker/src/services/UpstashCacheAdapter.ts
+  s_4c513cbb16d4c3::t_dc236c85117b2f 13
+  s_4c513cbb16d4c3::t_b8f3761fc6060a 140-163
+  s_4c513cbb16d4c3::t_985291e49766a2 139
+  s_4c513cbb16d4c3::t_859222955c9492 164-166
+web/app/api/webhooks/embed/route.ts
+  s_4c513cbb16d4c3::t_15f3d603bd0b3c 165-169,224-245
+  s_4c513cbb16d4c3::t_e89b74286bc85d 102-108
+  s_4c513cbb16d4c3::t_7054785d6d5104 246
+web/lib/upstash-vector.ts
+  s_4c513cbb16d4c3::t_6d4fb82795d3c7 4-8,10,13-14,16-25
+worker/src/services/JevFallbackBudget.ts
+  s_4c513cbb16d4c3::t_d8fa9070eb5e6e 90-91
+  s_4c513cbb16d4c3::t_14a59b8815bc1b 101-121
+  s_4c513cbb16d4c3::t_94a744c2119c84 35
+  s_4c513cbb16d4c3::t_7ccd554489ca29 147-148,169-203,205-228
+  s_4c513cbb16d4c3::t_228860ee277c12 34
+  s_4c513cbb16d4c3::t_fe01f52ee705a7 204
+  s_4c513cbb16d4c3::t_275e9e17de89fa 229
+worker/src/__tests__/jev-fallback-budget.test.ts
+  s_4c513cbb16d4c3::t_825f31e02e7d23 296-297
+  s_ac3316c5d98e57::t_4473b6f200f1c5 203-204
+  s_4c513cbb16d4c3::t_995a2d10c59b93 200-202
+  s_4c513cbb16d4c3::t_22fc2c2f168b85 358-359,361
+  s_4c513cbb16d4c3::t_55e9dabf2f66b2 30
+  s_4c513cbb16d4c3::t_303360f61eb554 196-199,205-243
+  s_4c513cbb16d4c3::t_c8996030cac90e 137-138,140
+.memory/AGENT_LEDGER.md
+  s_30b47ccda9f069::t_6f16c5bfc7a16e 1480-1481
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a7504e3a09863ec6eaaf365919115b389ae538c",
+  "prompts": {},
+  "sessions": {
+    "s_30b47ccda9f069": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef5267a47ffeiHUtWzqG6FQ3wp",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4c513cbb16d4c3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef48488a1ffefefDBYfqydYOg0",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ac3316c5d98e57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef74cc00effeVeS7VLWeJVBD7N",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
