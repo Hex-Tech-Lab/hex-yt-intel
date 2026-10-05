@@ -100,16 +100,38 @@ export class SensorRegistry {
         ? this.multimodalProvider.inspectVideoChunks(request.videoId, request.chunkUrls)
         : Promise.resolve(null);
 
-    const [diarization, multimodal] = await Promise.all([diarizationPromise, multimodalPromise]);
+    const [diarizationSettled, multimodalSettled] = await Promise.allSettled([
+      diarizationPromise,
+      multimodalPromise,
+    ]);
+
+    let diarization: DiarizationResult | null = null;
+    let multimodal: MultimodalProbeResult | null = null;
+    let degradedSensors = false;
+
+    if (diarizationSettled.status === 'fulfilled') {
+      diarization = diarizationSettled.value;
+    } else {
+      degradedSensors = true;
+      console.warn('[SensorRegistry] Diarization sensor failed non-fatally:', diarizationSettled.reason);
+    }
+
+    if (multimodalSettled.status === 'fulfilled') {
+      multimodal = multimodalSettled.value;
+    } else {
+      degradedSensors = true;
+      console.warn('[SensorRegistry] Multimodal probe failed non-fatally:', multimodalSettled.reason);
+    }
 
     const fusionInput: FusionInput = {
       turnMarkerCount: request.turnMarkerCount,
-      diarizationSpeakerCount: diarization?.metrics.speakerCount ?? 1,
+      diarizationSpeakerCount: diarization?.metrics.speakerCount ?? 0,
       uiFramesDetected: multimodal?.summary.uiFramesDetected ?? false,
       debateProsodyDetected: multimodal?.summary.debateProsodyDetected ?? false,
       directAddressIntensity: request.directAddressIntensity,
       proceduralInstructionIntensity: request.proceduralInstructionIntensity,
       tangentialFluffIntensity: request.tangentialFluffIntensity,
+      degradedSensors,
     };
 
     const fusionResult = routeFusion(fusionInput);

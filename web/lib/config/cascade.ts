@@ -150,7 +150,31 @@ export const resolveDiarizationCascade = async (): Promise<DiarizationCascadeIte
     { 'cascade.diarization': DIARIZATION_CASCADE_FALLBACK as DiarizationCascadeItem[] }
   );
   const value = resolved['cascade.diarization'];
-  return Array.isArray(value) && value.length > 0 ? (value as DiarizationCascadeItem[]) : [...DIARIZATION_CASCADE_FALLBACK];
+  if (!Array.isArray(value) || value.length === 0) {
+    return [...DIARIZATION_CASCADE_FALLBACK];
+  }
+
+  const normalized: DiarizationCascadeItem[] = [];
+  for (const item of value) {
+    if (typeof item === 'string') {
+      if (DIARIZATION_PROVIDER_ALLOWLIST.includes(item as DiarizationProviderName)) {
+        normalized.push({
+          provider: item as DiarizationProviderName,
+          name: item === 'assemblyai' ? 'AssemblyAI Universal-1' : 'Deepgram Nova-2',
+        });
+      }
+    } else if (item && typeof item === 'object' && typeof item.provider === 'string') {
+      if (DIARIZATION_PROVIDER_ALLOWLIST.includes(item.provider as DiarizationProviderName)) {
+        normalized.push({
+          provider: item.provider as DiarizationProviderName,
+          name: typeof item.name === 'string' && item.name ? item.name : item.provider,
+          ...(typeof item.timeoutMs === 'number' && item.timeoutMs > 0 ? { timeoutMs: item.timeoutMs } : {}),
+        });
+      }
+    }
+  }
+
+  return normalized.length > 0 ? normalized : [...DIARIZATION_CASCADE_FALLBACK];
 };
 
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);

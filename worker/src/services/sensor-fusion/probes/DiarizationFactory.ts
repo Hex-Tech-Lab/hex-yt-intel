@@ -10,6 +10,7 @@
 import * as Sentry from '@sentry/cloudflare';
 import { DeepgramNova2Adapter } from '../../../adapters/DeepgramNova2Adapter';
 import { AssemblyAIAdapter } from '../../../adapters/AssemblyAIAdapter';
+import { redactMediaUrl } from '../diarization-metrics';
 import type {
   DiarizationProviderPort,
   DiarizationResult,
@@ -144,7 +145,7 @@ export class DiarizationFactory implements DiarizationProviderPort {
           },
           extra: {
             cascadeOrder: this.cascadeOrder,
-            audioUrl,
+            audioUrl: redactMediaUrl(audioUrl),
             remainingTimeMs,
             errorDetails: providerError instanceof Error ? providerError.message : String(providerError),
           },

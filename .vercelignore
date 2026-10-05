@@ -11,3 +11,25 @@ dist/
 test-results/
 review-loop.log
 docs/skills/
+# 2026-10-06 OC (UAT deploy): root .code-review-graph/graph.db (~123MB, gitignored
+# but still uploaded by CLI v54) tripped Vercel's per-file 100MB limit.
+.code-review-graph/
+.claude/
+# 2026-10-06 user-requested hygiene (safe subset verified against build:
+# worker/ and .env.local deliberately NOT excluded -- pnpm-lock.yaml has a
+# worker importer and 7 web files reference worker paths; .env.local is a
+# secrets file that must never enter the build container).
+web/out/
+web/playwright-report/
+web/playwright/.cache/
+tests/
+coverage/
+docs/
+scripts/
+.github/
+.memory/
+*.mp4
+*.mp3
+*.mov
+*.sqlite
+*.db

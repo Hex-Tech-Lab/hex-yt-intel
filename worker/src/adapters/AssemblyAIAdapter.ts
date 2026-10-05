@@ -10,6 +10,12 @@
  */
 
 import * as Sentry from '@sentry/cloudflare';
+
+import {
+  calculateDiarizationMetrics,
+  redactMediaUrl,
+} from '../services/sensor-fusion/diarization-metrics';
+
 import type {
   DiarizationProviderPort,
   DiarizationResult,
@@ -82,7 +88,10 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
     options?: { timeoutMs?: number },
   ): Promise<DiarizationResult> {
     const startTime = Date.now();
-    const effectiveTimeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : this.timeoutMs;
+    const effectiveTimeoutMs =
+      options?.timeoutMs && options.timeoutMs > 0
+        ? Math.min(options.timeoutMs, this.timeoutMs)
+        : this.timeoutMs;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
 
@@ -111,7 +120,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
         );
         Sentry.captureException(submitError, {
           tags: { subsystem: 'sensor-fusion', provider: 'assemblyai', videoId },
-          extra: { status: submitResponse.status, audioUrl },
+          extra: { status: submitResponse.status, audioUrl: redactMediaUrl(audioUrl) },
         });
         throw submitError;
       }
@@ -139,15 +148,15 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
           );
           Sentry.captureException(apiError, {
             tags: { subsystem: 'sensor-fusion', provider: 'assemblyai', videoId },
-            extra: { transcriptId, audioUrl },
+            extra: { transcriptId, audioUrl: redactMediaUrl(audioUrl) },
           });
           throw apiError;
         }
 
         // Check timeout horizon before sleeping
-        if (Date.now() - startTime >= this.timeoutMs || controller.signal.aborted) {
+        if (Date.now() - startTime >= effectiveTimeoutMs || controller.signal.aborted) {
           throw new AssemblyAIDiarizationError(
-            `AssemblyAI diarization timed out after ${this.timeoutMs}ms (fail-closed)`,
+            `AssemblyAI diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`,
             408,
             true,
           );
@@ -236,7 +245,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       const isAbort = (err as Error)?.name === 'AbortError' || controller.signal.aborted;
       const wrappedError = new AssemblyAIDiarizationError(
         isAbort
-          ? `AssemblyAI diarization timed out after ${this.timeoutMs}ms (fail-closed)`
+          ? `AssemblyAI diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`
           : `AssemblyAI diarization request failed: ${(err as Error)?.message || String(err)}`,
         isAbort ? 408 : 500,
         isAbort,
@@ -244,7 +253,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
 
       Sentry.captureException(wrappedError, {
         tags: { subsystem: 'sensor-fusion', provider: 'assemblyai', videoId, isTimeout: String(isAbort) },
-        extra: { timeoutMs: this.timeoutMs, audioUrl },
+        extra: { timeoutMs: effectiveTimeoutMs, audioUrl: redactMediaUrl(audioUrl) },
       });
 
       throw wrappedError;
@@ -253,79 +262,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
     }
   }
 
-  /**
-   * Native mathematical reduction over word-level timestamp intervals:
-   * 1. speakerCount: cardinality of unique speaker indices.
-   * 2. turnEntropy: Shannon entropy H = - \sum (p_i * log2(p_i)) over speaker speech durations.
-   * 3. overlapRatio: sum of simultaneous speech intervals across different speakers divided by total speech time.
-   */
   public static calculateMetrics(words: WordDiarization[]): DiarizationMetrics {
-    if (!words || words.length === 0) {
-      return {
-        speakerCount: 0,
-        turnEntropy: 0,
-        overlapRatio: 0,
-      };
-    }
-
-    const speakerDurations = new Map<number, number>();
-    let totalSpeechDuration = 0;
-
-    for (const wordItem of words) {
-      const duration = Math.max(0, wordItem.end - wordItem.start);
-      if (duration > 0) {
-        speakerDurations.set(wordItem.speaker, (speakerDurations.get(wordItem.speaker) || 0) + duration);
-        totalSpeechDuration += duration;
-      }
-    }
-
-    const speakerCount = speakerDurations.size;
-
-    // 1. Calculate Shannon turnEntropy: H = - sum(p_i * log2(p_i))
-    let turnEntropy = 0;
-    if (totalSpeechDuration > 0 && speakerCount > 1) {
-      for (const duration of speakerDurations.values()) {
-        const speechProbability = duration / totalSpeechDuration;
-        if (speechProbability > 0) {
-          turnEntropy -= speechProbability * Math.log2(speechProbability);
-        }
-      }
-    }
-
-    // 2. Calculate overlapRatio (cross-talk / simultaneous speech between different speakers)
-    let overlapDuration = 0;
-    const sortedWords = [...words]
-      .filter((wordItem) => wordItem.end > wordItem.start)
-      .sort((prevWord, nextWord) => prevWord.start - nextWord.start);
-
-    for (let outerIndex = 0; outerIndex < sortedWords.length; outerIndex++) {
-      const currentWord = sortedWords[outerIndex]!;
-      for (let innerIndex = outerIndex + 1; innerIndex < sortedWords.length; innerIndex++) {
-        const nextWord = sortedWords[innerIndex]!;
-        if (nextWord.start >= currentWord.end) {
-          break;
-        }
-
-        if (nextWord.speaker !== currentWord.speaker) {
-          const overlapStart = Math.max(currentWord.start, nextWord.start);
-          const overlapEnd = Math.min(currentWord.end, nextWord.end);
-          const overlap = overlapEnd - overlapStart;
-          if (overlap > 0) {
-            overlapDuration += overlap;
-          }
-        }
-      }
-    }
-
-    const overlapRatio =
-      totalSpeechDuration > 0
-        ? Math.min(1, Math.max(0, Math.round((overlapDuration / totalSpeechDuration) * 10000) / 10000))
-        : 0;
-
-    return {
-      speakerCount,
-      turnEntropy: Math.round(turnEntropy * 10000) / 10000,
-      overlapRatio,
-    };
+    return calculateDiarizationMetrics(words);
   }
 }

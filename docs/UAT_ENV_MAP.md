@@ -1,7 +1,7 @@
 # UAT Environment Configuration & Mapping Specification
 
 **Target Environment:** `uat.getvintel.com`  
-**Worker Target:** `youtube-intelligence-worker-uat.workers.dev` (or mapped custom domain)  
+**Worker Target:** `youtube-intelligence-worker-uat.hex-tech-lab.workers.dev`  
 **Supabase Ref:** `adnmbikaqnxivalqoild` (Region: `eu-west-3`)  
 **Specification Date:** 2026-10-05  
 

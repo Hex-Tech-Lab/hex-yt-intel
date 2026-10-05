@@ -22,6 +22,10 @@ describe('GroundedExtractionEngine (Epistemic Schism Part A)', () => {
       systemPrompt: 'You are a sterile extraction engine. Your universe consists ONLY of the provided transcript...',
       userPrompt: 'Extract claims...',
     }),
+    buildProjectiveSynthesisPrompt: vi.fn().mockReturnValue({
+      systemPrompt: 'You are a projective synthesis engine...',
+      userPrompt: 'Synthesize projections...',
+    }),
   };
 
   const createMockCascade = (streamOutput: string): LLMCascadePort => ({

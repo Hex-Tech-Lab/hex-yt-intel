@@ -72,7 +72,10 @@ export class GroundedExtractionEngine {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          rawResponse += decoder.decode();
+          break;
+        }
         rawResponse += typeof value === 'string' ? value : decoder.decode(value, { stream: true });
       }
     } catch (err: unknown) {
@@ -129,35 +132,54 @@ export class GroundedExtractionEngine {
       throw new GroundedExtractionError('Parsed output must be an object.', rawText);
     }
 
-    const claims = Array.isArray(parsed.claims) ? parsed.claims : [];
+    const rawClaims = Array.isArray(parsed.claims) ? parsed.claims : [];
     const unknowns = Array.isArray(parsed.unknowns) ? parsed.unknowns.filter((u): u is string => typeof u === 'string') : [];
 
-    const validatedClaims = claims.map((rawClaim, index) => {
-      const claimObj = rawClaim as Record<string, unknown>;
-      const id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
-      const speaker = typeof claimObj.speaker === 'string' ? claimObj.speaker : undefined;
-      const range = Array.isArray(claimObj.timestampRange) && claimObj.timestampRange.length === 2
-        ? [Number(claimObj.timestampRange[0]), Number(claimObj.timestampRange[1])] as [number, number]
-        : [0, 0] as [number, number];
-      const verbatimQuote = typeof claimObj.verbatimQuote === 'string' ? claimObj.verbatimQuote : '';
-      const atomicAssertion = typeof claimObj.atomicAssertion === 'string' ? claimObj.atomicAssertion : '';
-      const confidence = typeof claimObj.confidence === 'number' ? Math.max(0, Math.min(1, claimObj.confidence)) : 1.0;
+    const validatedClaims = rawClaims
+      .map((rawClaim, index) => {
+        const claimObj = rawClaim as Record<string, unknown>;
+        const id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
+        const speaker = typeof claimObj.speaker === 'string' ? claimObj.speaker : undefined;
+        const hasValidRange =
+          Array.isArray(claimObj.timestampRange) &&
+          claimObj.timestampRange.length === 2 &&
+          typeof claimObj.timestampRange[0] === 'number' &&
+          typeof claimObj.timestampRange[1] === 'number' &&
+          !Number.isNaN(claimObj.timestampRange[0]) &&
+          !Number.isNaN(claimObj.timestampRange[1]);
+        const range = hasValidRange
+          ? [Number(claimObj.timestampRange[0]), Number(claimObj.timestampRange[1])] as [number, number]
+          : null;
+        const verbatimQuote = typeof claimObj.verbatimQuote === 'string' ? claimObj.verbatimQuote.trim() : '';
+        const atomicAssertion = typeof claimObj.atomicAssertion === 'string' ? claimObj.atomicAssertion : '';
+        const confidence = typeof claimObj.confidence === 'number' ? Math.max(0, Math.min(1, claimObj.confidence)) : 1.0;
 
-      return {
-        id,
-        speaker,
-        timestampRange: range,
-        verbatimQuote,
-        atomicAssertion,
-        confidence,
-      };
-    });
+        if (!range || !verbatimQuote) {
+          return null;
+        }
+
+        return {
+          id,
+          speaker,
+          timestampRange: range,
+          verbatimQuote,
+          atomicAssertion,
+          confidence,
+        };
+      })
+      .filter((claim): claim is NonNullable<typeof claim> => claim !== null);
 
     const metaObj = (parsed.metadata && typeof parsed.metadata === 'object' ? parsed.metadata : {}) as Record<string, unknown>;
+    const VALID_ROUTES = new Set(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']);
+    const classification =
+      typeof metaObj.classification === 'string' && VALID_ROUTES.has(metaObj.classification)
+        ? (metaObj.classification as 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6')
+        : fallbackMetadata.classification;
+
     const metadata = {
       speakerCount: typeof metaObj.speakerCount === 'number' ? metaObj.speakerCount : fallbackMetadata.speakerCount,
       durationSeconds: typeof metaObj.durationSeconds === 'number' ? metaObj.durationSeconds : fallbackMetadata.durationSeconds,
-      classification: (metaObj.classification as 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6') || fallbackMetadata.classification,
+      classification,
     };
 
     return {

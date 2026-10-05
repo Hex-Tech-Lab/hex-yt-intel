@@ -104,7 +104,7 @@ export class EpistemicPipelineDispatcher {
     // 1. Layer 0: Sensor Fusion & Deterministic Matrix Routing
     const turnMarkerCount = countTurnMarkers(input.transcript);
 
-    let diarizationSpeakerCount = 1;
+    let diarizationSpeakerCount = 0;
     let uiFramesDetected = false;
     let debateProsodyDetected = false;
     let degradedSensors = false;
@@ -116,18 +116,21 @@ export class EpistemicPipelineDispatcher {
           audioUrl: input.audioUrl,
           chunkUrls: input.chunkUrls,
           turnMarkerCount,
-          directAddressIntensity: 0,
-          proceduralInstructionIntensity: 0,
-          tangentialFluffIntensity: 0,
+          directAddressIntensity: (input as { directAddressIntensity?: number }).directAddressIntensity ?? 0,
+          proceduralInstructionIntensity: (input as { proceduralInstructionIntensity?: number }).proceduralInstructionIntensity ?? 0,
+          tangentialFluffIntensity: (input as { tangentialFluffIntensity?: number }).tangentialFluffIntensity ?? 0,
         };
 
         const fusionResponse = await this.sensorRegistry.fuseSensors(fusionRequest);
-        if (fusionResponse.diarization?.metrics.speakerCount) {
+        if (fusionResponse.diarization?.metrics.speakerCount !== undefined) {
           diarizationSpeakerCount = fusionResponse.diarization.metrics.speakerCount;
         }
         if (fusionResponse.multimodal?.summary) {
           uiFramesDetected = fusionResponse.multimodal.summary.uiFramesDetected;
           debateProsodyDetected = fusionResponse.multimodal.summary.debateProsodyDetected;
+        }
+        if (fusionResponse.fusionResult.degradedSensors) {
+          degradedSensors = true;
         }
       } catch (sensorErr: unknown) {
         degradedSensors = true;
@@ -150,9 +153,9 @@ export class EpistemicPipelineDispatcher {
       diarizationSpeakerCount,
       uiFramesDetected,
       debateProsodyDetected,
-      directAddressIntensity: 0,
-      proceduralInstructionIntensity: 0,
-      tangentialFluffIntensity: 0,
+      directAddressIntensity: (input as { directAddressIntensity?: number }).directAddressIntensity ?? 0,
+      proceduralInstructionIntensity: (input as { proceduralInstructionIntensity?: number }).proceduralInstructionIntensity ?? 0,
+      tangentialFluffIntensity: (input as { tangentialFluffIntensity?: number }).tangentialFluffIntensity ?? 0,
       degradedSensors,
     };
 

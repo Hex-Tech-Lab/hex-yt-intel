@@ -24,7 +24,7 @@ import {
   type EpistemicPipelineInput,
 } from '../worker/src/services/EpistemicPipelineDispatcher';
 import { PromptBuilder } from '../worker/src/services/PromptBuilder';
-import { LLMCascade } from '../worker/src/services/LLMCascade';
+import type { LLMCascadePort } from '../worker/src/ports/LLMCascadePort';
 import type { FusionRoute } from '../worker/src/services/sensor-fusion/matrix/fusion-router';
 import type { DiarizationProviderPort } from '../worker/src/ports/DiarizationProviderPort';
 import type { MultimodalProbePort } from '../worker/src/ports/MultimodalProbePort';
@@ -221,8 +221,22 @@ async function runMicroBatch(): Promise<void> {
       inspectVideoChunks: () =>
         Promise.resolve({
           videoId: target.videoId,
-          chunksScanned: 3,
-          summary: target.mockMultimodal,
+          chunks: [
+            {
+              chunkIndex: 0,
+              startTimeSeconds: 15,
+              uiFramesDetected: target.mockMultimodal.uiFramesDetected,
+              debateProsodyDetected: target.mockMultimodal.debateProsodyDetected,
+              visibleSpeakerCount: target.mockDiarization.speakerCount > 2 ? 3 : (target.mockDiarization.speakerCount as 0 | 1 | 2),
+              confidence: 0.95,
+            },
+          ],
+          summary: {
+            uiFramesDetected: target.mockMultimodal.uiFramesDetected,
+            debateProsodyDetected: target.mockMultimodal.debateProsodyDetected,
+            maxVisibleSpeakers: target.mockDiarization.speakerCount,
+            meanConfidence: 0.95,
+          },
           latencyMs: 120,
         }),
     };

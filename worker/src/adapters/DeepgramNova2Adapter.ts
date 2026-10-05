@@ -10,6 +10,12 @@
  */
 
 import * as Sentry from '@sentry/cloudflare';
+
+import {
+  calculateDiarizationMetrics,
+  redactMediaUrl,
+} from '../services/sensor-fusion/diarization-metrics';
+
 import type {
   DiarizationProviderPort,
   DiarizationResult,
@@ -82,7 +88,10 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     options?: { timeoutMs?: number },
   ): Promise<DiarizationResult> {
     const startTime = Date.now();
-    const effectiveTimeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : this.timeoutMs;
+    const effectiveTimeoutMs =
+      options?.timeoutMs && options.timeoutMs > 0
+        ? Math.min(options.timeoutMs, this.timeoutMs)
+        : this.timeoutMs;
     const url = new URL(this.baseUrl);
     url.searchParams.set('model', this.model);
     url.searchParams.set('diarize', 'true');
@@ -113,7 +122,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
         );
         Sentry.captureException(error, {
           tags: { subsystem: 'sensor-fusion', provider: 'deepgram', videoId },
-          extra: { status: response.status, audioUrl },
+          extra: { status: response.status, audioUrl: redactMediaUrl(audioUrl) },
         });
         throw error;
       }
@@ -146,7 +155,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
       const isAbort = (err as Error)?.name === 'AbortError' || controller.signal.aborted;
       const wrappedError = new DeepgramDiarizationError(
         isAbort
-          ? `Deepgram diarization timed out after ${this.timeoutMs}ms (fail-closed)`
+          ? `Deepgram diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`
           : `Deepgram diarization request failed: ${(err as Error)?.message || String(err)}`,
         isAbort ? 408 : 500,
         isAbort,
@@ -154,7 +163,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
 
       Sentry.captureException(wrappedError, {
         tags: { subsystem: 'sensor-fusion', provider: 'deepgram', videoId, isTimeout: String(isAbort) },
-        extra: { timeoutMs: this.timeoutMs, audioUrl },
+        extra: { timeoutMs: effectiveTimeoutMs, audioUrl: redactMediaUrl(audioUrl) },
       });
 
       throw wrappedError;
@@ -163,82 +172,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     }
   }
 
-  /**
-   * Native mathematical reduction over word-level timestamp intervals:
-   * 1. speakerCount: cardinality of unique speaker indices.
-   * 2. turnEntropy: Shannon entropy H = - \sum (p_i * log2(p_i)) over speaker speech durations.
-   * 3. overlapRatio: sum of simultaneous speech intervals across different speakers divided by total speech time.
-   */
   public static calculateMetrics(words: WordDiarization[]): DiarizationMetrics {
-    if (!words || words.length === 0) {
-      return {
-        speakerCount: 0,
-        turnEntropy: 0,
-        overlapRatio: 0,
-      };
-    }
-
-    const speakerDurations = new Map<number, number>();
-    let totalSpeechDuration = 0;
-
-    for (const w of words) {
-      const duration = Math.max(0, w.end - w.start);
-      if (duration > 0) {
-        speakerDurations.set(w.speaker, (speakerDurations.get(w.speaker) || 0) + duration);
-        totalSpeechDuration += duration;
-      }
-    }
-
-    const speakerCount = speakerDurations.size;
-
-    // 1. Calculate Shannon turnEntropy: H = - sum(p_i * log2(p_i))
-    let turnEntropy = 0;
-    if (totalSpeechDuration > 0 && speakerCount > 1) {
-      for (const duration of speakerDurations.values()) {
-        const p = duration / totalSpeechDuration;
-        if (p > 0) {
-          turnEntropy -= p * Math.log2(p);
-        }
-      }
-    }
-
-    // 2. Calculate overlapRatio (cross-talk / simultaneous speech between different speakers)
-    let overlapDuration = 0;
-    // Sort words by start timestamp to sweep overlap intervals in O(N log N)
-    const sortedWords = [...words]
-      .filter((w) => w.end > w.start)
-      .sort((prevWord, nextWord) => prevWord.start - nextWord.start);
-
-    for (let i = 0; i < sortedWords.length; i++) {
-      const current = sortedWords[i]!;
-      for (let j = i + 1; j < sortedWords.length; j++) {
-        const next = sortedWords[j]!;
-        // Beyond the current word's end boundary, no further overlap can occur
-        if (next.start >= current.end) {
-          break;
-        }
-
-        // Only count simultaneous speech if spoken by different speakers
-        if (next.speaker !== current.speaker) {
-          const overlapStart = Math.max(current.start, next.start);
-          const overlapEnd = Math.min(current.end, next.end);
-          const overlap = overlapEnd - overlapStart;
-          if (overlap > 0) {
-            overlapDuration += overlap;
-          }
-        }
-      }
-    }
-
-    const overlapRatio =
-      totalSpeechDuration > 0
-        ? Math.min(1, Math.max(0, Math.round((overlapDuration / totalSpeechDuration) * 10000) / 10000))
-        : 0;
-
-    return {
-      speakerCount,
-      turnEntropy: Math.round(turnEntropy * 10000) / 10000,
-      overlapRatio,
-    };
+    return calculateDiarizationMetrics(words);
   }
 }

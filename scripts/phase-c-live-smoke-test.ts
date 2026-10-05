@@ -41,47 +41,21 @@ async function runLiveSmokeTest() {
   console.log(`Physical LLM Cascade: OpenRouter (anthropic/claude-haiku-4.5)`);
   console.log(`---------------------------------------------------------------------`);
 
-  // Step 1: Physical AssemblyAI Diarization
-  console.log('\n[1/3] Executing physical AssemblyAI diarization...');
+  // Step 1 & 2 are orchestrated natively inside EpistemicPipelineDispatcher.
+  console.log('\n[1/1] Executing physical EpistemicPipelineDispatcher (Sensor Fusion + Part A + Part B)...');
   const assemblyAdapter = new AssemblyAIAdapter({
     apiKey: ASSEMBLYAI_KEY!,
     timeoutMs: 30000,
   });
 
-  const diarizationStartTime = Date.now();
-  const diarizationResult = await assemblyAdapter.diarizeAudioUrl(SAMPLE_AUDIO_URL, VIDEO_ID);
-  const diarizationLatencyMs = Date.now() - diarizationStartTime;
-
-  console.log(`✓ AssemblyAI Succeeded in ${diarizationLatencyMs}ms:`, {
-    speakerCount: diarizationResult.metrics.speakerCount,
-    turnEntropy: diarizationResult.metrics.turnEntropy,
-    overlapRatio: diarizationResult.metrics.overlapRatio,
-  });
-
-  // Step 2: Physical Multimodal Probe Runner
-  console.log('\n[2/3] Executing physical Multimodal Probe call via OpenRouter...');
   const multimodalRunner = new MultimodalProbeRunner({
     apiKey: MULTIMODAL_VISION_KEY!,
     timeoutMs: 25000,
   });
 
-  const probeStartTime = Date.now();
-  const probeResult = await multimodalRunner.inspectVideoChunks(VIDEO_ID, [
-    { chunkIndex: 0, startTimeSeconds: 15, mediaUrl: SAMPLE_FRAME_URL },
-  ]);
-  const probeLatencyMs = Date.now() - probeStartTime;
-
-  console.log(`✓ Multimodal Probe Succeeded in ${probeLatencyMs}ms:`, {
-    uiFramesDetected: probeResult.summary.uiFramesDetected,
-    debateProsodyDetected: probeResult.summary.debateProsodyDetected,
-    confidence: probeResult.summary.meanConfidence,
-  });
-
-  // Step 3: Physical Part A & Part B Pipeline Dispatcher
-  console.log('\n[3/3] Executing physical EpistemicPipelineDispatcher (Part A + Part B)...');
   const promptBuilder = new PromptBuilder();
 
-  // Create real live LLM cascade adapter targeting OpenRouter anthropic/claude-haiku-4.5
+  // Create real live LLM cascade adapter targeting OpenRouter google/gemini-2.5-flash-lite
   const liveCascade: LLMCascadePort = {
     generateStream: async (options) => {
       let content = '{}';
@@ -97,7 +71,7 @@ async function runLiveSmokeTest() {
             'X-Title': 'hex-yt-intel-smoke-test',
           },
           body: JSON.stringify({
-            model: 'anthropic/claude-haiku-4.5',
+            model: 'google/gemini-2.5-flash-lite',
             messages: [
               { role: 'system', content: options.systemPrompt },
               { role: 'user', content: options.userPrompt },

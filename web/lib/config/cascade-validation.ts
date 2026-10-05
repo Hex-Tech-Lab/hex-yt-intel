@@ -87,18 +87,18 @@ export function validateCascadeRegistryValue(value: unknown, key?: string): stri
     return 'Cascade must contain at least one tier (an empty cascade resolves to code fallbacks — save the explicit tiers you want instead)';
   }
 
-  // If array of strings or diarization items passed to general cascade, check if key is diarization
+  // For non-diarization cascades, every item must strictly be a CascadeRegistryItem
   for (const item of value) {
+    // If a diarization provider or item is passed to a non-diarization cascade key, reject immediately
+    if (
+      (typeof item === 'string' && DIARIZATION_PROVIDER_ALLOWLIST.includes(item as never)) ||
+      (item && typeof item === 'object' && 'provider' in item)
+    ) {
+      return `Diarization providers cannot be used for general LLM cascade key "${key ?? 'unknown'}". Use models from the allowlist instead.`;
+    }
+
     const parsed = CascadeRegistryItemSchema.safeParse(item);
     if (!parsed.success) {
-      // If it looks like a diarization item or plain provider string, try validating as diarization
-      if (
-        (typeof item === 'string' && DIARIZATION_PROVIDER_ALLOWLIST.includes(item as never)) ||
-        (item && typeof item === 'object' && 'provider' in item)
-      ) {
-        return validateDiarizationCascadeValue(value);
-      }
-
       const first = parsed.error.issues[0];
       const path = first && first.path.length > 0 ? `${first.path.join('.')}: ` : '';
       return `Invalid cascade tier — ${path}${first?.message ?? 'schema mismatch'}`;

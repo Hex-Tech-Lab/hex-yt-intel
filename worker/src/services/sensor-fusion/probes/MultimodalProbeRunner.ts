@@ -10,11 +10,14 @@
  */
 
 import * as Sentry from '@sentry/cloudflare';
+
+import { redactMediaUrl } from '../diarization-metrics';
+
 import type {
   MultimodalProbePort,
   MultimodalProbeResult,
   MultimodalChunkInspection,
-} from '../../ports/MultimodalProbePort';
+} from '../../../ports/MultimodalProbePort';
 
 export interface MultimodalRunnerConfig {
   apiKey: string;
@@ -130,6 +133,17 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
+      const isVideoPayload = /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl);
+      const mediaPart = isVideoPayload
+        ? {
+            type: 'video_url',
+            video_url: { url: mediaUrl },
+          }
+        : {
+            type: 'image_url',
+            image_url: { url: mediaUrl },
+          };
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
@@ -149,10 +163,7 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
                   type: 'text',
                   text: `Analyze this 15-second clip at timestamp ${startTimeSeconds}s for UI frames and debate contention.`,
                 },
-                {
-                  type: 'image_url',
-                  image_url: { url: mediaUrl },
-                },
+                mediaPart,
               ],
             },
           ],
@@ -208,7 +219,7 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
 
       Sentry.captureException(wrappedError, {
         tags: { subsystem: 'sensor-fusion', runner: 'multimodal-probe', videoId, chunkIndex: String(chunkIndex) },
-        extra: { timeoutMs: this.timeoutMs, mediaUrl },
+        extra: { timeoutMs: this.timeoutMs, mediaUrl: redactMediaUrl(mediaUrl) },
       });
 
       throw wrappedError;

@@ -64,5 +64,10 @@ describe('validateCascadeRegistryValue (ADR 040)', () => {
     it('rejects empty diarization array', () => {
       expect(validateCascadeRegistryValue([], 'cascade.diarization')).toMatch(/must contain at least one/);
     });
+
+    it('rejects diarization providers for non-diarization keys (e.g. cascade.chat)', () => {
+      const err = validateCascadeRegistryValue(['assemblyai'], 'cascade.chat');
+      expect(err).toMatch(/Diarization providers cannot be used for general LLM cascade key "cascade.chat"/);
+    });
   });
 });

@@ -78,7 +78,10 @@ export class ProjectiveSynthesisEngine {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          rawResponse += decoder.decode();
+          break;
+        }
         rawResponse += typeof value === 'string' ? value : decoder.decode(value, { stream: true });
       }
     } catch (err: unknown) {
@@ -116,6 +119,10 @@ export class ProjectiveSynthesisEngine {
       throw new ProjectiveSynthesisError('Output from synthesis LLM is not valid JSON.', rawText);
     }
 
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new ProjectiveSynthesisError('Parsed synthesis output must be a JSON object.', rawText);
+    }
+
     const validClaimIds = new Set(groundedPayload.claims.map((claimItem) => claimItem.id));
     const synthesisObj = (parsed.synthesis && typeof parsed.synthesis === 'object' ? parsed.synthesis : {}) as Record<
       string,
@@ -125,31 +132,38 @@ export class ProjectiveSynthesisEngine {
     const coreThesis = typeof synthesisObj.coreThesis === 'string' ? synthesisObj.coreThesis : '';
     const rawProjections = Array.isArray(synthesisObj.projections) ? synthesisObj.projections : [];
 
-    const projections: StrategicProjection[] = rawProjections.map((proj, idx) => {
-      const projRecord = proj as Record<string, unknown>;
-      const id = typeof projRecord.id === 'string' && projRecord.id ? projRecord.id : `proj_${idx + 1}`;
-      const cited = Array.isArray(projRecord.citedClaimIds)
-        ? projRecord.citedClaimIds.filter((cid): cid is string => typeof cid === 'string' && validClaimIds.has(cid))
-        : [];
+    const projections: StrategicProjection[] = rawProjections
+      .map((proj, idx) => {
+        const projRecord = proj as Record<string, unknown>;
+        const id = typeof projRecord.id === 'string' && projRecord.id ? projRecord.id : `proj_${idx + 1}`;
+        const cited = Array.isArray(projRecord.citedClaimIds)
+          ? projRecord.citedClaimIds.filter((cid): cid is string => typeof cid === 'string' && validClaimIds.has(cid))
+          : [];
 
-      const implication = typeof projRecord.implication === 'string' ? projRecord.implication : '';
-      const marketHorizon =
-        projRecord.marketHorizon === 'near-term' ||
-        projRecord.marketHorizon === 'mid-term' ||
-        projRecord.marketHorizon === 'long-term'
-          ? projRecord.marketHorizon
-          : 'mid-term';
-      const confidence =
-        typeof projRecord.confidence === 'number' ? Math.max(0, Math.min(1, projRecord.confidence)) : 0.8;
+        // ADR 039 Epistemic Schism constraint: Projections MUST be grounded in at least one valid claim
+        if (cited.length === 0) {
+          return null;
+        }
 
-      return {
-        id,
-        citedClaimIds: cited,
-        implication,
-        marketHorizon,
-        confidence,
-      };
-    });
+        const implication = typeof projRecord.implication === 'string' ? projRecord.implication : '';
+        const marketHorizon =
+          projRecord.marketHorizon === 'near-term' ||
+          projRecord.marketHorizon === 'mid-term' ||
+          projRecord.marketHorizon === 'long-term'
+            ? projRecord.marketHorizon
+            : 'mid-term';
+        const confidence =
+          typeof projRecord.confidence === 'number' ? Math.max(0, Math.min(1, projRecord.confidence)) : 0.8;
+
+        return {
+          id,
+          citedClaimIds: cited,
+          implication,
+          marketHorizon,
+          confidence,
+        };
+      })
+      .filter((projection): projection is NonNullable<typeof projection> => projection !== null);
 
     const unsupportedQuestions = Array.isArray(synthesisObj.unsupportedQuestions)
       ? synthesisObj.unsupportedQuestions.filter((q): q is string => typeof q === 'string')
