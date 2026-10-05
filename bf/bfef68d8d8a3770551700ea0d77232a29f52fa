@@ -1,0 +1,18 @@
+docs/UAT_ENV_MAP.md
+  h_60000122af7b55 1-71
+supabase/migrations/20261005020000_phase_c_epistemic_schema.sql
+  h_60000122af7b55 1-54
+worker/wrangler.toml
+  h_60000122af7b55 50-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bfbfef68d8d8a3770551700ea0d77232a29f52fa",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
