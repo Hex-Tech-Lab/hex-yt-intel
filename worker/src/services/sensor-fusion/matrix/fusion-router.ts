@@ -19,11 +19,14 @@ export interface FusionInput {
   directAddressIntensity: number;
   proceduralInstructionIntensity: number;
   tangentialFluffIntensity: number;
+  /** Flag set when physical acoustic/visual sensors failed and fell back to heuristics. */
+  degradedSensors?: boolean;
 }
 
 export interface FusionResult {
   route: FusionRoute;
   confidence: number;
+  degradedSensors?: boolean;
 }
 
 type Feature = 'bias' | 'direct' | 'procedural' | 'fluff' | 'multiSpeaker' | 'turns' | 'debate';
@@ -116,13 +119,30 @@ const matchPreRule = (input: FusionInput): FusionRoute | null => {
 export const routeFusion = (input: FusionInput, weights: FusionWeights = DEFAULT_FUSION_WEIGHTS): FusionResult => {
   validate(input);
 
+  let result: FusionResult;
+
   // 1. Hard overrides.
-  if (input.uiFramesDetected) return { route: 'S4', confidence: OVERRIDE_CONFIDENCE };
+  if (input.uiFramesDetected) {
+    result = { route: 'S4', confidence: OVERRIDE_CONFIDENCE };
+  } else {
+    // 2. Deterministic pre-rules.
+    const preRule = matchPreRule(input);
+    if (preRule) {
+      result = { route: preRule, confidence: PRE_RULE_CONFIDENCE };
+    } else {
+      // 3. Weighted sum for everything else.
+      result = routeByWeights(input, weights);
+    }
+  }
 
-  // 2. Deterministic pre-rules.
-  const preRule = matchPreRule(input);
-  if (preRule) return { route: preRule, confidence: PRE_RULE_CONFIDENCE };
+  // When physical acoustic/visual sensors are degraded, cap confidence at 0.50
+  if (input.degradedSensors) {
+    return {
+      route: result.route,
+      confidence: Math.min(0.5, result.confidence),
+      degradedSensors: true,
+    };
+  }
 
-  // 3. Weighted sum for everything else.
-  return routeByWeights(input, weights);
+  return result;
 };

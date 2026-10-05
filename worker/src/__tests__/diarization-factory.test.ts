@@ -98,4 +98,35 @@ describe('DiarizationFactory (Cascade Runner)', () => {
     expect(mockAssemblyAI.diarizeAudioUrl).toHaveBeenCalledTimes(1);
     expect(mockDeepgram.diarizeAudioUrl).toHaveBeenCalledTimes(1);
   });
+
+  it('aborts and throws DiarizationCascadeExhaustedError when cascade timeout budget is exhausted', async () => {
+    // Provider 1 takes 500ms
+    const mockAssemblyAI: DiarizationProviderPort = {
+      diarizeAudioUrl: vi.fn().mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        throw new Error('AssemblyAI failed after 80ms');
+      }),
+    };
+    const mockDeepgram: DiarizationProviderPort = {
+      diarizeAudioUrl: vi.fn().mockResolvedValue(dummyResult),
+    };
+
+    // Set totalCascadeTimeoutMs to 50ms so by the time AssemblyAI fails, budget is already expired
+    const factory = new DiarizationFactory({
+      cascadeOrder: ['assemblyai', 'deepgram'],
+      totalCascadeTimeoutMs: 50,
+      customProviders: {
+        assemblyai: mockAssemblyAI,
+        deepgram: mockDeepgram,
+      },
+    });
+
+    await expect(
+      factory.diarizeAudioUrl('https://example.com/audio.mp3', 'test_timeout_vid'),
+    ).rejects.toThrow(DiarizationCascadeExhaustedError);
+
+    expect(mockAssemblyAI.diarizeAudioUrl).toHaveBeenCalledTimes(1);
+    // Deepgram must NOT have been called because budget was already exhausted
+    expect(mockDeepgram.diarizeAudioUrl).not.toHaveBeenCalled();
+  });
 });

@@ -78,7 +78,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
           return Promise.resolve({
             ok: true,
             status: 200,
-            json: async () => ({
+            json: () => Promise.resolve({
               id: 'transcript_test_123',
               status: 'queued',
             }),
@@ -90,7 +90,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
           return Promise.resolve({
             ok: true,
             status: 200,
-            json: async () => ({
+            json: () => Promise.resolve({
               id: 'transcript_test_123',
               status: 'processing',
             }),
@@ -100,7 +100,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({
+          json: () => Promise.resolve({
             id: 'transcript_test_123',
             status: 'completed',
             words: [
@@ -128,7 +128,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
         ok: false,
         status: 503,
         statusText: 'Service Unavailable',
-        text: async () => 'Cluster overload',
+        text: () => Promise.resolve('Cluster overload'),
       } as Response);
 
       await expect(
@@ -144,7 +144,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
           return Promise.resolve({
             ok: true,
             status: 200,
-            json: async () => ({
+            json: () => Promise.resolve({
               id: 'transcript_err',
               status: 'queued',
             }),
@@ -154,7 +154,7 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({
+          json: () => Promise.resolve({
             id: 'transcript_err',
             status: 'error',
             error: 'Audio file unreadable or corrupt',

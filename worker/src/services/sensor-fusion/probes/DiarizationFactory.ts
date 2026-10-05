@@ -17,8 +17,11 @@ import type {
 
 export type DiarizationProviderName = 'assemblyai' | 'deepgram';
 
+export const DEFAULT_TOTAL_CASCADE_TIMEOUT_MS = 18000;
+
 export interface DiarizationFactoryConfig {
   cascadeOrder?: DiarizationProviderName[];
+  totalCascadeTimeoutMs?: number;
   deepgramApiKey?: string;
   deepgramTimeoutMs?: number;
   assemblyaiApiKey?: string;
@@ -41,12 +44,17 @@ export class DiarizationCascadeExhaustedError extends Error {
 export class DiarizationFactory implements DiarizationProviderPort {
   private readonly providers: Map<DiarizationProviderName, DiarizationProviderPort> = new Map();
   private readonly cascadeOrder: DiarizationProviderName[];
+  private readonly totalCascadeTimeoutMs: number;
 
   constructor(config: DiarizationFactoryConfig) {
     this.cascadeOrder =
       config.cascadeOrder && config.cascadeOrder.length > 0
         ? config.cascadeOrder
         : [...DEFAULT_DIARIZATION_CASCADE];
+    this.totalCascadeTimeoutMs =
+      config.totalCascadeTimeoutMs && config.totalCascadeTimeoutMs > 0
+        ? config.totalCascadeTimeoutMs
+        : DEFAULT_TOTAL_CASCADE_TIMEOUT_MS;
 
     // Wire AssemblyAI
     if (config.customProviders?.assemblyai) {
@@ -86,12 +94,35 @@ export class DiarizationFactory implements DiarizationProviderPort {
   /**
    * Iterates through the cascade order, attempting execution on each provider.
    * If a provider fails or times out, catches the error, logs to Sentry,
-   * and falls back to the next provider.
+   * calculates remaining time against totalCascadeTimeoutMs, and falls back to the next provider.
+   * If remainingTime <= 0, immediately aborts without attempting subsequent providers.
    */
-  async diarizeAudioUrl(audioUrl: string, videoId: string): Promise<DiarizationResult> {
+  async diarizeAudioUrl(
+    audioUrl: string,
+    videoId: string,
+    options?: { timeoutMs?: number },
+  ): Promise<DiarizationResult> {
+    const cascadeStartTime = Date.now();
+    const effectiveCascadeTimeoutMs =
+      options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : this.totalCascadeTimeoutMs;
+
     const attemptedErrors: Array<{ provider: string; error: unknown }> = [];
 
     for (const providerName of this.cascadeOrder) {
+      const elapsedMs = Date.now() - cascadeStartTime;
+      const remainingTimeMs = effectiveCascadeTimeoutMs - elapsedMs;
+
+      if (remainingTimeMs <= 0) {
+        console.warn(
+          `[DiarizationFactory] Total cascade timeout budget exhausted (${effectiveCascadeTimeoutMs}ms). Skipping remaining provider "${providerName}".`,
+        );
+        attemptedErrors.push({
+          provider: providerName,
+          error: new Error(`Cascade timeout budget exhausted before provider execution (${elapsedMs}ms elapsed)`),
+        });
+        break;
+      }
+
       const provider = this.providers.get(providerName);
       if (!provider) {
         console.warn(`[DiarizationFactory] Provider "${providerName}" has no credentials or adapter registered, skipping.`);
@@ -99,7 +130,7 @@ export class DiarizationFactory implements DiarizationProviderPort {
       }
 
       try {
-        const result = await provider.diarizeAudioUrl(audioUrl, videoId);
+        const result = await provider.diarizeAudioUrl(audioUrl, videoId, { timeoutMs: remainingTimeMs });
         return result;
       } catch (providerError: unknown) {
         attemptedErrors.push({ provider: providerName, error: providerError });
@@ -114,6 +145,7 @@ export class DiarizationFactory implements DiarizationProviderPort {
           extra: {
             cascadeOrder: this.cascadeOrder,
             audioUrl,
+            remainingTimeMs,
             errorDetails: providerError instanceof Error ? providerError.message : String(providerError),
           },
         });

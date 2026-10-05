@@ -76,8 +76,13 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     this.model = config.model || DEEPGRAM_DEFAULT_MODEL;
   }
 
-  async diarizeAudioUrl(audioUrl: string, videoId: string): Promise<DiarizationResult> {
+  async diarizeAudioUrl(
+    audioUrl: string,
+    videoId: string,
+    options?: { timeoutMs?: number },
+  ): Promise<DiarizationResult> {
     const startTime = Date.now();
+    const effectiveTimeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : this.timeoutMs;
     const url = new URL(this.baseUrl);
     url.searchParams.set('model', this.model);
     url.searchParams.set('diarize', 'true');
@@ -85,7 +90,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     url.searchParams.set('utterances', 'false');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
 
     try {
       const response = await fetch(url.toString(), {

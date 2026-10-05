@@ -39,6 +39,10 @@ export interface DiarizationResult {
   latencyMs: number;
 }
 
+export interface DiarizeAudioOptions {
+  timeoutMs?: number;
+}
+
 export interface DiarizationProviderPort {
   /**
    * Ingests an audio source URL (e.g. presigned S3/R2 URL or direct media link)
@@ -46,5 +50,5 @@ export interface DiarizationProviderPort {
    *
    * Must FAIL CLOSED on timeout or API unavailability.
    */
-  diarizeAudioUrl(audioUrl: string, videoId: string): Promise<DiarizationResult>;
+  diarizeAudioUrl(audioUrl: string, videoId: string, options?: DiarizeAudioOptions): Promise<DiarizationResult>;
 }

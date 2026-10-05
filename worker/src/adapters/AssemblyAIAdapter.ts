@@ -76,10 +76,15 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       config.pollIntervalMs && config.pollIntervalMs > 0 ? config.pollIntervalMs : ASSEMBLYAI_DEFAULT_POLL_INTERVAL_MS;
   }
 
-  async diarizeAudioUrl(audioUrl: string, videoId: string): Promise<DiarizationResult> {
+  async diarizeAudioUrl(
+    audioUrl: string,
+    videoId: string,
+    options?: { timeoutMs?: number },
+  ): Promise<DiarizationResult> {
     const startTime = Date.now();
+    const effectiveTimeoutMs = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : this.timeoutMs;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
 
     try {
       // Step 1: Submit transcription job
