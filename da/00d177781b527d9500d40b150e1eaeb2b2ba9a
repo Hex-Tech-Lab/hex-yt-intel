@@ -1,0 +1,19 @@
+web/lib/__tests__/cascade-settings-route.test.ts
+  s_c2bb5a5d6f7923::t_328e4fda91934f 26,28,35,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da00d177781b527d9500d40b150e1eaeb2b2ba9a",
+  "prompts": {},
+  "sessions": {
+    "s_c2bb5a5d6f7923": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ef43b105fffevRLfKBVDbL0gWm",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
