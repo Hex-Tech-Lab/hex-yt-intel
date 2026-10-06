@@ -1,9 +1,11 @@
 'use client';
 
-import type React from 'react';
 import { Markdown } from '@astryxdesign/core';
-import { preprocessMarkdown } from '@/lib/utils/format';
+
 import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
+import { preprocessMarkdown } from '@/lib/utils/format';
+
+import type React from 'react';
 
 const HEADING_CLASS: Record<1 | 2 | 3 | 4 | 5 | 6, string> = {
   1: 'font-mono text-[16px] font-bold text-[var(--ink)] mt-6 mb-3 pb-2 border-b border-[var(--line-faint)]',
@@ -56,7 +58,10 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-4 hx-custom-scrollbar">
+    <div
+      className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-4 hx-custom-scrollbar"
+      style={{ scrollbarGutter: 'stable' }}
+    >
       {dimension.content ? (
         <div className="text-[14px] leading-relaxed text-[var(--ink-secondary)]">
           <Markdown components={readoutComponents}>

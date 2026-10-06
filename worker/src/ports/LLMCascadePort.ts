@@ -50,4 +50,14 @@ export interface LLMCascadePort {
     metadata: EngineMetadata,
     accept?: (text: string) => boolean
   ): Promise<{ text: string; modelUsed: string } | null>;
+
+  /**
+   * Stream raw LLM generation for Epistemic engines.
+   */
+  generateStream?(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    maxTokens?: number;
+    temperature?: number;
+  }): Promise<ReadableStream<Uint8Array | string>>;
 }

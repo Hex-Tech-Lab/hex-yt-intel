@@ -59,7 +59,9 @@ export class GroundedExtractionEngine {
 
     let rawResponse = '';
     try {
-      // Use LLMCascade or provider to generate the extraction
+      if (!this.cascade.generateStream) {
+        throw new GroundedExtractionError('LLMCascadePort does not support generateStream');
+      }
       const stream = await this.cascade.generateStream({
         systemPrompt,
         userPrompt,
@@ -140,15 +142,16 @@ export class GroundedExtractionEngine {
         const claimObj = rawClaim as Record<string, unknown>;
         const id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
         const speaker = typeof claimObj.speaker === 'string' ? claimObj.speaker : undefined;
+        const rawRange = Array.isArray(claimObj.timestampRange) ? (claimObj.timestampRange as unknown[]) : null;
         const hasValidRange =
-          Array.isArray(claimObj.timestampRange) &&
-          claimObj.timestampRange.length === 2 &&
-          typeof claimObj.timestampRange[0] === 'number' &&
-          typeof claimObj.timestampRange[1] === 'number' &&
-          !Number.isNaN(claimObj.timestampRange[0]) &&
-          !Number.isNaN(claimObj.timestampRange[1]);
-        const range = hasValidRange
-          ? [Number(claimObj.timestampRange[0]), Number(claimObj.timestampRange[1])] as [number, number]
+          rawRange !== null &&
+          rawRange.length === 2 &&
+          typeof rawRange[0] === 'number' &&
+          typeof rawRange[1] === 'number' &&
+          !Number.isNaN(rawRange[0]) &&
+          !Number.isNaN(rawRange[1]);
+        const range = hasValidRange && rawRange !== null
+          ? [Number(rawRange[0]), Number(rawRange[1])] as [number, number]
           : null;
         const verbatimQuote = typeof claimObj.verbatimQuote === 'string' ? claimObj.verbatimQuote.trim() : '';
         const atomicAssertion = typeof claimObj.atomicAssertion === 'string' ? claimObj.atomicAssertion : '';

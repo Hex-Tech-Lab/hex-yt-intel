@@ -125,10 +125,10 @@ export class PromptBuilder implements PromptBuilderPort {
       // every bundle of the same video — is preserved.
       const isProjective = isProjectiveBundle(dims);
       const epistemicConstraint = isProjective
-        ? `EPISTEMIC MODE - PLURALISTIC PROJECTION: You are an expert strategic analyst. Using the rigidly extracted data provided as your foundational truth, project its implications onto the broader market. You are authorized to use your internal knowledge to evaluate monetization viability, audience impact, and cross-domain connections. This request is EXEMPT from the Insufficient Data Protocol's zero-extrapolation restriction.`
+        ? `EPISTEMIC MODE - PLURALISTIC PROJECTION: You are an expert strategic analyst. Using the rigidly extracted data provided as your foundational truth, project its implications onto the broader market. You are authorized to use your internal knowledge to evaluate monetization viability, audience impact, and cross-domain connections. This request is EXEMPT from the Insufficient Data Protocol's zero-extrapolation restriction. You are strictly FORBIDDEN from using the literal string "[Insufficient data in source transcript to fulfill this dimension]" across any persona archetype (Creator, Indie Maker, Consultant, Researcher, Product Manager). If direct evidence is minimal, generate realistic deductive market projections and strategic estimations based on domain dynamics.`
         : `EPISTEMIC MODE - UNIVERSE OF 1: You are a sterile extraction engine. Your universe consists ONLY of the provided transcript. If a concept, entity, or claim is not explicitly spoken in the text, it does not exist. Zero extrapolation.`;
       const bundleFallback = isProjective
-        ? `If the grounded evidence is genuinely insufficient for a projection, state the limitation explicitly in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`
+        ? `Never output "[Insufficient data in source transcript to fulfill this dimension]". If direct evidence is sparse, provide a deductive market projection and strategic estimation. Never output empty dimensions arrays; always include dimension objects with analytical projections.`
         : fallbackInstructions;
 
       // R1d: inject ONLY the validated number + content pairs. The boundary
@@ -144,6 +144,10 @@ export class PromptBuilder implements PromptBuilderPort {
       const sanitizedPriorPayload = { schemaVersion: '2.0', dimensions: sanitizedPriorDimensions };
       const priorPayloadInstruction = (isProjective && sanitizedPriorDimensions.length > 0)
         ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(sanitizedPriorPayload)}\n`
+        : '';
+
+      const dim6Notice = dims.includes(6)
+        ? `\nIMPORTANT: For DIMENSION 6, insert an upfront notice banner at "#### 6.0 Comparative Scope & Stress-Testing" explaining comparative parameters, stress-testing boundaries, and deductive projection models before 6.1 and 6.2.\n`
         : '';
 
       // R1b/R1e: a grounded bundle containing dimension 8 produces 8.1/8.2
@@ -175,7 +179,7 @@ ${epistemicConstraint}
 CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (${label}):
 You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension(s):
 ${dimLabels}
-${priorPayloadInstruction}${dim8GroundedOmission}
+${priorPayloadInstruction}${dim8GroundedOmission}${dim6Notice}
 Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}${projectiveBridgeInstruction}
 Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
 ${bundleFallback}

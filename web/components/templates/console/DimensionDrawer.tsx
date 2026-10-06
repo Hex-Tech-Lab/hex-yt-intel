@@ -176,6 +176,32 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     };
   }, [dimension, onClose, setOverlayOpen]);
 
+  const [drawerWidth, setDrawerWidth] = useState<number>(390);
+  const isDraggingRef = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const startX = e.clientX;
+    const startWidth = drawerWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const deltaX = startX - moveEvent.clientX;
+      const newWidth = Math.min(Math.max(startWidth + deltaX, 320), Math.min(window.innerWidth * 0.8, 800));
+      setDrawerWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, [drawerWidth]);
+
   if (!dimension) return null;
 
   return (
@@ -188,8 +214,16 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label={`${dimension.label} details`}
-        className="fixed right-0 top-0 bottom-0 w-[min(90vw,390px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
+        style={{ width: `${drawerWidth}px`, maxWidth: '90vw' }}
+        className="fixed right-0 top-0 bottom-0 bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute left-0 top-0 bottom-0 w-2 -translate-x-1 cursor-col-resize hover:bg-[var(--accent)]/30 transition-colors z-[102]"
+          title="Drag to resize panel"
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]">
           <div className="flex items-center gap-2">

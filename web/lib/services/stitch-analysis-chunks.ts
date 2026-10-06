@@ -18,6 +18,7 @@ import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
 import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
 import { normalizeNodeWeight } from "@/lib/utils/node-weight-normalization";
+import { CombinerPass } from "@/lib/services/CombinerPass";
 import {
   UCISPayloadV2Schema,
   KGNodeSchema,
@@ -232,9 +233,10 @@ export function stitchChunksIntoPayload(
     return { payload: undefined, markdown: "", validationPassed: false };
   }
 
-  const cleanDimensions = stitchedDimensions
-    .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
-    .sort((a, b) => a.number - b.number);
+  const cleanDimensions = CombinerPass.reduceDimensions(
+    stitchedDimensions
+      .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
+  ).sort((a, b) => a.number - b.number);
 
   // Normalize KG node.weight / edge.strength scale before validation.
   //

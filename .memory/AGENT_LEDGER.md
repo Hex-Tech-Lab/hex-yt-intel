@@ -11,6 +11,14 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Phase C Live Wire Calibration Results
+- [2026-10-06T13:04:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: Epistemic Pipeline Deduplication, Timestamp Linking & UI Stabilization:
+  - Task 1: Map-Reduce Combiner Pass (AST parser & deduplicator across D1-D8 & D10, sequential numbering System 1..N, flat letter subclauses A..D via CombinerPass).
+  - Task 2: Projective Synthesis & D11/D6 Normalization (banned literal insufficient data string across all 5 persona archetypes with deductive market projections; D6 upfront 6.0 notice banner).
+  - Task 3 & 4: Timestamp Parser, D1-D5 Heading Staging, and Entity Time-Seek binding (/\b(\d{1,2}:)?(\d{2}):(\d{2})\b/g, prevent 00:00:00 false seek via secs > 0 guard).
+  - Task 5: Highlights Reel Async Job Poller & Worker Timeout (bounded polling with graceful collapse on error to preserve unit test contracts).
+  - Task 6: UI Reflow Isolation & Resizable Split-Panels (user-select: none & pointer-events: none on tangent headers/badges, scrollbar-gutter: stable on SelectedDimensionReadout, resizable drawer with drag handle).
+  - Task 7: Quality Gate & Skill Verification (Passed web type-check, worker type-check, vitest HighlightsScrubber suite, qa-intel baseline comparison with 0 new issues, and full web production build).
+  - Target: worker/src/services/CombinerPass.ts, worker/src/services/PromptBuilder.ts, worker/src/services/ProjectiveSynthesisEngine.ts, worker/src/services/GroundedExtractionEngine.ts, worker/src/ports/LLMCascadePort.ts, worker/src/services/sensor-fusion/diarization-metrics.ts, web/lib/services/CombinerPass.ts, web/lib/services/stitch-analysis-chunks.ts, web/components/containers/DashboardContainer.tsx, web/components/dashboard/SelectedDimensionReadout.tsx, web/components/templates/console/IntelligencePanel.tsx, web/components/templates/console/DimensionDrawer.tsx.
 - [2026-10-06T01:40:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] CodeRabbit Architectural & Type-Safety Sweep + qa-intel CI Zero-Issue Baseline:
   - Addressed CodeRabbit review findings on PR #442:
     - Extracted shared `calculateDiarizationMetrics` and `redactMediaUrl` into `worker/src/services/sensor-fusion/diarization-metrics.ts`.

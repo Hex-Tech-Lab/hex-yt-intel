@@ -1,7 +1,7 @@
 import type {
   DiarizationMetrics,
   WordDiarization,
-} from '../ports/DiarizationProviderPort';
+} from '../../ports/DiarizationProviderPort';
 
 /**
  * Shared native mathematical reduction over word-level timestamp intervals:
@@ -88,7 +88,8 @@ export function redactMediaUrl(rawUrl: string | undefined): string {
   try {
     const parsed = new URL(rawUrl);
     return parsed.hostname;
-  } catch {
+  } catch (error) {
+    console.warn('[redactMediaUrl] Failed to parse media URL', error);
     return 'redacted-invalid-url';
   }
 }

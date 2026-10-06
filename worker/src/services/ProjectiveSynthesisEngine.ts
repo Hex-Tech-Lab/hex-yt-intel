@@ -66,6 +66,9 @@ export class ProjectiveSynthesisEngine {
 
     let rawResponse = '';
     try {
+      if (!this.cascade.generateStream) {
+        throw new ProjectiveSynthesisError('LLMCascadePort does not support generateStream');
+      }
       const stream = await this.cascade.generateStream({
         systemPrompt,
         userPrompt,
@@ -146,7 +149,7 @@ export class ProjectiveSynthesisEngine {
         }
 
         const implication = typeof projRecord.implication === 'string' ? projRecord.implication : '';
-        const marketHorizon =
+        const marketHorizon: 'near-term' | 'mid-term' | 'long-term' =
           projRecord.marketHorizon === 'near-term' ||
           projRecord.marketHorizon === 'mid-term' ||
           projRecord.marketHorizon === 'long-term'
