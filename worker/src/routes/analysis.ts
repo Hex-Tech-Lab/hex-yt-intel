@@ -116,7 +116,7 @@ interface StreamRequest {
   // per tier, which `models` (flat id list, signed into the HMAC token) can't carry when
   // multiple tiers share the same model id across different providers. Preferred over
   // `models` when present; `models` stays as the signed/legacy fallback for stale clients.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
   // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
   // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
   maxOutputTokens?: { haiku: number; default: number };

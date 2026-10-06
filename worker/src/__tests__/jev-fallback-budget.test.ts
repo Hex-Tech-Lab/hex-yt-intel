@@ -400,7 +400,7 @@ describe('analyze-llm-stream fallback budget gating (T3 route-level)', () => {
         sig,
         exp,
         models: [],
-        cascade: [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku 4.5', providerOrder: ['anthropic'] }],
+        cascade: [{ model: 'test/model-a', name: 'Model A', providerOrder: ['anthropic'] }],
         tokenVersion: 2,
         streamCount: STREAM_COUNT,
         jevChunkIndex: 0,

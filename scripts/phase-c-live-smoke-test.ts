@@ -3,10 +3,11 @@
  *
  * Runs a live physical evaluation pass against Z6l4HpuyyP0 WITHOUT mocks:
  * 1. Physical AssemblyAI pre-recorded API execution (speakerCount & turnEntropy returned).
- * 2. Physical Multimodal Probe call via OpenRouter (google/gemini-2.5-flash).
- * 3. Part A sterile extraction & Part B projective synthesis via OpenRouter (anthropic/claude-haiku-4.5).
+ * 2. Physical Multimodal Probe call via OpenRouter (model from PHASE_C_MULTIMODAL_PROBE_MODEL).
+ * 3. Part A sterile extraction & Part B projective synthesis via OpenRouter (model from PHASE_C_LLM_MODEL).
  *
  * Run: pnpm dlx tsx scripts/phase-c-live-smoke-test.ts
+ * ADR 041: no hardcoded model IDs in scripts — both fail fast when unset.
  */
 
 import * as fs from 'node:fs';
@@ -23,9 +24,12 @@ const ASSEMBLYAI_KEY = process.env.ASSEMBLYAI_API_KEY;
 const DEEPGRAM_KEY = process.env.DEEPGRAM_API_KEY;
 const MULTIMODAL_VISION_KEY = process.env.MULTIMODAL_VISION_API_KEY || process.env.OPENROUTER_API_KEY;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+// ADR 041: explicit configuration, no silently-defaulted remote models.
+const MULTIMODAL_PROBE_MODEL = process.env.PHASE_C_MULTIMODAL_PROBE_MODEL;
+const PHASE_C_LLM_MODEL = process.env.PHASE_C_LLM_MODEL;
 
-if (!ASSEMBLYAI_KEY || !MULTIMODAL_VISION_KEY || !OPENROUTER_KEY) {
-  console.error('Missing required environment keys in process.env');
+if (!ASSEMBLYAI_KEY || !MULTIMODAL_VISION_KEY || !OPENROUTER_KEY || !MULTIMODAL_PROBE_MODEL || !PHASE_C_LLM_MODEL) {
+  console.error('Missing required environment keys in process.env (ASSEMBLYAI_API_KEY, MULTIMODAL_VISION_API_KEY/OPENROUTER_API_KEY, OPENROUTER_API_KEY, PHASE_C_MULTIMODAL_PROBE_MODEL, PHASE_C_LLM_MODEL)');
   process.exit(1);
 }
 
@@ -37,8 +41,8 @@ async function runLiveSmokeTest() {
   console.log(`\n=================== PHASE C LIVE WIRE SMOKE TEST ===================`);
   console.log(`Target Video: ${VIDEO_ID}`);
   console.log(`Physical Diarization: AssemblyAI (Universal-1)`);
-  console.log(`Physical Vision Probe: OpenRouter (google/gemini-2.5-flash)`);
-  console.log(`Physical LLM Cascade: OpenRouter (anthropic/claude-haiku-4.5)`);
+  console.log(`Physical Vision Probe: OpenRouter (${MULTIMODAL_PROBE_MODEL})`);
+  console.log(`Physical LLM Cascade: OpenRouter (${PHASE_C_LLM_MODEL})`);
   console.log(`---------------------------------------------------------------------`);
 
   // Step 1 & 2 are orchestrated natively inside EpistemicPipelineDispatcher.
@@ -50,12 +54,13 @@ async function runLiveSmokeTest() {
 
   const multimodalRunner = new MultimodalProbeRunner({
     apiKey: MULTIMODAL_VISION_KEY!,
+    model: MULTIMODAL_PROBE_MODEL!,
     timeoutMs: 25000,
   });
 
   const promptBuilder = new PromptBuilder();
 
-  // Create real live LLM cascade adapter targeting OpenRouter google/gemini-2.5-flash-lite
+  // Create real live LLM cascade adapter targeting the env-configured OpenRouter model
   const liveCascade: LLMCascadePort = {
     generateStream: async (options) => {
       let content = '{}';
@@ -71,7 +76,7 @@ async function runLiveSmokeTest() {
             'X-Title': 'hex-yt-intel-smoke-test',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-lite',
+            model: PHASE_C_LLM_MODEL,
             messages: [
               { role: 'system', content: options.systemPrompt },
               { role: 'user', content: options.userPrompt },

@@ -25,6 +25,8 @@ export interface SensorRegistryConfig {
   deepgramTimeoutMs?: number;
   assemblyaiTimeoutMs?: number;
   multimodalTimeoutMs?: number;
+  /** Required whenever openrouterApiKey is configured (ADR 041 — no silent remote-model defaults). Resolved by the caller, e.g. from the Settings Registry. */
+  multimodalModel?: string;
   diarizationCascadeOrder?: DiarizationProviderName[];
   mockDiarization?: DiarizationProviderPort;
   mockMultimodal?: MultimodalProbePort;
@@ -70,8 +72,12 @@ export class SensorRegistry {
     if (config.mockMultimodal) {
       this.multimodalProvider = config.mockMultimodal;
     } else if (config.openrouterApiKey && config.openrouterApiKey.trim() !== '') {
+      if (!config.multimodalModel || config.multimodalModel.trim() === '') {
+        throw new Error('[SensorRegistry] multimodalModel is required when openrouterApiKey is configured — no silent remote-model default (ADR 041).');
+      }
       this.multimodalProvider = new MultimodalProbeRunner({
         apiKey: config.openrouterApiKey,
+        model: config.multimodalModel,
         timeoutMs: config.multimodalTimeoutMs,
       });
     }

@@ -8,6 +8,7 @@ describe('MultimodalProbeRunner (Phase 2 Sensor Fusion)', () => {
   const config: MultimodalRunnerConfig = {
     apiKey: 'test-openrouter-key',
     baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+    model: 'test/probe-model',
     timeoutMs: 500,
   };
 
@@ -20,6 +21,10 @@ describe('MultimodalProbeRunner (Phase 2 Sensor Fusion)', () => {
 
   it('throws error when apiKey is missing', () => {
     expect(() => new MultimodalProbeRunner({ apiKey: '' })).toThrow(/API key is required/);
+  });
+
+  it('throws error when probe model is missing (no silent remote-model default, ADR 041)', () => {
+    expect(() => new MultimodalProbeRunner({ apiKey: 'test-openrouter-key' })).toThrow(/Probe model is required/);
   });
 
   it('returns default empty summary when no chunks provided', async () => {

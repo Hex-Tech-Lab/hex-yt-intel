@@ -253,8 +253,10 @@ export interface WorkerStreamRequest {
   models?: string[];
   // Full registry-resolved cascade (2026-07-25, includes providerOrder per tier)
   // -- see CreateAnalysisUseCase's resolveAnalysisCascade() and StreamRequest.cascade
-  // in worker/src/routes/analysis.ts.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  // in worker/src/routes/analysis.ts. ADR 041: resolve time also stamps per-tier
+  // dispatch capabilities (maxOutputTokens, requiresProviderOrder) so the worker's
+  // dispatch code is model-agnostic — no inline model-ID comparisons.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
   maxOutputTokens?: { haiku: number; default: number };

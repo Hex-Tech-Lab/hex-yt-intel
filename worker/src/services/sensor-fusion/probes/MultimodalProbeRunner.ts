@@ -22,11 +22,11 @@ import type {
 export interface MultimodalRunnerConfig {
   apiKey: string;
   baseUrl?: string;
-  model?: string;
+  /** Required — no silent remote-model default (ADR 041: the configured probe model must be resolved by the caller, e.g. from the Settings Registry, and fail fast if absent). */
+  model: string;
   timeoutMs?: number;
 }
 
-export const MULTIMODAL_PROBE_DEFAULT_MODEL = 'google/gemini-2.5-flash';
 export const MULTIMODAL_PROBE_DEFAULT_TIMEOUT_MS = 15000;
 export const OPENROUTER_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -60,10 +60,13 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
     if (!config.apiKey || config.apiKey.trim() === '') {
       throw new Error('[MultimodalProbeRunner] API key is required and cannot be empty.');
     }
+    if (!config.model || config.model.trim() === '') {
+      throw new Error('[MultimodalProbeRunner] Probe model is required — no silent remote-model default (ADR 041).');
+    }
     this.apiKey = config.apiKey.trim();
     // Normalize baseUrl: default to OpenRouter chat completions endpoint
     this.baseUrl = config.baseUrl || OPENROUTER_COMPLETIONS_URL;
-    this.model = config.model || MULTIMODAL_PROBE_DEFAULT_MODEL;
+    this.model = config.model;
     this.timeoutMs = config.timeoutMs && config.timeoutMs > 0 ? config.timeoutMs : MULTIMODAL_PROBE_DEFAULT_TIMEOUT_MS;
   }
 

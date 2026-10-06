@@ -17,10 +17,10 @@ describe('buildFailPatch', () => {
   });
 
   it('preserves existing report fields instead of overwriting them (P2 fix)', () => {
-    const existing = { dimension_status: [{ number: 1, status: 'done' }], model_used: 'claude-haiku-4.5' };
+    const existing = { dimension_status: [{ number: 1, status: 'done' }], model_used: 'test-model' };
     const patch = buildFailPatch('Network error', existing, '2026-08-15T00:00:00.000Z');
     expect(patch.validation_report.dimension_status).toEqual(existing.dimension_status);
-    expect(patch.validation_report.model_used).toBe('claude-haiku-4.5');
+    expect(patch.validation_report.model_used).toBe('test-model');
     expect(patch.validation_report.status).toBe('failed');
   });
 

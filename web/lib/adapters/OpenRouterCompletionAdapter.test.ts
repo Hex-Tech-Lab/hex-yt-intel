@@ -25,19 +25,19 @@ describe('OpenRouterCompletionAdapter.complete', () => {
     const result = await adapter.complete({
       system: 'sys prompt',
       user: 'user prompt',
-      models: [{ model: 'anthropic/claude-haiku-4.5' }],
+      models: [{ model: 'test/model-a' }],
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
     const body = JSON.parse(init.body as string);
-    expect(body.model).toBe('anthropic/claude-haiku-4.5');
+    expect(body.model).toBe('test/model-a');
     expect(body.messages).toEqual([
       { role: 'system', content: 'sys prompt' },
       { role: 'user', content: 'user prompt' },
     ]);
-    expect(result).toEqual({ text: 'hello world', model: 'anthropic/claude-haiku-4.5' });
+    expect(result).toEqual({ text: 'hello world', model: 'test/model-a' });
   });
 
   it('falls through to the next cascade model when the first returns an empty completion', async () => {
