@@ -1,0 +1,29 @@
+web/lib/utils/worker-origin-allowlist.ts
+  s_8b47960df14dfb::t_3205cfc5aa090b 1-28
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_8b47960df14dfb::t_739b1f309b9f65 78,80
+  s_8b47960df14dfb::t_bd2c678e2b82fa 4
+web/lib/__tests__/worker-origin-allowlist.test.ts
+  s_8b47960df14dfb::t_cbad43820173dd 1-32
+web/lib/services/worker-llm.ts
+  s_8b47960df14dfb::t_115d689888de47 4
+  s_8b47960df14dfb::t_e729093a148426 65,67
+web/.env.example
+  s_8b47960df14dfb::t_84d79c07311e1b 28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa08d7071a15eced9c8f56357823992994b1b3d1",
+  "prompts": {},
+  "sessions": {
+    "s_8b47960df14dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eef56d471ffeOVRvTEJZomqhhA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
