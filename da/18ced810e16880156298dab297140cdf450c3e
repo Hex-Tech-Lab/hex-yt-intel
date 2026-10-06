@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 14-21
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 451
+web/components/dashboard/SelectedDimensionReadout.tsx
+  h_60000122af7b55 4,6-8,61-64
+web/components/templates/console/DimensionDrawer.tsx
+  h_60000122af7b55 179-204,217-218,220-226
+web/components/templates/console/IntelligencePanel.tsx
+  h_60000122af7b55 134-135,139
+web/lib/services/CombinerPass.ts
+  h_60000122af7b55 1-237
+web/lib/services/stitch-analysis-chunks.ts
+  h_60000122af7b55 21,236-239
+worker/src/ports/LLMCascadePort.ts
+  h_60000122af7b55 53-62
+worker/src/services/CombinerPass.ts
+  h_60000122af7b55 1-269
+worker/src/services/GroundedExtractionEngine.ts
+  h_60000122af7b55 62-64,145,147-154
+worker/src/services/ProjectiveSynthesisEngine.ts
+  h_60000122af7b55 69-71,152
+worker/src/services/PromptBuilder.ts
+  h_60000122af7b55 128,131,149-152,182
+worker/src/services/sensor-fusion/diarization-metrics.ts
+  h_60000122af7b55 4,91-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da18ced810e16880156298dab297140cdf450c3e",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
