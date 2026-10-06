@@ -1,0 +1,23 @@
+.memory/DEFENSIVE_LEDGER.md
+  s_8b47960df14dfb::t_383c2b2175e498 1-109
+AGENTS.md
+  s_8b47960df14dfb::t_03254fc3f38969 42-44
+CLAUDE.md
+  s_8b47960df14dfb::t_663503674863e5 204-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c8ff8d12de4a3771453334cc6e2483daeca4edc",
+  "prompts": {},
+  "sessions": {
+    "s_8b47960df14dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eef56d471ffeOVRvTEJZomqhhA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
