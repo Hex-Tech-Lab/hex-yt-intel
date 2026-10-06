@@ -1,0 +1,82 @@
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  s_8b47960df14dfb::t_05473a5815cc4f 25-26
+  s_8b47960df14dfb::t_5c83237119fe5f 63-65,69
+worker/src/services/LLMCascade.test.ts
+  s_8b47960df14dfb::t_0ffbc21043a524 81-91,97,108-110,112
+web/lib/adapters/SettingsModelAdapter.ts
+  s_8b47960df14dfb::t_b2048079c840dd 122-129
+web/lib/utils/model-id-translator.ts
+  s_8b47960df14dfb::t_220c40b75dccd6 5
+worker/src/services/LLMCascade.ts
+  s_8b47960df14dfb::t_86db56be7f4d4d 606
+  s_8b47960df14dfb::t_2018a9307b732b 276,283-285
+  s_8b47960df14dfb::t_ac060ead8379a1 409
+  s_8b47960df14dfb::t_8dd5a99cbae473 390
+  s_8b47960df14dfb::t_5d7f49baa55f65 76-79
+  s_8b47960df14dfb::t_c89990a4a58e78 120-131
+  s_8b47960df14dfb::t_2aaacfe1c9a4ca 194-196
+  s_8b47960df14dfb::t_0a37f60f49b7c0 80
+  s_8b47960df14dfb::t_aa1c595cfedcf3 587-589,595-596
+  s_8b47960df14dfb::t_7309777afe250a 52-56,59,62,64
+  s_8b47960df14dfb::t_19ca70d49e35eb 170
+  s_8b47960df14dfb::t_bc4fe9e6e9dfc8 18
+  s_8b47960df14dfb::t_691a53b1439f32 309-311
+  s_8b47960df14dfb::t_f349bf36155a95 344-349
+worker/src/services/sensor-fusion/SensorRegistry.ts
+  s_8b47960df14dfb::t_94dcc82f767f04 28-29
+  s_8b47960df14dfb::t_772142c271ba16 75-77,80
+scripts/phase-c-live-smoke-test.ts
+  s_8b47960df14dfb::t_bc576557184bdf 27-29,31-32
+  s_8b47960df14dfb::t_b6f22508874ff2 57
+  s_8b47960df14dfb::t_a72a68b15cb966 63,79
+  s_8b47960df14dfb::t_4ca145b7f6af3b 44-45
+  s_8b47960df14dfb::t_2ae062987b056f 6-7,10
+web/lib/types/contracts.ts
+  s_8b47960df14dfb::t_00704fdb57438a 256-259
+web/lib/config/cascade.ts
+  s_8b47960df14dfb::t_233e0d509ccb35 15-18
+  s_8b47960df14dfb::t_98f93d899fbc4e 168-178,180-181,183-187,189-207
+  s_8b47960df14dfb::t_9594b6e1b5d5d2 112-151
+  s_8b47960df14dfb::t_ce45216ceaf460 5
+worker/src/__tests__/multimodal-probe-runner.test.ts
+  s_8b47960df14dfb::t_dc3333a68ace77 11,26-27
+  s_8b47960df14dfb::t_198b997055d117 28-29
+web/lib/__tests__/cascade-resolution.test.ts
+  s_8b47960df14dfb::t_32ffd0fd41cf96 1-110
+worker/src/routes/analysis.ts
+  s_8b47960df14dfb::t_7edd099b49ea71 119
+worker/src/services/model-id-translator.ts
+  s_8b47960df14dfb::t_176ac47389e786 5
+web/lib/__tests__/analysis-fail-patch.test.ts
+  s_8b47960df14dfb::t_764127ca47309a 20,23
+web/lib/__tests__/contracts/openrouter-request.contract.test.ts
+  s_8b47960df14dfb::t_d308eb6325c44e 130,185,201
+web/lib/adapters/OpenRouterCompletionAdapter.test.ts
+  s_8b47960df14dfb::t_6a03739d0ae526 28,35,40
+worker/src/__tests__/jev-fallback-budget.test.ts
+  s_8b47960df14dfb::t_26a6c5f1e7102e 403
+worker/src/__tests__/jev-plan-route.test.ts
+  s_8b47960df14dfb::t_f82f0e20ffa381 31
+worker/src/__tests__/jev-slice-route.test.ts
+  s_8b47960df14dfb::t_6b8c37e71917ed 30
+worker/src/__tests__/jev-time-sync-route.test.ts
+  s_8b47960df14dfb::t_9e8c8a8fdd300c 23
+worker/src/__tests__/prompt-cache-request-shape.test.ts
+  s_8b47960df14dfb::t_69cd958da78f7c 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "181483c3ab7f952e09cc19f96cb40b2255853ca6",
+  "prompts": {},
+  "sessions": {
+    "s_8b47960df14dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eef56d471ffeOVRvTEJZomqhhA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
