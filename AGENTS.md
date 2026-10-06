@@ -39,6 +39,9 @@ All agents MUST adhere to the 4 core Karpathy engineering tenets, strictly bound
 3. **Surgical Diffs**: Modify ONLY target lines/files. Zero drive-by formatting, zero unsolicited refactors, strict blast-radius isolation.
 4. **Goal-Driven Verification**: Define empirical pass criteria; execute negative-control checks, vitest unit suites, strict type checks (`tsc --noEmit`), and `qa-intel:baseline` before closing tasks.
 
+### Defensive Ledger Contract (Mandatory)
+Any modification to a primary system configuration, fallback behavior, timeout constant, or API contract MUST trigger an automatic cross-reference against `.memory/DEFENSIVE_LEDGER.md`. If a touched module has mapped defensive relatives or shadow defaults, those fallback states must be audited, kept coherent, and updated synchronously in the same PR.
+
 ### Imports (order — grouped with blank lines)
 1. Framework / lib (`react`, `next/server`, Zustand, `@sentry/nextjs`)
 2. Third-party (`zod`, `@supabase/ssr`, `d3`)
