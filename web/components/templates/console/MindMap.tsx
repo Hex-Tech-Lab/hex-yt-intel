@@ -268,7 +268,12 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       });
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      if (typeof window !== 'undefined') {
+        window.getSelection()?.removeAllRanges();
+      }
+    };
   }, []);
 
   // Global mousemove/mouseup listeners while dragging

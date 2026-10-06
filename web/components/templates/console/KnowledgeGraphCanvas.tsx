@@ -72,7 +72,12 @@ export function KnowledgeGraphCanvas({
       setSize({ w: el.clientWidth, h: height ?? (compact ? 280 : el.clientHeight || 520) });
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (typeof window !== 'undefined') {
+        window.getSelection()?.removeAllRanges();
+      }
+    };
   }, [height, compact]);
 
   const data = useMemo(() => {

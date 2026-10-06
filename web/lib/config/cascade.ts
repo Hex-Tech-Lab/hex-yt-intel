@@ -175,14 +175,23 @@ export const CASCADE_MODEL_ALLOWLIST: readonly string[] = Array.from(
  *   previous silent fallback, per the 10X registry-enforcement mission. ADR
  *   040's save-time validation should prevent this from ever being saved.
  */
+function parseValidTokenCap(key: string, val: unknown, fallback: number): number {
+  if (val === undefined || val === null) return fallback;
+  const num = Number(val);
+  if (!Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) {
+    throw new Error(`Cascade Registry SSOT Violation: setting '${key}' must be a positive integer, received: ${String(val)}`);
+  }
+  return num;
+}
+
 async function resolveCascade(key: CascadeRegistryKey, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
     [key, ...OUTPUT_TOKEN_REGISTRY_KEYS],
     { [key]: fallback as CascadeItem[], 'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku, 'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default } as Record<string, unknown>
   );
   const tokenCaps = {
-    haiku: Number(resolved['analysis.maxOutputTokens.haiku']) || OUTPUT_TOKEN_FALLBACKS.haiku,
-    default: Number(resolved['analysis.maxOutputTokens.default']) || OUTPUT_TOKEN_FALLBACKS.default,
+    haiku: parseValidTokenCap('analysis.maxOutputTokens.haiku', resolved['analysis.maxOutputTokens.haiku'], OUTPUT_TOKEN_FALLBACKS.haiku),
+    default: parseValidTokenCap('analysis.maxOutputTokens.default', resolved['analysis.maxOutputTokens.default'], OUTPUT_TOKEN_FALLBACKS.default),
   };
 
   const value = resolved[key];
@@ -199,6 +208,9 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
   return items.map((item) => {
     const caps = MODEL_CAPABILITIES[item.model];
     if (!caps) return { ...item };
+    if (caps.requiresProviderOrder && (!Array.isArray(item.providerOrder) || item.providerOrder.length === 0)) {
+      throw new Error(`Cascade Registry SSOT Violation (${key}): model '${item.model}' requires a non-empty providerOrder`);
+    }
     return {
       ...item,
       ...(caps.tokenCapKey ? { maxOutputTokens: tokenCaps[caps.tokenCapKey] } : {}),

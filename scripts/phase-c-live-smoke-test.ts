@@ -69,6 +69,7 @@ async function runLiveSmokeTest() {
       try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
+          signal: AbortSignal.timeout(60000),
           headers: {
             Authorization: `Bearer ${OPENROUTER_KEY}`,
             'Content-Type': 'application/json',

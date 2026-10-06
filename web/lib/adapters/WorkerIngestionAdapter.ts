@@ -33,7 +33,15 @@ function getRandomUserAgent(): string {
 
 async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: string; segments?: TranscriptSegment[] }> {
   const workerUrl = env.cloudflareWorkerUrl;
-  if (!workerUrl) throw new Error('Worker URL not configured');
+  if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
+    throw new Error('Worker URL not configured');
+  }
+
+  const urlObj = new URL(workerUrl);
+  if (urlObj.protocol !== 'https:' || !isTrustedWorkerOrigin(urlObj.hostname)) {
+    console.error('[fetchWorkerTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
+    throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
+  }
 
   try {
     const response = await fetch(`${workerUrl}/fetch-transcript`, {

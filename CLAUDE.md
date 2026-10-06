@@ -202,6 +202,7 @@ All agents MUST adhere to the 4 core Karpathy engineering tenets, strictly bound
    - Define empirical pass criteria; execute negative-control checks, vitest unit suites, strict type checks (`tsc --noEmit`), and `qa-intel:baseline` before closing tasks.
 
 ### Defensive Ledger Contract (Mandatory)
+
 Any modification to a primary system configuration, fallback behavior, timeout constant, or API contract MUST trigger an automatic cross-reference against `.memory/DEFENSIVE_LEDGER.md`. If a touched module has mapped defensive relatives or shadow defaults, those fallback states must be audited, kept coherent, and updated synchronously in the same PR.
 
 ---

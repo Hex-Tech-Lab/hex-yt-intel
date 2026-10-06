@@ -22,7 +22,7 @@ const HAIKU_TIERS = CASCADE_FALLBACKS.analysis.filter((i) => i.model === 'anthro
 beforeEach(() => {
   getRegistrySettings.mockReset();
   // Default: registry returns the caller fallback (key absent → negative cache null keeps fallback reference).
-  getRegistrySettings.mockImplementation(async (keys, fallback) => ({ ...fallback }));
+  getRegistrySettings.mockImplementation((keys, fallback) => Promise.resolve({ ...fallback }));
 });
 
 describe('resolveCascade capability stamping (ADR 041)', () => {
@@ -38,11 +38,11 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
   });
 
   it('stamps capabilities by model ID onto registry-resolved items (DB values carry no capability fields)', async () => {
-    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku (Vertex)' }];
-    getRegistrySettings.mockImplementation(async (keys, fallback) => {
+    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku (Vertex)', providerOrder: ['google-vertex'] }];
+    getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = dbValue;
-      return out as typeof fallback;
+      return Promise.resolve(out as typeof fallback);
     });
 
     const items = await resolveAnalysisCascade();
@@ -51,11 +51,22 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
     expect(items[0]?.requiresProviderOrder).toBe(true);
   });
 
+  it('rejects a tier requiring provider order when providerOrder is missing or empty', async () => {
+    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku (Vertex)' }];
+    getRegistrySettings.mockImplementation((keys, fallback) => {
+      const out = { ...fallback } as Record<string, unknown>;
+      out['cascade.analysis'] = dbValue;
+      return Promise.resolve(out as typeof fallback);
+    });
+
+    await expect(resolveAnalysisCascade()).rejects.toThrow(/requires a non-empty providerOrder/);
+  });
+
   it('resolves the cap from the analysis.maxOutputTokens.* registry keys, not a static value', async () => {
-    getRegistrySettings.mockImplementation(async (keys, fallback) => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['analysis.maxOutputTokens.haiku'] = 6000;
-      return out as typeof fallback;
+      return Promise.resolve(out as typeof fallback);
     });
 
     const items = await resolveAnalysisCascade();
@@ -64,28 +75,28 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
   });
 
   it('throws an explicit SSOT violation when the registry returns a malformed value (no silent fallback)', async () => {
-    getRegistrySettings.mockImplementation(async (keys, fallback) => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = 'not-an-array';
-      return out as typeof fallback;
+      return Promise.resolve(out as typeof fallback);
     });
     await expect(resolveAnalysisCascade()).rejects.toThrow(/SSOT Violation.*non-empty array/);
   });
 
   it('throws when a registry-resolved tier has an empty model ID', async () => {
-    getRegistrySettings.mockImplementation(async (keys, fallback) => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = [{ model: '   ', name: 'Blank' }];
-      return out as typeof fallback;
+      return Promise.resolve(out as typeof fallback);
     });
     await expect(resolveAnalysisCascade()).rejects.toThrow(/empty or missing model ID/);
   });
 
   it('throws when a registry-resolved tier has an empty display name', async () => {
-    getRegistrySettings.mockImplementation(async (keys, fallback) => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = [{ model: 'test/model-a', name: '  ' }];
-      return out as typeof fallback;
+      return Promise.resolve(out as typeof fallback);
     });
     await expect(resolveAnalysisCascade()).rejects.toThrow(/empty or missing display name/);
   });

@@ -2,7 +2,7 @@
 
 > **Single Source of Truth (SSOT)** for all defensive defaults, fallbacks, coalesce operators, and recovery behaviors across `hex-yt-intel`.
 >
-> Established: 2026-10-06 | Governed by: **Defensive Ledger Contract** in [CLAUDE.md](file:///home/kellyb_dev/projects/hex-yt-intel-wt-10x/CLAUDE.md) & [AGENTS.md](file:///home/kellyb_dev/projects/hex-yt-intel-wt-10x/AGENTS.md).
+> Established: 2026-10-06 | Governed by: **Defensive Ledger Contract** in [CLAUDE.md](../CLAUDE.md) & [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -13,6 +13,7 @@ Defensive code patterns (e.g. `?? fallback`, `|| defaultValue`, catch-and-return
 This ledger formalizes every defensive node into a traceable dependency graph. 
 
 ### Ledger Structure
+
 - **Node ID**: Domain-scoped identifier (`DOM-xxx`)
 - **Module Path**: Source file relative to repository root
 - **Line Reference**: Target line/block reference

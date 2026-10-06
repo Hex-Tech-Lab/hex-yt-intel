@@ -84,6 +84,13 @@ export function WordCloud({ graph, selectedId, onSelect, isAnalyzing }: WordClou
     if (!Number.isNaN(parsedRadius)) radiusRef.current = parsedRadius;
     const ink = cs.getPropertyValue('--ink').trim();
     if (ink) inkRef.current = ink;
+
+    return () => {
+      // Prevent InvalidNodeTypeError when canvas/DOM nodes unmount mid-selection
+      if (typeof window !== 'undefined') {
+        window.getSelection()?.removeAllRanges();
+      }
+    };
   }, []);
 
   // Reset animation progress and timeout refs whenever a new video/graph is loaded or restored from history
