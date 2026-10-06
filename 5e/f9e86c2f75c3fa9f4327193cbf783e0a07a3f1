@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 14-19
+.memory/DEFENSIVE_LEDGER.md
+  h_50fba0cdd9e5c4 5,16
+AGENTS.md
+  h_50fba0cdd9e5c4 43
+CLAUDE.md
+  h_50fba0cdd9e5c4 205
+scripts/phase-c-live-smoke-test.ts
+  h_50fba0cdd9e5c4 72
+web/components/templates/console/AnalysisHistory.tsx
+  h_50fba0cdd9e5c4 143-172
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  h_50fba0cdd9e5c4 75-80
+web/components/templates/console/MindMap.tsx
+  h_50fba0cdd9e5c4 271-276
+web/components/templates/console/WordCloud.tsx
+  h_50fba0cdd9e5c4 87-93
+web/lib/__tests__/cascade-resolution.test.ts
+  h_50fba0cdd9e5c4 25,41-42,45,54-64,66,69,78,81,87,90,96,99
+web/lib/adapters/WorkerIngestionAdapter.ts
+  h_50fba0cdd9e5c4 36-44
+web/lib/config/cascade.ts
+  h_50fba0cdd9e5c4 178-186,193-194,211-213
+web/next-env.d.ts
+  h_50fba0cdd9e5c4 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ef9e86c2f75c3fa9f4327193cbf783e0a07a3f1",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
