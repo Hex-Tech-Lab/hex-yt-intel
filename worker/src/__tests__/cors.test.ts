@@ -2,6 +2,23 @@ import { describe, it, expect } from "vitest";
 import { resolveCorsOrigin, isValidAppUrl } from "../middleware/cors";
 
 describe("resolveCorsOrigin", () => {
+  it("accepts localhost in dev", () => {
+    expect(resolveCorsOrigin("http://localhost:3000", false)).toBe("http://localhost:3000");
+    expect(resolveCorsOrigin("http://localhost:3005", false)).toBe("http://localhost:3005");
+  });
+
+  it("rejects localhost in production (dev trust is prod-gated, fail-closed default)", () => {
+    expect(resolveCorsOrigin("http://localhost:3000", true)).toBeNull();
+    expect(resolveCorsOrigin("http://localhost:3005", true)).toBeNull();
+    // unknown prod-ness defaults to production (fail closed)
+    expect(resolveCorsOrigin("http://localhost:3000")).toBeNull();
+  });
+
+  it("accepts exact production and legacy origins in production regardless of dev gating", () => {
+    expect(resolveCorsOrigin("https://getvintel.com", true)).toBe("https://getvintel.com");
+    expect(resolveCorsOrigin("https://hex-yt-intel-abc123.vercel.app", true)).toBe("https://hex-yt-intel-abc123.vercel.app");
+  });
+
   it("accepts exact production and legacy origins", () => {
     expect(resolveCorsOrigin("https://getvintel.com")).toBe("https://getvintel.com");
     expect(resolveCorsOrigin("https://www.getvintel.com")).toBe("https://www.getvintel.com");
@@ -10,7 +27,7 @@ describe("resolveCorsOrigin", () => {
     expect(resolveCorsOrigin("https://uat.getvintel.com")).toBe("https://uat.getvintel.com");
     expect(resolveCorsOrigin("https://yt-intel.getmytestdrive.com")).toBe("https://yt-intel.getmytestdrive.com");
     expect(resolveCorsOrigin("https://v-intel.getmytestdrive.com")).toBe("https://v-intel.getmytestdrive.com");
-    expect(resolveCorsOrigin("http://localhost:3000")).toBe("http://localhost:3000");
+    expect(resolveCorsOrigin("http://localhost:3000", false)).toBe("http://localhost:3000");
   });
 
   it("accepts this app's own vercel preview deployments", () => {

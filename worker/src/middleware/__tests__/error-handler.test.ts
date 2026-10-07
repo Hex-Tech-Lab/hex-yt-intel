@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { errorHandler } from "../middleware/error-handler";
 import { Hono } from "hono";
+import { errorHandler } from "../../middleware/error-handler";
 
 vi.mock("@sentry/cloudflare", () => ({
   captureException: vi.fn(() => "evt-123"),

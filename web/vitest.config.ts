@@ -116,6 +116,10 @@ export default defineConfig({
       // fixture file matching the pattern (real finding, CodeRabbit).
       'middleware.test.ts',
       '../worker/src/__tests__/**/*.test.ts',
+      // error-handler.test.ts lives in middleware/__tests__ so the QualityEngine
+      // sibling-test rule (same dir or its own __tests__) sees it; without this
+      // entry it would silently never execute.
+      '../worker/src/middleware/__tests__/**/*.test.ts',
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
       '../worker/src/services/CommentClassifier.test.ts',
