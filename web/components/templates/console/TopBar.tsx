@@ -7,8 +7,9 @@ import { useUIStore } from "@/store/useUIStore";
 import { useEntitlements } from "@/lib/hooks/useEntitlements";
 import { PricingModal } from "@/components/billing/PricingModal";
 import { ViewModeToggle } from "./ViewModeToggle";
+import { requestDashboardLayoutReset } from '@/lib/hooks/useDashboardLayout';
 
-export interface TopBarProps {
+interface TopBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit?: () => void;
@@ -81,6 +82,20 @@ function TopBarImpl({
       </div>
 
       <span className="flex-1" />
+
+      {/*
+        Reset Layout (PR #442 Task 4): desktop-only affordance for the
+        resizable panel group -- clears both persisted layout keys and
+        snaps the live panels back to their defaults. No-op (and hidden)
+        below xl where panels are drawers and don't resize.
+      */}
+      <IconButton
+        label="Reset layout"
+        variant="ghost"
+        className="hidden xl:flex flex-none"
+        icon={<Icon icon="solar:refresh-linear" size={18} />}
+        onClick={requestDashboardLayoutReset}
+      />
 
       <div className="relative">
         <Button
