@@ -64,9 +64,9 @@ function TopBarImpl({
         />
         <input
           value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSearchSubmit?.();
+          onChange={(changeEvent) => onSearchChange(changeEvent.target.value)}
+          onKeyDown={(keyEvent) => {
+            if (keyEvent.key === "Enter") onSearchSubmit?.();
           }}
           placeholder="Search your knowledge graph"
           aria-label="Search syntheses"
