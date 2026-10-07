@@ -191,7 +191,8 @@ export function requestDashboardLayoutReset(): void {
 export function readStoredLayoutForTest(shape: LayoutShape): string | null {
   try {
     return window.localStorage.getItem(storageKey(shape));
-  } catch {
+  } catch (error) {
+    reportError(error);
     return null;
   }
 }

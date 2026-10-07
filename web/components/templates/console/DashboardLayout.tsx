@@ -5,6 +5,7 @@ import { Group, Panel, Separator, useGroupRef } from 'react-resizable-panels';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 import {
+  DEFAULT_LAYOUT,
   registerResetSink,
   useDashboardPanels,
   type LayoutShape,
@@ -123,10 +124,11 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
     registerResetSink(() => {
       // setLayout requires a complete layout (all panel ids) and validates
       // percentages sum to ~100: center absorbs the remainder.
+      const { sidebar, right } = DEFAULT_LAYOUT[shape];
       groupRef.current?.setLayout(
         shape === '3col'
-          ? { sidebar: 18, center: 64, right: 18 }
-          : { sidebar: 18, center: 82 }
+          ? { sidebar, center: 100 - sidebar - right, right }
+          : { sidebar, center: 100 - sidebar }
       );
     });
     return () => registerResetSink(null);

@@ -9,7 +9,7 @@ import { PricingModal } from "@/components/billing/PricingModal";
 import { ViewModeToggle } from "./ViewModeToggle";
 import { requestDashboardLayoutReset } from '@/lib/hooks/useDashboardLayout';
 
-interface TopBarProps {
+export interface TopBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit?: () => void;
