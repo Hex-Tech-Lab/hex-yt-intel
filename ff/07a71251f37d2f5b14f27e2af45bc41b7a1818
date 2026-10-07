@@ -1,0 +1,23 @@
+web/lib/hooks/useDashboardLayout.ts
+  s_4075cc6448b8f7::t_c081cd16f658eb 194-195
+web/components/templates/console/DashboardLayout.tsx
+  s_4075cc6448b8f7::t_c081cd16f658eb 8,127,130-131
+web/components/templates/console/TopBar.tsx
+  s_4075cc6448b8f7::t_c081cd16f658eb 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff07a71251f37d2f5b14f27e2af45bc41b7a1818",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
