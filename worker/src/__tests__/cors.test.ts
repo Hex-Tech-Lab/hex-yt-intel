@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { resolveCorsOrigin, isValidAppUrl } from "../middleware/cors";
 
 describe("resolveCorsOrigin", () => {
@@ -53,6 +53,18 @@ describe("resolveCorsOrigin", () => {
 
   it("returns null for no origin", () => {
     expect(resolveCorsOrigin(undefined)).toBeNull();
+  });
+
+  it("rejects a malformed origin before parsing and without logging (PR #442 group 9)", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // Contains a space: URL accepts it (percent-encodes), the regex
+      // pre-check does not.
+      expect(resolveCorsOrigin("http://foo bar.com")).toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
 
