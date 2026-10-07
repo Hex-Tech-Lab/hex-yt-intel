@@ -1,0 +1,45 @@
+web/components/TimestampLink.tsx
+  s_9ffad0f2c94cc1::t_3bdfd2c064c7d0 11-17,50-58,63,72,91-109
+  s_9ffad0f2c94cc1::t_527c411cb08ba4 110
+  s_4075cc6448b8f7::t_df3f42c189b532 3
+web/components/templates/console/ChatDock.tsx
+  s_9ffad0f2c94cc1::t_5e79c3e6796c59 24
+  s_9ffad0f2c94cc1::t_0cf5c0a673c9c6 126-136
+web/app/globals.css
+  s_9ffad0f2c94cc1::t_aa35c490901fee 943-966
+web/components/markdown/dimensionMarkdownComponents.tsx
+  s_9ffad0f2c94cc1::t_5524007f9e4c56 51
+  s_9ffad0f2c94cc1::t_806d7e099aca63 5-19
+  s_9ffad0f2c94cc1::t_841ed1cd484004 43-50
+  s_9ffad0f2c94cc1::t_3b2798b4c67dae 24-26
+  s_9ffad0f2c94cc1::t_1d0886ad99d3d1 4
+web/components/markdown/__tests__/dimensionMarkdownComponents.test.tsx
+  s_9ffad0f2c94cc1::t_39323031c1e4b2 25-27,33-35,49-50,58,64-66
+web/components/markdown/__tests__/timestamp-buttons.test.tsx
+  s_9ffad0f2c94cc1::t_33bc8f7f81764e 1-60,62-81
+  s_9ffad0f2c94cc1::t_ad64d128f4552b 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a73fb7434f6cf95cc0028c5ee8b8eb7c17018d74",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_9ffad0f2c94cc1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee79b0643ffeazb7vk00lkUElR",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
