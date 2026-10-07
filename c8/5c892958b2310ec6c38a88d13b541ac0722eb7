@@ -1,0 +1,21 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_e6654590d22c3e::t_5be2cb0bc6507f 145,168
+web/components/templates/console/__tests__/AnalysisHistory-thumbnail.test.tsx
+  s_e6654590d22c3e::t_592b9283053804 161-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c85c892958b2310ec6c38a88d13b541ac0722eb7",
+  "prompts": {},
+  "sessions": {
+    "s_e6654590d22c3e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee773227fffec3Se3Gdx2m7g26",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
