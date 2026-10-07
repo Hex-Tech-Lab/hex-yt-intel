@@ -1,0 +1,25 @@
+web/lib/hooks/useHighlightsStatus.ts
+  s_b14ec58584de89::t_3074123925e78f 1,19-21,27-39,50-54,56-59,61-63,90,127,129-178
+web/lib/hooks/__tests__/use-highlights-status.test.ts
+  s_b14ec58584de89::t_92b308771fffd2 166-206
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_b14ec58584de89::t_11c46673776a2e 137-147
+  s_b14ec58584de89::t_c0d67a5062ad40 25-26
+  s_b14ec58584de89::t_e33b28dc6f0c1c 158-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c31d8986c2288706ff53e84aa25b4b5809accb17",
+  "prompts": {},
+  "sessions": {
+    "s_b14ec58584de89": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee7a474feffeo5EBUAi1unjVQA",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
