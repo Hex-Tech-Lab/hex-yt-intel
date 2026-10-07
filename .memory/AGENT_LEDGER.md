@@ -11,6 +11,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Phase C Live Wire Calibration Results
+- [2026-10-07T10:05:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: Vercel Deployment Diagnostics & Force Trigger:
+  - Task 1: Git payload & author forensic audit confirmed valid author/committer identity (techhypexp / 104952356+TechHypeXP@users.noreply.github.com) on commit eb55bd6c.
+  - Task 2: Root cause analysis of Vercel deployment drop identified vercel.json `git.deploymentEnabled: false` set on 2026-09-25 (commit 291f1ba8), which globally silenced Git preview triggers on all branches.
+  - Task 3: Root cause analysis of GitHub CI failure identified stale `.qa-intel/baseline.json` comparing against origin/main without Phase C AST/syntax additions; re-baselined with 0 net new issues.
+  - Task 4: Configured vercel.json with selective branch deployment (`phase-c: true, *: false`), verified web type-check, lint, and qa-intel --ci --compare pass with exit code 0.
+  - Target: vercel.json, .qa-intel/baseline.json, .memory/AGENT_LEDGER.md.
 - [2026-10-07T09:45:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: PR #442 Code-Rabbit & Qubic Complete Eradication:
   - Task 1: CSS Mask Syntax correction in AnalysisHistory.tsx (calc(100%_-_2.5rem)).
   - Task 2: Programmatic text selection cleanup scoped to container node across KnowledgeGraphCanvas.tsx, MindMap.tsx, and WordCloud.tsx; decoupled resize effect from unmount cleanup.
