@@ -1,0 +1,22 @@
+worker/src/middleware/cors.ts
+  s_253962a83f9990::t_c3dea88cbc137c 40-45
+worker/src/__tests__/cors.test.ts
+  s_253962a83f9990::t_f0ba4fb4c99734 1
+  s_253962a83f9990::t_bfdfe52733019e 57-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cd52b6d4c1e279cf5b178d98565d1d2b2cabd1d",
+  "prompts": {},
+  "sessions": {
+    "s_253962a83f9990": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee76a1511ffefJ0TC0BP0WV365",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
