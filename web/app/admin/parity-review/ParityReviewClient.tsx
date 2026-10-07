@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Banner, Spinner, Badge, Markdown } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { preprocessMarkdown } from '@/lib/utils/format';
+import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
 
 interface DimensionOutputPair {
   haiku_output?: string;
@@ -52,6 +53,11 @@ const readoutComponents = {
   inlineCode: ({ children }: { children: string }) => (
     <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded font-mono text-[12px] text-[var(--ink)]">{children}</code>
   ),
+  // phase-c T3: this page renders preprocessMarkdown output (dimension
+  // content) but had no `link` override, so linkified timestamps rendered
+  // as dead in-page anchors instead of seek buttons. Wire the shared
+  // MarkdownLink override (same pattern as SelectedDimensionReadout).
+  link: MarkdownLink,
 };
 
 /**
