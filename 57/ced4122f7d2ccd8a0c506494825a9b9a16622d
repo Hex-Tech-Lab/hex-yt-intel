@@ -1,0 +1,19 @@
+web/components/templates/console/TopBar.tsx
+  s_253962a83f9990::t_0d5f971dcfb407 67-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57ced4122f7d2ccd8a0c506494825a9b9a16622d",
+  "prompts": {},
+  "sessions": {
+    "s_253962a83f9990": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee76a1511ffefJ0TC0BP0WV365",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
