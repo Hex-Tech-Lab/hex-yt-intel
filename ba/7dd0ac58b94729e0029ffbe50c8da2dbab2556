@@ -1,0 +1,68 @@
+.memory/AGENT_LEDGER.md
+  s_fdb447255a4f08::t_ab12e2fe645c91 1563
+  s_fdb447255a4f08::t_a7473b33c7a434 1564
+  s_fdb447255a4f08::t_89602bce8632a3 1562
+docs/agent-prompts/2026-10-08-oc-phase-c-resizable-panels.md
+  s_4075cc6448b8f7::t_bc8d9c0c11e823 1-69
+web/components/templates/console/DashboardLayout.tsx
+  s_fdb447255a4f08::t_4238f0a0a5b3fb 181
+  s_fdb447255a4f08::t_95a604ff40550c 4,7-11
+  s_fdb447255a4f08::t_120ea83ec3060f 112
+  s_fdb447255a4f08::t_ae768ec46d2c61 124-125,128-129
+  s_fdb447255a4f08::t_a07e1a3ddacbf3 126-127,130
+  s_fdb447255a4f08::t_43aa92a9d1c380 135
+  s_fdb447255a4f08::t_b207a68f8a7d9d 108-111,113-123,131-134,136-150,152-156,179-180,182-185,187-198,200,202,204-306
+web/components/templates/console/TopBar.tsx
+  s_fdb447255a4f08::t_b0359ef5658551 10
+  s_fdb447255a4f08::t_bb6a68b7b0ef5d 12
+  s_fdb447255a4f08::t_e482af8b1c1b41 86-95,97-99
+  s_fdb447255a4f08::t_da437f63085a89 96
+web/package.json
+  s_fdb447255a4f08::t_397b3409e327a2 49
+web/lib/hooks/__tests__/useDashboardLayout.test.ts
+  s_fdb447255a4f08::t_66280df8f9dc9b 1-69
+web/components/templates/console/__tests__/DashboardLayout.test.tsx
+  s_fdb447255a4f08::t_dbedd7e4d23213 1-9,25-101,103-114,116-139
+  s_fdb447255a4f08::t_c6cbecf22260a9 10-24
+  s_fdb447255a4f08::t_295deab0418ba4 102,115
+web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts
+  s_fdb447255a4f08::t_6b9301405a24f3 7-10
+  s_fdb447255a4f08::t_ee1230d1f5b288 3
+  s_fdb447255a4f08::t_af6b7545b7debd 2,4
+  s_fdb447255a4f08::t_6f9a53851fdecc 16
+  s_fdb447255a4f08::t_349fd10828e239 1,5-6,11-15,17-58
+web/lib/hooks/useDashboardLayout.ts
+  s_fdb447255a4f08::t_050dfc1c4e4d41 138
+  s_fdb447255a4f08::t_08bb9a3bcf4809 1-2,4-52,54-67,69-117,120-134,137,139-175,188-197
+  s_fdb447255a4f08::t_695f61978aae63 53,68
+  s_fdb447255a4f08::t_5c4a3036f0e79b 118-119
+  s_fdb447255a4f08::t_1dfcd453e6892a 176-187
+  s_fdb447255a4f08::t_16da4b355c06c5 135-136
+  s_fdb447255a4f08::t_4197beed302f3f 3
+pnpm-lock.yaml
+  s_fdb447255a4f08::t_ea6a003b570dd9 158-160,5427-5432,11706-11710
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba7dd0ac58b94729e0029ffbe50c8da2dbab2556",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_fdb447255a4f08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee78b2e81ffegfA0Q5CfCcogOl",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
