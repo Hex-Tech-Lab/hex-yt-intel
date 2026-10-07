@@ -294,6 +294,13 @@
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
     "file": "web/lib/services/CombinerPass.ts",
     "severity": "low",
     "title": "Data Quality: String truncation without ellipsis indicator",

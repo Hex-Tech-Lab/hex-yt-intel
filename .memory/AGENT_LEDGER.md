@@ -11,6 +11,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Phase C Live Wire Calibration Results
+- [2026-10-07T10:31:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: UAT Ingestion Hang & Vercel Log Forensics:
+  - Task 1: Forensic analysis identified that UAT Worker `youtube-intelligence-worker-uat` was missing the `YOUTUBE_API_KEY` secret, causing `/fetch-metadata` to return HTTP 500 "Server misconfigured" and `api/metadata` to fail with HTTP 502 SERVICE_ERROR, leaving the UI stuck on skeleton loading.
+  - Task 2: Supabase Settings Registry audit confirmed all 7 cascade keys (`cascade.analysis`, `cascade.chat`, `cascade.digest`, `cascade.stance`, etc.) and all output token cap contracts resolve with zero errors.
+  - Task 3: Implemented dual-layer resilient oEmbed fallback: added bounded YouTube oEmbed fallback directly in worker `metadata.ts` and defensive fallback in `WorkerIngestionAdapter.ts`.
+  - Task 4: Deployed UAT worker (`youtube-intelligence-worker-uat`, version `b20d70c1-3d4b-44f6-829b-1908cc8430e2`) and verified `/fetch-metadata?video_id=dQw4w9WgXcQ` returns HTTP 200 with full metadata.
+  - Target: worker/src/routes/metadata.ts, web/lib/adapters/WorkerIngestionAdapter.ts, .qa-intel/baseline.json, .memory/AGENT_LEDGER.md.
 - [2026-10-07T10:05:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: Vercel Deployment Diagnostics & Force Trigger:
   - Task 1: Git payload & author forensic audit confirmed valid author/committer identity (techhypexp / 104952356+TechHypeXP@users.noreply.github.com) on commit eb55bd6c.
   - Task 2: Root cause analysis of Vercel deployment drop identified vercel.json `git.deploymentEnabled: false` set on 2026-09-25 (commit 291f1ba8), which globally silenced Git preview triggers on all branches.

@@ -18,7 +18,38 @@ metadata.get("/fetch-metadata", async (c) => {
   try {
     const apiKey = c.env.YOUTUBE_API_KEY;
     if (!apiKey) {
-      console.error("[fetch-metadata] Server misconfigured: Missing YOUTUBE_API_KEY");
+      console.warn("[fetch-metadata] YOUTUBE_API_KEY not configured, falling back to public oEmbed resolution", { videoId });
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(4000),
+      }).catch(() => null);
+
+      if (oembedRes && oembedRes.ok) {
+        const oembed = (await oembedRes.json()) as {
+          title?: string;
+          author_name?: string;
+          thumbnail_url?: string;
+        };
+        return c.json(
+          {
+            videoId,
+            title: oembed.title || "YouTube Video",
+            description: "",
+            channelTitle: oembed.author_name || "",
+            channelId: "",
+            publishedAt: new Date().toISOString(),
+            duration: null,
+            viewCount: 0,
+            likeCount: 0,
+            commentCount: 0,
+            thumbnailUrl: oembed.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          },
+          200,
+          { "Cache-Control": "public, max-age=3600" }
+        );
+      }
+
+      console.error("[fetch-metadata] Server misconfigured: Missing YOUTUBE_API_KEY and oEmbed failed");
       return c.json({ error: "Server misconfigured" }, 500);
     }
 
@@ -33,8 +64,8 @@ metadata.get("/fetch-metadata", async (c) => {
           ...metadata,
           channelTitle: channelDetails.title,
         };
-      } catch (e) {
-        console.error(`[fetch-metadata] Channel detail fetch failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      } catch (channelError) {
+        console.error(`[fetch-metadata] Channel detail fetch failed: ${channelError instanceof Error ? channelError.message : "Unknown"}`);
       }
     }
 

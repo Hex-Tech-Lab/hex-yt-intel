@@ -137,6 +137,31 @@ async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataRespo
       tags: { component: 'WorkerIngestionAdapter', phase: 'fetch-metadata' },
       extra: { videoId },
     });
+
+    // Fallback: direct YouTube oEmbed resolution if Worker is unavailable or misconfigured
+    try {
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
+        headers: { 'User-Agent': getRandomUserAgent() },
+      });
+      if (oembedRes.ok) {
+        const oembed = (await oembedRes.json()) as { title?: string; author_name?: string; thumbnail_url?: string };
+        return {
+          title: oembed.title || 'YouTube Video',
+          channelTitle: oembed.author_name || '',
+          channelId: '',
+          publishedAt: new Date().toISOString(),
+          duration: null,
+          viewCount: '0',
+          likeCount: '0',
+          commentCount: '0',
+          thumbnailUrl: oembed.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          description: '',
+        };
+      }
+    } catch (oembedErr) {
+      console.warn('[fetchWorkerMetadata] Direct oEmbed fallback failed:', oembedErr);
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to fetch metadata from Worker: ${message}`);
   }
