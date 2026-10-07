@@ -1,0 +1,32 @@
+docs/agent-prompts/2026-10-08-oc-phase-c-timestamps.md
+  s_4075cc6448b8f7::t_547f8d224daff8 1-68
+.memory/AGENT_LEDGER.md
+  s_9ffad0f2c94cc1::t_fe1f15813a1f43 1559
+  s_9ffad0f2c94cc1::t_2e838391849ab1 1560
+  s_9ffad0f2c94cc1::t_2e485ded31c2f0 1558
+  s_4075cc6448b8f7::t_8867f080aeddd2 1561
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "26c8477e525418717e0b5f3267a5f6382a4d14ec",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_9ffad0f2c94cc1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee79b0643ffeazb7vk00lkUElR",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
