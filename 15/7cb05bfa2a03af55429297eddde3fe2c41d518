@@ -1,0 +1,30 @@
+.memory/AGENT_LEDGER.md
+  s_e6654590d22c3e::t_abdaac6239b4dd 1566
+  s_e6654590d22c3e::t_5a06a1815bdfb2 1567
+docs/agent-prompts/2026-10-08-oc-phase-c-history-chips.md
+  s_4075cc6448b8f7::t_06281c6334d9a6 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "157cb05bfa2a03af55429297eddde3fe2c41d518",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_e6654590d22c3e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee773227fffec3Se3Gdx2m7g26",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
