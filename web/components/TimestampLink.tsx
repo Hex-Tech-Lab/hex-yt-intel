@@ -94,7 +94,6 @@ export function TimestampLink({ timestamp, children, className = '', asButton = 
         type="button"
         className={`${SEEK_BUTTON_CLASS} ${className}`}
         onClick={handleClick}
-        onKeyDown={handleKeyDown}
         aria-label={`Seek to ${timestamp}`}
         data-timestamp={timestamp}
       >
