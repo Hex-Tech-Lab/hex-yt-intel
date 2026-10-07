@@ -158,4 +158,20 @@ describe('AnalysisHistory thumbnail fade (mockup v2)', () => {
     expect(css).not.toMatch(/\.hx-thumb-divider/);
     expect(css).toMatch(/\.hx-thumb-layer[\s\S]*?width:\s*calc\(var\(--hx-thumb-sharp\) \+ var\(--hx-thumb-fade\)\)/);
   });
+
+  it('chip-row containers carry NO mask (letters must never fade — only the thumbnail layer fades)', () => {
+    const source = readFileSync(join(__dirname, '..', 'AnalysisHistory.tsx'), 'utf-8');
+    // No mask-image class may appear anywhere in the component; the only
+    // fade lives on .hx-thumb-layer in globals.css.
+    expect(source).not.toMatch(/mask-image/);
+
+    const css = readFileSync(join(__dirname, '..', '..', '..', '..', 'app', 'globals.css'), 'utf-8');
+    // The fade mask belongs to the thumbnail layer only.
+    const layerBlock = css.match(/\.hx-thumb-layer \{[^}]*\}/)?.[0] ?? '';
+    expect(layerBlock).toMatch(/mask-image:\s*linear-gradient\(to left/);
+    // And no text/content rule carries a mask.
+    expect(css.match(/\.hx-thumb-content \{[^}]*\}/)?.[0] ?? '').not.toMatch(/mask-image/);
+    expect(css.match(/\.hx-halo[^{]*\{[^}]*\}/)?.[0] ?? '').not.toMatch(/mask-image/);
+    expect(css.match(/\.hx-chip-shadow[^{]*\{[^}]*\}/)?.[0] ?? '').not.toMatch(/mask-image/);
+  });
 });
