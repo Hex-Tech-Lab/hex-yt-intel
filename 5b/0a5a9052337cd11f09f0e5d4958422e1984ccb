@@ -1,0 +1,31 @@
+docs/agent-prompts/2026-10-08-oc-phase-c-highlights-iframe.md
+  s_4075cc6448b8f7::t_7854eaa56726b4 1-70
+.memory/AGENT_LEDGER.md
+  s_b14ec58584de89::t_794ee7048bd090 1556
+  s_b14ec58584de89::t_9a7d4908a8778d 1555
+  s_4075cc6448b8f7::t_b93bf37d015c5f 1557
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b0a5a9052337cd11f09f0e5d4958422e1984ccb",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_b14ec58584de89": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee7a474feffeo5EBUAi1unjVQA",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
