@@ -1,0 +1,46 @@
+worker/src/worker.ts
+  s_2e9d482fc88bd4::t_311e2f52f98497 52
+  s_2e9d482fc88bd4::t_d12b181d07f735 7
+  s_4075cc6448b8f7::t_d4190ee42feefa 1
+worker/src/__tests__/cors.test.ts
+  s_2e9d482fc88bd4::t_ad602f3ff74163 30
+  s_2e9d482fc88bd4::t_eed68f56a1d9a1 5-21
+worker/src/middleware/cors.ts
+  s_2e9d482fc88bd4::t_742412953dd12c 43-44,49-58,60
+  s_2e9d482fc88bd4::t_4f8dba96b0b2a8 17-21,27-32
+  s_2e9d482fc88bd4::t_7d848151df08cd 89-90,95
+worker/src/middleware/error-handler.ts
+  s_2e9d482fc88bd4::t_24eec6b295c9d6 4
+  s_2e9d482fc88bd4::t_8095c48618eeea 41
+  s_2e9d482fc88bd4::t_205bf9d105fab3 6,13-14,25,30-31,39
+docs/agent-prompts/2026-10-08-oc-phase-c-qe-unblock.md
+  s_4075cc6448b8f7::t_abad606a677c44 1-74
+worker/src/middleware/__tests__/error-handler.test.ts
+  s_2e9d482fc88bd4::t_b8510a6a97e5ac 3
+web/vitest.config.ts
+  s_4075cc6448b8f7::t_61068ec058b794 119-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "718f6580b6e823e307345a4046f760f73080a50a",
+  "prompts": {},
+  "sessions": {
+    "s_2e9d482fc88bd4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee7b98da4ffeR6gHNI7kxO6XIL",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
