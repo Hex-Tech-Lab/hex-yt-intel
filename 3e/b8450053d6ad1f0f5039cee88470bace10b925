@@ -1,0 +1,20 @@
+web/app/admin/parity-review/ParityReviewClient.tsx
+  s_9ffad0f2c94cc1::t_ebf09045c360d0 7
+  s_9ffad0f2c94cc1::t_040d7a8355943a 56-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3eb8450053d6ad1f0f5039cee88470bace10b925",
+  "prompts": {},
+  "sessions": {
+    "s_9ffad0f2c94cc1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee79b0643ffeazb7vk00lkUElR",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
