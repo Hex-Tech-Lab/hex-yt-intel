@@ -252,7 +252,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     try {
       const vol = this.player.getVolume();
       return typeof vol === 'number' && Number.isFinite(vol) ? Math.max(0, Math.min(100, vol)) : 100;
-    } catch {
+    } catch (volumeError) {
+      console.error('[YouTubePlayerAdapter]', volumeError instanceof Error ? volumeError.message : String(volumeError));
       return 100;
     }
   }
@@ -261,7 +262,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     if (this.destroyed || !this.player?.isMuted) return false;
     try {
       return Boolean(this.player.isMuted());
-    } catch {
+    } catch (mutedError) {
+      console.error('[YouTubePlayerAdapter]', mutedError instanceof Error ? mutedError.message : String(mutedError));
       return false;
     }
   }
