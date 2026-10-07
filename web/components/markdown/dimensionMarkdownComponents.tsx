@@ -2,10 +2,28 @@ import { TimestampLink } from '@/components/TimestampLink';
 import type React from 'react';
 
 /**
+ * Formats a raw seconds string as M:SS or H:MM:SS (matching the forms
+ * linkifyTimestamps accepts) for use in aria-labels when the rendered
+ * link text isn't a plain timestamp.
+ */
+function formatSecondsAsTimestamp(seconds: string): string {
+  const n = parseInt(seconds, 10);
+  if (Number.isNaN(n) || n < 0) return seconds;
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = n % 60;
+  const mm = String(m).padStart(h > 0 ? 2 : 1, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/**
  * Shared Astryx `<Markdown>` `link` component override.
  *
  * Routes `#t=<seconds>` hrefs (produced by `linkifyTimestamps` in
- * `web/lib/utils/format.tsx`) through `TimestampLink` (video-seek links),
+ * `web/lib/utils/format.tsx`) through `TimestampLink` with `asButton`
+ * (semantic `<button>` seek controls -- timestamp seeks are actions, not
+ * navigation links),
  * and applies `target="_blank"` only to genuinely external `http(s)` links
  * -- a catch-all `target="_blank"` would also break relative/same-origin/
  * mailto/in-page links.
@@ -22,8 +40,15 @@ import type React from 'react';
  */
 export function MarkdownLink({ href, children }: { href: string; children: React.ReactNode }) {
   if (href?.startsWith('#t=')) {
-    const timestamp = href.replace('#t=', '');
-    return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+    const seconds = href.replace('#t=', '');
+    // linkifyTimestamps encodes the raw seconds in the href but renders the
+    // original human form (e.g. `1:23`) as the link text. For accessibility,
+    // prefer the rendered text as the label when it looks like a timestamp
+    // (guards against text that was mangled/truncated by other transforms);
+    // otherwise fall back to the canonical M:SS/HH:MM:SS derived from seconds.
+    const text = typeof children === 'string' ? children.trim() : '';
+    const timestamp = /^\d{1,2}(:\d{2}){1,2}$/.test(text) ? text : formatSecondsAsTimestamp(seconds);
+    return <TimestampLink timestamp={timestamp} asButton>{children}</TimestampLink>;
   }
   // Real bug fix (automated review, PR #260): protocol-relative URLs
   // (`//host/path`) are valid external navigation targets in a browser but

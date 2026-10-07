@@ -940,3 +940,27 @@ ol.astryx-list > .astryx-list-item > span:first-child {
 .chat-answer-table table td:last-child {
   min-width: 140px;
 }
+
+/*
+ * Shared timestamp seek-button styling (phase-c T3). Every raw timestamp
+ * in dimension markdown renders as a real <button type="button"> (see
+ * TimestampLink `asButton` + MarkdownLink), and ALL visual states live in
+ * this one rule so the control restyles in a single place. Layout
+ * utilities (inline-flex/gap/padding/font) stay as inline utilities on the
+ * element; this class owns color/hover/active/focus states only.
+ */
+.hx-timestamp-seek {
+  color: var(--accent);
+  background: transparent;
+  border: none;
+}
+.hx-timestamp-seek:hover {
+  background: var(--accent-a10);
+}
+.hx-timestamp-seek:active {
+  background: var(--accent-a15);
+}
+.hx-timestamp-seek:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 1px;
+}

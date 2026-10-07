@@ -21,11 +21,11 @@ import {
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
+import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
 import { EXPAND_MARKER_PATTERN, truncateCitationPoints } from '@/lib/utils/citation-truncate';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { CHAT_REGISTRY_FALLBACK } from '@/lib/utils/chat-options-settings';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
-import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
@@ -123,13 +123,17 @@ const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
     <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{children}</p>
   ),
-  link: ({ href, children }) => {
-    if (href?.startsWith('#t=')) {
-      const timestamp = href.replace('#t=', '');
-      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
-    }
-    return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-  },
+  // Shared `#t=` seek routing (phase-c T3): ChatDock's local copy of the
+  // `#t=` -> TimestampLink branch was a byte-for-byte duplicate of the
+  // shared override's branch (same guard, same replace, same component);
+  // only the non-#t= fallback differs (chat wants plain anchors without
+  // the target=_blank/rel extras MarkdownLink adds, which was a separate
+  // PR #260 behavior fix scoped to dimension readouts). Chat keeps its own
+  // fallback but routes `#t=` through the shared MarkdownLink. Note:
+  // MarkdownLink renders seek controls as real <button>s (asButton), so
+  // any test querying by role="link" for chat timestamps must switch to
+  // role="button".
+  link: MarkdownLink,
   inlineCode: ({ children }) => (
     <code className="bg-slate-800/80 px-1.5 py-0.5 rounded font-mono text-[11px] text-[var(--ink-secondary)]">
       {parseAnsiToReact(children)}
