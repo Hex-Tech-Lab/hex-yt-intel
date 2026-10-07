@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
-import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
+import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 interface WordCloudProps {
   graph: KnowledgeGraph;
@@ -85,10 +85,14 @@ export function WordCloud({ graph, selectedId, onSelect, isAnalyzing }: WordClou
     const ink = cs.getPropertyValue('--ink').trim();
     if (ink) inkRef.current = ink;
 
+    const el = containerRef.current;
     return () => {
       // Prevent InvalidNodeTypeError when canvas/DOM nodes unmount mid-selection
       if (typeof window !== 'undefined') {
-        window.getSelection()?.removeAllRanges();
+        const sel = window.getSelection();
+        if (sel && el && ((sel.anchorNode && el.contains(sel.anchorNode)) || (sel.focusNode && el.contains(sel.focusNode)))) {
+          sel.removeAllRanges();
+        }
       }
     };
   }, []);

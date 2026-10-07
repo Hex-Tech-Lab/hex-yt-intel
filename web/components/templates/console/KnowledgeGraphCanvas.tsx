@@ -74,11 +74,20 @@ export function KnowledgeGraphCanvas({
     ro.observe(el);
     return () => {
       ro.disconnect();
-      if (typeof window !== 'undefined') {
-        window.getSelection()?.removeAllRanges();
-      }
     };
   }, [height, compact]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    return () => {
+      if (typeof window !== 'undefined') {
+        const sel = window.getSelection();
+        if (sel && el && ((sel.anchorNode && el.contains(sel.anchorNode)) || (sel.focusNode && el.contains(sel.focusNode)))) {
+          sel.removeAllRanges();
+        }
+      }
+    };
+  }, []);
 
   const data = useMemo(() => {
     const rawNodes = (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[];
@@ -273,13 +282,15 @@ export function KnowledgeGraphCanvas({
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === selectedId || node.id === hoverActive;
           const radius = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
+          const nodeX = typeof node.x === 'number' ? node.x : 0;
+          const nodeY = typeof node.y === 'number' ? node.y : 0;
           // entityRgb already defaults to ENTITY_DEFAULT_RGB for missing/unknown
           // types, so there's no separate "unknown" colour to keep in sync here.
           const typeRgb = entityRgb(node.entityType);
 
           // Draw base backing container filled with node category color (glowing fill)
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, radius, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.fillStyle = dim 
             ? 'rgba(30, 41, 59, 0.1)' 
             : `rgb(${typeRgb} / ${isActive ? '0.85' : (isRoot ? '0.6' : '0.3')})`;
@@ -287,7 +298,7 @@ export function KnowledgeGraphCanvas({
 
           // Colored border/ring based on entity type!
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, radius, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.lineWidth = (isActive || node.id === selectedId ? 2.5 : 1.25) / scale;
           ctx.strokeStyle = dim ? `rgb(${COL.slate} / 0.1)` : `rgb(${typeRgb} / ${node.inPersona || isRoot || isActive ? '1.0' : '0.7'})`;
           ctx.stroke();
@@ -295,7 +306,7 @@ export function KnowledgeGraphCanvas({
           // Active/selected double ring
           if (isActive || node.id === selectedId) {
             ctx.beginPath();
-            ctx.arc(node.x!, node.y!, radius + 3 / scale, 0, 2 * Math.PI);
+            ctx.arc(nodeX, nodeY, radius + 3 / scale, 0, 2 * Math.PI);
             ctx.lineWidth = 1 / scale;
             ctx.strokeStyle = `rgb(${COL.accent} / 0.8)`;
             ctx.stroke();
@@ -304,7 +315,7 @@ export function KnowledgeGraphCanvas({
           // Root halo ring
           if (isRoot && !dim) {
             ctx.beginPath();
-            ctx.arc(node.x!, node.y!, radius + 6 / scale, 0, 2 * Math.PI);
+            ctx.arc(nodeX, nodeY, radius + 6 / scale, 0, 2 * Math.PI);
             ctx.lineWidth = 1 / scale;
             ctx.strokeStyle = `rgb(${COL.accent} / 0.3)`;
             ctx.stroke();
@@ -346,29 +357,33 @@ export function KnowledgeGraphCanvas({
             const lines = [];
             
             for (let wordIdx = 0; wordIdx < words.length; wordIdx++) {
-              const testLine = line + words[wordIdx] + ' ';
+              const testLine = `${line}${words[wordIdx]} `;
               const metrics = ctx.measureText(testLine);
               if (metrics.width > maxWidth && line !== '') {
                 lines.push(line.trim());
-                line = words[wordIdx] + ' ';
+                line = `${words[wordIdx]} `;
               } else {
                 line = testLine;
               }
             }
             lines.push(line.trim());
 
-            const startY = node.y! + radius + 4 / scale;
+            const nodeX = typeof node.x === 'number' ? node.x : 0;
+            const nodeY = typeof node.y === 'number' ? node.y : 0;
+            const startY = nodeY + radius + 4 / scale;
             lines.forEach((lineText, lineIdx) => {
-              ctx.fillText(lineText, node.x!, startY + lineIdx * lineHeight);
+              ctx.fillText(lineText, nodeX, startY + lineIdx * lineHeight);
             });
           }
         }}
         nodePointerAreaPaint={(targetNode: any, color: string, ctx: CanvasRenderingContext2D) => {
           const node = targetNode as FGNode;
           const radius = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4) + 4;
+          const nodeX = typeof node.x === 'number' ? node.x : 0;
+          const nodeY = typeof node.y === 'number' ? node.y : 0;
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, radius, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.fill();
         }}
       />

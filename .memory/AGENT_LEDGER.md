@@ -11,6 +11,14 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Phase C Live Wire Calibration Results
+- [2026-10-07T09:45:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: PR #442 Code-Rabbit & Qubic Complete Eradication:
+  - Task 1: CSS Mask Syntax correction in AnalysisHistory.tsx (calc(100%_-_2.5rem)).
+  - Task 2: Programmatic text selection cleanup scoped to container node across KnowledgeGraphCanvas.tsx, MindMap.tsx, and WordCloud.tsx; decoupled resize effect from unmount cleanup.
+  - Task 3: DeepSource/Sonar text wrapping template literals & node coordinate null guards in KnowledgeGraphCanvas.tsx.
+  - Task 4: Cubic P1 integer validation check for analysis.maxOutputTokens.* in settings PUT route.
+  - Task 5: Defensive Ledger mapping NET-010 for OpenRouter abort timeout in smoke test.
+  - Task 6: Reordered imports in MindMap.tsx and WordCloud.tsx to framework → thirdparty → internal → types; verified web/worker type-checks and lint clean.
+  - Target: web/components/templates/console/AnalysisHistory.tsx, web/components/templates/console/KnowledgeGraphCanvas.tsx, web/components/templates/console/MindMap.tsx, web/components/templates/console/WordCloud.tsx, web/app/api/admin/settings/[key]/route.ts, .memory/DEFENSIVE_LEDGER.md.
 - [2026-10-07T02:11:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: QA-Intel Sweep, UI Stabilization & CI/CD Unblock:
   - Task 1: Import Ordering Enforcement on KnowledgeGraphCanvas.tsx (reordered to framework → thirdparty → internal → types).
   - Task 2: Variable Naming Semantic Sweep on KnowledgeGraphCanvas.tsx (eradicated single-letter variables r → radius, e → edge / error / event, n → targetNode, l → link / lineText / lineIdx).

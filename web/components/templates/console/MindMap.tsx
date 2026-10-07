@@ -3,8 +3,8 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Tooltip } from '@astryxdesign/core';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
-import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import { Icon } from '@/components/templates/_shared/primitives';
+import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 interface MindMapProps {
   graph: KnowledgeGraph;
@@ -271,7 +271,10 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     return () => {
       el.removeEventListener('wheel', handleWheel);
       if (typeof window !== 'undefined') {
-        window.getSelection()?.removeAllRanges();
+        const sel = window.getSelection();
+        if (sel && ((sel.anchorNode && el.contains(sel.anchorNode)) || (sel.focusNode && el.contains(sel.focusNode)))) {
+          sel.removeAllRanges();
+        }
       }
     };
   }, []);

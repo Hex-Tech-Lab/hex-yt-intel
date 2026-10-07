@@ -142,7 +142,7 @@ function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine 
   return (
     <div className="mt-3 pt-3 border-t border-[var(--line-faint)] flex flex-col gap-2">
       <div
-        className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent_100%)]"
+        className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent_100%)]"
       >
         <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
         {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
@@ -165,7 +165,7 @@ function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine 
       </div>
       {auxChipsSecondLine && (
         <div
-          className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent_100%)]"
+          className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent_100%)]"
         >
           {auxChipsSecondLine}
         </div>

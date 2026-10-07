@@ -73,6 +73,7 @@ This ledger formalizes every defensive node into a traceable dependency graph.
 | `NET-007` | `web/lib/services/dimension-remediation.ts` | L579-581 | Timeouts missing from Settings Registry | `timeoutMs: 240000`, `handshakeTimeoutMs: 15000`, `connectionTimeoutMs: 3000` | Background dimension gap remediation sweep |
 | `NET-008` | `web/lib/adapters/DubShortLinkAdapter.ts` | L20 | Missing `dub.requestTimeoutMs` in registry | `DUB_CONFIG_FALLBACK = { requestTimeoutMs: 3000 }` (3s abort) | Short URL creation, share links |
 | `NET-009` | `web/lib/utils/sign-out-with-timeout.ts` | L25-38 | Supabase Auth `signOut()` hanging indefinitely | Races against timeout, forces local session purge | Client signout flow, navigation state |
+| `NET-010` | `scripts/phase-c-live-smoke-test.ts` | L72 | OpenRouter probe/cascade request stalls | `AbortSignal.timeout(60000)` (60s abort) | Multimodal wire smoke test, live telemetry |
 
 ---
 
