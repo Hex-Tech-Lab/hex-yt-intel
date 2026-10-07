@@ -1,6 +1,7 @@
 import type { ErrorHandler } from "hono";
 import * as Sentry from "@sentry/cloudflare";
 import { isProductionEnv } from "../env-utils";
+import { resolveCorsOrigin } from "./cors";
 
 export const errorHandler: ErrorHandler = (err, c) => {
   const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -28,7 +29,15 @@ export const errorHandler: ErrorHandler = (err, c) => {
   // the worker's ENVIRONMENT var (NODE_ENV is unset on Workers); fail closed.
   const isDev = !isProductionEnv(c.env as { ENVIRONMENT?: string; NODE_ENV?: string });
 
-  return c.json(
+  // 2026-10-06 (UAT synthesis RCA): an uncaught exception here bypasses the
+  // cors() middleware's response decoration, so the 500 shipped with NO
+  // access-control-allow-origin — the browser turned it into an opaque
+  // "Failed to fetch" instead of the JSON error payload. Echo the CORS
+  // origin explicitly for trusted origins so fatal errors remain readable
+  // by the frontend (null/unknown origins stay headerless, fail closed).
+  const corsOrigin = resolveCorsOrigin(c.req.header("Origin"));
+
+  const response = c.json(
     {
       error: "Internal server error",
       errorId,
@@ -36,4 +45,8 @@ export const errorHandler: ErrorHandler = (err, c) => {
     },
     500,
   );
+  if (corsOrigin) {
+    response.headers.set("Access-Control-Allow-Origin", corsOrigin);
+  }
+  return response;
 };

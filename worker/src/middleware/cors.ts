@@ -14,6 +14,11 @@ const PRODUCTION_ORIGINS = [
   "https://hex-yt-intel.vercel.app",
   "https://getvintel.com",
   "https://www.getvintel.com",
+  // UAT environment (wrangler.toml env.uat APP_URL): without this, every
+  // browser request from uat.getvintel.com resolved to a null CORS origin —
+  // even preflights returned no access-control-allow-origin — surfacing to
+  // the frontend as an opaque "Failed to fetch" (real incident 2026-10-06).
+  "https://uat.getvintel.com",
   "https://yt-intel.getmytestdrive.com",
   "https://v-intel.getmytestdrive.com",
 ];

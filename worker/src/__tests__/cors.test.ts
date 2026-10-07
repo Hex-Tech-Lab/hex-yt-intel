@@ -5,6 +5,9 @@ describe("resolveCorsOrigin", () => {
   it("accepts exact production and legacy origins", () => {
     expect(resolveCorsOrigin("https://getvintel.com")).toBe("https://getvintel.com");
     expect(resolveCorsOrigin("https://www.getvintel.com")).toBe("https://www.getvintel.com");
+    // UAT environment origin (2026-10-06 incident: its absence made every
+    // browser request from uat.getvintel.com fail CORS as "Failed to fetch")
+    expect(resolveCorsOrigin("https://uat.getvintel.com")).toBe("https://uat.getvintel.com");
     expect(resolveCorsOrigin("https://yt-intel.getmytestdrive.com")).toBe("https://yt-intel.getmytestdrive.com");
     expect(resolveCorsOrigin("https://v-intel.getmytestdrive.com")).toBe("https://v-intel.getmytestdrive.com");
     expect(resolveCorsOrigin("http://localhost:3000")).toBe("http://localhost:3000");
