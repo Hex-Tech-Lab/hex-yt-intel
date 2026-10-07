@@ -123,7 +123,9 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
     if (!isDesktop) return;
     registerResetSink(() => {
       // setLayout requires a complete layout (all panel ids) and validates
-      // percentages sum to ~100: center absorbs the remainder.
+      // percentages sum to ~100: center absorbs the remainder, derived from
+      // DEFAULT_LAYOUT so the reset target and the hydrated defaults share
+      // one source of truth.
       const { sidebar, right } = DEFAULT_LAYOUT[shape];
       groupRef.current?.setLayout(
         shape === '3col'

@@ -26,7 +26,9 @@ export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
   '2col': { sidebar: 18, right: 0 },
-  '3col': { sidebar: 18, right: 18 },
+  // Right panel gets the ~390px column from the historic fixed grid
+  // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
+  '3col': { sidebar: 18, right: 27 },
 };
 
 export const SIDEBAR_MIN = 10;
@@ -36,10 +38,6 @@ export const RIGHT_MAX = 35;
 
 function storageKey(shape: LayoutShape): string {
   return `${LAYOUT_STORAGE_PREFIX}${shape}`;
-}
-
-function reportError(error: unknown): void {
-  console.error('[DashboardLayout]', error instanceof Error ? error.message : String(error));
 }
 
 export function readPersistedLayout(shape: LayoutShape): { sidebar: number; right: number } | null {
@@ -67,7 +65,7 @@ export function readPersistedLayout(shape: LayoutShape): { sidebar: number; righ
     }
     return { sidebar, right: right as number };
   } catch (error) {
-    reportError(error);
+    console.error('[DashboardLayout]', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -77,7 +75,7 @@ export function persistLayout(shape: LayoutShape, sidebar: number, right: number
     const value = shape === '3col' ? { sidebar, right } : { sidebar };
     window.localStorage.setItem(storageKey(shape), JSON.stringify(value));
   } catch (error) {
-    reportError(error);
+    console.error('[DashboardLayout]', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -86,7 +84,7 @@ export function clearPersistedLayouts(): void {
     window.localStorage.removeItem(storageKey('2col'));
     window.localStorage.removeItem(storageKey('3col'));
   } catch (error) {
-    reportError(error);
+    console.error('[DashboardLayout]', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -125,10 +123,12 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
   const isDesktop = useIsDesktop();
   // Undefined until hydrated: Group then falls back to its own
   // defaultSize props (which mirror the historic fixed grid).
-  const [sizes, setSizes] = useState<{ sidebar?: number; right?: number }>({});
+  const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>({
+    shape,
+  });
 
   useEffect(() => {
-    setSizes(readPersistedLayout(shape) ?? {});
+    setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
   }, [shape]);
 
   const handleLayoutChanged = useCallback(
@@ -137,7 +137,7 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
       if (typeof sidebar !== 'number' || !Number.isFinite(sidebar)) return;
       const right = shape === '3col' ? layout.right : undefined;
       if (shape === '3col' && (typeof right !== 'number' || !Number.isFinite(right))) return;
-      setSizes(shape === '3col' ? { sidebar, right: right as number } : { sidebar });
+      setSizes({ shape, ...(shape === '3col' ? { sidebar, right: right as number } : { sidebar }) });
       persistLayout(shape, sidebar, typeof right === 'number' ? right : 0);
     },
     [shape]
@@ -145,7 +145,7 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
 
   const resetLayout = useCallback(() => {
     clearPersistedLayouts();
-    setSizes({});
+    setSizes({ shape });
     // Snap the live Group back to defaults via the panels' imperative
     // handles (registered below through the shared reset sink).
     resetSink?.(shape);
@@ -153,8 +153,11 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
 
   return {
     isDesktop,
-    sidebarSize: sizes.sidebar,
-    rightSize: sizes.right,
+    // Sizes are tagged with the shape that produced them; when the shape
+    // switches (rightPanel toggles), the pending sizes are stale and must
+    // NOT leak into the other shape's panel group (PR #442 review 6b).
+    sidebarSize: sizes.shape === shape ? sizes.sidebar : undefined,
+    rightSize: sizes.shape === shape ? sizes.right : undefined,
     handleLayoutChanged,
     resetLayout,
   };
@@ -192,7 +195,7 @@ export function readStoredLayoutForTest(shape: LayoutShape): string | null {
   try {
     return window.localStorage.getItem(storageKey(shape));
   } catch (error) {
-    reportError(error);
+    console.error('[DashboardLayout]', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
