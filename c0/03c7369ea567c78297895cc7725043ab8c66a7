@@ -1,0 +1,28 @@
+web/lib/hooks/__tests__/use-highlights-status.test.ts
+  s_253962a83f9990::t_71ad5371a16812 216-260,263-266
+  s_253962a83f9990::t_6badb4b80b6dac 261-262
+web/lib/hooks/useHighlightsStatus.ts
+  s_253962a83f9990::t_756387fc9f6779 55-61
+  s_253962a83f9990::t_fa34dab3f7a064 121-123
+  s_253962a83f9990::t_6f88dd64ce9222 149,174-175,177-181
+  s_253962a83f9990::t_24db32c2ea56f4 158-167
+  s_253962a83f9990::t_fd7a8398241e93 208-213,219
+  s_253962a83f9990::t_b167747da8eb52 98-100
+  s_253962a83f9990::t_3c2aba0f6b042b 168-173,176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c003c7369ea567c78297895cc7725043ab8c66a7",
+  "prompts": {},
+  "sessions": {
+    "s_253962a83f9990": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee76a1511ffefJ0TC0BP0WV365",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
