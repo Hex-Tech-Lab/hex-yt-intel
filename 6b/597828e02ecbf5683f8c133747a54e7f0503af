@@ -1,0 +1,22 @@
+web/components/markdown/dimensionMarkdownComponents.tsx
+  s_253962a83f9990::t_21bb3b18d62bfc 10-17
+  s_253962a83f9990::t_4308b29efa4568 44-47
+web/components/markdown/__tests__/timestamp-buttons.test.tsx
+  s_253962a83f9990::t_edaca6fac88455 81-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b597828e02ecbf5683f8c133747a54e7f0503af",
+  "prompts": {},
+  "sessions": {
+    "s_253962a83f9990": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee76a1511ffefJ0TC0BP0WV365",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
