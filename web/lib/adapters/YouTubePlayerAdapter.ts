@@ -112,7 +112,7 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     this.destroyed = false;
     this.container = container;
 
-    const timeout = new Promise<never>((_, reject) => {
+    const timeout = new Promise<never>((_unused, reject) => {
       this.loadTimeout = setTimeout(() => {
         reject(new Error('YouTube Player mount timed out after 30s'));
       }, 30000);
@@ -155,10 +155,10 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
           onReady: () => {
             if (this.destroyed) {
               if (this.player?.destroy) {
-                try { this.player.destroy(); } catch (destroyErr) {
+                try { this.player.destroy(); } catch (mountRaceError) {
                   // Expected path when racing an unmount during mount -- stale
                   // iframe teardown failure is harmless, log for diagnostics.
-                  console.debug('[YouTubePlayerAdapter] destroy during mount race:', destroyErr instanceof Error ? destroyErr.message : String(destroyErr));
+                  console.error('[YouTubePlayerAdapter]', mountRaceError instanceof Error ? mountRaceError.message : String(mountRaceError));
                 }
               }
               if (this.container) this.container.innerHTML = '';
@@ -166,14 +166,14 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
             }
             callbacks?.onReady?.();
           },
-          onError: (e: YTPlayerEvent) => {
-            if (!this.destroyed) callbacks?.onError?.(new Error(`YouTube error: ${e.data}`));
+          onError: (event: YTPlayerEvent) => {
+            if (!this.destroyed) callbacks?.onError?.(new Error(`YouTube error: ${event.data}`));
           },
-          onStateChange: (e: YTPlayerEvent) => {
+          onStateChange: (event: YTPlayerEvent) => {
             if (this.destroyed) return;
-            if (e.data === 1) callbacks?.onPlay?.();
-            else if (e.data === 2) callbacks?.onPause?.();
-            else if (e.data === 0) callbacks?.onEnded?.();
+            if (event.data === 1) callbacks?.onPlay?.();
+            else if (event.data === 2) callbacks?.onPause?.();
+            else if (event.data === 0) callbacks?.onEnded?.();
           },
         },
       });
@@ -232,8 +232,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       this.loadTimeout = null;
     }
     if (this.player?.destroy) {
-      try { this.player.destroy(); } catch (err) {
-        Sentry.captureException(err, { tags: { operation: 'youtube-player-destroy' } });
+      try { this.player.destroy(); } catch (destroyError) {
+        Sentry.captureException(destroyError, { tags: { operation: 'youtube-player-destroy' } });
       }
     }
     if (this.container) {
