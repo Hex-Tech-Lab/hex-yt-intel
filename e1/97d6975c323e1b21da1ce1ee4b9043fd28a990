@@ -1,0 +1,27 @@
+worker/src/__tests__/error-handler-cors.test.ts
+  s_8b47960df14dfb::t_328932cacf7128 4-7
+  s_8b47960df14dfb::t_55e2a32b795301 1-3,8-29,31-43
+  s_8b47960df14dfb::t_4d812c2a51b469 30
+worker/src/middleware/error-handler.ts
+  s_8b47960df14dfb::t_3b08a243282d56 4,32-40,48-51
+worker/src/__tests__/cors.test.ts
+  s_8b47960df14dfb::t_a0d7c2b04ef7f0 8-10
+worker/src/middleware/cors.ts
+  s_8b47960df14dfb::t_749f08455a7c65 17-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e197d6975c323e1b21da1ce1ee4b9043fd28a990",
+  "prompts": {},
+  "sessions": {
+    "s_8b47960df14dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eef56d471ffeOVRvTEJZomqhhA",
+        "model": "z-ai/glm-5.3-flash"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
