@@ -213,4 +213,55 @@ describe('useHighlightsStatus', () => {
     const calledUrl = fetchMock.mock.calls[0][0] as string;
     expect(calledUrl).toContain(encodeURIComponent('id with spaces & stuff'));
   });
+
+  it('restores A badge (no refetch) when returning to A while B is in flight (A -> B -> A, PR #442 5a)', async () => {
+    // The stale-B request never resolves -- B stays pending the whole time.
+    let pendingB: (value: unknown) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}] }) }))
+      .mockImplementationOnce(() => new Promise((resolve) => { pendingB = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, rerender } = renderHook(({ id }: { id: string }) => useHighlightsStatus(id, 'complete'), {
+      initialProps: { id: 'a1' },
+    });
+
+    // A settles with highlights.
+    await waitFor(() => expect(result.current).toEqual({ hasHighlights: true, count: 2 }));
+
+    // Switch to B -- still in flight, badge must reset to null.
+    rerender({ id: 'b1' });
+    expect(result.current).toEqual({ hasHighlights: null, count: 0 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Back to A: badge restored from cache, and B's in-flight request must
+    // be aborted -- no third fetch, and A's settled value wins over B's
+    // late resolution.
+    rerender({ id: 'a1' });
+    await waitFor(() => expect(result.current).toEqual({ hasHighlights: true, count: 2 }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Negative-guard: B's late resolution can never clobber A's badge.
+    pendingB({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}, {}, {}] }) });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(result.current).toEqual({ hasHighlights: true, count: 2 });
+  });
+
+  it('does NOT fetch when digestLoading goes true -> false while status is not complete (PR #442 5b)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, result } = renderHook(
+      ({ digestLoading }: { digestLoading: boolean }) => useHighlightsStatus('a1', 'analyzing', digestLoading),
+      { initialProps: { digestLoading: true } }
+    );
+
+    rerender({ digestLoading: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ hasHighlights: null, count: 0 });
+  });
 });

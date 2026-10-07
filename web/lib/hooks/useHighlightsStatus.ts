@@ -52,6 +52,13 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
   // "already found" guard for re-runs.
   const foundForAnalysisIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Per-analysisId settled results (PR #442 review, 5a): switching A -> B
+  // -> A while B's fetch is in flight previously cleared `result` (B's
+  // setResult(IDLE)) and then Effect A's `foundForAnalysisIdRef` guard
+  // early-returned without restoring anything -- A's badge went null and
+  // never refetched. Cache the settled result per id so returning to A
+  // restores it (and skips the redundant refetch).
+  const settledResultsCacheRef = useRef<Map<string, HighlightsStatusResult>>(new Map());
 
   const runFetchCycle = useCallback((id: string) => {
     // Cancel whatever cycle (if any) is currently running before starting a
@@ -88,7 +95,9 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
             if (controller.signal.aborted) return;
             loadedForAnalysisIdRef.current = requestAnalysisId;
             foundForAnalysisIdRef.current = requestAnalysisId;
-            setResult({ hasHighlights: true, count });
+            const settled: HighlightsStatusResult = { hasHighlights: true, count };
+            settledResultsCacheRef.current.set(requestAnalysisId, settled);
+            setResult(settled);
             return;
           }
           if (attempt < HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS - 1) {
@@ -109,7 +118,9 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
         // Still empty after every retry: a confirmed zero-result extraction.
         if (controller.signal.aborted) return;
         loadedForAnalysisIdRef.current = requestAnalysisId;
-        setResult({ hasHighlights: false, count: 0 });
+        const settled: HighlightsStatusResult = { hasHighlights: false, count: 0 };
+        settledResultsCacheRef.current.set(requestAnalysisId, settled);
+        setResult(settled);
       } catch (err) {
         if ((err as Error)?.name === 'AbortError') return;
         console.warn(`[useHighlightsStatus] failed to load highlights status for ${requestAnalysisId}:`, err);
@@ -135,6 +146,7 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
       abortControllerRef.current?.abort();
       loadedForAnalysisIdRef.current = null;
       foundForAnalysisIdRef.current = null;
+      settledResultsCacheRef.current.delete(analysisId ?? '');
       setResult(IDLE);
       return;
     }
@@ -143,7 +155,30 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
     // re-completing after a status blip): a later digestLoading flip must
     // not blank/reset the badge. A confirmed-EMPTY result deliberately does
     // NOT short-circuit -- see Effect B for the retry path.
-    if (foundForAnalysisIdRef.current === analysisId) return;
+    // PR #442 review (5a): if `result` was blanked by an intermediate id's
+    // entry (A -> B -> A while B was in flight), restore the settled value
+    // from the per-id cache here instead of leaving the badge null.
+    // setResult with the already-current value is a render bail-out, so
+    // this cannot loop.
+    if (foundForAnalysisIdRef.current === analysisId) {
+      const cached = settledResultsCacheRef.current.get(analysisId);
+      if (cached) setResult(cached);
+      return;
+    }
+
+    // PR #442 review (5a): A -> B -> A while B's cycle is still in flight
+    // -- the refs were cleared on B's entry, so without the cache this
+    // path would refetch A and leave B's stale cycle running. Restore the
+    // settled result from the per-id cache instead, aborting B's orphaned
+    // cycle so its late resolution can never clobber the restored badge.
+    const cached = settledResultsCacheRef.current.get(analysisId);
+    if (cached && cached.hasHighlights === true) {
+      abortControllerRef.current?.abort();
+      loadedForAnalysisIdRef.current = analysisId;
+      foundForAnalysisIdRef.current = analysisId;
+      setResult(cached);
+      return;
+    }
 
     setResult(IDLE);
     runFetchCycle(analysisId);
@@ -170,12 +205,18 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
     const analysisIdChangedThisRender = prevAnalysisIdForDigestEffectRef.current !== analysisId;
     prevDigestLoadingRef.current = digestLoading;
     prevAnalysisIdForDigestEffectRef.current = analysisId;
+    // PR #442 review (5b): a digestLoading flip is only meaningful for a
+    // completed analysis -- while status is anything else, Effect A already
+    // holds the single source of lifecycle truth and this effect must not
+    // start a stray cycle outside its guardrails (no cleanup here by
+    // design, so every early-return matters).
+    if (status !== 'complete') return;
     if (!wasTrueNowFalse || analysisIdChangedThisRender) return;
     if (!analysisId) return;
     // Already found real highlights for THIS analysisId -- don't refetch.
     if (foundForAnalysisIdRef.current === analysisId) return;
     runFetchCycle(analysisId);
-  }, [digestLoading, analysisId, runFetchCycle]);
+  }, [digestLoading, analysisId, status, runFetchCycle]);
 
   // CodeRabbit finding, PR #294: guard the RETURNED value too, not just the
   // effect's own re-trigger -- if analysisId changed but this render still
