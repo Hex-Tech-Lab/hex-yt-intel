@@ -1,0 +1,20 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 14-19
+.qa-intel/baseline.json
+  h_50fba0cdd9e5c4 294-300
+web/lib/adapters/WorkerIngestionAdapter.ts
+  h_50fba0cdd9e5c4 140-164
+worker/src/routes/metadata.ts
+  h_50fba0cdd9e5c4 21-52,67-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "353776663718c44045ca15f234e6826eea373f5e",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
