@@ -78,4 +78,21 @@ describe('clickable timestamp buttons in dimension markdown', () => {
     expect(link.tagName).toBe('A');
     expect(link).toHaveAttribute('target', '_blank');
   });
+
+  it('uses the href seconds as the seek target even when the text disagrees ([1:23](#t=30) -> 30s)', () => {
+    render(
+      <SelectedDimensionReadout
+        dimension={{
+          label: 'Test',
+          icon: 'solar:case-linear',
+          content: 'Jump to [1:23](#t=30) here.\n',
+        }}
+      />
+    );
+    const btn = screen.getByRole('button', { name: /seek to/i });
+    expect(btn.textContent).toContain('1:23');
+    expect(btn).toHaveAttribute('data-timestamp', '0:30');
+    fireEvent.click(btn);
+    expect(useVideoStore.getState().seekTo).toBe(30);
+  });
 });

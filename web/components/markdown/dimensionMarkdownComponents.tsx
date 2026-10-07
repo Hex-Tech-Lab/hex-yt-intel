@@ -7,14 +7,14 @@ import type React from 'react';
  * link text isn't a plain timestamp.
  */
 function formatSecondsAsTimestamp(seconds: string): string {
-  const n = parseInt(seconds, 10);
-  if (Number.isNaN(n) || n < 0) return seconds;
-  const h = Math.floor(n / 3600);
-  const m = Math.floor((n % 3600) / 60);
-  const s = n % 60;
-  const mm = String(m).padStart(h > 0 ? 2 : 1, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  const total = parseInt(seconds, 10);
+  if (Number.isNaN(total) || total < 0) return seconds;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  const mm = String(minutes).padStart(hours > 0 ? 2 : 1, '0');
+  const ss = String(secs).padStart(2, '0');
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 /**
@@ -41,13 +41,10 @@ function formatSecondsAsTimestamp(seconds: string): string {
 export function MarkdownLink({ href, children }: { href: string; children: React.ReactNode }) {
   if (href?.startsWith('#t=')) {
     const seconds = href.replace('#t=', '');
-    // linkifyTimestamps encodes the raw seconds in the href but renders the
-    // original human form (e.g. `1:23`) as the link text. For accessibility,
-    // prefer the rendered text as the label when it looks like a timestamp
-    // (guards against text that was mangled/truncated by other transforms);
-    // otherwise fall back to the canonical M:SS/HH:MM:SS derived from seconds.
-    const text = typeof children === 'string' ? children.trim() : '';
-    const timestamp = /^\d{1,2}(:\d{2}){1,2}$/.test(text) ? text : formatSecondsAsTimestamp(seconds);
+    // The seek target MUST come from the href seconds only — the rendered
+    // text is untrusted (may be mangled/truncated by other transforms) and
+    // is used solely as the visible label.
+    const timestamp = formatSecondsAsTimestamp(seconds);
     return <TimestampLink timestamp={timestamp} asButton>{children}</TimestampLink>;
   }
   // Real bug fix (automated review, PR #260): protocol-relative URLs
