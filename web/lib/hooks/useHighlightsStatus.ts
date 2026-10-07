@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getHighlightsRetryDelayMs, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
@@ -16,14 +16,27 @@ const IDLE: HighlightsStatusResult = { hasHighlights: null, count: 0 };
  * fetch -- that one drives the actual scrubber UI and has its own richer
  * state; this is a cheap count-only check for the status chip.
  *
- * `digestLoading` is a deliberate re-trigger dependency, not just a value
- * read: see HighlightsScrubber.tsx and highlights-settings.ts's retry-
- * constants doc for the full mechanism -- highlights are backfilled by
+ * `digestLoading` is a deliberate re-trigger, not just a value read: see
+ * HighlightsScrubber.tsx and highlights-settings.ts's retry-constants doc
+ * for the full mechanism -- highlights are backfilled by
  * scheduleHighlightsRecovery() AFTER digest generation, so a
  * digestLoading:true->false transition is the real, video-length-scaled
  * signal that recovery has now been scheduled server-side, not a fixed
  * timeout guessed from stream-completion (real production race, confirmed
  * 2026-09-08 against the live DB).
+ *
+ * T2 phase-c fix (2026-10-08): the previous single effect keyed on
+ * [analysisId, status, digestLoading] ran its cleanup (controller.abort)
+ * before its body on EVERY dep change -- an in-body early-return guard
+ * cannot prevent React from tearing down first. Any digestLoading flip
+ * mid-retry-cycle therefore killed the in-flight request and restarted the
+ * loop at attempt 0 (rapid-fire CANCELLED requests in the Network tab, and
+ * a cycle that could never complete -> badge stuck null). Same bug class
+ * Cubic flagged on PR #298 in HighlightsScrubber. Fixed with the same
+ * two-effect split: Effect A owns the abort/cleanup lifecycle keyed on
+ * [analysisId, status] only; Effect B only ever STARTS a new cycle on a
+ * genuine digestLoading true->false transition and has NO cleanup, so a
+ * flip can never abort an active cycle.
  */
 export function useHighlightsStatus(analysisId: string | null, status: string, digestLoading?: boolean): HighlightsStatusResult {
   const [result, setResult] = useState<HighlightsStatusResult>(IDLE);
@@ -34,31 +47,20 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
   // AND the fetch entirely -- exposing the previous analysis's "done" badge
   // under the new one until something else happened to re-trigger the effect.
   const loadedForAnalysisIdRef = useRef<string | null>(null);
+  // Set ONLY when hasHighlights===true commits (distinct from
+  // loadedForAnalysisIdRef, which also covers confirmed-empty) -- the
+  // "already found" guard for re-runs.
+  const foundForAnalysisIdRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (status !== 'complete' || !analysisId) {
-      setResult(IDLE);
-      return;
-    }
-
-    // Already have real highlights for THIS analysisId -- a later
-    // digestLoading flip (e.g. a manual digest refresh) must not
-    // blank/reset the badge. A confirmed-EMPTY result (false) deliberately
-    // does NOT short-circuit here -- a later digestLoading transition must
-    // still be allowed to retry, since "empty" from an earlier check can
-    // become "found" once scheduleHighlightsRecovery() actually runs.
-    // Deliberately NOT in the dependency array: a guard read of the current
-    // value, not a re-trigger condition (see HighlightsScrubber.tsx).
-    if (loadedForAnalysisIdRef.current === analysisId && result.hasHighlights === true) return;
-
-    // Reset immediately for the NEW analysisId, not the previous one's
-    // result -- otherwise switching directly between two completed
-    // analyses could flash the old analysis's badge state while the new
-    // fetch is in flight (external review finding).
-    setResult(IDLE);
-
+  const runFetchCycle = useCallback((id: string) => {
+    // Cancel whatever cycle (if any) is currently running before starting a
+    // new one -- keeps runFetchCycle safe to call from either effect below.
+    abortControllerRef.current?.abort();
     const controller = new AbortController();
-    const requestAnalysisId = analysisId;
+    abortControllerRef.current = controller;
+
+    const requestAnalysisId = id;
     let attemptsMade = 0;
 
     (async () => {
@@ -85,6 +87,7 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
           if (count > 0) {
             if (controller.signal.aborted) return;
             loadedForAnalysisIdRef.current = requestAnalysisId;
+            foundForAnalysisIdRef.current = requestAnalysisId;
             setResult({ hasHighlights: true, count });
             return;
           }
@@ -121,11 +124,58 @@ export function useHighlightsStatus(analysisId: string | null, status: string, d
         console.debug(`[useHighlightsStatus] fetch cycle settled for ${requestAnalysisId} after ${attemptsMade} attempt(s), aborted=${controller.signal.aborted}`);
       }
     })();
+  }, []);
 
-    return () => controller.abort();
-  // `result` is a deliberate guard read above, not a dependency (see its comment).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysisId, status, digestLoading]);
+  // Effect A: owns the fetch cycle's start/abort lifecycle. Keyed ONLY on
+  // [analysisId, status] -- a digestLoading change must never trigger this
+  // effect's cleanup, or it would abort an active cycle (see Effect B) with
+  // nothing left to replace it.
+  useEffect(() => {
+    if (status !== 'complete' || !analysisId) {
+      abortControllerRef.current?.abort();
+      loadedForAnalysisIdRef.current = null;
+      foundForAnalysisIdRef.current = null;
+      setResult(IDLE);
+      return;
+    }
+
+    // Already have real highlights for THIS analysisId (e.g. same id
+    // re-completing after a status blip): a later digestLoading flip must
+    // not blank/reset the badge. A confirmed-EMPTY result deliberately does
+    // NOT short-circuit -- see Effect B for the retry path.
+    if (foundForAnalysisIdRef.current === analysisId) return;
+
+    setResult(IDLE);
+    runFetchCycle(analysisId);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, [analysisId, status, runFetchCycle]);
+
+  // Effect B: the digestLoading:true->false recovery trigger --
+  // scheduleHighlightsRecovery() is scheduled server-side AFTER digest
+  // generation completes, which can land well after Effect A's own retry
+  // budget has already given up. This effect has NO cleanup function, so a
+  // digestLoading change (in either direction) can never abort Effect A's
+  // in-flight cycle -- it can only ever START a new one, and only on a
+  // genuine true->false transition.
+  const prevDigestLoadingRef = useRef<boolean | undefined>(digestLoading);
+  // If analysisId ALSO changed in the same render as the true->false
+  // transition, Effect A already started a fresh cycle for the new id --
+  // this effect firing too would abort that brand-new cycle and start a
+  // needless duplicate for the exact same id.
+  const prevAnalysisIdForDigestEffectRef = useRef<string | null>(analysisId);
+  useEffect(() => {
+    const wasTrueNowFalse = prevDigestLoadingRef.current === true && digestLoading === false;
+    const analysisIdChangedThisRender = prevAnalysisIdForDigestEffectRef.current !== analysisId;
+    prevDigestLoadingRef.current = digestLoading;
+    prevAnalysisIdForDigestEffectRef.current = analysisId;
+    if (!wasTrueNowFalse || analysisIdChangedThisRender) return;
+    if (!analysisId) return;
+    // Already found real highlights for THIS analysisId -- don't refetch.
+    if (foundForAnalysisIdRef.current === analysisId) return;
+    runFetchCycle(analysisId);
+  }, [digestLoading, analysisId, runFetchCycle]);
 
   // CodeRabbit finding, PR #294: guard the RETURNED value too, not just the
   // effect's own re-trigger -- if analysisId changed but this render still

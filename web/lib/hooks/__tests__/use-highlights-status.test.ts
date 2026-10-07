@@ -163,6 +163,47 @@ describe('useHighlightsStatus', () => {
     expect(result.current.count).toBe(2);
   });
 
+  it('does NOT abort/restart the active fetch cycle when digestLoading flips false->true mid-retry (phase-c T2 abort-loop regression)', async () => {
+    // phase-c T2 (2026-10-08): the old single effect keyed on
+    // [analysisId, status, digestLoading] ran its cleanup (abort) before its
+    // body on EVERY dep change, so a digestLoading flip during streaming
+    // killed the in-flight cycle and restarted the loop at attempt 0 --
+    // rapid-fire CANCELLED requests and a retry budget that never completed
+    // (badge stuck null = silent hang). Same bug class Cubic flagged on PR
+    // #298 in HighlightsScrubber. The fix splits the lifecycle: only
+    // analysisId/status changes may abort a cycle; a digestLoading flip is
+    // either a no-op (false->true) or a deliberate new-cycle START
+    // (true->false), never an abort of the active cycle.
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = renderHook(
+      ({ digestLoading }: { digestLoading: boolean }) => useHighlightsStatus('a1', 'complete', digestLoading),
+      { initialProps: { digestLoading: false } }
+    );
+
+    // Attempt 0 fires and resolves empty; the cycle is now sitting in its
+    // backoff wait (attempt 1 scheduled at +3s).
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A digest refresh STARTING (false->true) must not abort/restart the
+    // active cycle -- no new fetch, no reset of the backoff schedule.
+    rerender({ digestLoading: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // The original cycle's backoff is still intact: attempt 1 lands on the
+    // ORIGINAL schedule (~3s after attempt 0), not restarted from scratch.
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // And the cycle still completes normally to confirmed-empty.
+    await act(async () => { await vi.advanceTimersByTimeAsync(60000); });
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+  });
+
   it('encodes the analysisId in the request URL', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}] }) });
     vi.stubGlobal('fetch', fetchMock);

@@ -22,6 +22,8 @@ interface YTPlayerConstructor {
     container: HTMLElement | string,
     config: {
       videoId: string;
+      /** Undocumented-but-real iframe_api option (see mount()); not in the official typings. */
+      host?: string;
       playerVars?: Record<string, number | string>;
       events?: {
         onReady?: () => void;
@@ -132,6 +134,17 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       }
       this.player = new YT.Player(container, {
         videoId,
+        // Undocumented-but-real YT widget constructor option (supported by the
+        // iframe_api script itself): forces the widget to construct the embed
+        // iframe against this host explicitly, aligning the internal
+        // postMessage listener's expected iframe origin with the real one.
+        // Without it the widget can bind its listener to a default that
+        // mismatches the actual iframe origin, producing the console error
+        // "Failed to execute 'postMessage' on 'DOMWindow': The target origin
+        // provided ('https://www.youtube.com') does not match the recipient
+        // window's origin". The `origin` playerVar below is still required
+        // (embed-side identity), but does not address the listener side.
+        host: 'https://www.youtube.com',
         playerVars: {
           modestbranding: 1,
           rel: 0,
@@ -142,7 +155,11 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
           onReady: () => {
             if (this.destroyed) {
               if (this.player?.destroy) {
-                try { this.player.destroy(); } catch (_) { /* ignore */ }
+                try { this.player.destroy(); } catch (destroyErr) {
+                  // Expected path when racing an unmount during mount -- stale
+                  // iframe teardown failure is harmless, log for diagnostics.
+                  console.debug('[YouTubePlayerAdapter] destroy during mount race:', destroyErr instanceof Error ? destroyErr.message : String(destroyErr));
+                }
               }
               if (this.container) this.container.innerHTML = '';
               return;
