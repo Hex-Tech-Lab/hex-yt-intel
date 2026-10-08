@@ -545,6 +545,12 @@ export function useSSEStream() {
                   prior_payload: projectiveContext?.prior_payload,
                   contextSig: projectiveContext?.contextSig,
                   contextExp: projectiveContext?.contextExp,
+                  // Phase C shadow mode: the Vercel-signed grant rides on the first
+                  // bundle only, so the worker runs the Epistemic pipeline once per
+                  // analysis (never on Jev cell requests).
+                  ...(i === 0 && !cellToken && job.epistemicShadow
+                    ? { epistemicShadowSig: job.epistemicShadow.sig, epistemicShadowExp: job.epistemicShadow.exp }
+                    : {}),
                   priorPayloadMaxBytes: job.priorPayloadMaxBytes,
                   // R3b 2.3 (P1): forward the resolved Jev plan when present.
                   // Dispatch count is NEVER derived from the plan -- it stays

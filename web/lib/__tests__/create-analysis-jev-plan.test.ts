@@ -199,3 +199,34 @@ describe('admin gate (R3b): K>1 planning needs the flag AND an admin requester',
     expect(planAnalysis.mock.calls[0][0].jevConfig.enabled).toBe(false);
   });
 });
+
+describe('CreateAnalysisUseCase Phase C shadow grant (analysis.pipeline.epistemic)', () => {
+  it('omits the grant when the flag is off (default)', async () => {
+    const result = await buildUseCase().execute(baseParams());
+    expect(result.type).toBe('processing');
+    expect(result.type === 'processing' && 'epistemicShadow' in result.data).toBe(false);
+  });
+
+  it('signs a grant for this analysis when the flag is on, verifiable by the worker', async () => {
+    const prev = process.env.STREAM_HMAC_SECRET;
+    process.env.STREAM_HMAC_SECRET = 'shadow-test-secret';
+    vi.mocked(getRegistrySettings).mockImplementation((keys: string[], fallback: Record<string, unknown>) => {
+      const res = defaultRegistry(keys, fallback);
+      if (keys.includes('analysis.pipeline.epistemic')) res['analysis.pipeline.epistemic'] = true;
+      return res;
+    });
+    try {
+      const result = await buildUseCase().execute(baseParams());
+      expect(result.type).toBe('processing');
+      const grant = result.type === 'processing' ? (result.data as { epistemicShadow?: { sig: string; exp: number } }).epistemicShadow : undefined;
+      expect(grant?.sig).toMatch(/^[0-9a-f]{64}$/);
+      const { verifyEpistemicShadowSig } = await import('@/lib/config/epistemic-shadow');
+      const { env } = await import('@/lib/env');
+      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'an-1', sig: grant?.sig, exp: grant?.exp })).toBe(true);
+      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'another', sig: grant?.sig, exp: grant?.exp })).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.STREAM_HMAC_SECRET; else process.env.STREAM_HMAC_SECRET = prev;
+      vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);
+    }
+  });
+});

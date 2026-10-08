@@ -22,6 +22,7 @@ import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfi
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
 import { gateJevForUser, resolveJevConfig, resolveJevMaxParallelStreams, resolveJevTimeMarkerIntervalSeconds, JEV_MAX_PARALLEL_STREAMS_FALLBACK, JEV_TIME_MARKER_INTERVAL_FALLBACK } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
+import { EPISTEMIC_PIPELINE_FLAG_KEY, signEpistemicShadow } from '@/lib/config/epistemic-shadow';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 /** A6 input estimate — same value as the /plan route's PROMPT_PREFIX_TOKENS_ESTIMATE. */
@@ -452,6 +453,23 @@ export class CreateAnalysisUseCase {
       };
     }
 
+    // Phase C shadow mode (2026-10-08): registry-gated, default off. The grant is
+    // signed (the worker has no DB access and the browser relays the request), and
+    // a signing or registry failure only skips the shadow run -- never the analysis.
+    let epistemicShadow: { sig: string; exp: number } | undefined;
+    try {
+      const flagRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+        [EPISTEMIC_PIPELINE_FLAG_KEY],
+        { [EPISTEMIC_PIPELINE_FLAG_KEY]: false }
+      );
+      if (flagRegistry[EPISTEMIC_PIPELINE_FLAG_KEY] === true) {
+        epistemicShadow = await signEpistemicShadow(env.streamHmacSecret, stub.id);
+      }
+    } catch (error) {
+      console.error('[CreateAnalysisUseCase] epistemic shadow grant skipped', error);
+      Sentry.captureException(error, { tags: { component: 'CreateAnalysisUseCase', phase: 'epistemic-shadow' }, extra: { videoId } });
+    }
+
     return {
       type: 'processing',
       persona,
@@ -494,6 +512,7 @@ export class CreateAnalysisUseCase {
           sig: token.sig,
           exp: token.exp,
         },
+        ...(epistemicShadow ? { epistemicShadow } : {}),
       },
     };
   }
