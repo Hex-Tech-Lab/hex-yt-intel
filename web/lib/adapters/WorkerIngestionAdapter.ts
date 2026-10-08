@@ -47,6 +47,16 @@ const workerUrlGuard = {
   },
 };
 
+/** Normalises the worker's /fetch-transcript JSON body into the adapter's result shape. */
+function toTranscriptResult(data: any): { transcript: string; segments?: TranscriptSegment[]; language?: string } {
+  return {
+    transcript: data.transcript || '',
+    segments: Array.isArray(data.segments) ? data.segments : undefined,
+    language: typeof data.language === 'string' && data.language ? data.language : undefined,
+  };
+}
+
+/** Fetches transcript text and timed segments for a video from the trusted Cloudflare worker. */
 async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: string; segments?: TranscriptSegment[]; language?: string }> {
   const workerUrl = env.cloudflareWorkerUrl;
   workerUrlGuard.assertTrusted(workerUrl);
@@ -66,7 +76,7 @@ async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: str
     // /fetch-transcript) already includes timed `segments` -- previously only
     // `data.transcript` was read here, discarding them at this boundary.
     const data = await response.json();
-    return { transcript: data.transcript || '', segments: Array.isArray(data.segments) ? data.segments : undefined, language: typeof data.language === 'string' && data.language ? data.language : undefined };
+    return toTranscriptResult(data);
   } catch (error) {
     // A rejection here previously vanished into Promise.allSettled with zero
     // telemetry, silently degrading to "no transcript" -- indistinguishable
