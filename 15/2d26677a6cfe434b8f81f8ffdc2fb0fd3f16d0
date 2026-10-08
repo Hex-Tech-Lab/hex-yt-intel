@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  s_e7f22c9bef3caa::t_5d5131818cd584 1572
+  s_f2d42573e639f0::t_50e163ecb7671a 47
+  s_f2d42573e639f0::t_c47a77e3338e86 1558
+  s_f2d42573e639f0::t_464d9a1d43e256 1566
+  s_f2d42573e639f0::t_ceb4226c31ef4e 40
+  s_f2d42573e639f0::t_02c0f67a963449 1555
+supabase/migrations/20261005020000_phase_c_epistemic_schema.sql
+  s_f2d42573e639f0::t_77e4bf926f943c 19-25
+.vercelignore
+  s_f2d42573e639f0::t_8e126145417a4b 19-21
+.memory/DEFENSIVE_LEDGER.md
+  s_f2d42573e639f0::t_f3c616a0cff77c 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "152d26677a6cfe434b8f81f8ffdc2fb0fd3f16d0",
+  "prompts": {},
+  "sessions": {
+    "s_e7f22c9bef3caa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5616a93ffeWmcSxddpLDZroI",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_f2d42573e639f0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4fe087dffeYlA367qLgn0h8d",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
