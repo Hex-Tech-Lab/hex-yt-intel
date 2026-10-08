@@ -1,0 +1,35 @@
+web/hooks/useSSEStream.ts
+  s_4075cc6448b8f7::t_9e258ed3561fea 552
+web/lib/__tests__/create-analysis-jev-plan.test.ts
+  s_4075cc6448b8f7::t_36fc765d0bdc14 225-226
+web/lib/config/epistemic-shadow.ts
+  s_4075cc6448b8f7::t_7590fb0be203cf 27-62,80-89,91,101,106-107,109
+web/lib/usecases/epistemic-shadow-grant.ts
+  s_4075cc6448b8f7::t_88c0f4d702f26c 11-18,20-28,30-32,34-46
+worker/src/__tests__/epistemic-persist-retry.test.ts
+  s_4075cc6448b8f7::t_c7221f5e9b6325 3-6,9,11-13,17-21,29-32,34,39,41,51-56,59-61,64,84,115-161
+worker/src/__tests__/epistemic-shadow-route.test.ts
+  s_4075cc6448b8f7::t_e6d3a9ca65a9a8 43-44,86-87,96-103,113-116,122-123
+worker/src/__tests__/epistemic-shadow-runner.test.ts
+  s_4075cc6448b8f7::t_c5a3cc81a1e8bb 47
+worker/src/routes/analysis.ts
+  s_4075cc6448b8f7::t_20992e1265d202 36,153,1994,1996,1999,2012
+worker/src/services/EpistemicShadowRunner.ts
+  s_4075cc6448b8f7::t_80146197dcb7a3 24,38-39,63-64,79,81-82,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da168156da47232cdff262e47948b2f0700ab1e1",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
