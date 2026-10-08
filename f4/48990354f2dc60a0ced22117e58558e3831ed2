@@ -1,0 +1,19 @@
+supabase/migrations/20261009120000_analysis_pipeline_retry_epistemic_registry_key.sql
+  s_c3159d04a49d90::t_73633680a2c51c 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f448990354f2dc60a0ced22117e58558e3831ed2",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
