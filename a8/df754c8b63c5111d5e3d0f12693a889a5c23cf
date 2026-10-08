@@ -1,0 +1,21 @@
+web/lib/__tests__/settings-registry-stale-cache.test.ts
+  s_4075cc6448b8f7::t_42763840a95bc9 1-54
+web/lib/adapters/SupabaseSettingsAdapter.ts
+  s_4075cc6448b8f7::t_e566971742a8a4 2,115-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8df754c8b63c5111d5e3d0f12693a889a5c23cf",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
