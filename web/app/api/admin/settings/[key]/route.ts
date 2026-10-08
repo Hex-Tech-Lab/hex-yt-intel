@@ -87,7 +87,7 @@ function validateAgainstContract(
   switch (dataType) {
     case 'number': {
       if (typeof value !== 'number' || !Number.isFinite(value)) return 'Expected a finite number';
-      if ((validation.integer === true || (key && key.startsWith('analysis.maxOutputTokens.'))) && !Number.isInteger(value)) {
+      if ((validation.integer === true || (key?.startsWith('analysis.maxOutputTokens.'))) && !Number.isInteger(value)) {
         return 'Expected an integer value';
       }
       if (typeof validation.min === 'number' && value < validation.min) return `Value must be >= ${validation.min}`;
