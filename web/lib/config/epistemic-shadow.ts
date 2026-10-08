@@ -52,18 +52,26 @@ const MAX_ATTEMPT_TIMEOUT_MS = 60_000;
  */
 const MAX_TOTAL_PERSIST_MS = 4 * 60 * 1000;
 
+/** Field-level checks: integer ranges, delay count matching the attempts, and each delay in bounds. */
+function hasValidFields(maxAttempts: unknown, backoffDelays: unknown, attemptTimeoutMs: unknown): boolean {
+  if (!Number.isInteger(maxAttempts) || !Number.isInteger(attemptTimeoutMs)) return false;
+  const attempts = maxAttempts as number;
+  const timeout = attemptTimeoutMs as number;
+  if (attempts < 1 || attempts > MAX_PERSIST_ATTEMPTS) return false;
+  if (timeout < MIN_ATTEMPT_TIMEOUT_MS || timeout > MAX_ATTEMPT_TIMEOUT_MS) return false;
+  if (!Array.isArray(backoffDelays) || backoffDelays.length !== attempts - 1) return false;
+  return backoffDelays.every((ms) => Number.isInteger(ms) && ms >= 0 && ms <= MAX_BACKOFF_MS);
+}
+
 /** Validates a registry value into a retry policy, or null when malformed. */
 export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetry | null {
   if (typeof value !== 'object' || value === null) return null;
   const { maxAttempts, backoffDelays, attemptTimeoutMs } = value as { maxAttempts?: unknown; backoffDelays?: unknown; attemptTimeoutMs?: unknown };
-  if (!Number.isInteger(maxAttempts) || (maxAttempts as number) < 1 || (maxAttempts as number) > MAX_PERSIST_ATTEMPTS) return null;
-  if (!Array.isArray(backoffDelays) || backoffDelays.length !== (maxAttempts as number) - 1) return null;
-  if (!Number.isInteger(attemptTimeoutMs) || (attemptTimeoutMs as number) < MIN_ATTEMPT_TIMEOUT_MS || (attemptTimeoutMs as number) > MAX_ATTEMPT_TIMEOUT_MS) return null;
-  const delays = backoffDelays as unknown[];
-  if (!delays.every((ms) => Number.isInteger(ms) && (ms as number) >= 0 && (ms as number) <= MAX_BACKOFF_MS)) return null;
-  const backoffTotal = (delays as number[]).reduce((total, ms) => total + ms, 0);
-  if (backoffTotal + (maxAttempts as number) * (attemptTimeoutMs as number) > MAX_TOTAL_PERSIST_MS) return null;
-  return { maxAttempts: maxAttempts as number, backoffDelays: [...(delays as number[])], attemptTimeoutMs: attemptTimeoutMs as number };
+  if (!hasValidFields(maxAttempts, backoffDelays, attemptTimeoutMs)) return null;
+  const delays = backoffDelays as number[];
+  const timeline = delays.reduce((total, ms) => total + ms, 0) + (maxAttempts as number) * (attemptTimeoutMs as number);
+  if (timeline > MAX_TOTAL_PERSIST_MS) return null;
+  return { maxAttempts: maxAttempts as number, backoffDelays: [...delays], attemptTimeoutMs: attemptTimeoutMs as number };
 }
 
 /** Canonical text of a retry policy, bound into the grant signature. */

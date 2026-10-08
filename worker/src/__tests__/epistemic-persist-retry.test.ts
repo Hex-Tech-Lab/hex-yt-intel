@@ -46,6 +46,12 @@ function params(fetchImpl: typeof fetch, persistRetry = EPISTEMIC_PERSIST_RETRY_
   };
 }
 
+/** Fails loudly when the grant was not minted, so assertions below need no non-null operator. */
+function requireGrant<T>(grant: T | undefined): T {
+  if (!grant) throw new Error('grant not minted');
+  return grant;
+}
+
 const ok = () => new Response('{}', { status: 200 });
 const status = (code: number) => new Response('err', { status: code });
 const registry = vi.mocked(SupabaseSettingsAdapter.getRegistrySettings);
@@ -133,12 +139,12 @@ describe('persistGroundedClaims bounded retry (PersistResilienceRule)', () => {
   describe('registry-driven policy (round trip: registry -> signed grant -> runner)', () => {
     it('a registry value of { maxAttempts: 2, backoffDelays: [7] } is minted, verified, and drives the runner', async () => {
       mockRegistry({ [EPISTEMIC_PIPELINE_FLAG_KEY]: true, [EPISTEMIC_PERSIST_RETRY_KEY]: { maxAttempts: 2, backoffDelays: [7], attemptTimeoutMs: 10_000 } });
-      const grant = await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1');
-      expect(grant?.retry).toEqual({ maxAttempts: 2, backoffDelays: [7], attemptTimeoutMs: 10_000 });
-      await expect(verifyEpistemicShadowSig({ secret: SECRET, analysisId: ANALYSIS_ID, sig: grant!.sig, exp: grant!.exp, retry: grant!.retry })).resolves.toBe(true);
+      const grant = requireGrant(await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1'));
+      expect(grant.retry).toEqual({ maxAttempts: 2, backoffDelays: [7], attemptTimeoutMs: 10_000 });
+      await expect(verifyEpistemicShadowSig({ secret: SECRET, analysisId: ANALYSIS_ID, sig: grant.sig, exp: grant.exp, retry: grant.retry })).resolves.toBe(true);
 
       const fetchImpl = vi.fn().mockResolvedValue(status(500));
-      const opts = params(fetchImpl as unknown as typeof fetch, grant!.retry);
+      const opts = params(fetchImpl as unknown as typeof fetch, grant.retry);
       await expect(persistGroundedClaims(opts, CLAIMS, false)).resolves.toBe(false);
 
       expect(fetchImpl).toHaveBeenCalledTimes(2);
@@ -149,9 +155,9 @@ describe('persistGroundedClaims bounded retry (PersistResilienceRule)', () => {
     it('a registry value with longer backoff (5 attempts, [11, 13, 17, 19]) is honoured by the runner', async () => {
       const custom = { maxAttempts: 5, backoffDelays: [11, 13, 17, 19], attemptTimeoutMs: 10_000 };
       mockRegistry({ [EPISTEMIC_PIPELINE_FLAG_KEY]: true, [EPISTEMIC_PERSIST_RETRY_KEY]: custom });
-      const grant = await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1');
+      const grant = requireGrant(await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1'));
       const fetchImpl = vi.fn().mockResolvedValue(status(503));
-      const opts = params(fetchImpl as unknown as typeof fetch, grant!.retry);
+      const opts = params(fetchImpl as unknown as typeof fetch, grant.retry);
 
       await expect(persistGroundedClaims(opts, CLAIMS, false)).resolves.toBe(false);
 

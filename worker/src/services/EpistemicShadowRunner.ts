@@ -82,6 +82,13 @@ async function postClaimsOnce(
   return res.status;
 }
 
+/** Maps one attempt's status to the next step: stop with success, retry, or give up. */
+function persistVerdict(status: number | "network"): "done" | "retry" | "final" {
+  if (status === "network") return "retry";
+  if (status >= 200 && status < 300) return "done";
+  return status >= 500 || status === 429 ? "retry" : "final";
+}
+
 /**
  * Signs and POSTs one grounded-claims write to Vercel. Retries 5xx, 429 and
  * network errors within the signed attempt budget and backoff; any other 4xx is
@@ -104,11 +111,10 @@ export async function persistGroundedClaims(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) await sleep(backoffDelays[attempt - 1] ?? 0);
     const status = await postClaimsOnce(params.fetchImpl ?? fetch, url, init, attemptTimeoutMs, params.analysisId, attempt);
-    if (status !== "network" && status >= 200 && status < 300) return true;
-    if (status !== "network") {
-      console.error("[EpistemicShadow] grounded-claims persist rejected", { analysisId: params.analysisId, status, attempt });
-      if (status < 500 && status !== 429) return false;
-    }
+    const verdict = persistVerdict(status);
+    if (verdict === "done") return true;
+    if (status !== "network") console.error("[EpistemicShadow] grounded-claims persist rejected", { analysisId: params.analysisId, status, attempt });
+    if (verdict === "final") return false;
   }
   Sentry.captureMessage("EpistemicShadow: grounded-claims persist gave up after retries", {
     level: "error",
