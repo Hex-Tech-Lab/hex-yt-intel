@@ -1,0 +1,47 @@
+scripts/quality-engine/rules/__tests__/artas-v3.test.ts
+  s_269b95ab1eb22f::t_c46367635dd9ed 208
+  s_269b95ab1eb22f::t_7757f324f89d05 42-59
+  s_269b95ab1eb22f::t_a5aa2c89dab524 1-41,60-207,209-321
+scripts/quality-engine/rules/__tests__/artas-v3-registration.test.ts
+  s_269b95ab1eb22f::t_f0b5a1e9281c37 1-37
+docs/agent-prompts/2026-10-08-oc-artas-qe-rules.md
+  s_4075cc6448b8f7::t_db360c42103b3f 1-67
+scripts/quality-engine/rules/artas-v3.ts
+  s_269b95ab1eb22f::t_1325b4f785afc5 194-197
+  s_269b95ab1eb22f::t_f0c59e8a79c0c9 393-398
+  s_269b95ab1eb22f::t_b81e8a154e21c4 408-415
+  s_269b95ab1eb22f::t_669bbf89614d4d 64-68
+  s_269b95ab1eb22f::t_a81cf6f74e6a36 105-111
+  s_269b95ab1eb22f::t_1ff4d4f4947989 86-87
+  s_269b95ab1eb22f::t_35af8759b99275 188
+  s_269b95ab1eb22f::t_ff15d5c0dd179e 362,364-368,370-371,373
+  s_269b95ab1eb22f::t_7af7742aa1bcc9 392
+  s_269b95ab1eb22f::t_7dd4d147fba3ab 1-63,69-85,89-104,112-187,189-193,198-361,363,369,372,374-391,399-407,416-436
+  s_4075cc6448b8f7::t_63602d41120416 88
+scripts/quality-engine/rules/index.ts
+  s_269b95ab1eb22f::t_e73058ebd172d9 60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20e69a58afd5cd2ce2d9665e3e23b8da9b9098c1",
+  "prompts": {},
+  "sessions": {
+    "s_269b95ab1eb22f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5720dceffevt4YEUTNt9MvIg",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
