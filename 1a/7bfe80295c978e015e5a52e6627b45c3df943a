@@ -1,0 +1,27 @@
+web/lib/config/epistemic-shadow.ts
+  s_4075cc6448b8f7::t_dc794bac56027e 33,38,42,46-47,49-51,53,58,61,64-66,71
+worker/src/__tests__/epistemic-persist-retry.test.ts
+  s_4075cc6448b8f7::t_8dd8cf444946c4 32,116-132,135,137,150,165,171,175,177,181-182
+worker/src/__tests__/epistemic-shadow-route.test.ts
+  s_4075cc6448b8f7::t_ad774a7fba5e92 43
+worker/src/__tests__/epistemic-shadow-runner.test.ts
+  s_4075cc6448b8f7::t_1ba3c7979d9254 47
+worker/src/services/EpistemicShadowRunner.ts
+  s_4075cc6448b8f7::t_2c01e1adad18e6 61-84,87-88,102,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a7bfe80295c978e015e5a52e6627b45c3df943a",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
