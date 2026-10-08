@@ -1,0 +1,23 @@
+.memory/skills/jev_decision_router.md
+  s_4075cc6448b8f7::t_530099558dd98e 1-45
+scripts/jev/jevRouter.ts
+  s_4075cc6448b8f7::t_c7e8952e75ab34 1-80
+scripts/test_jev_router.ts
+  s_4075cc6448b8f7::t_ac67fd4acf37ee 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "01217b00f5996344cef65da052838cbbef08ed93",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
