@@ -103,10 +103,17 @@ describe('WorkerIngestionAdapter', () => {
 
     it('stores the transcript with its timed segments and language before returning', async () => {
       const { WorkerIngestionAdapter } = await import('../adapters/WorkerIngestionAdapter');
+      let releaseUpsert!: () => void;
+      upsertTranscript.mockReturnValueOnce(new Promise<void>((resolve) => { releaseUpsert = resolve; }));
       mockFetches({ transcript: 'hello world', segments: SEGMENTS, language: 'de' });
-      const result = await new WorkerIngestionAdapter().fetch('vid1');
-      expect(result.segments).toEqual(SEGMENTS);
+      let settled = false;
+      const pending = new WorkerIngestionAdapter().fetch('vid1').then((r) => { settled = true; return r; });
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(upsertTranscript).toHaveBeenCalledWith({ videoId: 'vid1', content: 'hello world', segments: SEGMENTS, language: 'de' });
+      expect(settled).toBe(false);
+      releaseUpsert();
+      const result = await pending;
+      expect(result.segments).toEqual(SEGMENTS);
     });
 
     it('stores nothing when the worker returned no segments', async () => {
