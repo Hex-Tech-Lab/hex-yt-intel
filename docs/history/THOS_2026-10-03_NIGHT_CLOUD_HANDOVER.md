@@ -21,6 +21,8 @@
 | #426 | `a98679e4` | Route B: classification cell (dim 11) gets clean transcript; route-level v2 dimension-mismatch guard test. Merged with DeepSource JS (worker) red **by user decision** — main itself has been red on that analyzer since #417; #426 added no new DeepSource findings |
 
 ### 1.2 Open PRs (as of handover — #421, #424, #425 were merged afterwards, see §5)
+
+> **Status 2026-10-08 (weekly sync):** #427, #428 (draft) and #435 were later **closed unmerged**. #431 (taxonomy docs) and #433 (10X hostile audit template) were merged 2026-10-03 ~21:37 UTC. Treat the #427/#428 rows below as historical.
 | PR | Head | State | Next action |
 |---|---|---|---|
 | **#421** ETA smoothing — **MERGED `2e021d2e`, see §5** | `b50b5c86` | CC-verified (cutoff, ticker stop, new-run reset — each with a negative control), `/code-review` finding fixed, CI green | **Merge on the user's go** (they have not yet said go) |
