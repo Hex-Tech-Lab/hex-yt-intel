@@ -160,11 +160,6 @@ export class LLMCascade implements LLMCascadePort {
   }
 
   /**
-   * Stream the cascade. Iterates MODEL_CHAIN, committing to the first model that
-   * produces tokens. Emits 'model'/'fallback' lifecycle events via onStatus.
-   * Falls through to the next model only if the current one never produced a token.
-   */
-  /**
    * Epistemic engines' streaming entry point (Phase C). Runs the normal tier
    * cascade (same fallback, provider pinning and per-stream reasoning as the
    * live path) over `systemPrompt` + `userPrompt`, and exposes the deltas as a
@@ -199,6 +194,11 @@ export class LLMCascade implements LLMCascadePort {
     }));
   }
 
+  /**
+   * Stream the cascade. Iterates MODEL_CHAIN, committing to the first model that
+   * produces tokens. Emits 'model'/'fallback' lifecycle events via onStatus.
+   * Falls through to the next model only if the current one never produced a token.
+   */
   async streamCascade(
     systemPrompt: string,
     onDelta: (text: string) => void,
