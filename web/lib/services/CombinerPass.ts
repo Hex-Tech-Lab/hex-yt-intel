@@ -30,7 +30,14 @@ export interface DimensionChunk {
   [key: string]: unknown;
 }
 
+/**
+ * CombinerPass — merges per-chunk dimension markdown into one AST per
+ * dimension number (dedupes intros, merges subsection bodies), then
+ * re-serializes to markdown; Dimension 7 additionally gets system-block
+ * normalization (numbered `System N:` blocks with A–D subsection labels).
+ */
 export class CombinerPass {
+  /** Parses one chunk's dimension markdown into (intro, subsections) AST form. */
   public static parseDimensionMarkdown(dimNumber: number, name: string, markdown: string): ParsedDimensionAST {
     const ast: ParsedDimensionAST = {
       number: dimNumber,
@@ -48,11 +55,11 @@ export class CombinerPass {
     let currentSubLines: string[] = [];
     const introLines: string[] = [];
 
-    const subHeaderRegex = /^#{2,4}\s+(\d+\.\d+)\s*[-:–—]?\s*(.*)$/;
+    const subHeaderRegex = /^#{2,4}\s+(\d+\.\d+)\s*[-:–—]?\s*(.*)$/u;
 
     for (const line of lines) {
       const match = line.match(subHeaderRegex);
-      if (match && match[1]) {
+      if (match?.[1]) {
         if (currentSubNumber) {
           ast.subsections.set(currentSubNumber, {
             numberStr: currentSubNumber,
@@ -88,12 +95,13 @@ export class CombinerPass {
     return ast;
   }
 
+  /** Normalizes Dimension 7 content into canonical `**System N: title**` blocks. */
   public static normalizeDimension7(content: string): string {
     if (!content.includes('System') && !content.includes('7.1')) {
       return content;
     }
 
-    const systemSplitRegex = /(?:^|\n)(?:\*{0,2}System(?:\s+\d+)?:?\s*\*?\*?\s*)/i;
+    const systemSplitRegex = /(?:^|\n)\*{0,2}System(?:\s+\d+)?\s*:\s*\*?\*?\s*/iu;
     const parts = content.split(systemSplitRegex);
 
     if (parts.length <= 1) {
@@ -111,15 +119,21 @@ export class CombinerPass {
 
       const firstLineEnd = trimmed.indexOf('\n');
       let title = firstLineEnd !== -1 ? trimmed.slice(0, firstLineEnd).trim() : trimmed;
-      title = title.replace(/^\[|\]$/g, '').replace(/^\*{1,2}|\*{1,2}$/g, '').trim();
+      // Strip markdown bold first, then a balanced surrounding [pair] —
+      // stripping brackets before bold left titles like "[System Alpha]"
+      // with a trailing "]" (the ^\[|\]$ alternation only removes one side
+      // when the other is wrapped in asterisks).
+      title = title.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^\[(.*)\]$/u, '$1').trim();
 
       let body = firstLineEnd !== -1 ? trimmed.slice(firstLineEnd).trim() : '';
 
       body = body
-        .replace(/(?:^|\n)(?:[-*•]\s*)?(?:\*{0,2}(?:Step-by-[sS]tep [iI]mplementation|Implementation Steps):?\*{0,2})/gi, '\n\nA. Step-by-Step Implementation')
-        .replace(/(?:^|\n)(?:[-*•]\s*)?(?:\*{0,2}(?:Success [mM]etrics|Metrics):?\*{0,2})/gi, '\n\nB. Success Metrics')
-        .replace(/(?:^|\n)(?:[-*•]\s*)?(?:\*{0,2}(?:Common [pP]itfalls(?: & [tT]roubleshooting(?: [gG]uide)?)?|Troubleshooting):?\*{0,2})/gi, '\n\nC. Common Pitfalls & Troubleshooting')
-        .replace(/(?:^|\n)(?:[-*•]\s*)?(?:\*{0,2}(?:Risk [fF]actors(?: & [mM]itigation)?|Risks & Mitigation):?\*{0,2})/gi, '\n\nD. Risk Factors & Mitigation');
+        // Line-anchored ([ \t]*$/gim) so inline prose mentioning "Metrics" or
+        // "Troubleshooting" mid-sentence is never rewritten as a subsection.
+        .replace(/(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:\*{0,2}(?:Step-by-[sS]tep [iI]mplementation|Implementation Steps):?\*{0,2})[ \t]*$/gimu, '\n\nA. Step-by-Step Implementation')
+        .replace(/(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:\*{0,2}(?:Success [mM]etrics|Metrics):?\*{0,2})[ \t]*$/gimu, '\n\nB. Success Metrics')
+        .replace(/(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:\*{0,2}(?:Common [pP]itfalls(?: & [tT]roubleshooting(?: [gG]uide)?)?|Troubleshooting):?\*{0,2})[ \t]*$/gimu, '\n\nC. Common Pitfalls & Troubleshooting')
+        .replace(/(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:\*{0,2}(?:Risk [fF]actors(?: & [mM]itigation)?|Risks & Mitigation):?\*{0,2})[ \t]*$/gimu, '\n\nD. Risk Factors & Mitigation');
 
       normalizedSystems.push(`**System ${systemIndex}: ${title}**\n\n${body.trim()}`);
       systemIndex++;
@@ -131,11 +145,12 @@ export class CombinerPass {
     ].filter(Boolean).join('\n\n');
   }
 
+  /** Merges multiple chunks of the same dimension into one (intro dedupe, body merge). */
   public static combineDimensionChunks<T extends DimensionChunk>(dimNumber: number, chunks: T[]): T {
     if (chunks.length === 0) {
       return { number: dimNumber, content: '' } as T;
     }
-    const base = chunks[0]!;
+    const base: T = chunks[0] ?? ({ number: dimNumber, content: '' } as T);
     if (chunks.length === 1) {
       let content = base.content;
       if (dimNumber === 7) {
@@ -173,7 +188,12 @@ export class CombinerPass {
         if (!existing) {
           combinedAst.subsections.set(subKey, { ...subSec });
         } else {
-          if (!existing.body.includes(subSec.body)) {
+          // Compare normalized (trim + collapse whitespace) bodies and skip
+          // only full equality: a one-directional includes() both discards a
+          // distinct shorter body nested inside a longer one and appends the
+          // existing text again when the incoming body merely contains it.
+          const norm = (s: string) => s.trim().replace(/\s+/gu, ' ');
+          if (norm(existing.body) !== norm(subSec.body)) {
             existing.body += `\n\n${subSec.body}`;
           }
         }
@@ -193,7 +213,8 @@ export class CombinerPass {
     });
 
     for (const subKey of sortedSubKeys) {
-      const sub = combinedAst.subsections.get(subKey)!;
+      const sub = combinedAst.subsections.get(subKey);
+      if (!sub) continue;
       outputLines.push(`#### ${sub.numberStr} ${sub.title}`);
       outputLines.push('');
       outputLines.push(sub.body);
@@ -214,6 +235,7 @@ export class CombinerPass {
     };
   }
 
+  /** Groups raw chunks by dimension number and combines each group. */
   public static reduceDimensions<T extends DimensionChunk>(rawDimensions: T[]): T[] {
     const grouped = new Map<number, T[]>();
 
@@ -228,7 +250,8 @@ export class CombinerPass {
     const sortedNumbers = Array.from(grouped.keys()).sort((a, b) => a - b);
 
     for (const num of sortedNumbers) {
-      const chunks = grouped.get(num)!;
+      const chunks = grouped.get(num);
+      if (!chunks) continue;
       reduced.push(this.combineDimensionChunks(num, chunks));
     }
 

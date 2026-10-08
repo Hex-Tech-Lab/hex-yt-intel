@@ -236,6 +236,10 @@ export function stitchChunksIntoPayload(
   const cleanDimensions = CombinerPass.reduceDimensions(
     stitchedDimensions
       .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
+      // Malformed model output (non-string content) must not throw inside
+      // reduceDimensions (content.trim()/includes()) — drop those rows here so
+      // they take the normal partial/validation path instead of aborting stitch.
+      .filter((d) => typeof d.content === "string")
   ).sort((a, b) => a.number - b.number);
 
   // Normalize KG node.weight / edge.strength scale before validation.
