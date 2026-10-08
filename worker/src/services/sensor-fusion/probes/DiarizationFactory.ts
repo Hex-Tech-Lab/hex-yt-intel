@@ -10,7 +10,7 @@
 import * as Sentry from '@sentry/cloudflare';
 import { DeepgramNova2Adapter } from '../../../adapters/DeepgramNova2Adapter';
 import { AssemblyAIAdapter } from '../../../adapters/AssemblyAIAdapter';
-import { redactMediaUrl } from '../diarization-metrics';
+import { redactMediaUrl, redactUrlsInText } from '../diarization-metrics';
 import type {
   DiarizationProviderPort,
   DiarizationResult,
@@ -50,7 +50,7 @@ export class DiarizationFactory implements DiarizationProviderPort {
   constructor(config: DiarizationFactoryConfig) {
     this.cascadeOrder =
       config.cascadeOrder && config.cascadeOrder.length > 0
-        ? config.cascadeOrder
+        ? [...config.cascadeOrder]
         : [...DEFAULT_DIARIZATION_CASCADE];
     this.totalCascadeTimeoutMs =
       config.totalCascadeTimeoutMs && config.totalCascadeTimeoutMs > 0
@@ -136,7 +136,14 @@ export class DiarizationFactory implements DiarizationProviderPort {
       } catch (providerError: unknown) {
         attemptedErrors.push({ provider: providerName, error: providerError });
 
-        Sentry.captureException(providerError, {
+        // Provider error text may echo the submitted (signed) media URL —
+        // sanitize before capture; never attach the raw exception object.
+        const sanitizedMessage = redactUrlsInText(
+          providerError instanceof Error ? providerError.message : String(providerError),
+        );
+        const sanitizedError = new Error(sanitizedMessage);
+
+        Sentry.captureException(sanitizedError, {
           tags: {
             subsystem: 'sensor-fusion',
             component: 'DiarizationFactory',
@@ -147,11 +154,13 @@ export class DiarizationFactory implements DiarizationProviderPort {
             cascadeOrder: this.cascadeOrder,
             audioUrl: redactMediaUrl(audioUrl),
             remainingTimeMs,
-            errorDetails: providerError instanceof Error ? providerError.message : String(providerError),
           },
         });
 
-        console.error(`[DiarizationFactory] Provider "${providerName}" failed, evaluating cascade fallback:`, providerError);
+        console.error(
+          `[DiarizationFactory] Provider "${providerName}" failed, evaluating cascade fallback:`,
+          sanitizedError,
+        );
       }
     }
 

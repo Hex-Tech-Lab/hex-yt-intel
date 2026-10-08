@@ -14,6 +14,7 @@ import * as Sentry from '@sentry/cloudflare';
 import {
   calculateDiarizationMetrics,
   redactMediaUrl,
+  redactUrlsInText,
 } from '../services/sensor-fusion/diarization-metrics';
 
 import type {
@@ -55,6 +56,7 @@ interface DeepgramApiResponse {
   };
 }
 
+/** Error thrown by the Deepgram Nova-2 diarization adapter on HTTP, API, or timeout failures. */
 export class DeepgramDiarizationError extends Error {
   constructor(
     message: string,
@@ -66,6 +68,7 @@ export class DeepgramDiarizationError extends Error {
   }
 }
 
+/** DiarizationProviderPort adapter targeting the Deepgram Nova-2 pre-recorded endpoint. */
 export class DeepgramNova2Adapter implements DiarizationProviderPort {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -82,6 +85,11 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     this.model = config.model || DEEPGRAM_DEFAULT_MODEL;
   }
 
+  /**
+   * Sends the audio URL to Deepgram's pre-recorded endpoint with diarization
+   * enabled and computes metrics over the returned word timings (fail-closed
+   * on timeout).
+   */
   async diarizeAudioUrl(
     audioUrl: string,
     videoId: string,
@@ -114,9 +122,18 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
       });
 
       if (!response.ok) {
+        // If the abort fired while reading the error body, classify as a
+        // timeout instead of masking it with the HTTP status.
+        if (controller.signal.aborted) {
+          throw new DeepgramDiarizationError(
+            `Deepgram diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`,
+            408,
+            true,
+          );
+        }
         const errorText = await response.text().catch(() => '');
         const error = new DeepgramDiarizationError(
-          `Deepgram API HTTP ${response.status}: ${errorText || response.statusText}`,
+          `Deepgram API HTTP ${response.status}: ${redactUrlsInText(errorText || response.statusText)}`,
           response.status,
           false,
         );
@@ -156,7 +173,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
       const wrappedError = new DeepgramDiarizationError(
         isAbort
           ? `Deepgram diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`
-          : `Deepgram diarization request failed: ${(err as Error)?.message || String(err)}`,
+          : `Deepgram diarization request failed: ${redactUrlsInText((err as Error)?.message || String(err))}`,
         isAbort ? 408 : 500,
         isAbort,
       );
@@ -172,6 +189,7 @@ export class DeepgramNova2Adapter implements DiarizationProviderPort {
     }
   }
 
+  /** Computes diarization metrics over word-level intervals (delegates to the shared reducer). */
   public static calculateMetrics(words: WordDiarization[]): DiarizationMetrics {
     return calculateDiarizationMetrics(words);
   }
