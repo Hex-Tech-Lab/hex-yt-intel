@@ -57,3 +57,6 @@ testsprite_tests/tmp/config.json
 
 # agent scratch output (never commit)
 .scratch/
+
+# Ori dev-server workspace state (spawn-ori-eval skill)
+.ori/
