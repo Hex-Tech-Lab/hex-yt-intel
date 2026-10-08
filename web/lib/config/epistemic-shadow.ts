@@ -30,40 +30,45 @@ export const EPISTEMIC_PERSIST_RETRY_KEY = 'analysis.pipeline.retry.epistemic' a
 /**
  * Bounded retry policy for the grounded-claims persist. `maxAttempts` counts the
  * first attempt; `backoffDelays[i]` is the wait before attempt i+2, so its length
- * is always maxAttempts - 1.
+ * is always maxAttempts - 1; `attemptTimeoutMs` bounds each POST.
  */
 export interface EpistemicPersistRetry {
   maxAttempts: number;
   backoffDelays: number[];
+  attemptTimeoutMs: number;
 }
 
 /** Used only when the registry key is absent or its value fails validation. */
-export const EPISTEMIC_PERSIST_RETRY_DEFAULT: EpistemicPersistRetry = { maxAttempts: 3, backoffDelays: [250, 500] };
+export const EPISTEMIC_PERSIST_RETRY_DEFAULT: EpistemicPersistRetry = { maxAttempts: 3, backoffDelays: [250, 500], attemptTimeoutMs: 10_000 };
 
 const MAX_PERSIST_ATTEMPTS = 10;
 const MAX_BACKOFF_MS = 60_000;
+const MIN_ATTEMPT_TIMEOUT_MS = 1_000;
+const MAX_ATTEMPT_TIMEOUT_MS = 60_000;
 /**
- * Total backoff must finish inside the grounded-claims signature window (5 min,
- * worker CLAIMS_SIG_TTL_MS), with margin, or late attempts would carry an expired exp.
+ * Backoff plus all attempt timeouts must finish inside the grounded-claims signature
+ * window (5 min, worker CLAIMS_SIG_TTL_MS) with margin, or late attempts would carry
+ * an expired exp.
  */
-const MAX_TOTAL_BACKOFF_MS = 4 * 60 * 1000;
+const MAX_TOTAL_PERSIST_MS = 4 * 60 * 1000;
 
 /** Validates a registry value into a retry policy, or null when malformed. */
 export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetry | null {
   if (typeof value !== 'object' || value === null) return null;
-  const candidate = value as { maxAttempts?: unknown; backoffDelays?: unknown };
-  const { maxAttempts, backoffDelays } = candidate;
+  const { maxAttempts, backoffDelays, attemptTimeoutMs } = value as { maxAttempts?: unknown; backoffDelays?: unknown; attemptTimeoutMs?: unknown };
   if (!Number.isInteger(maxAttempts) || (maxAttempts as number) < 1 || (maxAttempts as number) > MAX_PERSIST_ATTEMPTS) return null;
   if (!Array.isArray(backoffDelays) || backoffDelays.length !== (maxAttempts as number) - 1) return null;
+  if (!Number.isInteger(attemptTimeoutMs) || (attemptTimeoutMs as number) < MIN_ATTEMPT_TIMEOUT_MS || (attemptTimeoutMs as number) > MAX_ATTEMPT_TIMEOUT_MS) return null;
   const delays = backoffDelays as unknown[];
   if (!delays.every((ms) => Number.isInteger(ms) && (ms as number) >= 0 && (ms as number) <= MAX_BACKOFF_MS)) return null;
-  if ((delays as number[]).reduce((total, ms) => total + ms, 0) > MAX_TOTAL_BACKOFF_MS) return null;
-  return { maxAttempts: maxAttempts as number, backoffDelays: [...(delays as number[])] };
+  const backoffTotal = (delays as number[]).reduce((total, ms) => total + ms, 0);
+  if (backoffTotal + (maxAttempts as number) * (attemptTimeoutMs as number) > MAX_TOTAL_PERSIST_MS) return null;
+  return { maxAttempts: maxAttempts as number, backoffDelays: [...(delays as number[])], attemptTimeoutMs: attemptTimeoutMs as number };
 }
 
 /** Canonical text of a retry policy, bound into the grant signature. */
 function retryCanonical(retry: EpistemicPersistRetry): string {
-  return `${retry.maxAttempts}:${retry.backoffDelays.join(',')}`;
+  return `${retry.maxAttempts}:${retry.backoffDelays.join(',')}:${retry.attemptTimeoutMs}`;
 }
 
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {

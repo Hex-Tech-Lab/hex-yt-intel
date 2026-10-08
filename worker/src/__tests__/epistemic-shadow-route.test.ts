@@ -40,7 +40,7 @@ async function signV1(): Promise<{ sig: string; exp: number }> {
   }
 }
 
-const RETRY = { maxAttempts: 3, backoffDelays: [250, 500] };
+const RETRY = { maxAttempts: 3, backoffDelays: [250, 500], attemptTimeoutMs: 10_000 };
 
 describe('analyze-llm-stream epistemic shadow wiring', () => {
   const originalFetch = globalThis.fetch;

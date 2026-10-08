@@ -44,7 +44,7 @@ describe('runEpistemicShadow', () => {
     return {
       analysisId: ANALYSIS_ID, videoId: 'v1', transcript: 'a transcript', durationSeconds: 60,
       appUrl: 'https://app.example.test/', signingSecret: SECRET, openRouterApiKey: 'k',
-      persistRetry: { maxAttempts: 3, backoffDelays: [250, 500] },
+      persistRetry: { maxAttempts: 3, backoffDelays: [250, 500], attemptTimeoutMs: 10_000 },
       promptBuilder: {} as never, cascade: {} as never, fetchImpl,
     };
   }

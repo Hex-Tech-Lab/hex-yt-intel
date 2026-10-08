@@ -59,10 +59,33 @@ export function groundedClaimsCanonical(analysisId: string, groundedClaims: Grou
 }
 
 /**
+ * One grounded-claims POST, bounded by the per-attempt deadline. Returns the HTTP
+ * status, or "network" when the request itself failed. Body cleanup is best-effort
+ * and never changes the classification, so a completed 2xx is never re-sent.
+ */
+async function postClaimsOnce(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: RequestInit,
+  attemptTimeoutMs: number,
+  analysisId: string,
+  attempt: number,
+): Promise<number | "network"> {
+  let res: Response;
+  try {
+    res = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(attemptTimeoutMs) });
+  } catch (error) {
+    console.error("[EpistemicShadow] grounded-claims persist network error", { analysisId, attempt, error });
+    return "network";
+  }
+  res.body?.cancel().catch(() => undefined);
+  return res.status;
+}
+
+/**
  * Signs and POSTs one grounded-claims write to Vercel. Retries 5xx, 429 and
- * network errors using the signed attempt budget and backoff delays; any other
- * 4xx is final. Resolves
- * false only after the row is given up on, so the caller can report it.
+ * network errors within the signed attempt budget and backoff; any other 4xx is
+ * final. Resolves false only after the row is given up on, so the caller can report it.
  */
 export async function persistGroundedClaims(
   params: EpistemicShadowParams,
@@ -76,19 +99,11 @@ export async function persistGroundedClaims(
   const url = `${params.appUrl.replace(/\/+$/, "")}/api/analyses/${encodeURIComponent(params.analysisId)}/grounded-claims`;
   const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
   const sleep = params.sleepImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const { maxAttempts, backoffDelays } = params.persistRetry;
+  const { maxAttempts, backoffDelays, attemptTimeoutMs } = params.persistRetry;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) await sleep(backoffDelays[attempt - 1] ?? 0);
-    let status: number | "network";
-    try {
-      const res = await (params.fetchImpl ?? fetch)(url, init);
-      status = res.status;
-      await res.body?.cancel();
-    } catch (error) {
-      status = "network";
-      console.error("[EpistemicShadow] grounded-claims persist network error", { analysisId: params.analysisId, attempt, error });
-    }
+    const status = await postClaimsOnce(params.fetchImpl ?? fetch, url, init, attemptTimeoutMs, params.analysisId, attempt);
     if (status !== "network" && status >= 200 && status < 300) return true;
     if (status !== "network") {
       console.error("[EpistemicShadow] grounded-claims persist rejected", { analysisId: params.analysisId, status, attempt });
