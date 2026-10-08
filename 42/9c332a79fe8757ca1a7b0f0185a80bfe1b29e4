@@ -1,0 +1,29 @@
+web/app/globals.css
+  s_4075cc6448b8f7::t_d5db9a56945fee 559-562
+web/components/templates/console/AnalysisHistory.tsx
+  s_4075cc6448b8f7::t_710d62a185303f 13,364-365
+web/components/templates/console/__tests__/AnalysisHistory-thumbnail.test.tsx
+  s_4075cc6448b8f7::t_ae0b5985637921 177-184
+web/hooks/useAutoRestoreAnalysis.ts
+  s_4075cc6448b8f7::t_75c907a396f12c 12,239-240
+web/lib/__tests__/video-count.test.ts
+  s_4075cc6448b8f7::t_98ad8c601d9e52 2,11-12,16-20,24-36
+web/lib/utils/video-count.ts
+  s_4075cc6448b8f7::t_1de8ee2da87cb4 4-8,10-16,18-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "429c332a79fe8757ca1a7b0f0185a80bfe1b29e4",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
