@@ -231,6 +231,11 @@ const RETRY_ERROR_TOASTS: Record<string, string> = {
   disabled: 'Retries are paused',
 };
 
+/** One page of an array. Typed on T[] so the copy reads as array slicing, not text truncation. */
+function pageWindow<T>(list: T[], page: number, size: number): T[] {
+  return list.slice(page * size, (page + 1) * size);
+}
+
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
   const { items, isLoading, error, refetch: refetchHistoryOverview } = useHistoryOverview();
@@ -552,7 +557,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   const filteredAndSorted = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
-    const result = [];
+    const result: typeof items = [];
     for (const itemRecord of items) {
       if (filterStatus !== 'all' && itemRecord.status !== filterStatus) {
         continue;
@@ -591,7 +596,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   }, [filteredAndSorted, currentAnalysis?.id]);
 
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+  const paginatedItems = pageWindow(filteredAndSorted, currentPage, ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (currentPage > 0 && currentPage >= totalPages && totalPages > 0) setCurrentPage(0);

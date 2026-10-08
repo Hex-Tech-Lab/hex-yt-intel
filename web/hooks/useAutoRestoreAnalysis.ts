@@ -225,9 +225,9 @@ export function useAutoRestoreAnalysis(url: string) {
           if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
             const payloadDims = restoreData.analysis_payload.dimensions;
             if (Array.isArray(payloadDims)) {
-              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, d: { number?: number; name?: string; content?: string }) => {
-                if (d && typeof d.number === 'number') {
-                  acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
+              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, dim: { number?: number; name?: string; content?: string }) => {
+                if (dim && typeof dim.number === 'number') {
+                  acc[dim.number] = { number: dim.number, name: dim.name || `Dimension ${dim.number}`, content: dim.content || '' };
                 }
                 return acc;
               }, {} as Record<number, typeof dimensions[1]>);
@@ -374,8 +374,8 @@ export function useAutoRestoreAnalysis(url: string) {
               } else if (!cancelled) {
                 useChatStore.setState({ activeId: null });
               }
-            } catch (e) {
-              console.debug('[AutoRestore] Background chat session restoration failed:', e);
+            } catch (restoreError) {
+              console.debug('[AutoRestore] Background chat session restoration failed:', restoreError);
             }
           };
           restoreChatSession();
