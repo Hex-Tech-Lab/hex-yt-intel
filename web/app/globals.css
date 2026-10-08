@@ -556,8 +556,10 @@ div[data-chat-dock="true"] div[class*="content"] {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
 }
 
-/* Status-chip grid: its children are display:contents wrappers, so the chips sit one level down. */
-.hx-chip-grid > * > * {
+/* Status-chip grid: children are display:contents wrappers. A chip with a tooltip sits inside the
+   Tooltip's display:contents box (one level deeper); a tooltip-less button sits directly in the wrapper. */
+.hx-chip-grid > * > * > *,
+.hx-chip-grid > * > button {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
 }
 
