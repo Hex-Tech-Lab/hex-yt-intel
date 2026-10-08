@@ -148,8 +148,14 @@ describe('persistGroundedClaims bounded retry (PersistResilienceRule)', () => {
       expect(grant?.retry).toEqual({ maxAttempts: 3, backoffDelays: [250, 500] });
     });
 
-    it('a malformed registry value falls back to the default and is reported', async () => {
+    it('a malformed registry value falls back to the default', async () => {
       mockRegistry({ [EPISTEMIC_PIPELINE_FLAG_KEY]: true, [EPISTEMIC_PERSIST_RETRY_KEY]: { maxAttempts: 0, backoffDelays: [] } });
+      const grant = await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1');
+      expect(grant?.retry).toEqual({ maxAttempts: 3, backoffDelays: [250, 500] });
+    });
+
+    it('a policy whose total backoff would outlive the 5-minute claims signature falls back to the default', async () => {
+      mockRegistry({ [EPISTEMIC_PIPELINE_FLAG_KEY]: true, [EPISTEMIC_PERSIST_RETRY_KEY]: { maxAttempts: 10, backoffDelays: Array(9).fill(60_000) } });
       const grant = await mintEpistemicShadowGrant(ANALYSIS_ID, 'v1');
       expect(grant?.retry).toEqual({ maxAttempts: 3, backoffDelays: [250, 500] });
     });

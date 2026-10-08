@@ -42,6 +42,11 @@ export const EPISTEMIC_PERSIST_RETRY_DEFAULT: EpistemicPersistRetry = { maxAttem
 
 const MAX_PERSIST_ATTEMPTS = 10;
 const MAX_BACKOFF_MS = 60_000;
+/**
+ * Total backoff must finish inside the grounded-claims signature window (5 min,
+ * worker CLAIMS_SIG_TTL_MS), with margin, or late attempts would carry an expired exp.
+ */
+const MAX_TOTAL_BACKOFF_MS = 4 * 60 * 1000;
 
 /** Validates a registry value into a retry policy, or null when malformed. */
 export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetry | null {
@@ -52,6 +57,7 @@ export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetr
   if (!Array.isArray(backoffDelays) || backoffDelays.length !== (maxAttempts as number) - 1) return null;
   const delays = backoffDelays as unknown[];
   if (!delays.every((ms) => Number.isInteger(ms) && (ms as number) >= 0 && (ms as number) <= MAX_BACKOFF_MS)) return null;
+  if ((delays as number[]).reduce((total, ms) => total + ms, 0) > MAX_TOTAL_BACKOFF_MS) return null;
   return { maxAttempts: maxAttempts as number, backoffDelays: [...(delays as number[])] };
 }
 
