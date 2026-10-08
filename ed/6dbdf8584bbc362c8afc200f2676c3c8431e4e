@@ -1,0 +1,29 @@
+docs/reviews/pr442-triage-g4.md
+  s_83a8c52a11f95a::t_375da0becafceb 1-85
+.memory/AGENT_LEDGER.md
+  s_99af580f37572e::t_eb12580439fa8a 1572
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed6dbdf8584bbc362c8afc200f2676c3c8431e4e",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_99af580f37572e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5617c69ffekAqed3RNfreZpe",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
