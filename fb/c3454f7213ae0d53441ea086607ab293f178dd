@@ -1,0 +1,30 @@
+web/app/api/admin/settings/[key]/route.ts
+  s_99af580f37572e::t_e05905c267cb3d 90
+web/lib/config/cascade.ts
+  s_83a8c52a11f95a::t_17ff987909a22b 139,141
+  s_99af580f37572e::t_9a21c1835790af 238-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fbc3454f7213ae0d53441ea086607ab293f178dd",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_99af580f37572e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5617c69ffekAqed3RNfreZpe",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
