@@ -1,0 +1,49 @@
+worker/src/services/ProjectiveSynthesisEngine.ts
+  s_1254a5e2df78cb::t_66a06a69231c86 168-178
+  s_1254a5e2df78cb::t_44e7744fdb7052 41-44,55-58,65-70,121-127,156-162,166-167,179-180,183-186
+worker/src/services/PromptBuilder.ts
+  s_1254a5e2df78cb::t_ef7af09a452c88 3-4
+  s_1254a5e2df78cb::t_29fdd6b3bb602c 80-81,91-92,109-111
+  s_1254a5e2df78cb::t_83e7260d03ea82 26-29
+  s_1254a5e2df78cb::t_e17f32b33c982a 145-147
+  s_a363fe58fd5657::t_811c2790e58ba8 154-156,199-202,220,256-259,283
+docs/reviews/2026-10-08-pr442-triage-g3.md
+  s_1254a5e2df78cb::t_bbec2043a1cc14 1-103
+worker/src/services/GroundedExtractionEngine.ts
+  s_1254a5e2df78cb::t_d0a561c985f2c8 126-128
+  s_1254a5e2df78cb::t_5a379999649f46 164-168
+  s_1254a5e2df78cb::t_529134539afed6 169-171
+  s_4075cc6448b8f7::t_4d626dd17731e5 38-41,52-56,63-68,133-138,172-173,177-179,194-195,198,213-216,222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f534c2a73811919c61c82d58f8fa8ef2b9667926",
+  "prompts": {},
+  "sessions": {
+    "s_1254a5e2df78cb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee52ccbdaffeSw4RQWnP80GsZo",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_a363fe58fd5657": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5229cf6ffeS3YdiHcvtuE0Ri",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
