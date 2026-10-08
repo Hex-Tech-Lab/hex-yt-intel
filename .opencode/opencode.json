@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "glm-preset/@preset/glm-53-flash-on-cheap",
+  "model": "jev-router/jev-auto",
   "small_model": "glm-preset/@preset/glm-53-flash-on-cheap",
   "provider": {
     "glm-preset": {
@@ -18,7 +18,7 @@
           "name": "GLM 5.3 Flash (user preset)",
           "options": {},
           "limit": {
-            "context": 110000,
+            "context": 200000,
             "output": 16000
           }
         }
@@ -26,7 +26,7 @@
     },
     "glm-dmb": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Direct (Decart→Modal→BaseTen)",
+      "name": "OpenRouter Direct (Decart\u2192Modal\u2192BaseTen)",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1"
       },
@@ -43,13 +43,17 @@
               ],
               "allow_fallbacks": false
             }
+          },
+          "limit": {
+            "context": 200000,
+            "output": 16000
           }
         }
       }
     },
     "glm-cheap-preset": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Preset (glm-53-flash-on-cheap) — hex-expan attribution",
+      "name": "OpenRouter Preset (glm-53-flash-on-cheap) \u2014 hex-expan attribution",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1",
         "headers": {
@@ -59,13 +63,17 @@
       },
       "models": {
         "@preset/glm-53-flash-on-cheap": {
-          "name": "GLM 5.3 Flash (cheap preset)"
+          "name": "GLM 5.3 Flash (cheap preset)",
+          "limit": {
+            "context": 200000,
+            "output": 16000
+          }
         }
       }
     },
     "glm-mb": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Direct (Modal→BaseTen, no fallback)",
+      "name": "OpenRouter Direct (Modal\u2192BaseTen, no fallback)",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1",
         "headers": {
@@ -75,7 +83,7 @@
       },
       "models": {
         "z-ai/glm-5.3-flash": {
-          "name": "GLM 5.3 Flash (Modal→BaseTen)",
+          "name": "GLM 5.3 Flash (Modal\u2192BaseTen)",
           "options": {
             "provider": {
               "order": [
@@ -99,7 +107,7 @@
             }
           },
           "limit": {
-            "context": 110000,
+            "context": 200000,
             "output": 16000
           }
         }
@@ -107,7 +115,7 @@
     },
     "glm-mbio": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Direct (Modal→BaseTen→InferenceNet→OpenInference, no fallback)",
+      "name": "OpenRouter Direct (Modal\u2192BaseTen\u2192InferenceNet\u2192OpenInference, no fallback)",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1",
         "headers": {
@@ -142,7 +150,7 @@
             }
           },
           "limit": {
-            "context": 110000,
+            "context": 200000,
             "output": 16000
           }
         }
@@ -150,7 +158,7 @@
     },
     "glm-bmt": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OpenRouter Direct (BaseTen→Morph→Together, no fallback)",
+      "name": "OpenRouter Direct (BaseTen\u2192Morph\u2192Together, no fallback)",
       "options": {
         "baseURL": "https://openrouter.ai/api/v1",
         "headers": {
@@ -184,7 +192,49 @@
             }
           },
           "limit": {
-            "context": 110000,
+            "context": 200000,
+            "output": 16000
+          }
+        }
+      }
+    },
+    "jev-router": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "JEV router (OC-hex-vIntel)",
+      "options": {
+        "baseURL": "http://127.0.0.1:3040/v1",
+        "apiKey": "jev-local",
+        "headers": {
+          "X-Title": "OC-hex-vIntel",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab"
+        }
+      },
+      "models": {
+        "jev-auto": {
+          "name": "JEV auto (Haiku 5.5 <95k / GLM 5.3 Flash >=95k)",
+          "limit": {
+            "context": 200000,
+            "output": 16000
+          }
+        }
+      }
+    },
+    "jev-router-expan": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "JEV router (OC-hex-expan)",
+      "options": {
+        "baseURL": "http://127.0.0.1:3040/v1",
+        "apiKey": "jev-local",
+        "headers": {
+          "X-Title": "OC-hex-expan",
+          "HTTP-Referer": "https://github.com/Hex-Tech-Lab"
+        }
+      },
+      "models": {
+        "jev-auto": {
+          "name": "JEV auto (Haiku 5.5 <95k / GLM 5.3 Flash >=95k)",
+          "limit": {
+            "context": 200000,
             "output": 16000
           }
         }
@@ -192,6 +242,8 @@
     }
   },
   "compaction": {
-    "auto": true
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
   }
 }
