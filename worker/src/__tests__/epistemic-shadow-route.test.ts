@@ -28,14 +28,15 @@ function sse(lines: string[]): Response {
 
 async function signV1(): Promise<{ sig: string; exp: number }> {
   const { signStreamToken } = await import('../../../web/lib/stream-token');
+  const mutableEnv = process.env as Record<string, string | undefined>;
   const prev = { secret: process.env.STREAM_HMAC_SECRET, nodeEnv: process.env.NODE_ENV };
   process.env.STREAM_HMAC_SECRET = SECRET;
-  process.env.NODE_ENV = 'development';
+  mutableEnv.NODE_ENV = 'development';
   try {
     return await signStreamToken(VIDEO_ID, ANALYSIS_ID, []);
   } finally {
     if (prev.secret === undefined) delete process.env.STREAM_HMAC_SECRET; else process.env.STREAM_HMAC_SECRET = prev.secret;
-    if (prev.nodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = prev.nodeEnv;
+    if (prev.nodeEnv === undefined) delete mutableEnv.NODE_ENV; else mutableEnv.NODE_ENV = prev.nodeEnv;
   }
 }
 
