@@ -1,0 +1,27 @@
+.qa-intel/baseline.json
+  s_4075cc6448b8f7::t_895be2f924fde3 701-714
+web/components/templates/console/AnalysisHistory.tsx
+  s_4075cc6448b8f7::t_c7de76d32b014f 13,143-144,148,168-170,367-368,921,930
+web/hooks/useAutoRestoreAnalysis.ts
+  s_4075cc6448b8f7::t_d3ca0fa3f70ea2 12,239-240
+web/lib/__tests__/video-count.test.ts
+  s_4075cc6448b8f7::t_415bde7e9acab2 1-22
+web/lib/utils/video-count.ts
+  s_4075cc6448b8f7::t_4e77d5e1b8f899 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "092723c6441c9a36b7a2c81149a08873c8ca583c",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
