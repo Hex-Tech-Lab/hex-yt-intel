@@ -1,0 +1,354 @@
+diff --git a/web/hooks/useSSEStream.ts b/web/hooks/useSSEStream.ts
+index df8055aa..1417d192 100644
+--- a/web/hooks/useSSEStream.ts
++++ b/web/hooks/useSSEStream.ts
+@@ -523,6 +523,8 @@ export function useSSEStream() {
+                   models: job.models,
+                   cascade: job.cascade,
+                   maxOutputTokens: job.maxOutputTokens,
++                  cascadeConfigSig: job.cascadeConfigSig,
++                  cascadeConfigExp: job.cascadeConfigExp,
+                   llmCascadeTimeoutMs: job.llmCascadeTimeoutMs,
+                   llmCascadeHandshakeTimeoutMs: job.llmCascadeHandshakeTimeoutMs,
+                   promptCaching: job.promptCaching,
+diff --git a/web/lib/__tests__/stream-token-security.test.ts b/web/lib/__tests__/stream-token-security.test.ts
+index e60dcc74..9d0b2d58 100644
+--- a/web/lib/__tests__/stream-token-security.test.ts
++++ b/web/lib/__tests__/stream-token-security.test.ts
+@@ -609,6 +609,64 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
+     });
+   });
+ 
++  // ─────────────────────────────────────────────────────────────────────
++  // CASCADE CONFIG BINDING (PR #442, analysis.ts:119)
++  // ─────────────────────────────────────────────────────────────────────
++
++  describe('Cascade Config Signing', () => {
++    it('should produce a signature verifiable by the worker layout (round trip)', async () => {
++      setDevelopmentMode();
++      process.env.STREAM_HMAC_SECRET = PRIMARY_SECRET;
++
++      const { signCascadeConfig, boundContentMessage } = await import('../stream-token');
++      const { canonicalJson } = await import('../utils/canonical-json');
++
++      const cascade = [
++        { model: 'z-ai/glm-5.3-flash', name: 'GLM', maxOutputTokens: 16000 },
++        { model: 'anthropic/claude-haiku-4.5', name: 'Haiku', requiresProviderOrder: true },
++      ];
++      const maxOutputTokens = { haiku: 8192, default: 16000 };
++
++      const { sig, exp } = await signCascadeConfig('analysis-1', cascade, maxOutputTokens);
++
++      expect(sig).toMatch(/^[0-9a-f]{64}$/i);
++      expect(exp).toBeGreaterThan(Date.now());
++
++      // Byte-identical rebuild of the worker verifier's message.
++      const content = canonicalJson({ cascade, maxOutputTokens });
++      const expected = computeHmac(PRIMARY_SECRET, boundContentMessage('cascade-config', 'analysis-1', exp, content));
++      expect(sig).toBe(expected);
++    });
++
++    it('should reject a tampered cascade config (signature mismatch on modified body)', async () => {
++      setDevelopmentMode();
++      process.env.STREAM_HMAC_SECRET = PRIMARY_SECRET;
++
++      const { signCascadeConfig, boundContentMessage } = await import('../stream-token');
++      const { canonicalJson } = await import('../utils/canonical-json');
++
++      const { sig, exp } = await signCascadeConfig('analysis-1', [{ model: 'a', name: 'A' }], undefined);
++
++      const tamperedContent = canonicalJson({ cascade: [{ model: 'attacker-model', name: 'X' }], maxOutputTokens: null });
++      const expectedForTampered = computeHmac(PRIMARY_SECRET, boundContentMessage('cascade-config', 'analysis-1', exp, tamperedContent));
++      expect(sig).not.toBe(expectedForTampered);
++    });
++
++    it('should bind to the analysis id (no cross-analysis replay)', async () => {
++      setDevelopmentMode();
++      process.env.STREAM_HMAC_SECRET = PRIMARY_SECRET;
++
++      const { signCascadeConfig, boundContentMessage } = await import('../stream-token');
++      const { canonicalJson } = await import('../utils/canonical-json');
++
++      const { sig, exp } = await signCascadeConfig('analysis-1', [{ model: 'a', name: 'A' }], undefined);
++
++      const content = canonicalJson({ cascade: [{ model: 'a', name: 'A' }], maxOutputTokens: null });
++      const crossAnalysis = computeHmac(PRIMARY_SECRET, boundContentMessage('cascade-config', 'analysis-2', exp, content));
++      expect(sig).not.toBe(crossAnalysis);
++    });
++  });
++
+   // ─────────────────────────────────────────────────────────────────────
+   // MISSING SECRET ERROR HANDLING
+   // ─────────────────────────────────────────────────────────────────────
+diff --git a/web/lib/adapters/StreamTokenAdapter.ts b/web/lib/adapters/StreamTokenAdapter.ts
+index 8cec7cc5..785e52af 100644
+--- a/web/lib/adapters/StreamTokenAdapter.ts
++++ b/web/lib/adapters/StreamTokenAdapter.ts
+@@ -1,4 +1,4 @@
+-import { signStreamToken, signChatToken, signCommentsTier3Token, signProjectiveContext } from '@/lib/stream-token';
++import { signStreamToken, signChatToken, signCommentsTier3Token, signProjectiveContext, signCascadeConfig } from '@/lib/stream-token';
+ import type { StreamToken, CryptographicTokenPort } from '@/lib/ports';
+ 
+ /**
+@@ -52,4 +52,13 @@ export class StreamTokenAdapter implements CryptographicTokenPort {
+   }): Promise<StreamToken> {
+     return signProjectiveContext(params.analysisId, params.dimensions, params.priorPayload);
+   }
++
++  /** PR #442 (analysis.ts:119): bind cascade config to the analysis id (browser-relayed body tamper guard). */
++  async signCascadeConfig(params: {
++    analysisId: string;
++    cascade: unknown;
++    maxOutputTokens: unknown;
++  }): Promise<StreamToken> {
++    return signCascadeConfig(params.analysisId, params.cascade, params.maxOutputTokens);
++  }
+ }
+diff --git a/web/lib/ports/CryptographicTokenPort.ts b/web/lib/ports/CryptographicTokenPort.ts
+index f4ebb418..7f6de2ef 100644
+--- a/web/lib/ports/CryptographicTokenPort.ts
++++ b/web/lib/ports/CryptographicTokenPort.ts
+@@ -24,4 +24,15 @@ export interface CryptographicTokenPort {
+     dimensions: readonly number[];
+     priorPayload: unknown;
+   }): Promise<StreamToken>;
++
++  /**
++   * PR #442 (analysis.ts:119): bind the registry-resolved cascade config into a
++   * short-lived signature so a tampered browser-relayed body can't retarget the
++   * worker's LLMCascade.
++   */
++  signCascadeConfig(params: {
++    analysisId: string;
++    cascade: unknown;
++    maxOutputTokens: unknown;
++  }): Promise<StreamToken>;
+ }
+diff --git a/web/lib/services/dimension-remediation.ts b/web/lib/services/dimension-remediation.ts
+index 5e984b22..7efb12a8 100644
+--- a/web/lib/services/dimension-remediation.ts
++++ b/web/lib/services/dimension-remediation.ts
+@@ -41,7 +41,7 @@ import * as Sentry from '@sentry/nextjs';
+ 
+ import { getSupabaseServiceClient } from '@/lib/supabase';
+ import { env } from '@/lib/env';
+-import { signStreamToken } from '@/lib/stream-token';
++import { signStreamToken, signCascadeConfig } from '@/lib/stream-token';
+ import { resolveAnalysisCascade } from '@/lib/config/cascade';
+ import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+ import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+@@ -559,6 +559,11 @@ async function collectDimensionsFromWorker(
+   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>
+ ): Promise<Record<string, unknown> | null> {
+   const token = await signStreamToken(gap.videoId, gap.id, models);
++  // PR #442 (analysis.ts:119): the worker now verifies cascade/maxOutputTokens
++  // against a bound signature (cascade-config) — sign the exact config this
++  // S2S caller sends. Server-to-server, so there's no relay-tamper surface,
++  // but the worker's gate is route-wide and would 401 without it.
++  const cascadeConfigSig = await signCascadeConfig(gap.id, cascade, undefined);
+ 
+   // Registry-resolved (2026-08-07) -- see LLMCascade.ts's timeoutMs doc
+   // comment for the RCA. Forwarded to the worker below AND used to derive
+@@ -603,6 +608,8 @@ async function collectDimensionsFromWorker(
+     timezone: (gap.metadata.timezone as string) ?? 'UTC',
+     models,
+     cascade,
++    cascadeConfigSig: cascadeConfigSig.sig,
++    cascadeConfigExp: cascadeConfigSig.exp,
+     llmCascadeTimeoutMs: resolvedLlmTimeoutMs,
+     llmCascadeHandshakeTimeoutMs: resolvedHandshakeTimeoutMs,
+     dimensions: gap.missingDimensions,
+diff --git a/web/lib/stream-token.ts b/web/lib/stream-token.ts
+index cab9f860..d430ac85 100644
+--- a/web/lib/stream-token.ts
++++ b/web/lib/stream-token.ts
+@@ -135,7 +135,37 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
+  * secret. The purpose tag is part of the signed message, so a signature minted
+  * for one flow can never be replayed into the other.
+  */
+-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'plan';
++export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters' | 'projective-context' | 'plan' | 'cascade-config';
++
++/** TTL for the cascade-config binding. Same 120s window as the stream token it
++ * accompanies: it only needs to outlive the request the browser relays it in,
++ * not the analysis itself. */
++export const CASCADE_CONFIG_TTL_MS = TOKEN_TTL_MS;
++
++/**
++ * PR #442 review (analysis.ts:119): `cascade` and `maxOutputTokens` are forwarded
++ * through the browser relayed request body UNSIGNED — a tampered body could point
++ * the worker's LLMCascade at an attacker-chosen model list / provider order /
++ * output-token budget (cost + model-trust surface) while the signed `models` field
++ * stays untouched. This binds the exact registry-resolved config Vercel minted into
++ * a short-lived bound-content signature (same boundContentMessage layout the worker
++ * already verifies for persist flows), keyed to the analysis id.
++ *
++ * The content is the canonicalJson of `{ cascade, maxOutputTokens }` — canonical
++ * (sorted keys) so the worker's rebuild hashes identical bytes. Absent on old
++ * clients = unsigned legacy path, verified leniently worker-side (deploy order:
++ * Vercel first, so any request the hardened worker sees from a current client
++ * always carries the sig).
++ */
++export async function signCascadeConfig(
++  analysisId: string,
++  cascade: unknown,
++  maxOutputTokens: unknown
++): Promise<{ sig: string; exp: number }> {
++  const exp = Date.now() + CASCADE_CONFIG_TTL_MS;
++  const content = canonicalJson({ cascade: cascade ?? null, maxOutputTokens: maxOutputTokens ?? null });
++  return { sig: await hmacHex(env.streamHmacSecret, boundContentMessage('cascade-config', analysisId, exp, content)), exp };
++}
+ 
+ /**
+  * The canonical message for a bound, time-limited S2S content signature. MUST be
+diff --git a/web/lib/types/contracts.ts b/web/lib/types/contracts.ts
+index 2a35c567..aa636129 100644
+--- a/web/lib/types/contracts.ts
++++ b/web/lib/types/contracts.ts
+@@ -260,6 +260,11 @@ export interface WorkerStreamRequest {
+   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
+   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
+   maxOutputTokens?: { haiku: number; default: number };
++  // PR #442 (analysis.ts:119): Vercel bound signature over the exact cascade config
++  // above (cascade-config purpose) — the worker verifies it against the relayed
++  // body before LLMCascade construction; relay verbatim, never edit these fields.
++  cascadeConfigSig?: string;
++  cascadeConfigExp?: number;
+   // Registry-resolved (2026-08-07) -- see CreateAnalysisUseCase and LLMCascade.ts's
+   // timeoutMs doc comment for the RCA behind this field (a long-video timeout
+   // incident traced to a hardcoded value that falsely assumed a non-existent
+diff --git a/web/lib/usecases/CreateAnalysisUseCase.ts b/web/lib/usecases/CreateAnalysisUseCase.ts
+index 3b9888de..96494258 100644
+--- a/web/lib/usecases/CreateAnalysisUseCase.ts
++++ b/web/lib/usecases/CreateAnalysisUseCase.ts
+@@ -80,6 +80,9 @@ export interface UseCaseSuccess {
+   models: string[];
+   cascade: CascadeItem[];
+   maxOutputTokens: { haiku: number; default: number };
++  /** PR #442 (analysis.ts:119): bound signature over cascade+maxOutputTokens; relay verbatim to the worker. */
++  cascadeConfigSig?: string;
++  cascadeConfigExp?: number;
+   llmCascadeTimeoutMs: number;
+   llmCascadeHandshakeTimeoutMs: number;
+   promptCaching?: boolean;
+@@ -434,6 +437,9 @@ export class CreateAnalysisUseCase {
+ 
+     // Mint HMAC token for streaming worker access
+     let token;
++    // PR #442 (analysis.ts:119): bound signature over the relayed cascade config.
++    let cascadeConfigSig: string | undefined;
++    let cascadeConfigExp: number | undefined;
+     try {
+       const sortedModelsForSigning = [...models].sort();
+       token = await this.tokenCrypto.signAnalysisToken({
+@@ -441,6 +447,23 @@ export class CreateAnalysisUseCase {
+         analysisId: stub.id,
+         models: sortedModelsForSigning,
+       });
++      // PR #442 (analysis.ts:119): `cascade`/`maxOutputTokens` reach the worker
++      // through the browser-relayed request body unsigned — bind the exact
++      // registry-resolved values minted here so a tampered relay can't
++      // retarget the worker's LLMCascade. Verified worker-side against the
++      // body before LLMCascade construction.
++      try {
++        const cascadeSig = await this.tokenCrypto.signCascadeConfig({
++          analysisId: stub.id,
++          cascade: analysisCascade,
++          maxOutputTokens,
++        });
++        cascadeConfigSig = cascadeSig.sig;
++        cascadeConfigExp = cascadeSig.exp;
++      } catch (error) {
++        // Same posture as the main token: hard failure, no unsigned fallback.
++        throw error;
++      }
+     } catch (error) {
+       const msg = error instanceof Error ? error.message : String(error);
+       console.error('[CreateAnalysisUseCase] Token signing failed:', msg);
+@@ -476,6 +499,8 @@ export class CreateAnalysisUseCase {
+         models,
+         cascade: analysisCascade,
+         maxOutputTokens,
++        cascadeConfigSig,
++        cascadeConfigExp,
+         llmCascadeTimeoutMs,
+         llmCascadeHandshakeTimeoutMs,
+         promptCaching,
+diff --git a/worker/src/__tests__/jev-slice-route.test.ts b/worker/src/__tests__/jev-slice-route.test.ts
+index e9303d62..19cf61f9 100644
+--- a/worker/src/__tests__/jev-slice-route.test.ts
++++ b/worker/src/__tests__/jev-slice-route.test.ts
+@@ -29,6 +29,15 @@ const DELTA_TOKEN = 'HELLO_GROUNDED_TOKEN';
+ 
+ const CASCADE = [{ model: 'test/model-a', name: 'Model A', providerOrder: ['anthropic'] }];
+ 
++// PR #442 (analysis.ts:119): the route verifies the relayed cascade config
++// against a bound signature before LLMCascade construction — sign the exact
++// CASCADE the request body carries (no maxOutputTokens in these fixtures).
++async function signCascadeConfigFor(exp: number): Promise<{ cascadeConfigSig: string; cascadeConfigExp: number }> {
++  const { canonicalJson } = await import('../../../web/lib/utils/canonical-json');
++  const sig = await hmacHex(SECRET, `cascade-config:${ANALYSIS_ID}:${exp}:${canonicalJson({ cascade: CASCADE, maxOutputTokens: null })}`);
++  return { cascadeConfigSig: sig, cascadeConfigExp: exp };
++}
++
+ const BUNDLE_LIST: number[][] = [
+   [1, 2, 3],
+   [4, 5],
+diff --git a/worker/src/routes/analysis.ts b/worker/src/routes/analysis.ts
+index 8ba5d970..57061772 100644
+--- a/worker/src/routes/analysis.ts
++++ b/worker/src/routes/analysis.ts
+@@ -120,6 +120,12 @@ interface StreamRequest {
+   // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
+   // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
+   maxOutputTokens?: { haiku: number; default: number };
++  // PR #442 (analysis.ts:119): bound HMAC signature over the exact cascade config
++  // Vercel minted (canonicalJson of { cascade, maxOutputTokens }), relayed by the
++  // browser and verified below before LLMCascade construction — without it a
++  // tampered relayed body could retarget the cascade unsigned.
++  cascadeConfigSig?: string;
++  cascadeConfigExp?: number;
+   // Registry-resolved (2026-08-07, analysis.llmCascade.timeoutMs) -- see
+   // LLMCascade.ts's timeoutMs doc comment for the RCA behind this field.
+   llmCascadeTimeoutMs?: number;
+@@ -1839,6 +1845,40 @@ analysis.post("/analyze-llm-stream", async (c) => {
+     return c.json({ error: "Invalid token", reason: "unknown_token_version" }, 401);
+   }
+ 
++  // PR #442 (analysis.ts:119): the cascade config reaches this worker through the
++  // browser-relayed body UNSIGNED — verify the bound-content signature Vercel
++  // minted at job creation (boundContentMessage('cascade-config', ...) layout,
++  // shared with web/lib/stream-token.ts) against the exact body fields before
++  // LLMCascade construction. A body carrying cascade/maxOutputTokens without a
++  // valid sig fails CLOSED; legacy clients sent neither field nor sig, so the
++  // both-absent case stays permitted (deploy order: Vercel ships first).
++  const hasCascadeConfig = req.cascade !== undefined || req.maxOutputTokens !== undefined;
++  if (hasCascadeConfig && c.env.STREAM_HMAC_SECRET) {
++    if (typeof req.cascadeConfigSig !== 'string' || !Number.isFinite(req.cascadeConfigExp)) {
++      return c.json({ error: "Invalid token", reason: "missing_cascade_config_signature" }, 401);
++    }
++    const cascadeContent = canonicalJson({ cascade: req.cascade ?? null, maxOutputTokens: req.maxOutputTokens ?? null });
++    const now = Date.now();
++    const secretsToTry = [c.env.STREAM_HMAC_SECRET, ...(!isProductionEnv(c.env) && c.env.DEV_HMAC_SECRET ? [c.env.DEV_HMAC_SECRET] : [])];
++    let cascadeSigValid = false;
++    for (const s of secretsToTry) {
++      if (!s) continue;
++      if (now > (req.cascadeConfigExp as number)) continue;
++      const expected = await hmacHex(s, `cascade-config:${req.analysisId}:${req.cascadeConfigExp}:${cascadeContent}`);
++      if (timingSafeEqualHex(expected, req.cascadeConfigSig as string)) {
++        cascadeSigValid = true;
++        break;
++      }
++    }
++    if (!cascadeSigValid) {
++      console.warn("[analyze-llm-stream] cascade config signature rejected", {
++        videoId: req.videoId,
++        analysisId: req.analysisId,
++      });
++      return c.json({ error: "Invalid token", reason: "invalid_cascade_config_signature" }, 401);
++    }
++  }
++
+   const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env, {
+     tokenVersion: req.tokenVersion,
+     streamCount: req.streamCount,
