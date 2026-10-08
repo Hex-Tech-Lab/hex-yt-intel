@@ -1,0 +1,25 @@
+web/app/globals.css
+  s_4075cc6448b8f7::t_cae31b61f00a15 559-563
+web/components/templates/console/AnalysisHistory.tsx
+  s_4075cc6448b8f7::t_1ce31c0b67130f 166
+web/lib/__tests__/video-count.test.ts
+  s_4075cc6448b8f7::t_09665b8cfe6525 16,22-30
+web/lib/utils/video-count.ts
+  s_4075cc6448b8f7::t_9334a87f99f611 6-7,9-11,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4951cf85693c27d541004cb4917f4809a45367d8",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
