@@ -1,0 +1,19 @@
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_83a8c52a11f95a::t_98eda2e395fd89 143-146,149,151,158-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6012613a8e0085f2d1f4a3abbc091114cadf6edb",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
