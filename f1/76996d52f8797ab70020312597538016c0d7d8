@@ -1,0 +1,40 @@
+worker/src/__tests__/epistemic-pipeline-dispatcher.test.ts
+  s_1254a5e2df78cb::t_b576319ce60727 76,139,189,236,269-271,332,364-407
+  s_1254a5e2df78cb::t_9ec3099dd5210b 408-432
+worker/src/services/EpistemicPipelineDispatcher.ts
+  s_5779c4a68221c4::t_f123f92185bb3f 53-56,87,117-120,122-143,146-167,175-177,181-189,213-219,263,265,278-281
+worker/src/__tests__/pr442-g3-regressions.test.ts
+  s_33d83365a95787::t_f214ff08677556 1-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f176996d52f8797ab70020312597538016c0d7d8",
+  "prompts": {},
+  "sessions": {
+    "s_1254a5e2df78cb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee52ccbdaffeSw4RQWnP80GsZo",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_33d83365a95787": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee536197affedZp3HQZd5F4T5h",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_5779c4a68221c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5362397ffek3q7Y33ptgC2If",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
