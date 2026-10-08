@@ -222,8 +222,8 @@ describe('CreateAnalysisUseCase Phase C shadow grant (analysis.pipeline.epistemi
       expect(grant?.sig).toMatch(/^[0-9a-f]{64}$/);
       const { verifyEpistemicShadowSig } = await import('@/lib/config/epistemic-shadow');
       const { env } = await import('@/lib/env');
-      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'an-1', sig: grant?.sig, exp: grant?.exp })).toBe(true);
-      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'another', sig: grant?.sig, exp: grant?.exp })).toBe(false);
+      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'an-1', sig: grant?.sig, exp: grant?.exp, retry: grant?.retry })).toBe(true);
+      expect(await verifyEpistemicShadowSig({ secret: env.streamHmacSecret, analysisId: 'another', sig: grant?.sig, exp: grant?.exp, retry: grant?.retry })).toBe(false);
     } finally {
       if (prev === undefined) delete process.env.STREAM_HMAC_SECRET; else process.env.STREAM_HMAC_SECRET = prev;
       vi.mocked(getRegistrySettings).mockImplementation(defaultRegistry);

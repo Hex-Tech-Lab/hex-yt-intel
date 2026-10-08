@@ -21,13 +21,10 @@ import { JevTextParser } from "./sensor-fusion/heuristics/jev-text-parser";
 import type { GroundedExtractionPayload } from "../types/grounded-extraction";
 import type { LLMCascadePort } from "../ports/LLMCascadePort";
 import type { PromptBuilderPort } from "../ports/PromptBuilderPort";
+import type { EpistemicPersistRetry } from "../../../web/lib/config/epistemic-shadow";
 
 /** How long a grounded-claims persist signature stays valid. */
 const CLAIMS_SIG_TTL_MS = 5 * 60 * 1000;
-/** Retries after the first attempt (3 attempts total). PersistResilienceRule asks for exponential backoff. */
-const PERSIST_MAX_RETRIES = 2;
-/** Backoff before retry n is PERSIST_BASE_BACKOFF_MS * 2^(n-1). */
-const PERSIST_BASE_BACKOFF_MS = 250;
 
 export interface EpistemicShadowParams {
   analysisId: string;
@@ -38,6 +35,8 @@ export interface EpistemicShadowParams {
   appUrl: string;
   signingSecret: string;
   openRouterApiKey: string;
+  /** Persist retry policy from the Vercel-signed grant (Settings Registry `analysis.pipeline.retry.epistemic`). */
+  persistRetry: EpistemicPersistRetry;
   promptBuilder: PromptBuilderPort;
   cascade: LLMCascadePort;
   fetchImpl?: typeof fetch;
@@ -61,7 +60,8 @@ export function groundedClaimsCanonical(analysisId: string, groundedClaims: Grou
 
 /**
  * Signs and POSTs one grounded-claims write to Vercel. Retries 5xx, 429 and
- * network errors with exponential backoff; any other 4xx is final. Resolves
+ * network errors using the signed attempt budget and backoff delays; any other
+ * 4xx is final. Resolves
  * false only after the row is given up on, so the caller can report it.
  */
 export async function persistGroundedClaims(
@@ -76,9 +76,10 @@ export async function persistGroundedClaims(
   const url = `${params.appUrl.replace(/\/+$/, "")}/api/analyses/${encodeURIComponent(params.analysisId)}/grounded-claims`;
   const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
   const sleep = params.sleepImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const { maxAttempts, backoffDelays } = params.persistRetry;
 
-  for (let attempt = 0; attempt <= PERSIST_MAX_RETRIES; attempt++) {
-    if (attempt > 0) await sleep(PERSIST_BASE_BACKOFF_MS * 2 ** (attempt - 1));
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) await sleep(backoffDelays[attempt - 1] ?? 0);
     let status: number | "network";
     try {
       const res = await (params.fetchImpl ?? fetch)(url, init);
@@ -97,7 +98,7 @@ export async function persistGroundedClaims(
   Sentry.captureMessage("EpistemicShadow: grounded-claims persist gave up after retries", {
     level: "error",
     tags: { operation: "epistemic-shadow-persist" },
-    extra: { analysisId: params.analysisId, attempts: PERSIST_MAX_RETRIES + 1 },
+    extra: { analysisId: params.analysisId, attempts: maxAttempts },
   });
   return false;
 }

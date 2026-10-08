@@ -40,6 +40,8 @@ async function signV1(): Promise<{ sig: string; exp: number }> {
   }
 }
 
+const RETRY = { maxAttempts: 3, backoffDelays: [250, 500] };
+
 describe('analyze-llm-stream epistemic shadow wiring', () => {
   const originalFetch = globalThis.fetch;
   let pending: Promise<unknown>[];
@@ -81,8 +83,8 @@ describe('analyze-llm-stream epistemic shadow wiring', () => {
   }
 
   it('starts the Epistemic pipeline with the resolved transcript for a valid grant', async () => {
-    const grant = await signEpistemicShadow(SECRET, ANALYSIS_ID);
-    const status = await run({ epistemicShadowSig: grant.sig, epistemicShadowExp: grant.exp });
+    const grant = await signEpistemicShadow(SECRET, ANALYSIS_ID, RETRY);
+    const status = await run({ epistemicShadowSig: grant.sig, epistemicShadowExp: grant.exp, epistemicShadowRetry: RETRY });
     expect(status).toBe(200);
     const { runEpistemicShadow } = await import('../services/EpistemicShadowRunner');
     expect(runEpistemicShadow).toHaveBeenCalledTimes(1);
@@ -91,6 +93,14 @@ describe('analyze-llm-stream epistemic shadow wiring', () => {
     expect(params.transcript).toBe(TRANSCRIPT);
     expect(params.durationSeconds).toBe(120);
     expect(params.appUrl).toBe(APP_URL);
+    expect(params.persistRetry).toEqual(RETRY);
+  });
+
+  it('does not start it when the retry policy in the request was altered after signing', async () => {
+    const grant = await signEpistemicShadow(SECRET, ANALYSIS_ID, RETRY);
+    expect(await run({ epistemicShadowSig: grant.sig, epistemicShadowExp: grant.exp, epistemicShadowRetry: { maxAttempts: 9, backoffDelays: [1, 1, 1, 1, 1, 1, 1, 1] } })).toBe(200);
+    const { runEpistemicShadow } = await import('../services/EpistemicShadowRunner');
+    expect(runEpistemicShadow).not.toHaveBeenCalled();
   });
 
   it('does not start it without a grant (legacy stream only)', async () => {
@@ -100,17 +110,17 @@ describe('analyze-llm-stream epistemic shadow wiring', () => {
   });
 
   it('does not start it for a forged or cross-analysis grant', async () => {
-    const other = await signEpistemicShadow(SECRET, 'a-different-analysis');
-    expect(await run({ epistemicShadowSig: other.sig, epistemicShadowExp: other.exp })).toBe(200);
-    const forged = await signEpistemicShadow('wrong-secret', ANALYSIS_ID);
-    expect(await run({ epistemicShadowSig: forged.sig, epistemicShadowExp: forged.exp })).toBe(200);
+    const other = await signEpistemicShadow(SECRET, 'a-different-analysis', RETRY);
+    expect(await run({ epistemicShadowSig: other.sig, epistemicShadowExp: other.exp, epistemicShadowRetry: RETRY })).toBe(200);
+    const forged = await signEpistemicShadow('wrong-secret', ANALYSIS_ID, RETRY);
+    expect(await run({ epistemicShadowSig: forged.sig, epistemicShadowExp: forged.exp, epistemicShadowRetry: RETRY })).toBe(200);
     const { runEpistemicShadow } = await import('../services/EpistemicShadowRunner');
     expect(runEpistemicShadow).not.toHaveBeenCalled();
   });
 
   it('does not start it for an expired grant', async () => {
-    const expired = await signEpistemicShadow(SECRET, ANALYSIS_ID, Date.now() - 60 * 60 * 1000);
-    expect(await run({ epistemicShadowSig: expired.sig, epistemicShadowExp: expired.exp })).toBe(200);
+    const expired = await signEpistemicShadow(SECRET, ANALYSIS_ID, RETRY, Date.now() - 60 * 60 * 1000);
+    expect(await run({ epistemicShadowSig: expired.sig, epistemicShadowExp: expired.exp, epistemicShadowRetry: RETRY })).toBe(200);
     const { runEpistemicShadow } = await import('../services/EpistemicShadowRunner');
     expect(runEpistemicShadow).not.toHaveBeenCalled();
   });

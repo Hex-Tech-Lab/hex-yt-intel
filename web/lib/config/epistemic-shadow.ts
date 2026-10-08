@@ -24,6 +24,42 @@ export const EPISTEMIC_SHADOW_TTL_MS = 10 * 60 * 1000;
 /** Registry key gating shadow mode. */
 export const EPISTEMIC_PIPELINE_FLAG_KEY = 'analysis.pipeline.epistemic' as const;
 
+/** Registry key for the grounded-claims persist retry policy (Settings Registry, never hardcoded). */
+export const EPISTEMIC_PERSIST_RETRY_KEY = 'analysis.pipeline.retry.epistemic' as const;
+
+/**
+ * Bounded retry policy for the grounded-claims persist. `maxAttempts` counts the
+ * first attempt; `backoffDelays[i]` is the wait before attempt i+2, so its length
+ * is always maxAttempts - 1.
+ */
+export interface EpistemicPersistRetry {
+  maxAttempts: number;
+  backoffDelays: number[];
+}
+
+/** Used only when the registry key is absent or its value fails validation. */
+export const EPISTEMIC_PERSIST_RETRY_DEFAULT: EpistemicPersistRetry = { maxAttempts: 3, backoffDelays: [250, 500] };
+
+const MAX_PERSIST_ATTEMPTS = 10;
+const MAX_BACKOFF_MS = 60_000;
+
+/** Validates a registry value into a retry policy, or null when malformed. */
+export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetry | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as { maxAttempts?: unknown; backoffDelays?: unknown };
+  const { maxAttempts, backoffDelays } = candidate;
+  if (!Number.isInteger(maxAttempts) || (maxAttempts as number) < 1 || (maxAttempts as number) > MAX_PERSIST_ATTEMPTS) return null;
+  if (!Array.isArray(backoffDelays) || backoffDelays.length !== (maxAttempts as number) - 1) return null;
+  const delays = backoffDelays as unknown[];
+  if (!delays.every((ms) => Number.isInteger(ms) && (ms as number) >= 0 && (ms as number) <= MAX_BACKOFF_MS)) return null;
+  return { maxAttempts: maxAttempts as number, backoffDelays: [...(delays as number[])] };
+}
+
+/** Canonical text of a retry policy, bound into the grant signature. */
+function retryCanonical(retry: EpistemicPersistRetry): string {
+  return `${retry.maxAttempts}:${retry.backoffDelays.join(',')}`;
+}
+
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -41,10 +77,18 @@ function timingSafeEqualHex(left: string, right: string): boolean {
   return diff === 0;
 }
 
-/** Vercel side: grant shadow mode for one analysis. */
-export async function signEpistemicShadow(secret: string, analysisId: string, nowMs: number = Date.now()): Promise<{ sig: string; exp: number }> {
+/**
+ * Vercel side: grant shadow mode for one analysis. The retry policy is bound into
+ * the signature, so a browser that relays the grant cannot raise its own attempts.
+ */
+export async function signEpistemicShadow(
+  secret: string,
+  analysisId: string,
+  retry: EpistemicPersistRetry,
+  nowMs: number = Date.now(),
+): Promise<{ sig: string; exp: number }> {
   const exp = nowMs + EPISTEMIC_SHADOW_TTL_MS;
-  const sig = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on`);
+  const sig = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on:${retryCanonical(retry)}`);
   return { sig, exp };
 }
 
@@ -54,12 +98,15 @@ export async function verifyEpistemicShadowSig(params: {
   analysisId: string;
   sig: unknown;
   exp: unknown;
+  retry: unknown;
   nowMs?: number;
 }): Promise<boolean> {
   const { secret, analysisId, sig, exp } = params;
   if (!secret || !analysisId || typeof sig !== 'string' || typeof exp !== 'number' || !Number.isFinite(exp)) return false;
+  const retry = parseEpistemicPersistRetry(params.retry);
+  if (!retry) return false;
   if ((params.nowMs ?? Date.now()) > exp) return false;
-  const expected = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on`);
+  const expected = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on:${retryCanonical(retry)}`);
   return timingSafeEqualHex(expected, sig);
 }
 

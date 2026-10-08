@@ -33,7 +33,7 @@ import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/
 import { verifyProjectiveContextSig } from "../../../web/lib/config/projective-context";
 import { isProjectiveBundle } from "../../../web/lib/config/synthesis";
 import { isValidAppUrl } from "../middleware/cors";
-import { verifyEpistemicShadowSig } from "../../../web/lib/config/epistemic-shadow";
+import { parseEpistemicPersistRetry, verifyEpistemicShadowSig } from "../../../web/lib/config/epistemic-shadow";
 import { runEpistemicShadow } from "../services/EpistemicShadowRunner";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
 
@@ -150,6 +150,7 @@ interface StreamRequest {
   /** Phase C shadow mode: Vercel-signed grant (web/lib/config/epistemic-shadow.ts), first bundle only. */
   epistemicShadowSig?: string;
   epistemicShadowExp?: number;
+  epistemicShadowRetry?: unknown;
   sig: string;
   exp: number;
   // R3b 2.2 (ADR 037 Addendum A3): token-format selector for the dual-verify
@@ -1990,10 +1991,12 @@ analysis.post("/analyze-llm-stream", async (c) => {
       analysisId: req.analysisId,
       sig: req.epistemicShadowSig,
       exp: req.epistemicShadowExp,
+      retry: req.epistemicShadowRetry,
     });
+    const shadowRetry = parseEpistemicPersistRetry(req.epistemicShadowRetry);
     const shadowAppUrl = req.appUrl || c.env.APP_URL;
     let shadowStarted = false;
-    const onTranscriptResolved = shadowGranted && shadowAppUrl
+    const onTranscriptResolved = shadowGranted && shadowAppUrl && shadowRetry
       ? (transcript: string) => {
         if (shadowStarted) return;
         shadowStarted = true;
@@ -2006,6 +2009,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
           appUrl: shadowAppUrl,
           signingSecret: signingKey,
           openRouterApiKey: apiKey,
+          persistRetry: shadowRetry,
           promptBuilder: new PromptBuilder(promptConfig),
           cascade: new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, 'grounded'),
         }));
