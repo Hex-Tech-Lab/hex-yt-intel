@@ -68,7 +68,7 @@ export async function verifyEpistemicShadowSig(params: {
  * layout as the shared bound-content signatures (`purpose:id:exp:content`),
  * kept here so the Phase C wiring needs no changes to the stream-token module.
  */
-export async function signEpistemicClaims(secret: string, analysisId: string, exp: number, content: string): Promise<string> {
+export function signEpistemicClaims(secret: string, analysisId: string, exp: number, content: string): Promise<string> {
   return hmacSha256Hex(secret, `${EPISTEMIC_CLAIMS_PURPOSE}:${analysisId}:${exp}:${content}`);
 }
 

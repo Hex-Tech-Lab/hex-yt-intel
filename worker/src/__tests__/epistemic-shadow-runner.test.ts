@@ -50,14 +50,14 @@ describe('runEpistemicShadow', () => {
 
   it('feeds JEV intensities to the dispatcher, injects persistGhostRow, and signs both writes so Vercel accepts them', async () => {
     analyze.mockResolvedValue({ direct_address_intensity: 3, procedural_instruction_intensity: 1, tangential_fluff_intensity: 2, turn_marker_count: 4 });
-    dispatchAnalysis.mockImplementation(async (input: { persistGhostRow: (p: unknown) => Promise<boolean> }) => {
+    dispatchAnalysis.mockImplementation(async (input: { persistGhostRow: (payload: unknown) => Promise<boolean> }) => {
       expect(await input.persistGhostRow(GROUNDED)).toBe(true);
       return { classification: { route: 'S2', degradedSensors: true }, groundedExtraction: GROUNDED, projectiveSynthesis: {}, latencyMs: 5 };
     });
     const posts: Array<{ url: string; body: any }> = [];
-    const fetchImpl = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const fetchImpl = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       posts.push({ url: String(url), body: JSON.parse(String(init?.body)) });
-      return new Response('{"ok":true}', { status: 200 });
+      return Promise.resolve(new Response('{"ok":true}', { status: 200 }));
     }) as unknown as typeof fetch;
 
     const { runEpistemicShadow } = await import('../services/EpistemicShadowRunner');
