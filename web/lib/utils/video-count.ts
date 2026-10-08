@@ -11,8 +11,8 @@ export const videoCount = {
   /** The count as a digit string, or null when the value is not a valid count. */
   parseCount(value: unknown): string | null {
     const digits = typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '';
-    const n = Number(digits);
-    return digits !== '' && Number.isSafeInteger(n) && n >= 0 && String(n) === digits ? digits : null;
+    const parsed = Number(digits);
+    return digits !== '' && Number.isSafeInteger(parsed) && parsed >= 0 && String(parsed) === digits ? digits : null;
   },
 
   /** Normalised count string for display; '0' when the value is not a valid count. */
