@@ -52,7 +52,10 @@ export interface LLMCascadePort {
   ): Promise<{ text: string; modelUsed: string } | null>;
 
   /**
-   * Stream raw LLM generation for Epistemic engines.
+   * Stream raw LLM generation for Epistemic engines (Part A extraction /
+   * Part B synthesis). Optional: legacy production LLMCascade instances only
+   * implement streamCascade/runCascade; Epistemic engines must fail fast when
+   * the injected cascade cannot stream (see GroundedExtractionEngine.ts).
    */
   generateStream?(params: {
     systemPrompt: string;

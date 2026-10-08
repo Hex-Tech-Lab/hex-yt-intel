@@ -20,6 +20,14 @@ const PRODUCTION_ORIGINS = [
   // surfacing to the frontend as an opaque "Failed to fetch" (real incident
   // 2026-10-06).
   "https://uat.getvintel.com",
+  // Threat-model note: this list is read by BOTH resolveCorsOrigin (browser
+  // CORS) and isValidAppUrl (persist callback target validation). Trusting
+  // uat.getvintel.com as a callback target means a compromised UAT app could
+  // POST persist results accepted by production workers. Accepted risk: UAT
+  // app and prod app share the same Supabase project/identity plane, so UAT
+  // writes land in the same DB under authenticated user identity — there is
+  // no separate prod-only data plane to protect. Revisit if UAT ever gets
+  // an isolated database.
   "https://yt-intel.getmytestdrive.com",
   "https://v-intel.getmytestdrive.com",
 ];
