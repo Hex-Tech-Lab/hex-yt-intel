@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   ProjectiveSynthesisEngine,
-  type ProjectiveSynthesisInput,
 } from '../services/ProjectiveSynthesisEngine';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { LLMCascadePort } from '../ports/LLMCascadePort';

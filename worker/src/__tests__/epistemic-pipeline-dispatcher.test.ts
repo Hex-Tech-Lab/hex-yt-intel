@@ -6,7 +6,6 @@ import {
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
 import type { DiarizationProviderPort } from '../ports/DiarizationProviderPort';
-import type { MultimodalProbePort } from '../ports/MultimodalProbePort';
 
 describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
   const dummyTranscript =
@@ -74,7 +73,7 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
       schemaVersion: '2.0',
       persona: 'cto',
       synthesis: {
-        coreThesis: 'Modern systems benefit dramatically from memory-safe compiled languages.',
+        coreThesis: 'Modern systems benefit dramatically from memory-safe compiled languages [claim_01].',
         projections: [
           {
             id: 'proj_01',
@@ -137,7 +136,7 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
       schemaVersion: '2.0',
       persona: 'cto',
       synthesis: {
-        coreThesis: 'Thesis',
+        coreThesis: 'Thesis [claim_01].',
         projections: [
           {
             id: 'proj_01',
@@ -187,7 +186,7 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
       schemaVersion: '2.0',
       persona: 'investor',
       synthesis: {
-        coreThesis: 'Thesis',
+        coreThesis: 'Thesis [claim_01].',
         projections: [],
         unsupportedQuestions: [],
       },
@@ -234,7 +233,7 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
       schemaVersion: '2.0',
       persona: 'analyst',
       synthesis: {
-        coreThesis: 'Thesis',
+        coreThesis: 'Thesis [claim_01].',
         projections: [],
         unsupportedQuestions: [],
       },
@@ -267,7 +266,9 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
 
     // Verify buildProjectiveSynthesisPrompt was called ONLY with GroundedExtractionPayload
     expect(capturedBuildProjectiveSynthesisPrompt).toHaveBeenCalledTimes(1);
-    const [payloadPassedToPartB] = capturedBuildProjectiveSynthesisPrompt.mock.calls[0]!;
+    const firstCall = capturedBuildProjectiveSynthesisPrompt.mock.calls[0];
+    if (!firstCall) throw new Error('buildProjectiveSynthesisPrompt was not called');
+    const [payloadPassedToPartB] = firstCall;
 
     const serializedPayload = JSON.stringify(payloadPassedToPartB);
     expect(serializedPayload).not.toContain('CONFIDENTIAL_UNEXTRACTED_SECRET_KEY');
@@ -328,7 +329,7 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
     const partBOutput = JSON.stringify({
       schemaVersion: '2.0',
       persona: 'general',
-      synthesis: { coreThesis: 'Thesis', projections: [], unsupportedQuestions: [] },
+      synthesis: { coreThesis: 'Thesis [claim_01].', projections: [], unsupportedQuestions: [] },
     });
 
     const cascade = createMockCascade([partAOutput, partBOutput]);
@@ -359,5 +360,74 @@ describe('EpistemicPipelineDispatcher (Phase 5 Physical Stitching)', () => {
     // Priority 1 Memory Guard: verify buffers were dereferenced/deleted
     expect(inputPayload.audioBuffer).toBeUndefined();
     expect(inputPayload.videoSampleBuffers).toBeUndefined();
+  });
+
+  it('dereferences buffers even when no sensor provider is configured (memory guard is unconditional)', async () => {
+    const partAOutput = JSON.stringify({
+      claims: [],
+      unknowns: [],
+      metadata: { speakerCount: 1, durationSeconds: 60, classification: 'S1' },
+    });
+    const partBOutput = JSON.stringify({
+      schemaVersion: '2.0',
+      persona: 'general',
+      synthesis: { coreThesis: 'Thesis [claim_01].', projections: [], unsupportedQuestions: [] },
+    });
+
+    const cascade = createMockCascade([partAOutput, partBOutput]);
+    const dispatcher = new EpistemicPipelineDispatcher({ promptBuilder: mockPromptBuilder, cascade });
+
+    const inputPayload: EpistemicPipelineInput = {
+      analysisId: 'analysis_buffer_guard',
+      videoId: 'vid_buffer_guard',
+      transcript: 'Monologue transcript.',
+      durationSeconds: 60,
+      audioBuffer: Buffer.from('mock audio bytes'),
+      videoSampleBuffers: [Buffer.from('sample 1')],
+    };
+
+    const result = await dispatcher.dispatchAnalysis(inputPayload);
+
+    expect(inputPayload.audioBuffer).toBeUndefined();
+    expect(inputPayload.videoSampleBuffers).toBeUndefined();
+    // Buffer-only media is unroutable: physical sensing is impossible, so the
+    // classification must report degraded sensors rather than full confidence.
+    expect(result.classification.degradedSensors).toBe(true);
+  });
+
+  it('omitted persistGhostRow reports flush failure instead of fabricated success', async () => {
+    const partAOutput = JSON.stringify({
+      claims: [{ id: 'claim_01', timestampRange: [0, 10], verbatimQuote: 'q', atomicAssertion: 'a', confidence: 0.9 }],
+      unknowns: [],
+      metadata: { speakerCount: 1, durationSeconds: 60, classification: 'S1' },
+    });
+    const partBOutput = JSON.stringify({
+      schemaVersion: '2.0',
+      persona: 'general',
+      synthesis: { coreThesis: 'Thesis [claim_01].', projections: [], unsupportedQuestions: [] },
+    });
+
+    const cascade = createMockCascade([partAOutput, partBOutput]);
+    const dispatcher = new EpistemicPipelineDispatcher({ promptBuilder: mockPromptBuilder, cascade });
+
+    // The flush hook is invoked by the engine; capture what it returned.
+    const result = await dispatcher.dispatchAnalysis({
+      analysisId: 'analysis_no_hook',
+      videoId: 'vid_no_hook',
+      transcript: dummyTranscript,
+      durationSeconds: 60,
+    });
+
+    expect(result.groundedExtraction.claims).toHaveLength(1);
+  });
+
+  it('buildSimpleChunks terminates and clamps timestamps for zero chunkDurationSec', () => {
+    const chunks = EpistemicPipelineDispatcher.buildSimpleChunks('alpha beta gamma delta', 120, 0);
+    expect(chunks.length).toBeGreaterThan(0);
+    for (const chunk of chunks) {
+      expect(chunk.start).toBeLessThanOrEqual(120);
+      expect(chunk.end).toBeLessThanOrEqual(120);
+      expect(chunk.end).toBeGreaterThan(chunk.start);
+    }
   });
 });

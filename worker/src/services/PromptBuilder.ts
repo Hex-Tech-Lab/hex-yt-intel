@@ -1,11 +1,11 @@
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
 import { UCIS_V5_4_SYSTEM } from '../../../web/lib/prompts/ucis-v5.4';
+import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS, isProjectiveBundle } from '../../../web/lib/config/synthesis';
+import { isValidPersona } from '../../../web/lib/types/persona';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { PromptConfigPort } from '../ports/PromptConfigPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
-import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS, isProjectiveBundle } from '../../../web/lib/config/synthesis';
 import type { PersonaId } from '../../../web/lib/types/persona';
-import { isValidPersona } from '../../../web/lib/types/persona';
 
 // RCA (2026-07-24): getUCISPrompt's default template resolution
 // (resolveUCISPromptTemplate) reads Supabase/Redis credentials via
@@ -23,6 +23,10 @@ import { isValidPersona } from '../../../web/lib/types/persona';
 // extraFieldsInstruction/fallbackInstructions) remains hardcoded in this
 // worker-only file -- smaller blast radius (dimension-count instructions,
 // not the core analysis prompt) than the base template, deferred separately.
+/**
+ * Builds LLM prompts for the analysis pipeline (UCIS v5.4 shared prefix,
+ * segmented-dimension instructions, and the ADR 039 Part A/B prompts).
+ */
 export class PromptBuilder implements PromptBuilderPort {
   constructor(private readonly promptConfig?: PromptConfigPort) {}
 
@@ -73,8 +77,8 @@ export class PromptBuilder implements PromptBuilderPort {
 
     if (context.dimensions !== undefined && context.dimensions.length > 0) {
       const dims = context.dimensions
-        .filter(d => Number.isInteger(d) && d >= 1 && d <= TOTAL_DIMENSIONS)
-        .filter((d, i, arr) => arr.indexOf(d) === i);
+        .filter((dimNumber) => Number.isInteger(dimNumber) && dimNumber >= 1 && dimNumber <= TOTAL_DIMENSIONS)
+        .filter((dimNumber, i, arr) => arr.indexOf(dimNumber) === i);
       if (dims.length === 0) {
         console.warn('[PromptBuilder] No valid dimensions after filtering', {
           received: context.dimensions,
@@ -84,8 +88,8 @@ export class PromptBuilder implements PromptBuilderPort {
       }
       const allExtraFields = new Set<string>();
       const extraInstrParts: string[] = [];
-      for (const d of dims) {
-        const cfg = DIMENSION_CONFIGS[d];
+      for (const dimNumber of dims) {
+        const cfg = DIMENSION_CONFIGS[dimNumber];
         if (cfg?.extraFields) {
           for (const f of cfg.extraFields) {
             if (!allExtraFields.has(f)) {
@@ -102,9 +106,9 @@ export class PromptBuilder implements PromptBuilderPort {
         ? extraInstrParts.join(', and ')
         : 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
 
-      const dimLabels = dims.map(d => {
-        const cfg = DIMENSION_CONFIGS[d];
-        return cfg ? `- ### DIMENSION ${d} - ${cfg.name}` : `- ### DIMENSION ${d}`;
+      const dimLabels = dims.map((dimNumber) => {
+        const cfg = DIMENSION_CONFIGS[dimNumber];
+        return cfg ? `- ### DIMENSION ${dimNumber} - ${cfg.name}` : `- ### DIMENSION ${dimNumber}`;
       }).join('\n');
 
       const label = dims.length === 1
@@ -138,16 +142,18 @@ export class PromptBuilder implements PromptBuilderPort {
       // belt-and-braces projection if a legacy context carries extra keys.
       const rawPriorDimensions: unknown = context.prior_payload?.dimensions;
       const sanitizedPriorDimensions = (Array.isArray(rawPriorDimensions) ? rawPriorDimensions : [])
-        .map((d: { number?: unknown; content?: unknown }) => ({ number: d.number, content: d.content }))
-        .filter((d: { number: unknown; content: unknown }): d is { number: number; content: string } =>
-          typeof d.number === 'number' && typeof d.content === 'string');
+        .map((dim: { number?: unknown; content?: unknown }) => ({ number: dim.number, content: dim.content }))
+        .filter((dim: { number: unknown; content: unknown }): dim is { number: number; content: string } =>
+          typeof dim.number === 'number' && typeof dim.content === 'string');
       const sanitizedPriorPayload = { schemaVersion: '2.0', dimensions: sanitizedPriorDimensions };
       const priorPayloadInstruction = (isProjective && sanitizedPriorDimensions.length > 0)
         ? `\n\nCRITICAL EVIDENCE FOR SYNTHESIS (GROUNDED FOUNDATIONAL TRUTH):\nUse the following rigidly extracted dimensions as the factual foundation for your projection. Do not contradict them:\n${JSON.stringify(sanitizedPriorPayload)}\n`
         : '';
 
       const dim6Notice = dims.includes(6)
-        ? `\nIMPORTANT: For DIMENSION 6, insert an upfront notice banner at "#### 6.0 Comparative Scope & Stress-Testing" explaining comparative parameters, stress-testing boundaries, and deductive projection models before 6.1 and 6.2.\n`
+        ? (isProjective
+          ? `\nIMPORTANT: For DIMENSION 6, insert an upfront notice banner at "#### 6.0 Comparative Scope & Stress-Testing" explaining comparative parameters, stress-testing boundaries, and deductive projection models before 6.1 and 6.2.\n`
+          : `\nIMPORTANT: For DIMENSION 6, insert an upfront notice banner at "#### 6.0 Comparative Scope & Stress-Testing" explaining the comparative parameters and stress-testing boundaries applied to this dimension before 6.1 and 6.2. Scope the comparison strictly to what the transcript evidences.\n`)
         : '';
 
       // R1b/R1e: a grounded bundle containing dimension 8 produces 8.1/8.2
@@ -190,6 +196,10 @@ Do NOT output any other dimensions. Do NOT include any other JSON root fields${i
     return { sharedPrefix: basePrompt, segmentInstruction: '' };
   }
 
+  /**
+   * Part A (ADR 039) prompt: sterile transcript-only extraction with a strict
+   * claims/unknowns/metadata JSON schema.
+   */
   buildGroundedExtractionPrompt(
     transcriptChunks: Array<{ text: string; start: number; end: number; speaker?: string }>,
     metadata: {
@@ -207,7 +217,7 @@ Output format must be valid, raw JSON conforming strictly to this layout:
     {
       "id": "claim_01",
       "speaker": "Speaker Name or optional identifier",
-      "timestampRange": [startSeconds, endSeconds],
+      "timestampRange": [125, 140],
       "verbatimQuote": "exact quote from transcript",
       "atomicAssertion": "concise factual assertion made in the quote",
       "confidence": 1.0
@@ -243,6 +253,10 @@ Extract all verifiable atomic claims with exact timestamp ranges and verbatim qu
     return { systemPrompt, userPrompt };
   }
 
+  /**
+   * Part B (ADR 039) prompt: projective synthesis over the grounded payload
+   * with mandatory claim-ID citations.
+   */
   buildProjectiveSynthesisPrompt(
     payload: import('../types/grounded-extraction').GroundedExtractionPayload,
     persona?: string,
@@ -266,7 +280,7 @@ Output format must be valid, raw JSON conforming to this layout:
         "id": "proj_01",
         "citedClaimIds": ["claim_01"],
         "implication": "Strategic forward-looking projection",
-        "marketHorizon": "near-term" | "mid-term" | "long-term",
+        "marketHorizon": "near-term",
         "confidence": 0.9
       }
     ],
