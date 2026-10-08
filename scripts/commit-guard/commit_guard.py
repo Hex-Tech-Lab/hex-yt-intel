@@ -10,7 +10,7 @@ Deterministic layer (exit 1 immediately on any hit):
     JWTs (Supabase service-role keys are JWTs), long secrets near key/token/secret
   - .env content: added dotenv-style assignments for secret-ish variable names
   - forbidden paths: local env/secret files and tool state that must never be committed
-Jev layer on added TEXT hunks (<=60 lines each), two yes/no questions per hunk:
+Jev layer on added TEXT hunks (first 60 lines each; deterministic checks read every line), two yes/no questions per hunk:
   private_material - private/internal ADR content, unreleased pricing or COGS, customer
                      or user personal data, legal/contract strategy
   secret_like      - looks like a credential, key, token or secret
@@ -24,6 +24,8 @@ A line containing `commit-guard: allow` is skipped by the deterministic key-like
 Usage: python3 scripts/commit-guard/commit_guard.py [--diff-file <path>] [--no-jev]
 """
 import argparse
+import ast
+import math
 import re
 import subprocess
 import sys
@@ -41,7 +43,7 @@ FORBIDDEN_PREFIXES = ("supabase/.temp/", ".ori/", ".scratch/", "web/.next/")
 FORBIDDEN_BASENAMES = (".dev.vars",)
 FORBIDDEN_SUFFIXES = (".pem", ".p12", ".key")
 ENV_FILE = re.compile(r"(^|/)\.env(\..+)?$")
-ENV_FILE_ALLOWED = (".env.example", ".env.template", ".env.sample")
+ENV_FILE_ALLOWED_SUFFIXES = (".example", ".template", ".sample")  # e.g. web/.env.local.example
 
 QUESTIONS = {
     "private_material": {"type": "noul",
@@ -67,34 +69,67 @@ DETERMINISTIC = [
 ]
 # .env-style secret assignments (e.g. OPENROUTER_API_KEY=sk-...). An assignment with an empty value
 # or a ${VAR} / <placeholder> reference is a template, not a leak.
-ENV_ASSIGN = re.compile(r"(?im)^[A-Z_]*(?:KEY|TOKEN|SECRET|PASSWORD)[A-Z_]*\s*=\s*(?!$|\$\{|<|\"\"|'')\S")
+ENV_ASSIGN = re.compile(r"(?im)^[A-Z_]*(?:KEY|TOKEN|SECRET|PASSWORD)[A-Z_]*[ \t]*=[ \t]*(?!$|\$\{|<|\"\"|'')\S")
+JEV_HUNK_LINES = 60  # Jev sees at most this many lines per hunk; deterministic checks see every line
+
+
+def is_env_template(path):
+    return bool(ENV_FILE.search(path)) and path.endswith(ENV_FILE_ALLOWED_SUFFIXES)
 
 
 def is_forbidden(path):
     base = path.rsplit("/", 1)[-1]
-    if ENV_FILE.search(path) and base not in ENV_FILE_ALLOWED:
+    if ENV_FILE.search(path) and not is_env_template(path):
         return True
     return (path.startswith(FORBIDDEN_PREFIXES) or base in FORBIDDEN_BASENAMES
             or path.endswith(FORBIDDEN_SUFFIXES))
 
 
+def header_path(rest):
+    """Path from a `+++ ` header remainder: b/<path>, a quoted "b/<path>" (git quotes unusual names), or /dev/null."""
+    if rest.startswith('"'):
+        try:
+            rest = ast.literal_eval(rest).encode("latin-1").decode("utf-8")  # git C-quotes UTF-8 bytes as octal
+        except (ValueError, SyntaxError, UnicodeError):
+            rest = rest.strip('"')
+    return rest[2:] if rest.startswith("b/") else rest
+
+
 def hunks(diff_text):
-    """[(file, [added lines])] per contiguous added run, capped at 60 lines each."""
-    out, cur_file, cur_adds = [], None, []
+    """[(file, [added lines])] per contiguous added run (every line; callers cap what Jev sees).
+    Headers are only recognised before a file's first @@, so an added line whose content starts
+    with `++` is never mistaken for a `+++` header."""
+    out, cur_file, cur_adds, in_header = [], None, [], False
     for line in diff_text.splitlines():
-        if line.startswith("+++ b/"):
-            cur_file = line[6:]
-        elif line.startswith("+++ /dev/null"):
-            cur_file = "/dev/null"
-        elif line.startswith("+") and not line.startswith("+++"):
-            cur_adds.append(line[1:])
-        elif line.startswith(("diff --git", "@@")) or (line.startswith("-") and not line.startswith("---")):
+        if line.startswith("diff --git"):
             if cur_file and cur_adds:
-                out.append((cur_file, cur_adds[:60]))
+                out.append((cur_file, cur_adds))
+            cur_adds, in_header = [], True
+        elif in_header and line.startswith("+++ "):
+            cur_file = header_path(line[4:])
+        elif line.startswith("@@"):
+            if cur_file and cur_adds:
+                out.append((cur_file, cur_adds))
+            cur_adds, in_header = [], False
+        elif in_header:
+            continue
+        elif line.startswith("+"):
+            cur_adds.append(line[1:])
+        elif cur_adds:
+            out.append((cur_file, cur_adds))
             cur_adds = []
     if cur_file and cur_adds:
-        out.append((cur_file, cur_adds[:60]))
+        out.append((cur_file, cur_adds))
     return out
+
+
+def jev_score(answers):
+    """max(private_material, secret_like) as a probability, or None if the answer is malformed."""
+    try:
+        p = max(float(answers["private_material"]["noul"]), float(answers["secret_like"]["noul"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+    return p if math.isfinite(p) and 0.0 <= p <= 1.0 else None
 
 
 def main():
@@ -109,7 +144,7 @@ def main():
 
     worst, flags = 0, []
     jev_down = False  # circuit breaker: one unavailable answer skips Jev for the rest of the commit
-    paths = set(re.findall(r"^\+\+\+ b/(.+)$", diff, re.M))
+    paths = {f for f, _ in hunks(diff)}
     paths |= set(re.findall(r"^Binary files .* and b/(.+) differ$", diff, re.M))
     if not args.diff_file:
         paths |= set(subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=d", "-z"],
@@ -119,16 +154,18 @@ def main():
             print(f"BLOCK: forbidden path staged: {path}")
             worst = 1
     for fname, adds in hunks(diff):
-        blob = "\n".join(adds)
+        blob = "\n".join(adds[:JEV_HUNK_LINES])
         if is_forbidden(fname) or fname == "/dev/null":
             continue
-        if ENV_ASSIGN.search("\n".join(a for a in adds if ALLOW_MARKER not in a)):
+        checked = "\n".join(a for a in adds if ALLOW_MARKER not in a)
+        if not is_env_template(fname) and ENV_ASSIGN.search(checked):
             print(f"BLOCK: secret assignment content in {fname}")
             worst = 1
             continue
-        hit = next((a for a in adds if ALLOW_MARKER not in a and any(rx.search(a) for rx in DETERMINISTIC)), None)
+        hit = next((n for n, a in enumerate(adds, 1) if ALLOW_MARKER not in a and any(rx.search(a) for rx in DETERMINISTIC)), None)
         if hit is not None:
-            print(f"BLOCK: key-like string in {fname}: {hit[:24]}… (redacted)")
+            # Never echo any part of the match: name the file and the added-line position only.
+            print(f"BLOCK: key-like string in {fname} (added line {hit} of this hunk; content withheld)")
             worst = 1
             continue
         if args.no_jev or jev_down:
@@ -139,9 +176,8 @@ def main():
             jev_down = True
             flags.append((fname, None, "UNCHECKED (Jev unavailable)"))
             continue
-        try:
-            p = max(answers["private_material"]["noul"], answers["secret_like"]["noul"])
-        except (KeyError, TypeError):
+        p = jev_score(answers)
+        if p is None:
             flags.append((fname, None, "UNCHECKED (unexpected Jev answer)"))
             continue
         if p >= HI:

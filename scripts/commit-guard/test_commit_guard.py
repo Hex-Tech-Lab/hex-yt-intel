@@ -30,6 +30,10 @@ def run_guard(diff_text, jev_answer=None, no_jev=False):
     return code, out.getvalue()
 
 
+# Fake OpenRouter-shaped key, assembled at runtime so no key-shaped literal is committed.
+FAKE_CREDENTIAL = "-".join(["sk", "or", "v1", "a1b2c3d4" * 8])
+
+
 def jev(private=0.0, secret=0.0):
     return {"private_material": {"noul": private}, "secret_like": {"noul": secret}}
 
@@ -41,7 +45,7 @@ class CommitGuardTest(unittest.TestCase):
         self.assertIn("PASS", out)
 
     def test_openrouter_key_blocks_without_echoing_it(self):
-        key = "sk-or-v1-" + "a1b2c3d4" * 8  # commit-guard: allow
+        key = FAKE_CREDENTIAL
         code, out = run_guard(diff_for("web/lib/x.ts", [f"const k = '{key}';"]), jev())
         self.assertEqual(code, 1)
         self.assertNotIn(key, out)
@@ -87,6 +91,37 @@ class CommitGuardTest(unittest.TestCase):
                     commit_guard.main()
         self.assertEqual(exit_.exception.code, 0)
         self.assertEqual(decide.call_count, 1)
+
+    def test_secret_past_line_60_still_blocks(self):
+        lines = ["const a = 1;"] * 70 + [f"const k = '{FAKE_CREDENTIAL}';"]
+        self.assertEqual(run_guard(diff_for("web/lib/x.ts", lines), jev())[0], 1)
+
+    def test_added_line_starting_with_plus_plus_is_content(self):
+        key = FAKE_CREDENTIAL
+        self.assertEqual(run_guard(diff_for("web/lib/x.ts", ["++ " + key]), jev())[0], 1)
+
+    def test_quoted_header_path_is_checked(self):
+        key = FAKE_CREDENTIAL
+        diff = 'diff --git "a/docs/\\303\\251.md" "b/docs/\\303\\251.md"\n--- /dev/null\n+++ "b/docs/\\303\\251.md"\n@@ -0,0 +1 @@\n+' + key + "\n"
+        code, out = run_guard(diff, jev())
+        self.assertEqual(code, 1)
+        self.assertIn("docs/\u00e9.md", out)
+
+    def test_env_local_example_placeholders_pass(self):
+        self.assertEqual(run_guard(diff_for("web/.env.local.example", ["OPENROUTER_API_KEY=your-key-here"]), jev())[0], 0)
+
+    def test_empty_assignment_does_not_swallow_next_line(self):
+        self.assertEqual(run_guard(diff_for("docs/setup.md", ["API_KEY=", "NEXT_STEP=run it"]), jev())[0], 0)
+
+    def test_block_message_echoes_no_secret_prefix(self):
+        key = FAKE_CREDENTIAL
+        out = run_guard(diff_for("web/lib/x.ts", [key]), jev())[1]
+        self.assertNotIn(FAKE_CREDENTIAL[:5], out)
+
+    def test_out_of_range_jev_score_is_unchecked(self):
+        code, out = run_guard(diff_for("web/lib/x.ts", ["export const a = 1;"]), jev(7.0, 0.0))
+        self.assertEqual(code, 0)
+        self.assertIn("UNCHECKED (unexpected Jev answer)", out)
 
     def test_thos_history_docs_are_allowed(self):
         self.assertEqual(run_guard(diff_for("docs/history/THOS_2026-10-08.md", ["# handover"]), jev(0.1, 0.1))[0], 0)

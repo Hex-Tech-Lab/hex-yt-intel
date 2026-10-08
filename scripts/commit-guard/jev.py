@@ -19,6 +19,16 @@ import subprocess
 import urllib.request
 
 URL = "https://openrouter.ai/api/alpha/decisions"
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """urllib copies Authorization onto redirects; the API key must never follow one."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
 MODEL = "~typesafe/jev-latest"
 
 
@@ -35,11 +45,13 @@ def _key():
     except (OSError, subprocess.SubprocessError):
         pass  # not inside a git checkout: only this checkout's env file is tried
     for env in candidates:
-        if not env.exists():
-            continue
-        for line in env.read_text().splitlines():
+        try:
+            text = env.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue  # missing or unreadable: try the next candidate
+        for line in text.splitlines():
             if line.startswith("OPENROUTER_API_KEY="):
-                return line.split("=", 1)[1].strip().strip('"')
+                return line.split("=", 1)[1].strip().strip("\"'") or None
     return None  # CI / fresh clone: no key -> callers fall back to UNCHECKED
 
 
@@ -55,7 +67,7 @@ def decide(state, questions, timeout=5.0):
         "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-yt-intel", "X-Title": "vIntel commit guard"})
     try:
         # URL is the fixed https constant above, never caller input.
-        return json.load(urllib.request.urlopen(req, timeout=timeout)).get("answers")  # nosec B310
+        return json.load(_OPENER.open(req, timeout=timeout)).get("answers")  # nosec B310
     except Exception:
         return None
 
