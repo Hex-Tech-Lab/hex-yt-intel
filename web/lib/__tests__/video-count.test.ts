@@ -1,0 +1,22 @@
+import { describe, it, expect } from 'vitest';
+import { toCountValue } from '@/lib/utils/video-count';
+
+describe('toCountValue', () => {
+  it('keeps numeric-string counts (the shape /api/metadata and stored payloads use)', () => {
+    expect(toCountValue('20334')).toBe('20334');
+    expect(toCountValue(' 344 ')).toBe('344');
+  });
+
+  it('keeps finite numbers', () => {
+    expect(toCountValue(0)).toBe(0);
+    expect(toCountValue(1500)).toBe(1500);
+  });
+
+  it('falls back to 0 for missing, empty or non-numeric values', () => {
+    expect(toCountValue(undefined)).toBe(0);
+    expect(toCountValue(null)).toBe(0);
+    expect(toCountValue('')).toBe(0);
+    expect(toCountValue('n/a')).toBe(0);
+    expect(toCountValue(Number.NaN)).toBe(0);
+  });
+});

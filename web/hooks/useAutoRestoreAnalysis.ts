@@ -9,6 +9,7 @@ import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+import { toCountValue } from '@/lib/utils/video-count';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
@@ -235,8 +236,8 @@ export function useAutoRestoreAnalysis(url: string) {
 
           const meta = restoreData.analysis_payload?.videoMetadata || restoreData.analysis_payload?.metadata || {};
           const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (restoreData.duration || 0);
-          const viewCount = typeof meta.viewCount === 'number' ? meta.viewCount : typeof meta.view_count === 'number' ? Number(meta.view_count) : (restoreData.viewCount || 0);
-          const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (restoreData.likeCount || 0);
+          const viewCount = toCountValue(meta.viewCount ?? meta.view_count ?? restoreData.viewCount);
+          const likeCount = toCountValue(meta.likeCount ?? meta.like_count ?? restoreData.likeCount);
 
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown, undefined, restoreData.videoId);
