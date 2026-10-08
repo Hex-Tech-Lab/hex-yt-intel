@@ -20,13 +20,32 @@ export function calculateDiarizationMetrics(words: WordDiarization[]): Diarizati
 
   const speakerDurations = new Map<number, number>();
   let totalSpeechDuration = 0;
+  // Per-speaker merged (union) intervals, so overlapping words from one
+  // speaker are counted once (true wall-clock speaking time).
+  const speakerIntervals = new Map<number, Array<{ start: number; end: number }>>();
 
   for (const wordItem of words) {
-    const duration = Math.max(0, wordItem.end - wordItem.start);
-    if (duration > 0) {
-      speakerDurations.set(wordItem.speaker, (speakerDurations.get(wordItem.speaker) || 0) + duration);
-      totalSpeechDuration += duration;
+    if (wordItem.end <= wordItem.start) continue;
+    const intervals = speakerIntervals.get(wordItem.speaker);
+    if (intervals) {
+      intervals.push({ start: wordItem.start, end: wordItem.end });
+    } else {
+      speakerIntervals.set(wordItem.speaker, [{ start: wordItem.start, end: wordItem.end }]);
     }
+  }
+
+  for (const [speaker, intervals] of speakerIntervals) {
+    intervals.sort((ivA, ivB) => ivA.start - ivB.start);
+    let speakingTime = 0;
+    let currentEnd = -Infinity;
+    for (const interval of intervals) {
+      if (interval.end > currentEnd) {
+        speakingTime += interval.end - Math.max(interval.start, currentEnd);
+        currentEnd = interval.end;
+      }
+    }
+    speakerDurations.set(speaker, speakingTime);
+    totalSpeechDuration += speakingTime;
   }
 
   const speakerCount = speakerDurations.size;
@@ -42,28 +61,40 @@ export function calculateDiarizationMetrics(words: WordDiarization[]): Diarizati
     }
   }
 
-  // 2. Calculate overlapRatio (cross-talk / simultaneous speech between different speakers)
+  // 2. Calculate overlapRatio (cross-talk / simultaneous speech between different speakers),
+  //    unioned per wall-clock instant so the same overlap is not double-counted
+  //    across speaker pairs (N speakers active simultaneously count once, not C(N,2) times).
   let overlapDuration = 0;
-  const sortedWords = [...words]
-    .filter((wordItem) => wordItem.end > wordItem.start)
-    .sort((prevWord, nextWord) => prevWord.start - nextWord.start);
+  const overlapSegments: Array<{ start: number; end: number }> = [];
 
-  for (let outerIndex = 0; outerIndex < sortedWords.length; outerIndex++) {
-    const currentWord = sortedWords[outerIndex]!;
-    for (let innerIndex = outerIndex + 1; innerIndex < sortedWords.length; innerIndex++) {
-      const nextWord = sortedWords[innerIndex]!;
-      if (nextWord.start >= currentWord.end) {
-        break;
-      }
-
-      if (nextWord.speaker !== currentWord.speaker) {
-        const overlapStart = Math.max(currentWord.start, nextWord.start);
-        const overlapEnd = Math.min(currentWord.end, nextWord.end);
-        const overlap = overlapEnd - overlapStart;
-        if (overlap > 0) {
-          overlapDuration += overlap;
+  for (const [speakerA, intervalsA] of speakerIntervals) {
+    for (const [speakerB, intervalsB] of speakerIntervals) {
+      if (speakerB <= speakerA) continue;
+      let indexB = 0;
+      for (const intervalA of intervalsA) {
+        while (indexB < intervalsB.length && intervalsB[indexB]!.end <= intervalA.start) {
+          indexB++;
+        }
+        for (let i = indexB; i < intervalsB.length; i++) {
+          const intervalB = intervalsB[i]!;
+          if (intervalB.start >= intervalA.end) break;
+          const overlapStart = Math.max(intervalA.start, intervalB.start);
+          const overlapEnd = Math.min(intervalA.end, intervalB.end);
+          if (overlapEnd > overlapStart) {
+            overlapSegments.push({ start: overlapStart, end: overlapEnd });
+          }
         }
       }
+    }
+  }
+
+  // Union the pairwise overlaps into disjoint wall-clock segments.
+  overlapSegments.sort((segA, segB) => segA.start - segB.start);
+  let unionEnd = -Infinity;
+  for (const segment of overlapSegments) {
+    if (segment.end > unionEnd) {
+      overlapDuration += segment.end - Math.max(segment.start, unionEnd);
+      unionEnd = segment.end;
     }
   }
 
@@ -88,8 +119,19 @@ export function redactMediaUrl(rawUrl: string | undefined): string {
   try {
     const parsed = new URL(rawUrl);
     return parsed.hostname;
-  } catch (error) {
-    console.warn('[redactMediaUrl] Failed to parse media URL', error);
+  } catch {
+    // Never log the parse error: `URL` errors carry the full raw input
+    // (including signed query tokens) in their message/input fields.
     return 'redacted-invalid-url';
   }
+}
+
+/**
+ * Strips URL(s) (including their query strings, which may carry signed
+ * tokens) from provider-supplied error text before it is captured to Sentry
+ * or rethrown. Replaces each URL with `[redacted-url]`.
+ */
+export function redactUrlsInText(text: string): string {
+  // Matches http(s) URLs up to the first whitespace/quote/boundary character.
+  return text.replace(/https?:\/\/[^\s'"<>()\\]+/g, '[redacted-url]');
 }

@@ -3,6 +3,8 @@ import {
   DiarizationFactory,
   DiarizationCascadeExhaustedError,
 } from '../services/sensor-fusion/probes/DiarizationFactory';
+
+vi.mock('@sentry/cloudflare', () => ({ captureException: vi.fn() }));
 import type {
   DiarizationProviderPort,
   DiarizationResult,
@@ -128,5 +130,47 @@ describe('DiarizationFactory (Cascade Runner)', () => {
     expect(mockAssemblyAI.diarizeAudioUrl).toHaveBeenCalledTimes(1);
     // Deepgram must NOT have been called because budget was already exhausted
     expect(mockDeepgram.diarizeAudioUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not mutate the caller-provided cascadeOrder array', () => {
+    const cascadeOrder = ['assemblyai', 'deepgram'] as const;
+    const factory = new DiarizationFactory({
+      cascadeOrder: [...cascadeOrder],
+      customProviders: { assemblyai: { diarizeAudioUrl: vi.fn() } },
+    });
+
+    expect(factory.getCascadeOrder()).toEqual(['assemblyai', 'deepgram']);
+  });
+
+  it('sanitizes provider error text (URLs redacted) before Sentry capture and console logging', async () => {
+    const signedError = new Error(
+      'AssemblyAI submission HTTP 400: invalid url https://r2.example.com/audio.mp3?sig=SECRET_TOKEN',
+    );
+    const { captureException: sentryCapture } = await import('@sentry/cloudflare');
+    vi.mocked(sentryCapture).mockClear();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const factory = new DiarizationFactory({
+        cascadeOrder: ['assemblyai', 'deepgram'],
+        customProviders: {
+          assemblyai: { diarizeAudioUrl: vi.fn().mockRejectedValue(signedError) },
+          deepgram: { diarizeAudioUrl: vi.fn().mockRejectedValue(new Error('deepgram down')) },
+        },
+      });
+
+      await expect(
+        factory.diarizeAudioUrl('https://example.com/audio.mp3?token=SUPERSECRET', 'vid_redact'),
+      ).rejects.toThrow(DiarizationCascadeExhaustedError);
+
+      const capturedFirst = (sentryCapture as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as Error | undefined;
+      expect(capturedFirst).toBeInstanceOf(Error);
+      expect(capturedFirst?.message).not.toContain('SECRET_TOKEN');
+      expect(capturedFirst?.message).toContain('[redacted-url]');
+      const logged = consoleError.mock.calls.map((c) => String(c[1] ?? c[0])).join(' ');
+      expect(logged).not.toContain('SECRET_TOKEN');
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

@@ -8,9 +8,12 @@
 
 export interface WordDiarization {
   word: string;
+  /** Interval start in seconds (float). */
   start: number;
+  /** Interval end in seconds (float). */
   end: number;
   confidence: number;
+  /** Zero-based numeric speaker index (normalized from provider labels). */
   speaker: number;
 }
 

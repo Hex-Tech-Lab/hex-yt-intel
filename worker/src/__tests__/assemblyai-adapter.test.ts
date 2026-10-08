@@ -66,6 +66,31 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
       expect(metrics.speakerCount).toBe(2);
       expect(metrics.overlapRatio).toBe(0.3333);
     });
+
+    it('counts each speaker once per wall-clock instant (3 speakers overlapped = 1/3, not 1)', () => {
+      const words: WordDiarization[] = [
+        { word: 'a', start: 0, end: 1, confidence: 0.9, speaker: 0 },
+        { word: 'b', start: 0, end: 1, confidence: 0.9, speaker: 1 },
+        { word: 'c', start: 0, end: 1, confidence: 0.9, speaker: 2 },
+      ];
+
+      const metrics = AssemblyAIAdapter.calculateMetrics(words);
+      // 3s total speech, only 1s of shared wall-clock overlap
+      expect(metrics.overlapRatio).toBe(0.3333);
+    });
+
+    it('counts overlapping same-speaker words once toward speaking time (entropy)', () => {
+      const words: WordDiarization[] = [
+        { word: 'one', start: 0, end: 1.5, confidence: 0.9, speaker: 0 },
+        { word: 'two', start: 1.0, end: 2.5, confidence: 0.9, speaker: 0 },
+        { word: 'resp', start: 0, end: 2.5, confidence: 0.9, speaker: 1 },
+      ];
+
+      const metrics = AssemblyAIAdapter.calculateMetrics(words);
+      // Speaker 0 wall-clock = 2.5s, speaker 1 = 2.5s -> balanced dialogue = 1.0 bit
+      expect(metrics.speakerCount).toBe(2);
+      expect(metrics.turnEntropy).toBe(1.0);
+    });
   });
 
   describe('API Polling & Execution Lifecycle', () => {
@@ -165,6 +190,41 @@ describe('AssemblyAIAdapter (Phase 2 Sensor Fusion - Diarization Cascade)', () =
       await expect(
         adapter.diarizeAudioUrl('https://example.com/audio.mp3', 'vid_fail'),
       ).rejects.toThrow(/Audio file unreadable or corrupt/);
+    });
+
+    it('includes the configured speech_model in the submission body', async () => {
+      const adapter = new AssemblyAIAdapter({ ...config, speechModel: 'best' });
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 't1', status: 'completed', words: [] }),
+      } as Response);
+      globalThis.fetch = fetchMock;
+
+      await adapter.diarizeAudioUrl('https://example.com/audio.mp3', 'vid_model');
+
+      const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+      expect(body.speech_model).toBe('best');
+      expect(body.speaker_labels).toBe(true);
+    });
+
+    it('redacts URLs echoed in provider error text', async () => {
+      const adapter = new AssemblyAIAdapter(config);
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        text: () => Promise.resolve('invalid audio_url https://r2.example.com/a.mp3?sig=SECRET_TOKEN'),
+      } as Response);
+
+      await expect(
+        adapter.diarizeAudioUrl('https://example.com/audio.mp3', 'vid_redact'),
+      ).rejects.toSatisfy(
+        (err: unknown) =>
+          err instanceof Error &&
+          !err.message.includes('SECRET_TOKEN') &&
+          err.message.includes('[redacted-url]'),
+      );
     });
   });
 });

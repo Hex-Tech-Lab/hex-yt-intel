@@ -14,6 +14,7 @@ import * as Sentry from '@sentry/cloudflare';
 import {
   calculateDiarizationMetrics,
   redactMediaUrl,
+  redactUrlsInText,
 } from '../services/sensor-fusion/diarization-metrics';
 
 import type {
@@ -52,6 +53,7 @@ interface AssemblyAITranscriptResponse {
   audio_duration?: number;
 }
 
+/** Error thrown by the AssemblyAI diarization adapter on HTTP, API, or timeout failures. */
 export class AssemblyAIDiarizationError extends Error {
   constructor(
     message: string,
@@ -63,6 +65,7 @@ export class AssemblyAIDiarizationError extends Error {
   }
 }
 
+/** DiarizationProviderPort adapter targeting AssemblyAI Universal-1 with speaker labels. */
 export class AssemblyAIAdapter implements DiarizationProviderPort {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -82,6 +85,10 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       config.pollIntervalMs && config.pollIntervalMs > 0 ? config.pollIntervalMs : ASSEMBLYAI_DEFAULT_POLL_INTERVAL_MS;
   }
 
+  /**
+   * Submits the audio URL to AssemblyAI, polls to completion (fail-closed on
+   * timeout), and computes diarization metrics over the returned word timings.
+   */
   async diarizeAudioUrl(
     audioUrl: string,
     videoId: string,
@@ -107,6 +114,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
         body: JSON.stringify({
           audio_url: audioUrl,
           speaker_labels: true,
+          speech_model: this.speechModel,
         }),
         signal: controller.signal,
       });
@@ -114,7 +122,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       if (!submitResponse.ok) {
         const errorText = await submitResponse.text().catch(() => '');
         const submitError = new AssemblyAIDiarizationError(
-          `AssemblyAI submission HTTP ${submitResponse.status}: ${errorText || submitResponse.statusText}`,
+          `AssemblyAI submission HTTP ${submitResponse.status}: ${redactUrlsInText(errorText || submitResponse.statusText)}`,
           submitResponse.status,
           false,
         );
@@ -142,7 +150,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       while (currentStatus !== 'completed') {
         if (currentStatus === 'error') {
           const apiError = new AssemblyAIDiarizationError(
-            `AssemblyAI transcription failed: ${transcriptData.error || 'Unknown error'}`,
+            `AssemblyAI transcription failed: ${redactUrlsInText(transcriptData.error || 'Unknown error')}`,
             500,
             false,
           );
@@ -163,15 +171,16 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
         }
 
         await new Promise((resolve, reject) => {
-          const timer = setTimeout(resolve, this.pollIntervalMs);
-          controller.signal.addEventListener(
-            'abort',
-            () => {
-              clearTimeout(timer);
-              reject(new Error('AbortError'));
-            },
-            { once: true },
-          );
+          const timer = setTimeout(onSleepResolved, this.pollIntervalMs);
+          const onAbort = () => {
+            clearTimeout(timer);
+            reject(new Error('AbortError'));
+          };
+          function onSleepResolved() {
+            controller.signal.removeEventListener('abort', onAbort);
+            resolve(null);
+          }
+          controller.signal.addEventListener('abort', onAbort, { once: true });
         });
 
         const pollResponse = await fetch(pollUrl, {
@@ -186,7 +195,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
         if (!pollResponse.ok) {
           const errorText = await pollResponse.text().catch(() => '');
           const pollError = new AssemblyAIDiarizationError(
-            `AssemblyAI poll HTTP ${pollResponse.status}: ${errorText || pollResponse.statusText}`,
+            `AssemblyAI poll HTTP ${pollResponse.status}: ${redactUrlsInText(errorText || pollResponse.statusText)}`,
             pollResponse.status,
             false,
           );
@@ -246,7 +255,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
       const wrappedError = new AssemblyAIDiarizationError(
         isAbort
           ? `AssemblyAI diarization timed out after ${effectiveTimeoutMs}ms (fail-closed)`
-          : `AssemblyAI diarization request failed: ${(err as Error)?.message || String(err)}`,
+          : `AssemblyAI diarization request failed: ${redactUrlsInText((err as Error)?.message || String(err))}`,
         isAbort ? 408 : 500,
         isAbort,
       );
@@ -262,6 +271,7 @@ export class AssemblyAIAdapter implements DiarizationProviderPort {
     }
   }
 
+  /** Computes diarization metrics over word-level intervals (delegates to the shared reducer). */
   public static calculateMetrics(words: WordDiarization[]): DiarizationMetrics {
     return calculateDiarizationMetrics(words);
   }
