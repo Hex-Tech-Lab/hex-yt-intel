@@ -1,0 +1,42 @@
+worker/src/services/sensor-fusion/probes/sampler.ts
+  s_047c7abc71bdf6::t_39be17dfb7b2ed 40-51
+worker/src/__tests__/multimodal-probe-runner.test.ts
+  s_025bccf4450cbf::t_6d8fde52a72dbd 51
+  s_025bccf4450cbf::t_4d28739220d560 30-50,52-96
+worker/src/__tests__/sensor-fusion.test.ts
+  s_025bccf4450cbf::t_153e785ecfd457 286-309
+  s_025bccf4450cbf::t_6bdbba869cf95b 50-54
+docs/reviews/pr442-triage-g2.md
+  s_025bccf4450cbf::t_6f9fdf90720f51 1-26
+worker/src/services/sensor-fusion/heuristics/jev-text-parser.ts
+  s_047c7abc71bdf6::t_f8999f01baf1e0 143,147-148,155-159,162-164
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  s_047c7abc71bdf6::t_b8da9b65b89c03 199-209
+  s_047c7abc71bdf6::t_cf5ec932fda6af 69
+  s_025bccf4450cbf::t_47056023211093 179-182,184
+  s_025bccf4450cbf::t_bc2bad2fb9f921 183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "279b676b2f0c82f31624f4273b198b74d6d0606c",
+  "prompts": {},
+  "sessions": {
+    "s_025bccf4450cbf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee52cc526ffeyKKqsGGhwgVx3S",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_047c7abc71bdf6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5618fc9ffeQ8NS1B5pvXPtk1",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
