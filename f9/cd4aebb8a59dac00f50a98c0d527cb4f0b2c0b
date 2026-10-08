@@ -1,0 +1,51 @@
+.memory/AGENT_LEDGER.md
+  s_6c6650a1c0ec39::t_f614580e3cb904 1576
+  s_fc77874bbb1d3d::t_96a6c2a0293777 1575
+  s_4075cc6448b8f7::t_58dc61d0305101 1577
+supabase/migrations/20261008120000_analysis_reasoning_effort_settings.sql
+  s_4075cc6448b8f7::t_ea2506f76e7045 1-40
+docs/agent-prompts/2026-10-08-oc-haiku55-reasoning.md
+  s_4075cc6448b8f7::t_b058775eaa2709 1-77
+web/lib/__tests__/cascade-resolution.test.ts
+  s_4075cc6448b8f7::t_330f37e32a9a6d 141-171
+web/lib/config/cascade.ts
+  s_4075cc6448b8f7::t_4ad062e6a7cbae 19-22,136,139-141,147-161,214-221,227-230,245-251,259
+worker/src/routes/analysis.ts
+  s_4075cc6448b8f7::t_848b82ca2c10f7 119,1972
+worker/src/services/LLMCascade.test.ts
+  s_4075cc6448b8f7::t_8651c19ecaff58 115-150
+worker/src/services/LLMCascade.ts
+  s_4075cc6448b8f7::t_68101f88f96553 74-96,103,121-122,129,134-135,138,198,224-225,305-306,315-316,342-343,457-460,621-622,654
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f9cd4aebb8a59dac00f50a98c0d527cb4f0b2c0b",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_6c6650a1c0ec39": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4ad0c2effeHdKTNpFynnuHDT",
+        "model": "jev-auto"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_fc77874bbb1d3d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4b0f332ffe862LiGZAXlqYKI",
+        "model": "jev-auto"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
