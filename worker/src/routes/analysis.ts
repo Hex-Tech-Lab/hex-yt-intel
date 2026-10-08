@@ -116,7 +116,7 @@ interface StreamRequest {
   // per tier, which `models` (flat id list, signed into the HMAC token) can't carry when
   // multiple tiers share the same model id across different providers. Preferred over
   // `models` when present; `models` stays as the signed/legacy fallback for stale clients.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: string; reasoningProjective?: string }>;
   // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
   // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
   maxOutputTokens?: { haiku: number; default: number };
@@ -1969,7 +1969,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       waitUntil: (p) => c.executionCtx.waitUntil(p),
     });
 
-    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching), new ValidationService(), cache);
+    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, isProjectiveBundle(req.dimensions ?? []) ? 'projective' : 'grounded'), new ValidationService(), cache);
 
     const persistController = new AbortController();
     const httpConnSignal = c.req.raw['signal'];
