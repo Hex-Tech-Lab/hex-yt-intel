@@ -50,6 +50,10 @@ export interface EpistemicPipelineInput {
   audioUrl?: string;
   audioBuffer?: Buffer;
   videoSampleBuffers?: Buffer[];
+  /** JEV intensity scores, integers 0-3. Optional; defaults to 0 when omitted. */
+  directAddressIntensity?: number;
+  proceduralInstructionIntensity?: number;
+  tangentialFluffIntensity?: number;
   chunkUrls?: Array<{ chunkIndex: number; startTimeSeconds: number; mediaUrl: string }>;
   persona?: string;
   /**
@@ -80,6 +84,7 @@ export interface EpistemicPipelineDispatcherConfig {
   sensorConfig?: SensorRegistryConfig;
 }
 
+/** Orchestrates sensor fusion, grounded extraction, and projective synthesis for one analysis (see module docblock). */
 export class EpistemicPipelineDispatcher {
   private readonly promptBuilder: PromptBuilderPort;
   private readonly cascade: LLMCascadePort;
@@ -109,43 +114,57 @@ export class EpistemicPipelineDispatcher {
     let debateProsodyDetected = false;
     let degradedSensors = false;
 
-    if (this.sensorRegistry.getDiarizationProvider() || this.sensorRegistry.getMultimodalProvider()) {
-      try {
-        const fusionRequest: FusionAnalysisRequest = {
-          videoId: input.videoId,
-          audioUrl: input.audioUrl,
-          chunkUrls: input.chunkUrls,
-          turnMarkerCount,
-          directAddressIntensity: (input as { directAddressIntensity?: number }).directAddressIntensity ?? 0,
-          proceduralInstructionIntensity: (input as { proceduralInstructionIntensity?: number }).proceduralInstructionIntensity ?? 0,
-          tangentialFluffIntensity: (input as { tangentialFluffIntensity?: number }).tangentialFluffIntensity ?? 0,
-        };
+    // Buffer-only inputs have no media URL for either sensor to consume: without a
+    // provider that accepts raw buffers, physical sensing is impossible and the
+    // pipeline must report degraded sensors rather than silently heuristic routing.
+    const hasUnroutableBuffers = Boolean(input.audioBuffer || input.videoSampleBuffers?.length);
 
-        const fusionResponse = await this.sensorRegistry.fuseSensors(fusionRequest);
-        if (fusionResponse.diarization?.metrics.speakerCount !== undefined) {
-          diarizationSpeakerCount = fusionResponse.diarization.metrics.speakerCount;
-        }
-        if (fusionResponse.multimodal?.summary) {
-          uiFramesDetected = fusionResponse.multimodal.summary.uiFramesDetected;
-          debateProsodyDetected = fusionResponse.multimodal.summary.debateProsodyDetected;
-        }
-        if (fusionResponse.fusionResult.degradedSensors) {
-          degradedSensors = true;
-        }
-      } catch (sensorErr: unknown) {
-        degradedSensors = true;
-        console.error('[EpistemicPipelineDispatcher] Sensor execution encountered non-fatal error:', sensorErr);
-        Sentry.captureException(sensorErr, {
-          tags: { component: 'EpistemicPipelineDispatcher', stage: 'layer0-sensors', videoId: input.videoId },
-        });
-      } finally {
-        // Priority 1 Memory Guard: Explicitly dereference and delete ephemeral audio/video buffers.
-        // Cloudflare Workers enforce a strict 128MB RAM ceiling. Retaining raw audio/video buffers
-        // across the downstream 30-45s LLM generation phases risks OOM worker crashes.
-        // Dereferencing here ensures V8 can reclaim this heap allocation immediately.
-        delete (input as { audioBuffer?: unknown }).audioBuffer;
-        delete (input as { videoSampleBuffers?: unknown }).videoSampleBuffers;
+    let fusionResponse: Awaited<ReturnType<SensorRegistry['fuseSensors']>> | null = null;
+
+    try {
+      const fusionRequest: FusionAnalysisRequest = {
+        videoId: input.videoId,
+        audioUrl: input.audioUrl,
+        chunkUrls: input.chunkUrls,
+        turnMarkerCount,
+        directAddressIntensity: input.directAddressIntensity ?? 0,
+        proceduralInstructionIntensity: input.proceduralInstructionIntensity ?? 0,
+        tangentialFluffIntensity: input.tangentialFluffIntensity ?? 0,
+      };
+
+      fusionResponse = await this.sensorRegistry.fuseSensors(fusionRequest);
+      if (fusionResponse.diarization?.metrics.speakerCount !== undefined) {
+        diarizationSpeakerCount = fusionResponse.diarization.metrics.speakerCount;
       }
+      if (fusionResponse.multimodal?.summary) {
+        uiFramesDetected = fusionResponse.multimodal.summary.uiFramesDetected;
+        debateProsodyDetected = fusionResponse.multimodal.summary.debateProsodyDetected;
+      }
+      if (fusionResponse.fusionResult.degradedSensors) {
+        degradedSensors = true;
+      }
+    } catch (sensorErr: unknown) {
+      degradedSensors = true;
+      console.error('[EpistemicPipelineDispatcher] Sensor execution encountered non-fatal error:', sensorErr);
+      Sentry.captureException(sensorErr, {
+        tags: { component: 'EpistemicPipelineDispatcher', stage: 'layer0-sensors', videoId: input.videoId },
+      });
+    } finally {
+      // Priority 1 Memory Guard: Explicitly dereference and delete ephemeral audio/video buffers.
+      // Cloudflare Workers enforce a strict 128MB RAM ceiling. Retaining raw audio/video buffers
+      // across the downstream 30-45s LLM generation phases risks OOM worker crashes.
+      // Dereferencing here ensures V8 can reclaim this heap allocation immediately.
+      // Runs unconditionally: buffers must be dropped even when no sensor provider is
+      // configured (otherwise they are retained across the 30-45s LLM phases).
+      delete (input as { audioBuffer?: unknown }).audioBuffer;
+      delete (input as { videoSampleBuffers?: unknown }).videoSampleBuffers;
+    }
+
+    // Buffer-only inputs have no media URL for either sensor to consume: without a
+    // provider that accepts raw buffers, physical sensing is impossible and the
+    // pipeline must report degraded sensors rather than silently heuristic routing.
+    if (hasUnroutableBuffers) {
+      degradedSensors = true;
     }
 
     const fusionInput: FusionInput = {
@@ -153,13 +172,21 @@ export class EpistemicPipelineDispatcher {
       diarizationSpeakerCount,
       uiFramesDetected,
       debateProsodyDetected,
-      directAddressIntensity: (input as { directAddressIntensity?: number }).directAddressIntensity ?? 0,
-      proceduralInstructionIntensity: (input as { proceduralInstructionIntensity?: number }).proceduralInstructionIntensity ?? 0,
-      tangentialFluffIntensity: (input as { tangentialFluffIntensity?: number }).tangentialFluffIntensity ?? 0,
+      directAddressIntensity: input.directAddressIntensity ?? 0,
+      proceduralInstructionIntensity: input.proceduralInstructionIntensity ?? 0,
+      tangentialFluffIntensity: input.tangentialFluffIntensity ?? 0,
       degradedSensors,
     };
 
-    const fusionResult: FusionResult = routeFusion(fusionInput);
+    // fuseSensors() already computed the S1-S6 route from the same sensor signals
+    // (SensorRegistry.fuseSensors calls routeFusion internally); reuse it instead of
+    // recomputing. When no sensor ran (no providers configured) OR buffer-only media
+    // makes physical sensing unroutable (a flag fuseSensors cannot see), fall back to
+    // a local routeFusion so degradedSensors is honored in the route confidence.
+    const fusionResult: FusionResult =
+      fusionResponse && !hasUnroutableBuffers
+        ? fusionResponse.fusionResult
+        : routeFusion(fusionInput);
 
     // 2. Prepare chunks for Part A Grounded Extraction
     // Break transcript into rough phrase chunks preserving temporal bounds
@@ -183,7 +210,13 @@ export class EpistemicPipelineDispatcher {
         if (input.persistGhostRow) {
           return input.persistGhostRow(payload);
         }
-        return Promise.resolve(true);
+        // No persistence hook supplied: report failure rather than a fabricated
+        // success so the partial ghost row is never silently dropped.
+        console.warn(
+          '[EpistemicPipelineDispatcher] No persistGhostRow configured; partial ghost row not persisted',
+          { analysisId: input.analysisId, videoId: input.videoId },
+        );
+        return Promise.resolve(false);
       },
       waitUntil: input.waitUntil,
     };
@@ -227,8 +260,9 @@ export class EpistemicPipelineDispatcher {
     const clean = transcript.trim();
     if (!clean) return [];
 
+    const effectiveChunkDurationSec = chunkDurationSec > 0 ? chunkDurationSec : 60;
     const effectiveDuration = durationSeconds > 0 ? durationSeconds : 60;
-    const numChunks = Math.max(1, Math.ceil(effectiveDuration / chunkDurationSec));
+    const numChunks = Math.max(1, Math.ceil(effectiveDuration / effectiveChunkDurationSec));
     const words = clean.split(/\s+/);
     const wordsPerChunk = Math.max(1, Math.ceil(words.length / numChunks));
     const chunks: Array<{ text: string; start: number; end: number; speaker?: string }> = [];
@@ -241,11 +275,10 @@ export class EpistemicPipelineDispatcher {
       const chunkText = chunkWords.join(' ').trim();
       if (!chunkText) continue;
 
-      const start = Math.round(((i * chunkDurationSec) / effectiveDuration) * effectiveDuration);
-      const end = Math.min(
-        effectiveDuration,
-        Math.round((((i + 1) * chunkDurationSec) / effectiveDuration) * effectiveDuration),
-      );
+      // Timestamps advance linearly by one chunk duration per chunk, clamped to
+      // the effective duration.
+      const start = Math.min(i * effectiveChunkDurationSec, effectiveDuration);
+      const end = Math.min((i + 1) * effectiveChunkDurationSec, effectiveDuration);
 
       chunks.push({
         text: chunkText,
