@@ -1,0 +1,38 @@
+worker/src/services/sensor-fusion/probes/DiarizationFactory.ts
+  s_a363fe58fd5657::t_dec65fb7c6b591 13,53,139-146,160-163
+worker/src/adapters/DeepgramNova2Adapter.ts
+  s_a363fe58fd5657::t_dec65fb7c6b591 17,59,71,88-92,125-133,136,176,192
+worker/src/ports/DiarizationProviderPort.ts
+  s_a363fe58fd5657::t_dec65fb7c6b591 11,13,16
+worker/src/services/sensor-fusion/diarization-metrics.ts
+  s_bc7cee8ed29695::t_b50949aed5d65c 137
+  s_a363fe58fd5657::t_d79bbc02b6ac71 92
+  s_a363fe58fd5657::t_dec65fb7c6b591 23-25,28-33,37,39-50,64-66,68,70-85,91,93-100,122-124,128-136
+  s_a363fe58fd5657::t_e36b8503370c65 38
+worker/src/adapters/AssemblyAIAdapter.ts
+  s_a363fe58fd5657::t_dec65fb7c6b591 17,56,68,88-91,117,125,153,174-183,198,258,274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fce3235ba48345e67210e3efe220fb0505dc5783",
+  "prompts": {},
+  "sessions": {
+    "s_a363fe58fd5657": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5229cf6ffeS3YdiHcvtuE0Ri",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_bc7cee8ed29695": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5614c46ffewBPEqV83B8oog6",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
