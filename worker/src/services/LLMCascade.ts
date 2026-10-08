@@ -162,7 +162,9 @@ export class LLMCascade implements LLMCascadePort {
   /**
    * Epistemic engines' streaming entry point (Phase C). Runs the normal tier
    * cascade (same fallback, provider pinning and per-stream reasoning as the
-   * live path) over `systemPrompt` + `userPrompt`, and exposes the deltas as a
+   * live path) with `systemPrompt` as the system message and `userPrompt` as a
+   * separate user message (never concatenated, so transcript text cannot
+   * re-address the system role), and exposes the deltas as a
    * text ReadableStream. The stream errors if no tier produced output.
    * The text is emitted only once a tier commits, so a tier that fails
    * mid-stream never leaves partial output ahead of the fallback's.
@@ -175,11 +177,10 @@ export class LLMCascade implements LLMCascadePort {
     maxTokens?: number;
     temperature?: number;
   }): Promise<ReadableStream<string>> {
-    const prompt = params.userPrompt ? `${params.systemPrompt}\n\n${params.userPrompt}` : params.systemPrompt;
     return Promise.resolve(new ReadableStream<string>({
       start: async (controller) => {
         try {
-          const result = await this.streamCascade(prompt, () => undefined);
+          const result = await this.streamCascade(params.systemPrompt, () => undefined, undefined, undefined, undefined, params.userPrompt);
           if (!result.started || !result.finalText) {
             controller.error(new Error('LLMCascade.generateStream: no tier produced output'));
             return;
@@ -204,7 +205,8 @@ export class LLMCascade implements LLMCascadePort {
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
     signal?: AbortSignal,
-    cacheSplit?: { prefix: string; suffix: string }
+    cacheSplit?: { prefix: string; suffix: string },
+    userPrompt?: string
   ): Promise<{
     started: boolean;
     finalText: string;
@@ -257,7 +259,8 @@ export class LLMCascade implements LLMCascadePort {
         cacheSplit,
         maxOutputTokens,
         requiresProviderOrder,
-        reasoningEffort
+        reasoningEffort,
+        userPrompt
       );
 
       if (result.started && finalText && !result.error) {
@@ -375,7 +378,8 @@ export class LLMCascade implements LLMCascadePort {
     cacheSplit?: { prefix: string; suffix: string },
     maxOutputTokens?: number,
     requiresProviderOrder?: boolean,
-    reasoningEffort: ReasoningEffort = 'low'
+    reasoningEffort: ReasoningEffort = 'low',
+    userPrompt?: string
   ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; cachedTokens?: number; generationId?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
@@ -496,7 +500,9 @@ export class LLMCascade implements LLMCascadePort {
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
           // echo the prompt header instead of analyzing.
-          messages: systemMessages,
+          // Role separation: system text and untrusted user content are sent as
+          // distinct messages. Callers that have no user content omit it.
+          messages: userPrompt ? [...systemMessages, { role: 'user', content: userPrompt }] : systemMessages,
           ...(requestProvider ? { provider: requestProvider } : {}),
           ...(this.userId ? { user: this.userId } : {}),
         }),
