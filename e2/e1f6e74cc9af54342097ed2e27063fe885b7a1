@@ -1,0 +1,45 @@
+web/lib/services/stitch-analysis-chunks.ts
+  s_83a8c52a11f95a::t_403b75b34fdf28 239-242
+web/lib/services/CombinerPass.ts
+  s_83a8c52a11f95a::t_7882bc57c60610 33
+  s_99af580f37572e::t_3251c30e7888b2 58
+  s_83a8c52a11f95a::t_d7bcadc534fca7 216-217
+  s_83a8c52a11f95a::t_fee9b20653d938 253-254
+  s_83a8c52a11f95a::t_40b6f076368896 40
+  s_83a8c52a11f95a::t_df46be18e59b31 195
+  s_83a8c52a11f95a::t_4314cd2c7ce9ba 191-194,196
+  s_99af580f37572e::t_7c6950def34b34 62
+  s_83a8c52a11f95a::t_acb5b2b254efc3 34-38
+  s_83a8c52a11f95a::t_52e5097bc2f9b9 238
+  s_83a8c52a11f95a::t_934b0f0d3b07fb 153
+  s_83a8c52a11f95a::t_2cd36f60cb1901 126
+  s_99af580f37572e::t_414a9326960062 122-125
+  s_83a8c52a11f95a::t_43a19cedcd3560 148
+  s_83a8c52a11f95a::t_a9441fc540b782 131-136
+  s_83a8c52a11f95a::t_faec6589931ea0 98
+  s_83a8c52a11f95a::t_2624c860b79902 104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e2e1f6e74cc9af54342097ed2e27063fe885b7a1",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_99af580f37572e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5617c69ffekAqed3RNfreZpe",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
