@@ -1,0 +1,20 @@
+web/lib/__tests__/pr442-group4-fixes.test.ts
+  s_83a8c52a11f95a::t_8a56a9be15e3f6 1-29,31-79
+  s_83a8c52a11f95a::t_8f4477394efc0d 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34fb345608be3748b217e57e457dadb1201b2724",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
