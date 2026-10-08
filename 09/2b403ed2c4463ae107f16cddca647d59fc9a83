@@ -1,0 +1,35 @@
+worker/src/__tests__/diarization-factory.test.ts
+  s_a363fe58fd5657::t_69ef80ff687e01 166
+  s_a363fe58fd5657::t_bc42942b57ca3e 6-7
+  s_bc7cee8ed29695::t_80d688805cb4fa 134-148,151-153,155-165,167-175
+  s_a363fe58fd5657::t_5babbd7b84eacc 149
+  s_a363fe58fd5657::t_de57e5ef057e7f 150
+  s_bc7cee8ed29695::t_690b5d7f513b0c 154
+worker/src/__tests__/assemblyai-adapter.test.ts
+  s_bc7cee8ed29695::t_905351a725fd8f 69-93
+  s_bc7cee8ed29695::t_604c0ac776a4a9 194-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "092b403ed2c4463ae107f16cddca647d59fc9a83",
+  "prompts": {},
+  "sessions": {
+    "s_a363fe58fd5657": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5229cf6ffeS3YdiHcvtuE0Ri",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_bc7cee8ed29695": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5614c46ffewBPEqV83B8oog6",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
