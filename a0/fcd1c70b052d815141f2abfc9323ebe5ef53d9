@@ -1,0 +1,62 @@
+scripts/phase-c-micro-bakeoff.ts
+  s_e7f22c9bef3caa::t_8f01ced9ebb835 284
+  s_e7f22c9bef3caa::t_1afca22f58721f 308-313
+  s_f2d42573e639f0::t_3f1ad4af4854e2 121-125
+  s_f2d42573e639f0::t_53c1b0c621a121 52-56
+scripts/phase-c-live-smoke-test.ts
+  s_e7f22c9bef3caa::t_c0a2fe99332b62 156
+  s_f2d42573e639f0::t_9114af7b889153 130-132
+  s_e7f22c9bef3caa::t_d81bb06543703a 9-10
+  s_e7f22c9bef3caa::t_a474c5f7cf8954 26
+worker/src/routes/metadata.ts
+  s_e7f22c9bef3caa::t_f7aaa01b8c967a 41-44
+  s_e7f22c9bef3caa::t_3440a421beb135 40
+worker/src/services/CombinerPass.ts
+  s_e7f22c9bef3caa::t_b6e08d5ed20f31 51
+scripts/phase-c-bakeoff.ts
+  s_e7f22c9bef3caa::t_c293b901e493b7 187-192
+  s_e7f22c9bef3caa::t_aa620aeddb1d3a 19
+  s_e7f22c9bef3caa::t_f54bd5a27f54d8 84-87,90-92
+  s_f2d42573e639f0::t_eb1e3fb413a46d 34-39
+worker/src/__tests__/deepgram-nova2-adapter.test.ts
+  s_e7f22c9bef3caa::t_273db48fdbbbb9 1
+worker/src/ports/LLMCascadePort.ts
+  s_e7f22c9bef3caa::t_9294f6c37b62a1 55-58
+worker/src/ports/MultimodalProbePort.ts
+  s_e7f22c9bef3caa::t_0e4ace3149cd1d 5
+worker/src/services/LLMCascade.ts
+  s_e7ee3fccedf0af::t_44a344cf7c6533 104
+  s_e7ee3fccedf0af::t_4bac0021727e1a 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a0fcd1c70b052d815141f2abfc9323ebe5ef53d9",
+  "prompts": {},
+  "sessions": {
+    "s_e7ee3fccedf0af": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee512bc58ffeuNtDEg3t09S0Rz",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_e7f22c9bef3caa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5616a93ffeWmcSxddpLDZroI",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_f2d42573e639f0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4fe087dffeYlA367qLgn0h8d",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
