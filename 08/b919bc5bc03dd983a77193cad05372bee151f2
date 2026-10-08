@@ -1,0 +1,21 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_c3159d04a49d90::t_9fbf54186e35a4 234-238,560,599
+web/hooks/useAutoRestoreAnalysis.ts
+  s_c3159d04a49d90::t_4079b660539d8e 228-230,377-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08b919bc5bc03dd983a77193cad05372bee151f2",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
