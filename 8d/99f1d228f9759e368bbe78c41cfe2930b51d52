@@ -1,0 +1,19 @@
+worker/wrangler.toml
+  s_f2d42573e639f0::t_4bce13d7f8f08f 75-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8d99f1d228f9759e368bbe78c41cfe2930b51d52",
+  "prompts": {},
+  "sessions": {
+    "s_f2d42573e639f0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4fe087dffeYlA367qLgn0h8d",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
