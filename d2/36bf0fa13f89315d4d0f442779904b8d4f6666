@@ -1,0 +1,19 @@
+docs/reviews/pr442-triage-g2.md
+  s_4075cc6448b8f7::t_37a5328c077431 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d236bf0fa13f89315d4d0f442779904b8d4f6666",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
