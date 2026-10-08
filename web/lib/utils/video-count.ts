@@ -7,14 +7,16 @@
  * (UAT, 2026-10-08). Only plain non-negative integers count; anything else
  * (negatives, fractions, hex/exponent forms) is invalid.
  */
-const isValidCount = (value: unknown): value is number | string =>
-  (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) ||
-  (typeof value === 'string' && /^\d+$/.test(value.trim()));
+const isCountNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
-export const toCountValue = (value: unknown): string => {
-  if (!isValidCount(value)) return '0';
-  return String(value).trim();
-};
+const isCountString = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d+$/.test(value.trim());
+
+const isValidCount = (value: unknown): value is number | string => isCountNumber(value) || isCountString(value);
+
+/** Normalised count string for display, or '0' when the value is not a valid count. */
+export const toCountValue = (value: unknown): string => (isValidCount(value) ? String(value).trim() : '0');
 
 /** First candidate that is a valid count (a valid 0 counts); '0' if none is. */
 export const pickCount = (...candidates: unknown[]): string => toCountValue(candidates.find(isValidCount));

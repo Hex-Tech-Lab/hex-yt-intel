@@ -32,7 +32,7 @@ describe('toCountValue', () => {
   it('pickCount falls through invalid candidates to the next valid one', () => {
     expect(pickCount('', 'n/a', '20334')).toBe('20334');
     expect(pickCount(undefined, '0', 500)).toBe('0');
-    expect(pickCount('n/a', undefined)).toBe('0');
+    expect(pickCount('n/a')).toBe('0');
     expect(pickCount()).toBe('0');
   });
 });
