@@ -1,5 +1,5 @@
-import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { SettingsPersistencePort } from '@/lib/ports';
 import type { KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
 
@@ -112,7 +112,11 @@ export class SupabaseSettingsAdapter
       const cached = SupabaseSettingsAdapter.registryCache.get(key);
       // Negative-cached nulls (key not defined anywhere) must NOT overwrite
       // the caller's fallback -- null means "nothing in the registry".
-      if (cached && cached.value !== null && cached.value !== undefined) (result as Record<string, unknown>)[key] = cached.value;
+      // An EXPIRED entry is also ignored: when the refresh above failed, the
+      // stale value must not stand in for a registry we could not reach (the
+      // fallback is the documented answer for that case). Otherwise a stale
+      // `true` would keep a gated feature on through an outage.
+      if (cached && cached.expiresAt >= now && cached.value !== null && cached.value !== undefined) (result as Record<string, unknown>)[key] = cached.value;
     }
     return result;
   }
