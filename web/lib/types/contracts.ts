@@ -256,7 +256,7 @@ export interface WorkerStreamRequest {
   // in worker/src/routes/analysis.ts. ADR 041: resolve time also stamps per-tier
   // dispatch capabilities (maxOutputTokens, requiresProviderOrder) so the worker's
   // dispatch code is model-agnostic — no inline model-ID comparisons.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: 'none' | 'minimal' | 'low'; reasoningProjective?: 'none' | 'minimal' | 'low' }>;
   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
   maxOutputTokens?: { haiku: number; default: number };

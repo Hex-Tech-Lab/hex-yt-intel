@@ -112,3 +112,39 @@ describe('LLMCascade.streamCascade', () => {
     await expect(cascade.streamCascade('sys', vi.fn())).rejects.toThrow('LLMCascade SSOT Violation: Model requires explicit providerOrder from Settings Registry');
   });
 });
+
+describe('LLMCascade per-stream reasoning effort (analysis.reasoning.*)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  async function requestBodyFor(
+    tier: { model: string; name: string; reasoningGrounded?: string; reasoningProjective?: string },
+    streamKind?: 'grounded' | 'projective',
+  ): Promise<Record<string, unknown>> {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const cascade = new LLMCascade('k', undefined, [tier], { haiku: 8192, default: 16000 }, 'u', 240000, 15000, true, streamKind);
+    await cascade.streamCascade('prompt', () => undefined);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    return JSON.parse(init.body as string);
+  }
+
+  const tier = { model: 'model/a', name: 'A', reasoningGrounded: 'none', reasoningProjective: 'low' };
+
+  it('disables reasoning for grounded streams', async () => {
+    expect((await requestBodyFor(tier, 'grounded')).reasoning).toEqual({ enabled: false });
+  });
+
+  it('requests low effort for projective streams', async () => {
+    expect((await requestBodyFor(tier, 'projective')).reasoning).toEqual({ effort: 'low' });
+  });
+
+  it('defaults to the historical low effort when the tier carries no stamp (older client)', async () => {
+    expect((await requestBodyFor({ model: 'model/a', name: 'A' })).reasoning).toEqual({ effort: 'low' });
+  });
+
+  it('clamps an out-of-set (tampered) effort to low instead of forwarding it', async () => {
+    expect((await requestBodyFor({ model: 'model/a', name: 'A', reasoningGrounded: 'max' }, 'grounded')).reasoning).toEqual({ effort: 'low' });
+  });
+});

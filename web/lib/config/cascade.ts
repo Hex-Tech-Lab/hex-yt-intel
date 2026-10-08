@@ -16,6 +16,10 @@ export interface CascadeItem {
   maxOutputTokens?: number;
   /** Per-tier provider-pinning requirement, stamped at resolve time from MODEL_CAPABILITIES. */
   requiresProviderOrder?: boolean;
+  /** Reasoning effort for grounded bundles, stamped at resolve time from analysis.reasoning.grounded. */
+  reasoningGrounded?: ReasoningEffort;
+  /** Reasoning effort for projective/combiner bundles, stamped at resolve time from analysis.reasoning.projective. */
+  reasoningProjective?: ReasoningEffort;
 }
 
 // All cascades below are registry-driven (supabase/migrations/20260725140000_cascade_registry.sql,
@@ -55,10 +59,10 @@ const ANALYSIS_CASCADE_FALLBACK: readonly CascadeItem[] = [
   // Provider order (2026-08-18, explicit user directive): Vertex/global first,
   // Azure second, Bedrock third -- same model/cost, Bedrock observed slower
   // in practice. Anthropic Direct kept as a fallback ahead of Bedrock.
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Vertex)', cost: 0.003, providerOrder: ['google-vertex'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Anthropic Direct)', cost: 0.003, providerOrder: ['anthropic'] },
 ];
@@ -129,12 +133,31 @@ export type CascadeRegistryKey =
  * of the saved registry value (ADR 040's save schema is `.strict()` and would
  * reject unknown fields).
  */
-const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean }>> = {
+const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean; reasoningMandatory?: boolean }>> = {
   'anthropic/claude-haiku-4.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
+  'anthropic/claude-haiku-5.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
+  // OpenRouter marks reasoning as mandatory for GLM 5.3 Flash: a concrete slug
+  // returns 400 for disabled reasoning, so 'none' is bumped to 'low' for it.
+  'z-ai/glm-5.3-flash': { reasoningMandatory: true },
 };
 
 const OUTPUT_TOKEN_REGISTRY_KEYS = ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'] as const;
 const OUTPUT_TOKEN_FALLBACKS = { haiku: 8192, default: 16000 } as const;
+
+/** Reasoning efforts the analysis cascade may request. Higher efforts are deliberately excluded (see the 20261008120000 migration). */
+export const REASONING_EFFORTS = ['none', 'minimal', 'low'] as const;
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+const REASONING_REGISTRY_KEYS = ['analysis.reasoning.grounded', 'analysis.reasoning.projective'] as const;
+const REASONING_FALLBACKS = { grounded: 'none', projective: 'low' } as const satisfies Record<string, ReasoningEffort>;
+
+/** Validates a registry reasoning-effort value, throwing with a labeled SSOT-violation message. */
+function parseReasoningEffort(key: string, val: unknown, fallback: ReasoningEffort): ReasoningEffort {
+  if (val === undefined || val === null) return fallback;
+  if (typeof val !== 'string' || !(REASONING_EFFORTS as readonly string[]).includes(val)) {
+    throw new Error(`Cascade Registry SSOT Violation: setting '${key}' must be one of ${REASONING_EFFORTS.join(', ')}, received: ${String(val)}`);
+  }
+  return val as ReasoningEffort;
+}
 
 /** Validates a registry-resolved cascade array, throwing with a labeled SSOT-violation message. */
 function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asserts items is CascadeItem[] {
@@ -163,7 +186,12 @@ function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asser
  */
 export const CASCADE_MODEL_ALLOWLIST: readonly string[] = Array.from(
   new Set(
-    Object.values(CASCADE_FALLBACKS).flatMap((cascade) => cascade.map((item) => item.model)),
+    [
+      ...Object.values(CASCADE_FALLBACKS).flatMap((cascade) => cascade.map((item) => item.model)),
+      // Capability-registered models are legitimate registry choices even when no
+      // fallback tier uses them (e.g. haiku-4.5 kept for rollback after the 5.5 switch).
+      ...Object.keys(MODEL_CAPABILITIES),
+    ],
   ),
 ).sort();
 
@@ -188,12 +216,24 @@ function parseValidTokenCap(key: string, val: unknown, fallback: number): number
 
 async function resolveCascade(key: CascadeRegistryKey, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
-    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS],
-    { [key]: fallback as CascadeItem[], 'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku, 'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default } as Record<string, unknown>
+    // Reasoning keys are analysis-only: other cascades never read or validate them,
+    // so a bad analysis.reasoning.* value cannot break chat/digest/stance resolution.
+    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS, ...(key === 'cascade.analysis' ? REASONING_REGISTRY_KEYS : [])],
+    {
+      [key]: fallback as CascadeItem[],
+      'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku,
+      'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default,
+      'analysis.reasoning.grounded': REASONING_FALLBACKS.grounded,
+      'analysis.reasoning.projective': REASONING_FALLBACKS.projective,
+    } as Record<string, unknown>
   );
   const tokenCaps = {
     haiku: parseValidTokenCap('analysis.maxOutputTokens.haiku', resolved['analysis.maxOutputTokens.haiku'], OUTPUT_TOKEN_FALLBACKS.haiku),
     default: parseValidTokenCap('analysis.maxOutputTokens.default', resolved['analysis.maxOutputTokens.default'], OUTPUT_TOKEN_FALLBACKS.default),
+  };
+  const reasoning = key !== 'cascade.analysis' ? null : {
+    grounded: parseReasoningEffort('analysis.reasoning.grounded', resolved['analysis.reasoning.grounded'], REASONING_FALLBACKS.grounded),
+    projective: parseReasoningEffort('analysis.reasoning.projective', resolved['analysis.reasoning.projective'], REASONING_FALLBACKS.projective),
   };
 
   const value = resolved[key];
@@ -209,7 +249,15 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
   // analysis.maxOutputTokens.default fallback remains the live source for them.
   return items.map((item) => {
     const caps = MODEL_CAPABILITIES[item.model];
-    if (!caps) return { ...item };
+    // Analysis tiers all get a reasoning stamp; a model that mandates reasoning never gets 'none'.
+    const noneAllowed = caps?.reasoningMandatory !== true;
+    const reasoningStamp: Pick<CascadeItem, 'reasoningGrounded' | 'reasoningProjective'> = reasoning
+      ? {
+          reasoningGrounded: reasoning.grounded === 'none' && !noneAllowed ? 'low' : reasoning.grounded,
+          reasoningProjective: reasoning.projective === 'none' && !noneAllowed ? 'low' : reasoning.projective,
+        }
+      : {};
+    if (!caps) return { ...item, ...reasoningStamp };
     if (caps.requiresProviderOrder && (!Array.isArray(item.providerOrder) || item.providerOrder.length === 0)) {
       throw new Error(`Cascade Registry SSOT Violation (${key}): model '${item.model}' requires a non-empty providerOrder`);
     }
@@ -217,6 +265,7 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
       ...item,
       ...(caps.tokenCapKey ? { maxOutputTokens: tokenCaps[caps.tokenCapKey] } : {}),
       ...(caps.requiresProviderOrder ? { requiresProviderOrder: true } : {}),
+      ...reasoningStamp,
     };
   });
 }
