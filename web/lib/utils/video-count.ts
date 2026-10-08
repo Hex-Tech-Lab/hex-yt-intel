@@ -7,12 +7,18 @@
  * (UAT, 2026-10-08). Only plain non-negative integers count; anything else
  * (negatives, fractions, hex/exponent forms) is invalid.
  */
+/** A non-negative safe integer. */
 const isCountNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
-const isCountString = (value: unknown): value is string =>
-  typeof value === 'string' && /^\d+$/.test(value.trim());
+/** A non-empty string of ASCII digits (surrounding whitespace ignored). */
+const isCountString = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const digits = value.trim();
+  return digits.length > 0 && [...digits].every((char) => char >= '0' && char <= '9');
+};
 
+/** Either form VideoMetadata counts can arrive in. */
 const isValidCount = (value: unknown): value is number | string => isCountNumber(value) || isCountString(value);
 
 /** Normalised count string for display, or '0' when the value is not a valid count. */
