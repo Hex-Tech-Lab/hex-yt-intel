@@ -33,6 +33,8 @@ import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/
 import { verifyProjectiveContextSig } from "../../../web/lib/config/projective-context";
 import { isProjectiveBundle } from "../../../web/lib/config/synthesis";
 import { isValidAppUrl } from "../middleware/cors";
+import { verifyEpistemicShadowSig } from "../../../web/lib/config/epistemic-shadow";
+import { runEpistemicShadow } from "../services/EpistemicShadowRunner";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
 
 declare const process: any;
@@ -145,6 +147,9 @@ interface StreamRequest {
   /** R2b: Vercel signature over the server-loaded prior_payload (see web/lib/config/projective-context.ts). */
   contextSig?: string;
   contextExp?: number;
+  /** Phase C shadow mode: Vercel-signed grant (web/lib/config/epistemic-shadow.ts), first bundle only. */
+  epistemicShadowSig?: string;
+  epistemicShadowExp?: number;
   sig: string;
   exp: number;
   // R3b 2.2 (ADR 037 Addendum A3): token-format selector for the dual-verify
@@ -1192,6 +1197,7 @@ function buildStreamResponse(
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   cache?: UpstashCacheAdapter,
   priorPayload?: Record<string, unknown>,
+  onTranscriptResolved?: (transcript: string) => void,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
@@ -1486,6 +1492,8 @@ function buildStreamResponse(
         controller.close();
         return;
       }
+      // Phase C shadow: only a transcript that passed the guard above.
+      onTranscriptResolved?.(resolvedTranscript);
 
       // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
       // BEFORE any grounded LLM call. Projective bundles never participate:
@@ -1974,7 +1982,40 @@ analysis.post("/analyze-llm-stream", async (c) => {
     const persistController = new AbortController();
     const httpConnSignal = c.req.raw['signal'];
 
-    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache, priorPayload);
+    // Phase C shadow mode (2026-10-08): runs the Epistemic pipeline in the
+    // background only when Vercel signed a grant for this analysis; the live
+    // stream below is unchanged either way.
+    const shadowGranted = req.epistemicShadowSig !== undefined && await verifyEpistemicShadowSig({
+      secret: signingKey,
+      analysisId: req.analysisId,
+      sig: req.epistemicShadowSig,
+      exp: req.epistemicShadowExp,
+    });
+    const shadowAppUrl = req.appUrl || c.env.APP_URL;
+    let shadowStarted = false;
+    const onTranscriptResolved = shadowGranted && shadowAppUrl
+      ? (transcript: string) => {
+        if (shadowStarted) return;
+        shadowStarted = true;
+        c.executionCtx.waitUntil(runEpistemicShadow({
+          analysisId: req.analysisId,
+          videoId: req.videoId,
+          title: (req.metadata as { title?: string } | undefined)?.title,
+          transcript,
+          durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration) ?? 0,
+          appUrl: shadowAppUrl,
+          signingSecret: signingKey,
+          openRouterApiKey: apiKey,
+          promptBuilder: new PromptBuilder(promptConfig),
+          cascade: new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, 'grounded'),
+        }));
+      }
+      : undefined;
+    if (req.epistemicShadowSig !== undefined && !shadowGranted) {
+      console.warn("[analyze-llm-stream] epistemic shadow grant rejected", { analysisId: req.analysisId });
+    }
+
+    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache, priorPayload, onTranscriptResolved);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;

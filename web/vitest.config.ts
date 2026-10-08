@@ -96,6 +96,7 @@ export default defineConfig({
       // class and matches nothing.
       'app/api/analyses/\\[id\\]/plan/**/*.test.ts',
       'app/api/analyses/\\[id\\]/stream-tokens/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/grounded-claims/**/*.test.ts',
       'app/billing/**/*.test.tsx',
       // PR #326's pricing page gained a copy-contract sibling test
       // (qa-intel high finding: authorization-relevant file with no

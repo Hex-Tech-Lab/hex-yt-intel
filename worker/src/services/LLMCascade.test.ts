@@ -148,3 +148,34 @@ describe('LLMCascade per-stream reasoning effort (analysis.reasoning.*)', () => 
     expect((await requestBodyFor({ model: 'model/a', name: 'A', reasoningGrounded: 'max' }, 'grounded')).reasoning).toEqual({ effort: 'low' });
   });
 });
+
+describe('LLMCascade.generateStream (Phase C engines)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('streams the cascade output as text and sends system + user prompt together', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"{\\"claims\\":"}}]}', 'data: {"choices":[{"delta":{"content":"[]}"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const cascade = new LLMCascade('k', undefined, [{ model: 'model/a', name: 'A' }], { haiku: 8192, default: 16000 }, 'u', 240000, 15000);
+    const stream = await cascade.generateStream({ systemPrompt: 'SYS', userPrompt: 'USER' });
+    const reader = stream.getReader();
+    let text = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += value;
+    }
+    expect(text).toBe('{"claims":[]}');
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(JSON.stringify(body.messages)).toContain('SYS');
+    expect(JSON.stringify(body.messages)).toContain('USER');
+  });
+
+  it('errors the stream when no tier produces output', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('boom', { status: 500 })));
+    const cascade = new LLMCascade('k', undefined, [{ model: 'model/a', name: 'A' }], { haiku: 8192, default: 16000 }, 'u', 240000, 15000);
+    const stream = await cascade.generateStream({ systemPrompt: 'SYS', userPrompt: '' });
+    await expect(stream.getReader().read()).rejects.toThrow(/no tier produced output/);
+  });
+});

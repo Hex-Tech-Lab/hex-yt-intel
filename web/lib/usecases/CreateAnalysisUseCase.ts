@@ -22,6 +22,7 @@ import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfi
 import { PRIOR_PAYLOAD_MAX_BYTES_FALLBACK } from '@/lib/config/prior-payload';
 import { gateJevForUser, resolveJevConfig, resolveJevMaxParallelStreams, resolveJevTimeMarkerIntervalSeconds, JEV_MAX_PARALLEL_STREAMS_FALLBACK, JEV_TIME_MARKER_INTERVAL_FALLBACK } from '@/lib/config/jev';
 import { planAnalysis } from '@/lib/usecases/PlanAnalysisUseCase';
+import { mintEpistemicShadowGrant } from './epistemic-shadow-grant';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 /** A6 input estimate — same value as the /plan route's PROMPT_PREFIX_TOKENS_ESTIMATE. */
@@ -452,6 +453,7 @@ export class CreateAnalysisUseCase {
       };
     }
 
+    const epistemicShadow = await mintEpistemicShadowGrant(stub.id, videoId); // Phase C shadow, default off
     return {
       type: 'processing',
       persona,
@@ -494,6 +496,7 @@ export class CreateAnalysisUseCase {
           sig: token.sig,
           exp: token.exp,
         },
+        ...(epistemicShadow ? { epistemicShadow } : {}),
       },
     };
   }

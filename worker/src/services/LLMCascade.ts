@@ -160,6 +160,41 @@ export class LLMCascade implements LLMCascadePort {
   }
 
   /**
+   * Epistemic engines' streaming entry point (Phase C). Runs the normal tier
+   * cascade (same fallback, provider pinning and per-stream reasoning as the
+   * live path) over `systemPrompt` + `userPrompt`, and exposes the deltas as a
+   * text ReadableStream. The stream errors if no tier produced output.
+   * The text is emitted only once a tier commits, so a tier that fails
+   * mid-stream never leaves partial output ahead of the fallback's.
+   * Limitation: `maxTokens` / `temperature` are not forwarded -- each tier's
+   * registry-stamped output cap and the cascade's fixed temperature apply.
+   */
+  generateStream(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    maxTokens?: number;
+    temperature?: number;
+  }): Promise<ReadableStream<string>> {
+    const prompt = params.userPrompt ? `${params.systemPrompt}\n\n${params.userPrompt}` : params.systemPrompt;
+    return Promise.resolve(new ReadableStream<string>({
+      start: async (controller) => {
+        try {
+          const result = await this.streamCascade(prompt, () => undefined);
+          if (!result.started || !result.finalText) {
+            controller.error(new Error('LLMCascade.generateStream: no tier produced output'));
+            return;
+          }
+          controller.enqueue(result.finalText);
+          controller.close();
+        } catch (error) {
+          console.error('[LLMCascade] generateStream failed', error);
+          controller.error(error);
+        }
+      },
+    }));
+  }
+
+  /**
    * Stream the cascade. Iterates MODEL_CHAIN, committing to the first model that
    * produces tokens. Emits 'model'/'fallback' lifecycle events via onStatus.
    * Falls through to the next model only if the current one never produced a token.
