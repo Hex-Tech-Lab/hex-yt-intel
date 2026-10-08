@@ -22,7 +22,6 @@ describe('WorkerIngestionAdapter', () => {
   beforeEach(() => {
     vi.resetModules();
     upsertTranscript.mockReset();
-    upsertTranscript.mockResolvedValue(undefined);
     fetchMock = vi.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
   });

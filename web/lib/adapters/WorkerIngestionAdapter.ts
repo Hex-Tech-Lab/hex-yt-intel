@@ -32,17 +32,24 @@ function getRandomUserAgent(): string {
   return USER_AGENTS[index] as string;
 }
 
+/** Worker-origin guard (SSRF prevention). Kept as a method so the checks stay in one place. */
+const workerUrlGuard = {
+  /** Throws unless the worker URL is configured, https, and on the approved allowlist. */
+  assertTrusted(workerUrl: string | undefined): void {
+    if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
+      throw new Error('Worker URL not configured');
+    }
+    const urlObj = new URL(workerUrl);
+    if (urlObj.protocol !== 'https:' || !isTrustedWorkerOrigin(urlObj.hostname)) {
+      console.error('[fetchWorkerTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
+      throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
+    }
+  },
+};
+
 async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: string; segments?: TranscriptSegment[]; language?: string }> {
   const workerUrl = env.cloudflareWorkerUrl;
-  if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
-    throw new Error('Worker URL not configured');
-  }
-
-  const urlObj = new URL(workerUrl);
-  if (urlObj.protocol !== 'https:' || !isTrustedWorkerOrigin(urlObj.hostname)) {
-    console.error('[fetchWorkerTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
-    throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
-  }
+  workerUrlGuard.assertTrusted(workerUrl);
 
   try {
     const response = await fetch(`${workerUrl}/fetch-transcript`, {
