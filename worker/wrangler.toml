@@ -72,6 +72,13 @@ head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
+# Mirror production's trace persistence so UAT traces survive invocation end
+# (parity with [env.production.observability.traces] above).
+[env.uat.observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
 [build]
 command = "pnpm run build"
 
