@@ -138,3 +138,34 @@ function MODEL_CAPABILITIES_HAS(model: string): boolean {
   // chat cascade's models are not capability-bound (see MODEL_CAPABILITIES in cascade.ts)
   return model === 'anthropic/claude-haiku-5.5';
 }
+
+describe('resolveCascade reasoning stamping (analysis.reasoning.*)', () => {
+  it('stamps registry defaults (grounded none, projective low) on every tier', async () => {
+    const items = await resolveAnalysisCascade();
+    for (const item of items) {
+      expect(item.reasoningGrounded).toBe('none');
+      expect(item.reasoningProjective).toBe('low');
+    }
+  });
+
+  it('bumps none to low for models whose reasoning is mandatory (z-ai/glm-5.3-flash)', async () => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
+      const out = { ...fallback } as Record<string, unknown>;
+      out['cascade.analysis'] = [{ model: 'z-ai/glm-5.3-flash', name: 'GLM' }];
+      out['analysis.reasoning.projective'] = 'none';
+      return Promise.resolve(out as typeof fallback);
+    });
+    const [glm] = await resolveAnalysisCascade();
+    expect(glm?.reasoningGrounded).toBe('low');
+    expect(glm?.reasoningProjective).toBe('low');
+  });
+
+  it('rejects a registry effort outside none|minimal|low', async () => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
+      const out = { ...fallback } as Record<string, unknown>;
+      out['analysis.reasoning.grounded'] = 'high';
+      return Promise.resolve(out as typeof fallback);
+    });
+    await expect(resolveAnalysisCascade()).rejects.toThrow(/analysis\.reasoning\.grounded/);
+  });
+});

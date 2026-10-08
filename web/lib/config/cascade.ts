@@ -16,6 +16,10 @@ export interface CascadeItem {
   maxOutputTokens?: number;
   /** Per-tier provider-pinning requirement, stamped at resolve time from MODEL_CAPABILITIES. */
   requiresProviderOrder?: boolean;
+  /** Reasoning effort for grounded bundles, stamped at resolve time from analysis.reasoning.grounded. */
+  reasoningGrounded?: ReasoningEffort;
+  /** Reasoning effort for projective/combiner bundles, stamped at resolve time from analysis.reasoning.projective. */
+  reasoningProjective?: ReasoningEffort;
 }
 
 // All cascades below are registry-driven (supabase/migrations/20260725140000_cascade_registry.sql,
@@ -129,13 +133,31 @@ export type CascadeRegistryKey =
  * of the saved registry value (ADR 040's save schema is `.strict()` and would
  * reject unknown fields).
  */
-const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean }>> = {
+const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean; reasoningMandatory?: boolean }>> = {
   'anthropic/claude-haiku-4.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
   'anthropic/claude-haiku-5.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
+  // OpenRouter marks reasoning as mandatory for GLM 5.3 Flash: a concrete slug
+  // returns 400 for disabled reasoning, so 'none' is bumped to 'low' for it.
+  'z-ai/glm-5.3-flash': { reasoningMandatory: true },
 };
 
 const OUTPUT_TOKEN_REGISTRY_KEYS = ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'] as const;
 const OUTPUT_TOKEN_FALLBACKS = { haiku: 8192, default: 16000 } as const;
+
+/** Reasoning efforts the analysis cascade may request. Higher efforts are deliberately excluded (see the 20261008120000 migration). */
+export const REASONING_EFFORTS = ['none', 'minimal', 'low'] as const;
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+const REASONING_REGISTRY_KEYS = ['analysis.reasoning.grounded', 'analysis.reasoning.projective'] as const;
+const REASONING_FALLBACKS = { grounded: 'none', projective: 'low' } as const satisfies Record<string, ReasoningEffort>;
+
+/** Validates a registry reasoning-effort value, throwing with a labeled SSOT-violation message. */
+function parseReasoningEffort(key: string, val: unknown, fallback: ReasoningEffort): ReasoningEffort {
+  if (val === undefined || val === null) return fallback;
+  if (typeof val !== 'string' || !(REASONING_EFFORTS as readonly string[]).includes(val)) {
+    throw new Error(`Cascade Registry SSOT Violation: setting '${key}' must be one of ${REASONING_EFFORTS.join(', ')}, received: ${String(val)}`);
+  }
+  return val as ReasoningEffort;
+}
 
 /** Validates a registry-resolved cascade array, throwing with a labeled SSOT-violation message. */
 function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asserts items is CascadeItem[] {
@@ -189,12 +211,22 @@ function parseValidTokenCap(key: string, val: unknown, fallback: number): number
 
 async function resolveCascade(key: CascadeRegistryKey, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
-    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS],
-    { [key]: fallback as CascadeItem[], 'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku, 'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default } as Record<string, unknown>
+    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS, ...REASONING_REGISTRY_KEYS],
+    {
+      [key]: fallback as CascadeItem[],
+      'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku,
+      'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default,
+      'analysis.reasoning.grounded': REASONING_FALLBACKS.grounded,
+      'analysis.reasoning.projective': REASONING_FALLBACKS.projective,
+    } as Record<string, unknown>
   );
   const tokenCaps = {
     haiku: parseValidTokenCap('analysis.maxOutputTokens.haiku', resolved['analysis.maxOutputTokens.haiku'], OUTPUT_TOKEN_FALLBACKS.haiku),
     default: parseValidTokenCap('analysis.maxOutputTokens.default', resolved['analysis.maxOutputTokens.default'], OUTPUT_TOKEN_FALLBACKS.default),
+  };
+  const reasoning = {
+    grounded: parseReasoningEffort('analysis.reasoning.grounded', resolved['analysis.reasoning.grounded'], REASONING_FALLBACKS.grounded),
+    projective: parseReasoningEffort('analysis.reasoning.projective', resolved['analysis.reasoning.projective'], REASONING_FALLBACKS.projective),
   };
 
   const value = resolved[key];
@@ -210,7 +242,13 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
   // analysis.maxOutputTokens.default fallback remains the live source for them.
   return items.map((item) => {
     const caps = MODEL_CAPABILITIES[item.model];
-    if (!caps) return { ...item };
+    // Reasoning is stamped on EVERY tier; a model that mandates reasoning never gets 'none'.
+    const noneAllowed = caps?.reasoningMandatory !== true;
+    const reasoningStamp = {
+      reasoningGrounded: reasoning.grounded === 'none' && !noneAllowed ? 'low' : reasoning.grounded,
+      reasoningProjective: reasoning.projective === 'none' && !noneAllowed ? 'low' : reasoning.projective,
+    } satisfies Pick<CascadeItem, 'reasoningGrounded' | 'reasoningProjective'>;
+    if (!caps) return { ...item, ...reasoningStamp };
     if (caps.requiresProviderOrder && (!Array.isArray(item.providerOrder) || item.providerOrder.length === 0)) {
       throw new Error(`Cascade Registry SSOT Violation (${key}): model '${item.model}' requires a non-empty providerOrder`);
     }
@@ -218,6 +256,7 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
       ...item,
       ...(caps.tokenCapKey ? { maxOutputTokens: tokenCaps[caps.tokenCapKey] } : {}),
       ...(caps.requiresProviderOrder ? { requiresProviderOrder: true } : {}),
+      ...reasoningStamp,
     };
   });
 }
