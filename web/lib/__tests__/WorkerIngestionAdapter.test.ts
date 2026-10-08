@@ -7,7 +7,8 @@
  * having no captions. And a metadata-fetch failure replaced the real error
  * with a generic message, discarding the actual cause.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { WorkerIngestionAdapter } from '../adapters/WorkerIngestionAdapter';
 
 vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
@@ -16,9 +17,25 @@ vi.mock('@sentry/nextjs', () => ({
 const upsertTranscript = vi.fn();
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({ SupabaseTranscriptAdapter: { upsertTranscript } }));
 
+const realFetch = global.fetch;
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// Every ingestion call goes through here so the fetch mock is swapped out in
+// finally, even when the call rejects. afterEach is the backstop for tests that
+// fail before reaching a call.
+async function ingest(adapter: WorkerIngestionAdapter, videoId: string) {
+  try {
+    return await adapter.fetch(videoId);
+  } finally {
+    global.fetch = realFetch;
+  }
+}
+
 describe('WorkerIngestionAdapter', () => {
+  afterEach(() => {
+    global.fetch = realFetch;
+  });
+
   beforeEach(() => {
     vi.resetModules();
     upsertTranscript.mockReset();
@@ -31,7 +48,7 @@ describe('WorkerIngestionAdapter', () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     const adapter = new WorkerIngestionAdapter();
-    await expect(adapter.fetch('abc123')).rejects.toThrow(/Failed to fetch metadata from Worker: Failed to fetch/);
+    await expect(ingest(adapter, 'abc123')).rejects.toThrow(/Failed to fetch metadata from Worker: Failed to fetch/);
   });
 
   it('falls back to metadata-only (empty transcript) when transcript fetch fails, without throwing', async () => {
@@ -44,7 +61,7 @@ describe('WorkerIngestionAdapter', () => {
       .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     const adapter = new WorkerIngestionAdapter();
-    const result = await adapter.fetch('abc123');
+    const result = await ingest(adapter, 'abc123');
 
     expect(result.metadata.title).toBe('Test Video');
     expect(result.transcript).toBe('');
@@ -62,7 +79,7 @@ describe('WorkerIngestionAdapter', () => {
       .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     const adapter = new WorkerIngestionAdapter();
-    await adapter.fetch('abc123');
+    await ingest(adapter, 'abc123');
 
     expect(Sentry.captureException).toHaveBeenCalledWith(
       expect.any(Error),
@@ -83,7 +100,7 @@ describe('WorkerIngestionAdapter', () => {
       }));
 
     const adapter = new WorkerIngestionAdapter();
-    const result = await adapter.fetch('abc123');
+    const result = await ingest(adapter, 'abc123');
 
     expect(result.metadata.title).toBe('Test Video');
     expect(result.transcript).toBe('hello world');
@@ -107,7 +124,7 @@ describe('WorkerIngestionAdapter', () => {
       upsertTranscript.mockReturnValueOnce(new Promise<void>((resolve) => { releaseUpsert = resolve; }));
       mockFetches({ transcript: 'hello world', segments: SEGMENTS, language: 'de' });
       let settled = false;
-      const pending = new WorkerIngestionAdapter().fetch('vid1').then((r) => { settled = true; return r; });
+      const pending = ingest(new WorkerIngestionAdapter(), 'vid1').then((r) => { settled = true; return r; });
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(upsertTranscript).toHaveBeenCalledWith({ videoId: 'vid1', content: 'hello world', segments: SEGMENTS, language: 'de' });
       expect(settled).toBe(false);
@@ -119,7 +136,7 @@ describe('WorkerIngestionAdapter', () => {
     it('stores nothing when the worker returned no segments', async () => {
       const { WorkerIngestionAdapter } = await import('../adapters/WorkerIngestionAdapter');
       mockFetches({ transcript: 'hello world' });
-      await new WorkerIngestionAdapter().fetch('vid1');
+      await ingest(new WorkerIngestionAdapter(), 'vid1');
       expect(upsertTranscript).not.toHaveBeenCalled();
     });
 
@@ -128,7 +145,7 @@ describe('WorkerIngestionAdapter', () => {
       const { WorkerIngestionAdapter } = await import('../adapters/WorkerIngestionAdapter');
       upsertTranscript.mockRejectedValueOnce(new Error('db down'));
       mockFetches({ transcript: 'hello world', segments: SEGMENTS });
-      const result = await new WorkerIngestionAdapter().fetch('vid1');
+      const result = await ingest(new WorkerIngestionAdapter(), 'vid1');
       expect(result.transcriptAvailable).toBe(true);
       expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ tags: expect.objectContaining({ phase: 'store-segments' }) }));
     });
