@@ -132,6 +132,48 @@ def jev_score(answers):
     return p if math.isfinite(p) and 0.0 <= p <= 1.0 else None
 
 
+def staged_paths(diff, diff_file):
+    """Every staged path: from the diff headers, binary notices, and (live mode) git's own name list."""
+    paths = {f for f, _ in hunks(diff)}
+    paths |= set(re.findall(r"^Binary files .* and b/(.+) differ$", diff, re.M))
+    if not diff_file:
+        paths |= set(subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=d", "-z"],
+                                    capture_output=True, text=True).stdout.split("\0")) - {""}
+    return paths
+
+
+def check_hunk(fname, adds, no_jev, jev_down):
+    """Check one added-line hunk. Returns (blocked, flag, jev_down); flag is (file, p, verdict) or None."""
+    if is_forbidden(fname) or fname == "/dev/null":
+        return False, None, jev_down
+    checked = "\n".join(a for a in adds if ALLOW_MARKER not in a)
+    if not is_env_template(fname) and ENV_ASSIGN.search(checked):
+        print(f"BLOCK: secret assignment content in {fname}")
+        return True, None, jev_down
+    hit = next((n for n, a in enumerate(adds, 1) if ALLOW_MARKER not in a and any(rx.search(a) for rx in DETERMINISTIC)), None)
+    if hit is not None:
+        # Never echo any part of the match: name the file and the added-line position only.
+        print(f"BLOCK: key-like string in {fname} (added line {hit} of this hunk; content withheld)")
+        return True, None, jev_down
+    return jev_check(fname, adds, no_jev, jev_down)
+
+
+def jev_check(fname, adds, no_jev, jev_down):
+    """Jev layer for one hunk. Same return shape as check_hunk."""
+    if no_jev or jev_down:
+        return False, (fname, None, "UNCHECKED (Jev off)" if no_jev else "UNCHECKED (Jev unavailable)"), jev_down
+    answers = decide({"file": fname, "hunk": "\n".join(adds[:JEV_HUNK_LINES])}, QUESTIONS, timeout=JEV_TIMEOUT_S)
+    if answers is None:
+        return False, (fname, None, "UNCHECKED (Jev unavailable)"), True  # circuit breaker trips
+    p = jev_score(answers)
+    if p is None:
+        return False, (fname, None, "UNCHECKED (unexpected Jev answer)"), jev_down
+    if p >= HI:
+        print(f"BLOCK: Jev p={p:.2f} on {fname}")
+        return True, None, jev_down
+    return False, (fname, p, "FLAG" if p >= LO else "PASS"), jev_down
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--diff-file")
@@ -143,50 +185,16 @@ def main():
         diff = subprocess.run(["git", "diff", "--cached"], capture_output=True, text=True).stdout
 
     worst, flags = 0, []
-    jev_down = False  # circuit breaker: one unavailable answer skips Jev for the rest of the commit
-    paths = {f for f, _ in hunks(diff)}
-    paths |= set(re.findall(r"^Binary files .* and b/(.+) differ$", diff, re.M))
-    if not args.diff_file:
-        paths |= set(subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=d", "-z"],
-                                    capture_output=True, text=True).stdout.split("\0")) - {""}
-    for path in sorted(paths):
+    for path in sorted(staged_paths(diff, args.diff_file)):
         if is_forbidden(path):
             print(f"BLOCK: forbidden path staged: {path}")
             worst = 1
+    jev_down = False  # circuit breaker: one unavailable answer skips Jev for the rest of the commit
     for fname, adds in hunks(diff):
-        blob = "\n".join(adds[:JEV_HUNK_LINES])
-        if is_forbidden(fname) or fname == "/dev/null":
-            continue
-        checked = "\n".join(a for a in adds if ALLOW_MARKER not in a)
-        if not is_env_template(fname) and ENV_ASSIGN.search(checked):
-            print(f"BLOCK: secret assignment content in {fname}")
-            worst = 1
-            continue
-        hit = next((n for n, a in enumerate(adds, 1) if ALLOW_MARKER not in a and any(rx.search(a) for rx in DETERMINISTIC)), None)
-        if hit is not None:
-            # Never echo any part of the match: name the file and the added-line position only.
-            print(f"BLOCK: key-like string in {fname} (added line {hit} of this hunk; content withheld)")
-            worst = 1
-            continue
-        if args.no_jev or jev_down:
-            flags.append((fname, None, "UNCHECKED (Jev off)" if args.no_jev else "UNCHECKED (Jev unavailable)"))
-            continue
-        answers = decide({"file": fname, "hunk": blob}, QUESTIONS, timeout=JEV_TIMEOUT_S)
-        if answers is None:
-            jev_down = True
-            flags.append((fname, None, "UNCHECKED (Jev unavailable)"))
-            continue
-        p = jev_score(answers)
-        if p is None:
-            flags.append((fname, None, "UNCHECKED (unexpected Jev answer)"))
-            continue
-        if p >= HI:
-            print(f"BLOCK: Jev p={p:.2f} on {fname}")
-            worst = 1
-        elif p >= LO:
-            flags.append((fname, p, "FLAG"))
-        else:
-            flags.append((fname, p, "PASS"))
+        blocked, flag, jev_down = check_hunk(fname, adds, args.no_jev, jev_down)
+        worst = 1 if blocked else worst
+        if flag:
+            flags.append(flag)
     for fname, p, verdict in flags:
         print(f"{verdict}{'' if p is None else f' (p={p:.2f})'}: {fname}")
     print(f"COMMIT-GUARD: {'BLOCK' if worst else 'CLEAR'} ({len(flags)} Jev-checked hunks)")
