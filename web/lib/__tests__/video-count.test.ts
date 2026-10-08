@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { toCountValue, pickCount } from '@/lib/utils/video-count';
+import { videoCount } from '@/lib/utils/video-count';
+
+const { toCountValue, pickCount } = videoCount;
 
 describe('toCountValue', () => {
   it('keeps numeric-string counts (the shape /api/metadata and stored payloads use)', () => {

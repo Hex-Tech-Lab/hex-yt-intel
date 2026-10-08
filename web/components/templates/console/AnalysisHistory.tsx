@@ -10,7 +10,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge, ChapterChip, GlowBorder } from '@/components/templates/_shared/primitives';
-import { pickCount } from '@/lib/utils/video-count';
+import { videoCount } from '@/lib/utils/video-count';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { showToast } from '@/lib/dashboard/export';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
@@ -361,8 +361,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
       const meta = data.analysis_payload?.videoMetadata || data.analysis_payload?.metadata || {};
       const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (data.duration || 0);
-      const viewCount = pickCount(meta.viewCount, meta.view_count, data.viewCount);
-      const likeCount = pickCount(meta.likeCount, meta.like_count, data.likeCount);
+      const viewCount = videoCount.pickCount(meta.viewCount, meta.view_count, data.viewCount);
+      const likeCount = videoCount.pickCount(meta.likeCount, meta.like_count, data.likeCount);
 
       // Repopulate the URL input from the restored video so the Analyze /
       // re-analyze controls are enabled — both bail on an empty `url`, so
