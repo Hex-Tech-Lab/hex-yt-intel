@@ -2,7 +2,7 @@
  * MultimodalProbePort — Domain Port (Hexagonal-Lite)
  *
  * Contract for visual and prosody inspection over ephemeral video chunks
- * (ADR 039 §1.2 / §5.4). Evaluates whether code editors, slides, or UI occupy >40%
+ * (ADR 039). Evaluates whether code editors, slides, or UI occupy >40%
  * of the visual frame, and detects rapid conversational cross-talk / contention.
  */
 

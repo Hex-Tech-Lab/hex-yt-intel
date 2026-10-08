@@ -6,7 +6,8 @@
  * 2. Physical Multimodal Probe call via OpenRouter (model from PHASE_C_MULTIMODAL_PROBE_MODEL).
  * 3. Part A sterile extraction & Part B projective synthesis via OpenRouter (model from PHASE_C_LLM_MODEL).
  *
- * Run: pnpm dlx tsx scripts/phase-c-live-smoke-test.ts
+ * Run: set -a; source web/.env.local; set +a; pnpm dlx tsx scripts/phase-c-live-smoke-test.ts
+ * (.env.local is not auto-loaded — without sourcing it the run exits at the env-key guard.)
  * ADR 041: no hardcoded model IDs in scripts — both fail fast when unset.
  */
 
@@ -21,9 +22,8 @@ import type { LLMCascadePort } from '../worker/src/ports/LLMCascadePort';
 
 // Read keys directly from environment (loaded via web/.env.local)
 const ASSEMBLYAI_KEY = process.env.ASSEMBLYAI_API_KEY;
-const DEEPGRAM_KEY = process.env.DEEPGRAM_API_KEY;
-const MULTIMODAL_VISION_KEY = process.env.MULTIMODAL_VISION_API_KEY || process.env.OPENROUTER_API_KEY;
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+const MULTIMODAL_VISION_KEY = process.env.MULTIMODAL_VISION_API_KEY || process.env.OPENROUTER_API_KEY;
 // ADR 041: explicit configuration, no silently-defaulted remote models.
 const MULTIMODAL_PROBE_MODEL = process.env.PHASE_C_MULTIMODAL_PROBE_MODEL;
 const PHASE_C_LLM_MODEL = process.env.PHASE_C_LLM_MODEL;
@@ -127,6 +127,9 @@ async function runLiveSmokeTest() {
   }
 
   const pipelineStartTime = Date.now();
+  // NOTE: sensor probes run against SAMPLE_AUDIO_URL / SAMPLE_FRAME_URL (synthetic
+  // fixtures), not real footage of VIDEO_ID — any fusion/sensor metrics printed
+  // below describe the fixture, not the video. videoId here is a lookup key only.
   const output = await dispatcher.dispatchAnalysis({
     analysisId: `live_smoke_${Date.now()}`,
     videoId: VIDEO_ID,
@@ -150,7 +153,7 @@ async function runLiveSmokeTest() {
     }
   }
 
-  const citationRate = projectionsCount > 0 ? `${Math.round((citedCount / projectionsCount) * 100)}%` : '100%';
+  const citationRate = projectionsCount > 0 ? `${Math.round((citedCount / projectionsCount) * 100)}%` : 'n/a (no projections)';
 
   console.log(`\n=================== LIVE SMOKE TEST METRICS ===================`);
   console.log(`Route Classified:      ${output.classification.route} (Confidence: ${output.classification.confidence})`);

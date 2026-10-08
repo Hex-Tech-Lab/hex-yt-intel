@@ -49,6 +49,11 @@ interface BenchmarkTarget {
 }
 
 const BENCHMARKS: BenchmarkTarget[] = [
+  // SCOPE NOTE: mockDiarization/mockMultimodal are synthetic fixtures tuned per
+  // video's ground-truth class, so `routingMatch` primarily exercises the
+  // router wiring against known sensor profiles — it is not a blind-routing
+  // accuracy claim. Cross-video router accuracy is measured in phase-c-bakeoff
+  // (real JEV text features + label-matched sensors) and live smoke test.
   {
     videoId: 'Z6l4HpuyyP0',
     expectedRoute: 'S1',
@@ -113,7 +118,11 @@ interface ValidationRow {
 async function runMicroBatch(): Promise<void> {
   const promptBuilder = new PromptBuilder();
 
-  // Deterministic mock cascade for offline micro-batch validation
+  // Deterministic mock cascade for offline micro-batch validation.
+  // SCOPE NOTE: returns the same fixed fixture payload for every transcript —
+  // this validates plumbing (routing, Part A parsing, Part B citation wiring,
+  // latency), NOT LLM content fidelity; claims are preordained by design.
+  // Content fidelity is covered by the live smoke test and phase-c-bakeoff.
   const mockCascade: LLMCascadePort = {
     generateStream: (options) => {
       // Check if prompt is Part A (Grounded Extraction) or Part B (Projective Synthesis)
@@ -272,7 +281,7 @@ async function runMicroBatch(): Promise<void> {
     }
 
     const citationRate =
-      projectionsCount > 0 ? `${Math.round((citedCount / projectionsCount) * 100)}%` : '100%';
+      projectionsCount > 0 ? `${Math.round((citedCount / projectionsCount) * 100)}%` : 'n/a (no projections)';
 
     results.push({
       videoId: target.videoId,
@@ -296,6 +305,12 @@ async function runMicroBatch(): Promise<void> {
     );
   }
   console.log('======================================================================\n');
+
+  const failedRows = results.filter((r) => !r.routingMatch || r.actual === 'NO_TRANSCRIPT');
+  if (failedRows.length > 0) {
+    console.error(`Micro-batch FAILED: ${failedRows.length}/${results.length} rows with route mismatches or missing transcripts`);
+    process.exit(1);
+  }
 }
 
 runMicroBatch().catch((err: unknown) => {

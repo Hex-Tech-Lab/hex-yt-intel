@@ -77,7 +77,7 @@ export class LLMCascade implements LLMCascadePort {
   // from the Settings Registry web-side; the worker has no DB access per
   // ADR 005). Missing/empty cascade is a hard construction error — there is
   // no hardcoded chain fallback (removed; see constructor throw).
-  private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
+  private chain: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
   private maxTokens: { haiku: number; default: number };
   private llmTimeoutMs: number;
   private llmHandshakeTimeoutMs: number;
@@ -101,7 +101,7 @@ export class LLMCascade implements LLMCascadePort {
   constructor(
     apiKey: string,
     models?: string[],
-    cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
+    cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>,
     maxOutputTokens?: { haiku: number; default: number },
     userId?: string,
     llmTimeoutMs?: number,

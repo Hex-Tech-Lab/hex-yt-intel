@@ -37,7 +37,11 @@ metadata.get("/fetch-metadata", async (c) => {
             description: "",
             channelTitle: oembed.author_name || "",
             channelId: "",
-            publishedAt: new Date().toISOString(),
+            // oEmbed provides no real publish date or engagement counts; these
+            // neutral placeholders are degraded-fallback values, not
+            // authoritative data (publishedAt must stay a string per
+            // AnalysisJobMetadataSchema, so empty instead of a fake date).
+            publishedAt: "",
             duration: null,
             viewCount: 0,
             likeCount: 0,

@@ -48,7 +48,7 @@ export class CombinerPass {
     let currentSubNumber = '';
     let currentSubTitle = '';
     let currentSubLines: string[] = [];
-    let introLines: string[] = [];
+    const introLines: string[] = [];
 
     // Match headings like "#### 7.1 Implementation Systems" or "### 7.1 ..." or "## 7.1"
     const subHeaderRegex = /^#{2,4}\s+(\d+\.\d+)\s*[-:–—]?\s*(.*)$/;

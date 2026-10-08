@@ -16,7 +16,7 @@
  * Transcripts: fetched from the worker's POST /fetch-transcript and cached
  * under the OS temp dir, never written to the repo (ADR 012).
  *
- * Run: pnpm dlx tsx scripts/phase-c-bakeoff.ts
+ * Run: set -a; source web/.env.local; set +a; pnpm dlx tsx scripts/phase-c-bakeoff.ts
  */
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -24,7 +24,6 @@ import * as nodePath from 'node:path';
 
 import {
   JevTextParser,
-  countTurnMarkers,
   splitTranscript,
 } from '../worker/src/services/sensor-fusion/heuristics/jev-text-parser';
 import { routeFusion, type FusionRoute } from '../worker/src/services/sensor-fusion/matrix/fusion-router';
@@ -32,7 +31,12 @@ import { routeFusion, type FusionRoute } from '../worker/src/services/sensor-fus
 const WORKER_URL = process.env.WORKER_URL ?? 'https://yt-intel.hex-tech-lab.workers.dev';
 const WORKER_ORIGIN = 'https://hex-yt-intel.vercel.app';
 const TRANSCRIPT_DIR = nodePath.join(os.tmpdir(), 'hex-yt-intel-pool-transcripts');
-const MAX_JEV_CALLS = Number(process.env.MAX_JEV_CALLS ?? 200);
+const MAX_JEV_CALLS_RAW = process.env.MAX_JEV_CALLS ?? '200';
+if (!Number.isFinite(Number(MAX_JEV_CALLS_RAW))) {
+  console.error(`MAX_JEV_CALLS must be a number (got "${MAX_JEV_CALLS_RAW}") - aborting before any paid call`);
+  process.exit(1);
+}
+const MAX_JEV_CALLS = Number(MAX_JEV_CALLS_RAW);
 const FETCH_TIMEOUT_MS = 90000;
 
 /** Simulated Diarization and A/V probe outputs. */
@@ -77,9 +81,15 @@ if (!OR_KEY) {
   process.exit(1);
 }
 
-/** Cached transcript text for a video, fetched from the worker on a miss. */
+/** Cached transcript text for a video, fetched from the worker on a miss.
+ *  Stale cache entries from a previous pool refresh can be cleared by running
+ *  with PHASE_C_CLEAR_TRANSCRIPT_CACHE=1 (tmpdir is OS-managed, so this
+ *  script never deletes them automatically). */
 const loadTranscript = async (videoId: string): Promise<string> => {
   const cachePath = nodePath.join(TRANSCRIPT_DIR, `${videoId}.txt`);
+  if (process.env.PHASE_C_CLEAR_TRANSCRIPT_CACHE === '1' && fs.existsSync(TRANSCRIPT_DIR)) {
+    fs.rmSync(TRANSCRIPT_DIR, { recursive: true, force: true });
+  }
   if (fs.existsSync(cachePath)) return fs.readFileSync(cachePath, 'utf8');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -174,6 +184,12 @@ const main = async (): Promise<void> => {
   console.log(`\nAgreement: ${matches}/${rows.length} = ${((matches / rows.length) * 100).toFixed(1)}%`);
   console.log(`Total JEV chunk calls: ${jevCalls}\n`);
   for (const row of rows) console.log(`${row.videoId}: ${row.detail}`);
+
+  const failedRows = rows.filter((r) => !r.match);
+  if (failedRows.length > 0) {
+    console.error(`Bake-off FAILED: ${failedRows.length}/${rows.length} rows did not match ground truth`);
+    process.exit(1);
+  }
 };
 
 main().catch((error) => {
