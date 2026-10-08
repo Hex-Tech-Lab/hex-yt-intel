@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { GroundedExtractionEngine, GroundedExtractionError } from '../services/GroundedExtractionEngine';
 import { ProjectiveSynthesisEngine, ProjectiveSynthesisError } from '../services/ProjectiveSynthesisEngine';
 import { PromptBuilder } from '../services/PromptBuilder';
