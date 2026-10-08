@@ -1,0 +1,20 @@
+web/components/templates/console/DimensionDrawer.tsx
+  s_83a8c52a11f95a::t_72eed1ec1ebe27 182-187,189-211,213-225
+  s_83a8c52a11f95a::t_b9cf44793c1978 242-243,245-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "74466249cd470f717a65129a0e96cb6740fcd8ca",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
