@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_4075cc6448b8f7::t_d71a9dd32903eb 1575
+.opencode/opencode.json
+  s_4075cc6448b8f7::t_24e46e88a53edd 3,21,29,46-49,56,66-70,76,86,110,118,153,161,195-237,245-247
+CLAUDE.md
+  s_4075cc6448b8f7::t_5e79b05c118525 38,41,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bec711a540553f7bf5b4fa2ecbc6fcc1c3c76a0",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
