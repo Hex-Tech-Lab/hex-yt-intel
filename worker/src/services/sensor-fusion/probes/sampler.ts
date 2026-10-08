@@ -37,6 +37,16 @@ export const calculateProbeTimestamps = (durationSeconds: number): number[] => {
 
   const sampleCount = sampleCountFor(durationSeconds);
   const starts = Array.from({ length: sampleCount }, (slot, index) => chunkStart(index, sampleCount, durationSeconds));
-  // Clips only a little over one chunk long clamp several bins onto one start.
-  return starts.filter((start, index) => index === 0 || start !== starts[index - 1]);
+  // Clips only a little over one chunk long clamp several bins onto the same or a
+  // nearly identical start (e.g. 16s -> 0.48/0.50/0.52): three probes that see the
+  // same ~15s window. Collapse runs of starts that overlap within one chunk length,
+  // keeping the first (earliest) start of each run.
+  const deduped: number[] = [];
+  for (const start of starts) {
+    const previous = deduped[deduped.length - 1];
+    if (previous === undefined || start - previous >= PROBE_CHUNK_SECONDS) {
+      deduped.push(start);
+    }
+  }
+  return deduped;
 };

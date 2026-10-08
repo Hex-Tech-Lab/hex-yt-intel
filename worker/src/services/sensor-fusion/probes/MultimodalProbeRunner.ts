@@ -66,7 +66,7 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
     this.apiKey = config.apiKey.trim();
     // Normalize baseUrl: default to OpenRouter chat completions endpoint
     this.baseUrl = config.baseUrl || OPENROUTER_COMPLETIONS_URL;
-    this.model = config.model;
+    this.model = config.model.trim();
     this.timeoutMs = config.timeoutMs && config.timeoutMs > 0 ? config.timeoutMs : MULTIMODAL_PROBE_DEFAULT_TIMEOUT_MS;
   }
 
@@ -176,7 +176,12 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
+        // Truncate (with an ellipsis marker): the raw error body is echoed into
+        // the Sentry exception message below (this error's message becomes the
+        // captureException payload), so it must not carry an unbounded upstream
+        // response body.
+        const rawErrorText = await response.text().catch(() => '');
+        const errorText = rawErrorText.length > 2000 ? `${rawErrorText.slice(0, 2000)}...` : rawErrorText;
         throw new MultimodalProbeError(
           `Multimodal probe HTTP ${response.status}: ${errorText || response.statusText}`,
           response.status,
@@ -191,8 +196,17 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
       const rawContent = data.choices?.[0]?.message?.content || '{}';
       const parsed = JSON.parse(rawContent) as Partial<MultimodalChunkInspection>;
 
-      const uiFramesDetected = Boolean(parsed.uiFramesDetected);
-      const debateProsodyDetected = Boolean(parsed.debateProsodyDetected);
+      // Strict validation: schema-invalid model output must fail closed, not be
+      // coerced into fabricated false/0 values that could corrupt sensor fusion.
+      if (typeof parsed.uiFramesDetected !== 'boolean' || typeof parsed.debateProsodyDetected !== 'boolean') {
+        throw new MultimodalProbeError(
+          `Multimodal probe response for chunk ${chunkIndex} is schema-invalid: missing boolean fields`,
+          500,
+          false,
+        );
+      }
+      const uiFramesDetected = parsed.uiFramesDetected;
+      const debateProsodyDetected = parsed.debateProsodyDetected;
       const rawCount = Number(parsed.visibleSpeakerCount);
       const visibleSpeakerCount: 0 | 1 | 2 | 3 = [0, 1, 2, 3].includes(rawCount)
         ? (rawCount as 0 | 1 | 2 | 3)
