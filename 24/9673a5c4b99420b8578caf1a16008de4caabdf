@@ -1,0 +1,19 @@
+docs/reviews/pr442-triage-g1.md
+  s_a363fe58fd5657::t_3ae24e30932e4e 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "249673a5c4b99420b8578caf1a16008de4caabdf",
+  "prompts": {},
+  "sessions": {
+    "s_a363fe58fd5657": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5229cf6ffeS3YdiHcvtuE0Ri",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
