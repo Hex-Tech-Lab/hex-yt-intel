@@ -1,0 +1,26 @@
+scripts/commit-guard/commit_guard.py
+  s_4075cc6448b8f7::t_4a05c3ae9fc085 1-160
+  s_4075cc6448b8f7::t_a8a31bc8742159 161-164
+scripts/commit-guard/install.sh
+  s_4075cc6448b8f7::t_4f89cbfca271a3 1-27
+scripts/commit-guard/jev.py
+  s_4075cc6448b8f7::t_ff14abc202fd89 1-66
+scripts/commit-guard/test_commit_guard.py
+  s_4075cc6448b8f7::t_6e3e1acccb7f18 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d949606453bac6dbf15345c725288844c89eaad",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
