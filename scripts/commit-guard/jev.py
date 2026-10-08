@@ -32,8 +32,8 @@ def _key():
                                 cwd=pathlib.Path(__file__).resolve().parent).stdout.strip()
         if common:
             candidates.append((pathlib.Path(__file__).resolve().parent / common).resolve().parent / "web" / ".env.local")
-    except Exception:
-        pass
+    except (OSError, subprocess.SubprocessError):
+        pass  # not inside a git checkout: only this checkout's env file is tried
     for env in candidates:
         if not env.exists():
             continue
@@ -54,7 +54,8 @@ def decide(state, questions, timeout=5.0):
         "Authorization": "Bearer " + key, "Content-Type": "application/json",
         "HTTP-Referer": "https://github.com/Hex-Tech-Lab/hex-yt-intel", "X-Title": "vIntel commit guard"})
     try:
-        return json.load(urllib.request.urlopen(req, timeout=timeout)).get("answers")
+        # URL is the fixed https constant above, never caller input.
+        return json.load(urllib.request.urlopen(req, timeout=timeout)).get("answers")  # nosec B310
     except Exception:
         return None
 

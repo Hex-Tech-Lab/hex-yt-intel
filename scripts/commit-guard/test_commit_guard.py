@@ -3,9 +3,9 @@ import io
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import commit_guard  # noqa: E402
@@ -21,7 +21,7 @@ def run_guard(diff_text, jev_answer=None, no_jev=False):
         handle.write(diff_text)
     argv = ["commit_guard.py", "--diff-file", handle.name] + (["--no-jev"] if no_jev else [])
     out = io.StringIO()
-    with mock.patch.object(sys, "argv", argv), mock.patch.object(commit_guard, "decide", return_value=jev_answer), redirect_stdout(out):
+    with unittest.mock.patch.object(sys, "argv", argv), unittest.mock.patch.object(commit_guard, "decide", return_value=jev_answer), redirect_stdout(out):
         try:
             commit_guard.main()
             code = 0
@@ -79,10 +79,10 @@ class CommitGuardTest(unittest.TestCase):
 
     def test_jev_outage_costs_one_call(self):
         diff = diff_for("docs/a.md", ["a"]) + diff_for("docs/b.md", ["b"]) + diff_for("docs/c.md", ["c"])
-        with mock.patch.object(commit_guard, "decide", return_value=None) as decide:
+        with unittest.mock.patch.object(commit_guard, "decide", return_value=None) as decide:
             with tempfile.NamedTemporaryFile("w", suffix=".diff", delete=False) as handle:
                 handle.write(diff)
-            with mock.patch.object(sys, "argv", ["commit_guard.py", "--diff-file", handle.name]), redirect_stdout(io.StringIO()):
+            with unittest.mock.patch.object(sys, "argv", ["commit_guard.py", "--diff-file", handle.name]), redirect_stdout(io.StringIO()):
                 with self.assertRaises(SystemExit) as exit_:
                     commit_guard.main()
         self.assertEqual(exit_.exception.code, 0)
