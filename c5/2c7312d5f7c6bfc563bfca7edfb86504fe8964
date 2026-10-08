@@ -1,0 +1,22 @@
+web/lib/__tests__/WorkerIngestionAdapter.test.ts
+  s_4075cc6448b8f7::t_198c076bbc6eaa 106-107,109-111,113-116
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_4075cc6448b8f7::t_b65085f504678b 50-60
+  s_4075cc6448b8f7::t_2a42d570d0bab8 82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c52c7312d5f7c6bfc563bfca7edfb86504fe8964",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
