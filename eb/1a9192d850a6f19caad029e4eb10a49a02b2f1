@@ -1,0 +1,20 @@
+web/lib/types/contracts.ts
+  s_99af580f37572e::t_dbb277a91fd293 365-379
+  s_99af580f37572e::t_648d40700cc7d3 387-398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb1a9192d850a6f19caad029e4eb10a49a02b2f1",
+  "prompts": {},
+  "sessions": {
+    "s_99af580f37572e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5617c69ffekAqed3RNfreZpe",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
