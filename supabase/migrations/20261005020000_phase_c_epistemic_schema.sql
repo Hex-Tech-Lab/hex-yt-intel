@@ -16,6 +16,13 @@ ALTER TABLE public.analyses
 
 -- 4. Safely widen check_billing_status constraint to include 'partial_extraction'
 --    Checks for existing constraint and updates it idempotently.
+--    CONSUMER NOTE (PR #442 review): web/lib/types/validation-report.ts
+--    BillingStatus does NOT yet include 'partial_extraction'. Safe today
+--    because no production writer sets this status yet (EpistemicPipelineDispatcher's
+--    persistGhostRow is an optional hook, unwired — ADR 039 Phases B-D pending).
+--    The web BillingStatus union + isPersistedValidationReport validator MUST be
+--    widened in the same PR that first wires a 'partial_extraction' writer,
+--    otherwise the validator would reject/reap such rows.
 DO $$
 BEGIN
   -- If check_billing_status exists, update it to include 'partial_extraction'
