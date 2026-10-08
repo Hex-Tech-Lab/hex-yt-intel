@@ -8,9 +8,8 @@ const KEY = 'analysis.pipeline.epistemic';
 function chain(result: () => { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
   for (const method of ['select', 'eq', 'is', 'in']) builder[method] = () => builder;
-  builder.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) => {
-    try { return Promise.resolve(result()).then(resolve, reject); } catch (e) { return Promise.reject(e).then(resolve, reject); }
-  };
+  builder.then = (onResolve: (value: unknown) => unknown, onReject: (reason: unknown) => unknown) =>
+    Promise.resolve().then(() => result()).then(onResolve, onReject);
   return builder;
 }
 
