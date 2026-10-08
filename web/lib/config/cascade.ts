@@ -2,7 +2,7 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
 
 /**
  * A single model in a fallback cascade.
- * @property model - OpenRouter model ID (e.g., 'anthropic/claude-haiku-4.5')
+ * @property model - OpenRouter model ID (must be in CASCADE_MODEL_ALLOWLIST)
  * @property name - Human-readable display name
  * @property cost - Optional cost per 1K tokens
  * @property providerOrder - Optional list of providers to try in order (e.g., ['groq', 'google-vertex'])
@@ -12,6 +12,10 @@ export interface CascadeItem {
   name: string;
   cost?: number;
   providerOrder?: string[];
+  /** Per-tier output cap, stamped at resolve time from analysis.maxOutputTokens.* (never stored in the DB — see MODEL_CAPABILITIES). */
+  maxOutputTokens?: number;
+  /** Per-tier provider-pinning requirement, stamped at resolve time from MODEL_CAPABILITIES. */
+  requiresProviderOrder?: boolean;
 }
 
 // All cascades below are registry-driven (supabase/migrations/20260725140000_cascade_registry.sql,
@@ -105,6 +109,48 @@ export const CASCADE_FALLBACKS = {
   reasoningPro: REASONING_CASCADE_PRO_FALLBACK,
 } as const;
 
+/** The full dotted registry keys every resolveCascade call site may use (ADR 041: strict keys, never a loose `string`). */
+export type CascadeRegistryKey =
+  | 'cascade.chat'
+  | 'cascade.digest'
+  | 'cascade.analysis'
+  | 'cascade.stance'
+  | 'cascade.entityExtraction'
+  | 'cascade.reasoning.free'
+  | 'cascade.reasoning.proEnterprise';
+
+/**
+ * ADR 041 (2026-10-06): the ONLY model-ID-keyed dispatch knowledge. Lives here
+ * in the registry-definition layer so the worker's dispatch code can be fully
+ * model-agnostic — capabilities ride the forwarded cascade per tier instead of
+ * the worker re-deriving them from inline string comparisons (the old
+ * `isHaiku45 = model === '...'` dispatch literals, now removed).
+ * Merged into resolved items by model ID at resolve time; deliberately NOT part
+ * of the saved registry value (ADR 040's save schema is `.strict()` and would
+ * reject unknown fields).
+ */
+const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean }>> = {
+  'anthropic/claude-haiku-4.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
+};
+
+const OUTPUT_TOKEN_REGISTRY_KEYS = ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'] as const;
+const OUTPUT_TOKEN_FALLBACKS = { haiku: 8192, default: 16000 } as const;
+
+/** Validates a registry-resolved cascade array, throwing with a labeled SSOT-violation message. */
+function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asserts items is CascadeItem[] {
+  /** Formats a labeled SSOT-violation error message for this key. */
+  const label = (msg: string) => `Cascade Registry SSOT Violation (${key}): ${msg}`;
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error(label('registry-resolved value must be a non-empty array of cascade tiers'));
+  }
+  for (const item of items) {
+    if (!item || typeof item !== 'object') throw new Error(label('each tier must be an object'));
+    const { model, name } = item as Partial<CascadeItem>;
+    if (typeof model !== 'string' || model.trim().length === 0) throw new Error(label('tier has an empty or missing model ID'));
+    if (typeof name !== 'string' || name.trim().length === 0) throw new Error(label(`tier '${model}' has an empty or missing display name`));
+  }
+}
+
 /**
  * ADR 040 (2026-10-05): every model ID the code-side registry actually uses.
  * The settings save path (validateAgainstContract's cascadeRegistry marker)
@@ -121,14 +167,112 @@ export const CASCADE_MODEL_ALLOWLIST: readonly string[] = Array.from(
   ),
 ).sort();
 
-async function resolveCascade(key: string, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
-  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
-    [key],
-    { [key]: fallback as CascadeItem[] }
-  );
-  const value = resolved[key];
-  return Array.isArray(value) && value.length > 0 ? (value as CascadeItem[]) : [...fallback];
+/**
+ * Resolves a cascade.* registry key and stamps per-tier dispatch capabilities
+ * onto the items (ADR 041). Fail-fast contract:
+ * - Registry unreachable (DB error) → resilient fallback (adapter-logged, not
+ *   cached) — unchanged behavior, an infra outage must not take down analyses.
+ * - Registry REACHABLE but value malformed (non-array / empty / blank model or
+ *   name) → explicit `Cascade Registry SSOT Violation` throw instead of the
+ *   previous silent fallback, per the 10X registry-enforcement mission. ADR
+ *   040's save-time validation should prevent this from ever being saved.
+ */
+function parseValidTokenCap(key: string, val: unknown, fallback: number): number {
+  if (val === undefined || val === null) return fallback;
+  const num = Number(val);
+  if (!Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) {
+    throw new Error(`Cascade Registry SSOT Violation: setting '${key}' must be a positive integer, received: ${String(val)}`);
+  }
+  return num;
 }
+
+async function resolveCascade(key: CascadeRegistryKey, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
+  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS],
+    { [key]: fallback as CascadeItem[], 'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku, 'analysis.maxOutputTokens.default': OUTPUT_TOKEN_FALLBACKS.default } as Record<string, unknown>
+  );
+  const tokenCaps = {
+    haiku: parseValidTokenCap('analysis.maxOutputTokens.haiku', resolved['analysis.maxOutputTokens.haiku'], OUTPUT_TOKEN_FALLBACKS.haiku),
+    default: parseValidTokenCap('analysis.maxOutputTokens.default', resolved['analysis.maxOutputTokens.default'], OUTPUT_TOKEN_FALLBACKS.default),
+  };
+
+  const value = resolved[key];
+  if (value !== (fallback as readonly CascadeItem[])) {
+    // Registry actually supplied a value — validate it structurally, fail fast on garbage.
+    assertValidCascadeItems(key, value);
+  }
+  const items = (Array.isArray(value) && value.length > 0 ? value : fallback) as readonly CascadeItem[];
+
+  // Stamp per-tier dispatch capabilities by model ID (never persisted in the
+  // registry value itself — see MODEL_CAPABILITIES). Stamp ONLY bound models:
+  // unbound tiers stay unstamped so the worker's forwarded
+  // analysis.maxOutputTokens.default fallback remains the live source for them.
+  return items.map((item) => {
+    const caps = MODEL_CAPABILITIES[item.model];
+    if (!caps) return { ...item };
+    if (caps.requiresProviderOrder && (!Array.isArray(item.providerOrder) || item.providerOrder.length === 0)) {
+      throw new Error(`Cascade Registry SSOT Violation (${key}): model '${item.model}' requires a non-empty providerOrder`);
+    }
+    return {
+      ...item,
+      ...(caps.tokenCapKey ? { maxOutputTokens: tokenCaps[caps.tokenCapKey] } : {}),
+      ...(caps.requiresProviderOrder ? { requiresProviderOrder: true } : {}),
+    };
+  });
+}
+
+export const DIARIZATION_PROVIDER_ALLOWLIST = ['assemblyai', 'deepgram'] as const;
+export type DiarizationProviderName = (typeof DIARIZATION_PROVIDER_ALLOWLIST)[number];
+
+export interface DiarizationCascadeItem {
+  provider: DiarizationProviderName;
+  name: string;
+  timeoutMs?: number;
+}
+
+const DIARIZATION_CASCADE_FALLBACK: readonly DiarizationCascadeItem[] = [
+  { provider: 'assemblyai', name: 'AssemblyAI Universal-1', timeoutMs: 15000 },
+  { provider: 'deepgram', name: 'Deepgram Nova-2', timeoutMs: 10000 },
+];
+
+/**
+ * Resolves the diarization provider cascade from the Settings Registry
+ * (`cascade.diarization`), falling back to the hardcoded defaults when the
+ * key is unset or empty. Accepts both string-provider entries and full
+ * {@link DiarizationCascadeItem} objects; unallowlisted providers are dropped.
+ */
+export const resolveDiarizationCascade = async (): Promise<DiarizationCascadeItem[]> => {
+  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+    ['cascade.diarization'],
+    { 'cascade.diarization': DIARIZATION_CASCADE_FALLBACK as DiarizationCascadeItem[] }
+  );
+  const value = resolved['cascade.diarization'];
+  if (!Array.isArray(value) || value.length === 0) {
+    return [...DIARIZATION_CASCADE_FALLBACK];
+  }
+
+  const normalized: DiarizationCascadeItem[] = [];
+  for (const item of value) {
+    if (typeof item === 'string') {
+      if (DIARIZATION_PROVIDER_ALLOWLIST.includes(item as DiarizationProviderName)) {
+        normalized.push({
+          provider: item as DiarizationProviderName,
+          name: item === 'assemblyai' ? 'AssemblyAI Universal-1' : 'Deepgram Nova-2',
+        });
+      }
+    } else if (item && typeof item === 'object' && typeof item.provider === 'string') {
+      if (DIARIZATION_PROVIDER_ALLOWLIST.includes(item.provider as DiarizationProviderName)) {
+        normalized.push({
+          provider: item.provider as DiarizationProviderName,
+          name: typeof item.name === 'string' && item.name ? item.name : item.provider,
+          ...(typeof item.timeoutMs === 'number' && item.timeoutMs > 0 ? { timeoutMs: item.timeoutMs } : {}),
+        });
+      }
+    }
+  }
+
+  return normalized.length > 0 ? normalized : [...DIARIZATION_CASCADE_FALLBACK];
+};
 
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);
 export const resolveDigestCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.digest', DIGEST_CASCADE_FALLBACK);

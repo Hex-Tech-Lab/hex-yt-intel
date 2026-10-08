@@ -17,4 +17,17 @@ export interface PromptBuilderPort {
    * cache_control breakpoint on the shared prefix (prompt caching, 2026-09-25).
    */
   buildSegmented(context: EngineContext): Promise<{ sharedPrefix: string; segmentInstruction: string }>;
+  buildGroundedExtractionPrompt(
+    transcriptChunks: Array<{ text: string; start: number; end: number; speaker?: string }>,
+    metadata: {
+      title?: string;
+      speakerCount: number;
+      durationSeconds: number;
+      classification: 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6';
+    },
+  ): { systemPrompt: string; userPrompt: string };
+  buildProjectiveSynthesisPrompt(
+    payload: import('../types/grounded-extraction').GroundedExtractionPayload,
+    persona?: string,
+  ): { systemPrompt: string; userPrompt: string };
 }

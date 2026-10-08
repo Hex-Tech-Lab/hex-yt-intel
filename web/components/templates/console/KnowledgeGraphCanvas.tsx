@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
-import { Tooltip } from '@astryxdesign/core';
-import { Icon } from '@/components/templates/_shared/primitives';
 import dynamic from 'next/dynamic';
+import { Tooltip } from '@astryxdesign/core';
 import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
-import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { ENTITY_RGB, entityRgb } from '@/lib/design/entity-colors';
+import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
 
 // react-force-graph-2d touches `window`, so it must be client-only.
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
@@ -72,8 +72,22 @@ export function KnowledgeGraphCanvas({
       setSize({ w: el.clientWidth, h: height ?? (compact ? 280 : el.clientHeight || 520) });
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, [height, compact]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    return () => {
+      if (typeof window !== 'undefined') {
+        const sel = window.getSelection();
+        if (sel && el && ((sel.anchorNode && el.contains(sel.anchorNode)) || (sel.focusNode && el.contains(sel.focusNode)))) {
+          sel.removeAllRanges();
+        }
+      }
+    };
+  }, []);
 
   const data = useMemo(() => {
     const rawNodes = (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[];
@@ -117,8 +131,8 @@ export function KnowledgeGraphCanvas({
       fgRef.current.d3Force(
         'collide',
         forceCollide().radius((node: any) => {
-          const r = (compact ? 3 : 4) + (node.weight || 0) * (compact ? 3.5 : 5);
-          return r + (compact ? 4 : 8);
+          const radius = (compact ? 3 : 4) + (node.weight || 0) * (compact ? 3.5 : 5);
+          return radius + (compact ? 4 : 8);
         })
       );
 
@@ -142,11 +156,11 @@ export function KnowledgeGraphCanvas({
     if (!selectedId) return null;
     const nodes = new Set<string>([selectedId]);
     const links = new Set<string>();
-    (graph.edges ?? []).forEach((e, i) => {
-      if (e.source === selectedId || e.target === selectedId) {
-        nodes.add(e.source);
-        nodes.add(e.target);
-        links.add(`${i}`);
+    (graph.edges ?? []).forEach((edge, index) => {
+      if (edge.source === selectedId || edge.target === selectedId) {
+        nodes.add(edge.source);
+        nodes.add(edge.target);
+        links.add(`${index}`);
       }
     });
     return { nodes, links };
@@ -155,8 +169,8 @@ export function KnowledgeGraphCanvas({
   const fit = useCallback(() => {
     try {
       fgRef.current?.zoomToFit(400, compact ? 24 : 48);
-    } catch (e) {
-      console.debug('[KnowledgeGraphCanvas] zoomToFit skipped (ref not ready):', e);
+    } catch (error) {
+      console.debug('[KnowledgeGraphCanvas] zoomToFit skipped (ref not ready):', error);
     }
   }, [compact]);
 
@@ -220,13 +234,13 @@ export function KnowledgeGraphCanvas({
         cooldownTicks={compact ? 120 : 300}
         onEngineStop={fit}
         nodeRelSize={compact ? 3 : 5}
-        nodeVal={(n: any) => 1 + (n as FGNode).weight * 3}
+        nodeVal={(targetNode: any) => 1 + (targetNode as FGNode).weight * 3}
         nodeLabel={() => ''}
         enableNodeDrag
-        onNodeClick={(n: any) => startTransition(() => onSelect((n as FGNode).id === selectedId ? null : (n as FGNode).id))}
-        onNodeRightClick={(n: any, e: MouseEvent) => {
-          e.preventDefault();
-          const node = n as FGNode;
+        onNodeClick={(targetNode: any) => startTransition(() => onSelect((targetNode as FGNode).id === selectedId ? null : (targetNode as FGNode).id))}
+        onNodeRightClick={(targetNode: any, event: MouseEvent) => {
+          event.preventDefault();
+          const node = targetNode as FGNode;
           node.fx = node.x;
           node.fy = node.y;
           onFocus?.(node.id);
@@ -234,47 +248,49 @@ export function KnowledgeGraphCanvas({
           try {
             fgRef.current?.centerAt(node.x, node.y, 600);
             fgRef.current?.zoom(compact ? 2.2 : 2.6, 600);
-          } catch (e) {
-            console.debug('[KnowledgeGraphCanvas] centerAt/zoom animation skipped:', e);
+          } catch (error) {
+            console.debug('[KnowledgeGraphCanvas] centerAt/zoom animation skipped:', error);
           }
         }}
         onNodeHover={handleHover as any}
         onBackgroundClick={() => startTransition(() => onSelect(null))}
-        linkColor={(l: any) => {
-          const srcId = String(typeof l.source === 'object' ? l.source?.id : l.source);
-          const tgtId = String(typeof l.target === 'object' ? l.target?.id : l.target);
+        linkColor={(link: any) => {
+          const srcId = String(typeof link.source === 'object' ? link.source?.id : link.source);
+          const tgtId = String(typeof link.target === 'object' ? link.target?.id : link.target);
           const isEdgeActive = neighborhood
             ? neighborhood.nodes.has(srcId) && neighborhood.nodes.has(tgtId)
             : true;
           const dim = neighborhood ? !isEdgeActive : false;
-          const base = KIND_COLOR[l.kind as RelationKind] || COL.slate;
-          const strength = typeof l.strength === 'number' && Number.isFinite(l.strength) ? l.strength : 0.5;
+          const base = KIND_COLOR[link.kind as RelationKind] || COL.slate;
+          const strength = typeof link.strength === 'number' && Number.isFinite(link.strength) ? link.strength : 0.5;
           return `rgb(${base} / ${dim ? 0.03 : 0.12 + strength * 0.18})`;
         }}
-        linkWidth={(l: any) => {
-          const srcId = String(typeof l.source === 'object' ? l.source?.id : l.source);
-          const tgtId = String(typeof l.target === 'object' ? l.target?.id : l.target);
+        linkWidth={(link: any) => {
+          const srcId = String(typeof link.source === 'object' ? link.source?.id : link.source);
+          const tgtId = String(typeof link.target === 'object' ? link.target?.id : link.target);
           const isEdgeActive = neighborhood
             ? neighborhood.nodes.has(srcId) && neighborhood.nodes.has(tgtId)
             : false;
-          const strength = typeof l.strength === 'number' && Number.isFinite(l.strength) ? l.strength : 0.5;
+          const strength = typeof link.strength === 'number' && Number.isFinite(link.strength) ? link.strength : 0.5;
           return isEdgeActive ? 1.5 : 0.4 + strength * 0.4;
         }}
-        linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
-        nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {
-          const node = n as FGNode;
+        linkLineDash={(link: any) => (link.kind === 'contrarian' ? [4, 3] : null)}
+        nodeCanvasObject={(targetNode: any, ctx: CanvasRenderingContext2D, scale: number) => {
+          const node = targetNode as FGNode;
           const hoverActive = hoverIdRef.current;
           const dim = neighborhood ? !neighborhood.nodes.has(node.id) : (hoverActive ? node.id !== hoverActive && node.id !== selectedId : false);
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === selectedId || node.id === hoverActive;
-          const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
+          const radius = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
+          const nodeX = typeof node.x === 'number' ? node.x : 0;
+          const nodeY = typeof node.y === 'number' ? node.y : 0;
           // entityRgb already defaults to ENTITY_DEFAULT_RGB for missing/unknown
           // types, so there's no separate "unknown" colour to keep in sync here.
           const typeRgb = entityRgb(node.entityType);
 
           // Draw base backing container filled with node category color (glowing fill)
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.fillStyle = dim 
             ? 'rgba(30, 41, 59, 0.1)' 
             : `rgb(${typeRgb} / ${isActive ? '0.85' : (isRoot ? '0.6' : '0.3')})`;
@@ -282,7 +298,7 @@ export function KnowledgeGraphCanvas({
 
           // Colored border/ring based on entity type!
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.lineWidth = (isActive || node.id === selectedId ? 2.5 : 1.25) / scale;
           ctx.strokeStyle = dim ? `rgb(${COL.slate} / 0.1)` : `rgb(${typeRgb} / ${node.inPersona || isRoot || isActive ? '1.0' : '0.7'})`;
           ctx.stroke();
@@ -290,7 +306,7 @@ export function KnowledgeGraphCanvas({
           // Active/selected double ring
           if (isActive || node.id === selectedId) {
             ctx.beginPath();
-            ctx.arc(node.x!, node.y!, r + 3 / scale, 0, 2 * Math.PI);
+            ctx.arc(nodeX, nodeY, radius + 3 / scale, 0, 2 * Math.PI);
             ctx.lineWidth = 1 / scale;
             ctx.strokeStyle = `rgb(${COL.accent} / 0.8)`;
             ctx.stroke();
@@ -299,7 +315,7 @@ export function KnowledgeGraphCanvas({
           // Root halo ring
           if (isRoot && !dim) {
             ctx.beginPath();
-            ctx.arc(node.x!, node.y!, r + 6 / scale, 0, 2 * Math.PI);
+            ctx.arc(nodeX, nodeY, radius + 6 / scale, 0, 2 * Math.PI);
             ctx.lineWidth = 1 / scale;
             ctx.strokeStyle = `rgb(${COL.accent} / 0.3)`;
             ctx.stroke();
@@ -340,30 +356,34 @@ export function KnowledgeGraphCanvas({
             let line = '';
             const lines = [];
             
-            for (let n = 0; n < words.length; n++) {
-              const testLine = line + words[n] + ' ';
+            for (let wordIdx = 0; wordIdx < words.length; wordIdx++) {
+              const testLine = `${line}${words[wordIdx]} `;
               const metrics = ctx.measureText(testLine);
               if (metrics.width > maxWidth && line !== '') {
                 lines.push(line.trim());
-                line = words[n] + ' ';
+                line = `${words[wordIdx]} `;
               } else {
                 line = testLine;
               }
             }
             lines.push(line.trim());
 
-            const startY = node.y! + r + 4 / scale;
-            lines.forEach((l, i) => {
-              ctx.fillText(l, node.x!, startY + i * lineHeight);
+            const nodeX = typeof node.x === 'number' ? node.x : 0;
+            const nodeY = typeof node.y === 'number' ? node.y : 0;
+            const startY = nodeY + radius + 4 / scale;
+            lines.forEach((lineText, lineIdx) => {
+              ctx.fillText(lineText, nodeX, startY + lineIdx * lineHeight);
             });
           }
         }}
-        nodePointerAreaPaint={(n: any, color: string, ctx: CanvasRenderingContext2D) => {
-          const node = n as FGNode;
-          const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4) + 4;
+        nodePointerAreaPaint={(targetNode: any, color: string, ctx: CanvasRenderingContext2D) => {
+          const node = targetNode as FGNode;
+          const radius = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4) + 4;
+          const nodeX = typeof node.x === 'number' ? node.x : 0;
+          const nodeY = typeof node.y === 'number' ? node.y : 0;
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
+          ctx.arc(nodeX, nodeY, radius, 0, 2 * Math.PI);
           ctx.fill();
         }}
       />

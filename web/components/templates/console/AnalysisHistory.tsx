@@ -140,28 +140,36 @@ function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine 
   // channel meta on the first, comments/chapters/highlights always on the
   // second -- the row height no longer depends on how the chips happen to wrap.
   return (
-    <div className="mt-3 pt-3 border-t border-[var(--line-faint)] flex flex-col gap-1.5">
-    <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden hx-chip-shadow">
-      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
-      {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
-        const isPresent = presentSet.has(n);
-        return (
-          <Tooltip key={n} content={`Dimension ${n}: ${isPresent ? 'generated' : 'missing'}`}>
-            <span
-              className={`inline-grid place-items-center w-5 h-5 rounded text-[9px] font-mono font-semibold tabular-nums ${
-                isPresent
-                  ? 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40'
-                  : 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]'
-              }`}
-            >
-              {n}
-            </span>
-          </Tooltip>
-        );
-      })}
-      {auxChips}
-    </div>
-    {auxChipsSecondLine && <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden hx-chip-shadow">{auxChipsSecondLine}</div>}
+    <div className="mt-3 pt-3 border-t border-[var(--line-faint)] flex flex-col gap-2">
+      <div
+        className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow"
+      >
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
+        {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
+          const isPresent = presentSet.has(n);
+          return (
+            <Tooltip key={n} content={`Dimension ${n}: ${isPresent ? 'generated' : 'missing'}`}>
+              <span
+                className={`inline-grid place-items-center w-5 h-5 rounded text-[9px] font-mono font-semibold tabular-nums ${
+                  isPresent
+                    ? 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40'
+                    : 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]'
+                }`}
+              >
+                {n}
+              </span>
+            </Tooltip>
+          );
+        })}
+        {auxChips}
+      </div>
+      {auxChipsSecondLine && (
+        <div
+          className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow"
+        >
+          {auxChipsSecondLine}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
 import { detectPersona } from '@/lib/prompts';
+import { isTrustedWorkerOrigin } from '@/lib/utils/worker-origin-allowlist';
 import type { VideoMetadata, IngestionResult, MetadataIngestionPort, TranscriptSegment } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
@@ -32,7 +33,15 @@ function getRandomUserAgent(): string {
 
 async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: string; segments?: TranscriptSegment[] }> {
   const workerUrl = env.cloudflareWorkerUrl;
-  if (!workerUrl) throw new Error('Worker URL not configured');
+  if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
+    throw new Error('Worker URL not configured');
+  }
+
+  const urlObj = new URL(workerUrl);
+  if (urlObj.protocol !== 'https:' || !isTrustedWorkerOrigin(urlObj.hostname)) {
+    console.error('[fetchWorkerTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
+    throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
+  }
 
   try {
     const response = await fetch(`${workerUrl}/fetch-transcript`, {
@@ -74,12 +83,9 @@ async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataRespo
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
-    // Validate worker URL against SSRF allowlist
-    const allowedOrigins = new Set([
-      'yt-intel.hex-tech-lab.workers.dev',
-    ]);
+    // Validate worker URL against SSRF allowlist (shared helper — single source of truth)
     const urlObj = new URL(workerUrl);
-    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
+    const isAllowedOrigin = urlObj.protocol === 'https:' && isTrustedWorkerOrigin(urlObj.hostname);
 
     if (!isAllowedOrigin) {
       console.error('[fetchWorkerMetadata] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
@@ -131,6 +137,39 @@ async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataRespo
       tags: { component: 'WorkerIngestionAdapter', phase: 'fetch-metadata' },
       extra: { videoId },
     });
+
+    // Fallback: direct YouTube oEmbed resolution if Worker is unavailable or misconfigured
+    try {
+      // Bounded timeout, same rationale as the main worker fetch above — an
+      // unbounded fallback fetch would hold the request open indefinitely.
+      const oembedController = new AbortController();
+      const oembedTimeout = setTimeout(() => oembedController.abort(), 3000);
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
+        headers: { 'User-Agent': getRandomUserAgent() },
+        signal: oembedController.signal,
+      });
+      clearTimeout(oembedTimeout);
+      if (oembedRes.ok) {
+        const oembed = (await oembedRes.json()) as { title?: string; author_name?: string; thumbnail_url?: string };
+        return {
+          title: oembed.title || 'YouTube Video',
+          channelTitle: oembed.author_name || '',
+          channelId: '',
+          // oEmbed exposes no publish date. A real "now" timestamp masquerades
+          // as fresh data; empty string keeps "unknown" honest downstream.
+          publishedAt: '',
+          duration: null,
+          viewCount: '0',
+          likeCount: '0',
+          commentCount: '0',
+          thumbnailUrl: oembed.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          description: '',
+        };
+      }
+    } catch (oembedErr) {
+      console.warn('[fetchWorkerMetadata] Direct oEmbed fallback failed:', oembedErr);
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to fetch metadata from Worker: ${message}`);
   }

@@ -14,16 +14,30 @@ const PRODUCTION_ORIGINS = [
   "https://hex-yt-intel.vercel.app",
   "https://getvintel.com",
   "https://www.getvintel.com",
+  // UAT environment (see wrangler.toml uat env's app origin): without this,
+  // every browser request from uat.getvintel.com resolved to a null CORS
+  // origin — even preflights returned no access-control-allow-origin —
+  // surfacing to the frontend as an opaque "Failed to fetch" (real incident
+  // 2026-10-06).
+  "https://uat.getvintel.com",
+  // Threat-model note: this list is read by BOTH resolveCorsOrigin (browser
+  // CORS) and isValidAppUrl (persist callback target validation). Trusting
+  // uat.getvintel.com as a callback target means a compromised UAT app could
+  // POST persist results accepted by production workers. Accepted risk: UAT
+  // app and prod app share the same Supabase project/identity plane, so UAT
+  // writes land in the same DB under authenticated user identity — there is
+  // no separate prod-only data plane to protect. Revisit if UAT ever gets
+  // an isolated database.
   "https://yt-intel.getmytestdrive.com",
   "https://v-intel.getmytestdrive.com",
 ];
 
-// Kept separate from PRODUCTION_ORIGINS: isValidAppUrl must reject localhost
-// as a callback target when isProd is true (trusting it there would let a
-// request claim a same-origin callback into the worker's own dev-only trust
-// path). resolveCorsOrigin has no such prod/dev distinction -- CORS preflight
-// from a real browser never carries a localhost Origin in production traffic
-// anyway -- so it trusts both lists unconditionally.
+// Kept separate from PRODUCTION_ORIGINS: localhost trust is dev-gated for BOTH
+// resolveCorsOrigin and isValidAppUrl (prod-gated via isProd, defaulting
+// fail-closed to production). A real browser never carries a localhost Origin
+// against the deployed worker, and a localhost callback target is only
+// meaningful in local dev — trusting either in production would let a request
+// claim the worker's dev-only trust path.
 const LOCAL_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:3005"];
 
 const OWN_VERCEL_PREVIEW_RE = /^hex-yt-intel-[a-z0-9-]+\.vercel\.app$/;
@@ -31,17 +45,33 @@ const OWN_VERCEL_PREVIEW_RE = /^hex-yt-intel-[a-z0-9-]+\.vercel\.app$/;
 /** True for this app's own production/legacy origins or its own preview deployments -- never any arbitrary *.vercel.app host. */
 function isTrustedProductionOrigin(origin: string): boolean {
   if (PRODUCTION_ORIGINS.includes(origin)) return true;
+  // Malformed origin: fail closed BEFORE the try block (Cubic PR #442
+  // review group 9). The URL constructor can be lenient with inputs like
+  // "http://foo bar.com" (spaces get percent-encoded rather than
+  // rejected), so guard with an RFC 3986-ish shape check first -- and
+  // never log a raw, attacker-controlled string.
+  if (!/^https?:\/\/[^\s/]+$/.test(origin)) return false;
   try {
     const hostname = new URL(origin).hostname.toLowerCase();
     return OWN_VERCEL_PREVIEW_RE.test(hostname);
-  } catch {
+  } catch (error) {
+    console.error("[CORS]", error);
     return false;
   }
 }
 
-export function resolveCorsOrigin(origin: string | undefined): string | null {
+/**
+ * Prod-gated CORS origin resolution. Localhost trust is dev-only: in
+ * production (or when production-ness cannot be determined — fail closed)
+ * localhost origins resolve to null so no dev trust path leaks. Callers
+ * pass `isProd` from isProductionEnv(env); defaults to true.
+ */
+export function resolveCorsOrigin(
+  origin: string | undefined,
+  isProd: boolean = true,
+): string | null {
   if (!origin) return null;
-  if (LOCAL_DEV_ORIGINS.includes(origin)) return origin;
+  if (!isProd && LOCAL_DEV_ORIGINS.includes(origin)) return origin;
   return isTrustedProductionOrigin(origin) ? origin : null;
 }
 
@@ -70,11 +100,12 @@ export function isValidAppUrl(
     if (!isProd && localhost) return true;
 
     return isTrustedProductionOrigin(origin);
-  } catch {
+  } catch (error) {
+    console.error("[CORS]", error);
     return false;
   }
 }
 
-export const corsMiddleware: MiddlewareHandler = async (c, next) => {
+export const corsMiddleware: MiddlewareHandler = async (ctx, next) => {
   await next();
 };

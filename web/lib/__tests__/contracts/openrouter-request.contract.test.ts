@@ -127,7 +127,7 @@ describe('CONTRACT: OpenRouter chat-completions request shape (Tech Debt Ledger 
   it('[web/lib/intelligence/relations-engine.ts:89-102] request body matches contract', () => {
     // Field-for-field from callStanceModelStream()'s fetch body.
     const body = {
-      model: 'anthropic/claude-haiku-4.5',
+      model: 'test/model-a',
       temperature: 0.3,
       max_tokens: 1500,
       stream: true,
@@ -182,7 +182,7 @@ describe('CONTRACT: OpenRouter chat-completions request shape (Tech Debt Ledger 
   it('[worker/src/services/LLMCascade.ts:301-318 streamCascade] request body matches contract', () => {
     // Field-for-field from LLMCascade.streamCascade()'s primary fetch body.
     const body = {
-      model: 'anthropic/claude-haiku-4.5',
+      model: 'test/model-a',
       temperature: 1,
       max_tokens: 8192,
       stream: true,
@@ -198,7 +198,7 @@ describe('CONTRACT: OpenRouter chat-completions request shape (Tech Debt Ledger 
   it('[worker/src/services/LLMCascade.ts:468-478 non-streaming variant] request body matches contract', () => {
     // Same site, second fetch call (no `stream` key -- non-streaming path).
     const body = {
-      model: 'anthropic/claude-haiku-4.5',
+      model: 'test/model-a',
       temperature: 1,
       max_tokens: 8192,
       reasoning: { effort: 'low' },

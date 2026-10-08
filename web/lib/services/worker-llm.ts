@@ -1,6 +1,7 @@
 import { env } from '@/lib/env';
 import { getUCISPrompt } from '@/lib/prompts/factory';
 import { PersonaId } from '@/lib/prompts';
+import { isTrustedWorkerOrigin } from '@/lib/utils/worker-origin-allowlist';
 
 export interface WorkerLLMRequest {
   videoId: string;
@@ -61,12 +62,9 @@ export async function callWorkerLLMAnalysis(
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
-    // Validate worker URL against SSRF allowlist
-    const allowedOrigins = new Set([
-      'yt-intel.hex-tech-lab.workers.dev',
-    ]);
+    // Validate worker URL against SSRF allowlist (shared helper — single source of truth)
     const urlObj = new URL(workerUrl);
-    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
+    const isAllowedOrigin = urlObj.protocol === 'https:' && isTrustedWorkerOrigin(urlObj.hostname);
 
     if (!isAllowedOrigin) {
       console.error('[callWorkerLLMAnalysis] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });

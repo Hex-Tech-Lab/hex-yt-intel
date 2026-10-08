@@ -176,6 +176,54 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     };
   }, [dimension, onClose, setOverlayOpen]);
 
+  const [drawerWidth, setDrawerWidth] = useState<number>(390);
+  const isDraggingRef = useRef(false);
+
+  // Shared clamp: min 320px, max min(80vw, 800px) — identical bounds for
+  // pointer drags and keyboard resize so both input paths stay in range.
+  const clampWidth = useCallback(
+    (width: number) => Math.min(Math.max(width, 320), Math.min(window.innerWidth * 0.8, 800)),
+    []
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      const startX = e.clientX;
+      const startWidth = drawerWidth;
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (!isDraggingRef.current) return;
+        setDrawerWidth(clampWidth(startWidth + (startX - moveEvent.clientX)));
+      };
+
+      const handlePointerUp = () => {
+        isDraggingRef.current = false;
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+      };
+
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+    },
+    [drawerWidth, clampWidth]
+  );
+
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 64 : 16;
+      let handled = true;
+      if (e.key === 'ArrowLeft') setDrawerWidth((w) => clampWidth(w + step));
+      else if (e.key === 'ArrowRight') setDrawerWidth((w) => clampWidth(w - step));
+      else if (e.key === 'Home') setDrawerWidth(clampWidth(800));
+      else if (e.key === 'End') setDrawerWidth(clampWidth(320));
+      else handled = false;
+      if (handled) e.preventDefault();
+    },
+    [clampWidth]
+  );
+
   if (!dimension) return null;
 
   return (
@@ -188,8 +236,25 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label={`${dimension.label} details`}
-        className="fixed right-0 top-0 bottom-0 w-[min(90vw,390px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
+        style={{ width: `${drawerWidth}px`, maxWidth: '90vw' }}
+        className="fixed right-0 top-0 bottom-0 bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
+        {/* Resize Handle — focusable separator: pointer drag + arrow-key
+            resize (Shift = larger step), Home/End jump to max/min. */}
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label="Resize panel"
+          aria-valuenow={Math.round(drawerWidth)}
+          aria-valuemin={320}
+          aria-valuemax={Math.round(Math.min(window.innerWidth * 0.8, 800))}
+          onPointerDown={handlePointerDown}
+          onKeyDown={handleResizeKeyDown}
+          className="absolute left-0 top-0 bottom-0 w-2 -translate-x-1 cursor-col-resize hover:bg-[var(--accent)]/30 transition-colors z-[102] focus-visible:bg-[var(--accent)]/50 focus-visible:outline-none"
+          title="Drag or use arrow keys to resize panel"
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]">
           <div className="flex items-center gap-2">

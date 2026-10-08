@@ -1,13 +1,33 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { resolveCorsOrigin, isValidAppUrl } from "../middleware/cors";
 
 describe("resolveCorsOrigin", () => {
+  it("accepts localhost in dev", () => {
+    expect(resolveCorsOrigin("http://localhost:3000", false)).toBe("http://localhost:3000");
+    expect(resolveCorsOrigin("http://localhost:3005", false)).toBe("http://localhost:3005");
+  });
+
+  it("rejects localhost in production (dev trust is prod-gated, fail-closed default)", () => {
+    expect(resolveCorsOrigin("http://localhost:3000", true)).toBeNull();
+    expect(resolveCorsOrigin("http://localhost:3005", true)).toBeNull();
+    // unknown prod-ness defaults to production (fail closed)
+    expect(resolveCorsOrigin("http://localhost:3000")).toBeNull();
+  });
+
+  it("accepts exact production and legacy origins in production regardless of dev gating", () => {
+    expect(resolveCorsOrigin("https://getvintel.com", true)).toBe("https://getvintel.com");
+    expect(resolveCorsOrigin("https://hex-yt-intel-abc123.vercel.app", true)).toBe("https://hex-yt-intel-abc123.vercel.app");
+  });
+
   it("accepts exact production and legacy origins", () => {
     expect(resolveCorsOrigin("https://getvintel.com")).toBe("https://getvintel.com");
     expect(resolveCorsOrigin("https://www.getvintel.com")).toBe("https://www.getvintel.com");
+    // UAT environment origin (2026-10-06 incident: its absence made every
+    // browser request from uat.getvintel.com fail CORS as "Failed to fetch")
+    expect(resolveCorsOrigin("https://uat.getvintel.com")).toBe("https://uat.getvintel.com");
     expect(resolveCorsOrigin("https://yt-intel.getmytestdrive.com")).toBe("https://yt-intel.getmytestdrive.com");
     expect(resolveCorsOrigin("https://v-intel.getmytestdrive.com")).toBe("https://v-intel.getmytestdrive.com");
-    expect(resolveCorsOrigin("http://localhost:3000")).toBe("http://localhost:3000");
+    expect(resolveCorsOrigin("http://localhost:3000", false)).toBe("http://localhost:3000");
   });
 
   it("accepts this app's own vercel preview deployments", () => {
@@ -33,6 +53,18 @@ describe("resolveCorsOrigin", () => {
 
   it("returns null for no origin", () => {
     expect(resolveCorsOrigin(undefined)).toBeNull();
+  });
+
+  it("rejects a malformed origin before parsing and without logging (PR #442 group 9)", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // Contains a space: URL accepts it (percent-encodes), the regex
+      // pre-check does not.
+      expect(resolveCorsOrigin("http://foo bar.com")).toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
 

@@ -253,8 +253,10 @@ export interface WorkerStreamRequest {
   models?: string[];
   // Full registry-resolved cascade (2026-07-25, includes providerOrder per tier)
   // -- see CreateAnalysisUseCase's resolveAnalysisCascade() and StreamRequest.cascade
-  // in worker/src/routes/analysis.ts.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  // in worker/src/routes/analysis.ts. ADR 041: resolve time also stamps per-tier
+  // dispatch capabilities (maxOutputTokens, requiresProviderOrder) so the worker's
+  // dispatch code is model-agnostic — no inline model-ID comparisons.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean }>;
   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
   maxOutputTokens?: { haiku: number; default: number };
@@ -358,3 +360,43 @@ export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
  * Contains validated success and cancel URLs on app domain.
  */
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
+
+// ─── Epistemic Schism / Part A: Grounded Extraction ──────────────────────────
+export const ExtractedClaimSchema = z
+  .object({
+    id: z.string().min(1),
+    speaker: z.string().optional(),
+    timestampRange: z.tuple([z.number().min(0), z.number().min(0)]),
+    verbatimQuote: z.string().min(1),
+    atomicAssertion: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+  })
+  // [startSeconds, endSeconds] — a reversed range (end before start) is
+  // malformed model output, not a valid interval.
+  .refine((claim) => claim.timestampRange[1] >= claim.timestampRange[0], {
+    message: 'timestampRange end must be >= start',
+    path: ['timestampRange'],
+  });
+
+export const GroundedExtractionMetadataSchema = z.object({
+  speakerCount: z.number().int().min(0),
+  durationSeconds: z.number().min(0),
+  classification: z.enum(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']),
+});
+
+export const GroundedExtractionPayloadSchema = z
+  .object({
+    claims: z.array(ExtractedClaimSchema),
+    unknowns: z.array(z.string()),
+    metadata: GroundedExtractionMetadataSchema,
+  })
+  // Duplicate claim IDs make downstream per-claim lookups ambiguous
+  // (indices/keys assumed unique); reject them at the boundary.
+  .refine(
+    (payload) => new Set(payload.claims.map((c) => c.id)).size === payload.claims.length,
+    { message: 'Duplicate claim IDs are not allowed', path: ['claims'] }
+  );
+
+export type ExtractedClaim = z.infer<typeof ExtractedClaimSchema>;
+export type GroundedExtractionMetadata = z.infer<typeof GroundedExtractionMetadataSchema>;
+export type GroundedExtractionPayload = z.infer<typeof GroundedExtractionPayloadSchema>;

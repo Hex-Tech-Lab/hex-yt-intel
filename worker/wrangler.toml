@@ -47,6 +47,38 @@ enabled = true
 persist = true
 head_sampling_rate = 1
 
+[env.uat]
+name = "youtube-intelligence-worker-uat"
+workers_dev = true
+vars = { REGION = "eu-west-3", WORKER_NAME = "youtube-intelligence-worker-uat", ENVIRONMENT = "uat", APP_URL = "https://uat.getvintel.com", SUPABASE_POOLER_URL = "postgresql://postgres.adnmbikaqnxivalqoild@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" }
+
+[[env.uat.queues.producers]]
+queue = "yt-intel-comments-tier3-uat"
+binding = "COMMENTS_TIER3_QUEUE"
+
+[[env.uat.queues.consumers]]
+queue = "yt-intel-comments-tier3-uat"
+max_batch_size = 1
+max_retries = 3
+dead_letter_queue = "yt-intel-comments-tier3-uat-dlq"
+
+[env.uat.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.uat.observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+# Mirror production's trace persistence so UAT traces survive invocation end
+# (parity with [env.production.observability.traces] above).
+[env.uat.observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
 [build]
 command = "pnpm run build"
 

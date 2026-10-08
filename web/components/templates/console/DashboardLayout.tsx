@@ -1,8 +1,15 @@
 'use client';
 
 import { ReactNode, useEffect, useRef } from 'react';
+import { Group, Panel, Separator, useGroupRef } from 'react-resizable-panels';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
+import {
+  DEFAULT_LAYOUT,
+  registerResetSink,
+  useDashboardPanels,
+  type LayoutShape,
+} from '@/lib/hooks/useDashboardLayout';
 
 // See /docs/ui/dashboard-layout.md
 
@@ -99,10 +106,58 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
     'fixed inset-y-1 z-50 w-[300px] max-w-[86vw] shadow-2xl transition-transform duration-300 ease-out ' +
     'xl:static xl:inset-auto xl:z-auto xl:w-full xl:max-w-none xl:h-full xl:shadow-none xl:translate-x-0 xl:transition-none';
 
+  // Resizable desktop panels (xl+ only). `shape` keys the per-shape
+  // localStorage layout (2-column vs 3-column -- rightPanel is optional,
+  // and mixing percentages across different panel counts would collide).
+  const shape: LayoutShape = rightPanel ? '3col' : '2col';
+  const { isDesktop, sidebarSize, rightSize, handleLayoutChanged } =
+    useDashboardPanels(shape);
+
+  const groupRef = useGroupRef();
+
+  // Register the imperative reset bridge: Reset Layout snaps the live
+  // Group back to its defaultSize props (via setLayout with the historic
+  // fixed-grid percentages) without a reload. Registered only while the
+  // desktop panel group is actually mounted.
+  useEffect(() => {
+    if (!isDesktop) return;
+    registerResetSink(() => {
+      // setLayout requires a complete layout (all panel ids) and validates
+      // percentages sum to ~100: center absorbs the remainder, derived from
+      // DEFAULT_LAYOUT so the reset target and the hydrated defaults share
+      // one source of truth.
+      const { sidebar, right } = DEFAULT_LAYOUT[shape];
+      groupRef.current?.setLayout(
+        shape === '3col'
+          ? { sidebar, center: 100 - sidebar - right, right }
+          : { sidebar, center: 100 - sidebar }
+      );
+    });
+    return () => registerResetSink(null);
+  }, [isDesktop, shape, groupRef]);
+
+  const onGroupLayoutChanged = handleLayoutChanged;
+
+  // Drag handle chrome: Tailwind-only (frozen stack, no imported CSS).
+  // The hairline bar is painted by ::before on a wide hit area so the
+  // grab target stays comfortable while the visible affordance stays
+  // thin. The library exposes drag state via data-separator-overlay /
+  // data-state on the Group; hover/active accent handled with plain
+  // Tailwind utilities on the wrapper's children via group selectors.
+  const separatorClass =
+    'group/sep relative flex w-[9px] shrink-0 cursor-col-resize items-center justify-center outline-none ' +
+    'before:h-full before:w-px before:bg-[var(--line)] before:transition-colors before:duration-150 ' +
+    'group-hover/sep:before:bg-[var(--ink-muted)] focus-visible:before:bg-[var(--accent)] ' +
+    'data-[resize-active]:before:bg-[var(--accent)]';
+
+  const showDesktopPanels = isDesktop;
+
   return (
-    <div className={`grid h-[100dvh] xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden xl:overflow-hidden gap-1 p-1 sm:p-1.5 grid-cols-1 ${
-      rightPanel ? "xl:grid-cols-[260px_1fr_390px]" : "xl:grid-cols-[260px_1fr]"
-    }`}>
+    <div
+      className={`grid h-[100dvh] xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden xl:overflow-hidden gap-1 p-1 sm:p-1.5 grid-cols-1 ${
+        showDesktopPanels ? '' : rightPanel ? 'xl:grid-cols-[260px_1fr_390px]' : 'xl:grid-cols-[260px_1fr]'
+      }`}
+    >
       {/* Mobile drawer backdrop */}
       {anyDrawerOpen && (
         <div
@@ -125,52 +180,134 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         />
       )}
 
-      {/* Left sidebar — hamburger drawer on mobile, static column on desktop */}
-      <aside
-        inert={isAnyOverlayOpen ? true : undefined}
-        className={`${drawerBase} left-1 bg-[var(--void)] xl:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+0.5rem)]'}`}
-      >
-        {sidebar}
-      </aside>
-
-      <main
-        // Deliberately NOT inert'd, on any breakpoint: the backdrop below
-        // (bg-black/60, z-40, its own click-to-close handler) already blocks
-        // accidental interaction with main while a drawer/dimension overlay
-        // is open -- inert additionally froze all touch-scroll and video
-        // playback inside main, which on iOS/iPadOS Safari specifically
-        // reads as "scroll is stuck" (user-confirmed direction 2026-08-07:
-        // keep main scrollable everywhere, backdrop alone is enough -- match
-        // the desktop/wide-viewport experience, where main was never inert'd
-        // in the first place, on every breakpoint including the "stacked"
-        // one this used to gate on).
-        className="relative flex flex-col h-[calc(100dvh-0.5rem)] sm:h-[calc(100dvh-0.75rem)] xl:h-full min-w-0 overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl [transform:translateZ(0)] [-webkit-transform:translateZ(0)]"
-      >
-        <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20 flex-shrink-0">
-          {topbar}
-        </header>
-
-        <div
-          ref={mainScrollRef}
-          className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth [-webkit-overflow-scrolling:touch] [overscroll-behavior-y:contain]"
+      {showDesktopPanels ? (
+        <Group
+          groupRef={groupRef}
+          id={`console-dashboard-${shape}`}
+          orientation="horizontal"
+          onLayoutChanged={onGroupLayoutChanged}
+          className="col-span-full flex h-full min-h-0 gap-1 p-1 sm:p-1.5"
         >
-          <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
-            <div className="flex-1 min-w-0">
-              {children}
+          <Panel
+            id="sidebar"
+            defaultSize={sidebarSize ?? 18}
+            minSize="10%"
+            maxSize="30%"
+            className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--void)]"
+          >
+            <div
+              inert={isAnyOverlayOpen ? true : undefined}
+              className="h-full overflow-y-auto"
+            >
+              {sidebar}
             </div>
-          </div>
-        </div>
+          </Panel>
 
-        {dock}
-      </main>
+          <Separator className={separatorClass} aria-label="Resize sidebar" />
 
-      {rightPanel && (
-        <aside
-          inert={isAnyOverlayOpen ? true : undefined}
-          className={`${drawerBase} right-1 bg-[var(--surface)] p-1.5 px-2 xl:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+0.5rem)]'}`}
-        >
-          {rightPanel}
-        </aside>
+          <Panel id="center" className="min-w-0">
+            <main
+              // Deliberately NOT inert'd, on any breakpoint: the backdrop below
+              // (bg-black/60, z-40, its own click-to-close handler) already blocks
+              // accidental interaction with main while a drawer/dimension overlay
+              // is open -- inert additionally froze all touch-scroll and video
+              // playback inside main, which on iOS/iPadOS Safari specifically
+              // reads as "scroll is stuck" (user-confirmed direction 2026-08-07:
+              // keep main scrollable everywhere, backdrop alone is enough -- match
+              // the desktop/wide-viewport experience, where main was never inert'd
+              // in the first place, on every breakpoint including the "stacked"
+              // one this used to gate on).
+              className="relative flex h-full flex-col overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl [transform:translateZ(0)] [-webkit-transform:translateZ(0)]"
+            >
+              <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20 flex-shrink-0">
+                {topbar}
+              </header>
+
+              <div
+                ref={mainScrollRef}
+                className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth [-webkit-overflow-scrolling:touch] [overscroll-behavior-y:contain]"
+              >
+                <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
+                  <div className="flex-1 min-w-0">
+                    {children}
+                  </div>
+                </div>
+              </div>
+
+              {dock}
+            </main>
+          </Panel>
+
+          {shape === '3col' && (
+            <>
+              <Separator className={separatorClass} aria-label="Resize intelligence panel" />
+              <Panel
+                id="right"
+                defaultSize={rightSize ?? 18}
+                minSize="10%"
+                maxSize="35%"
+                className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 px-2"
+              >
+                <div
+                  inert={isAnyOverlayOpen ? true : undefined}
+                  className="h-full overflow-y-auto"
+                >
+                  {rightPanel}
+                </div>
+              </Panel>
+            </>
+          )}
+        </Group>
+      ) : (
+        <>
+          {/* Left sidebar — hamburger drawer on mobile, static column on desktop */}
+          <aside
+            inert={isAnyOverlayOpen ? true : undefined}
+            className={`${drawerBase} left-1 bg-[var(--void)] xl:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+0.5rem)]'}`}
+          >
+            {sidebar}
+          </aside>
+
+          <main
+            // Deliberately NOT inert'd, on any breakpoint: the backdrop below
+            // (bg-black/60, z-40, its own click-to-close handler) already blocks
+            // accidental interaction with main while a drawer/dimension overlay
+            // is open -- inert additionally froze all touch-scroll and video
+            // playback inside main, which on iOS/iPadOS Safari specifically
+            // reads as "scroll is stuck" (user-confirmed direction 2026-08-07:
+            // keep main scrollable everywhere, backdrop alone is enough -- match
+            // the desktop/wide-viewport experience, where main was never inert'd
+            // in the first place, on every breakpoint including the "stacked"
+            // one this used to gate on).
+            className="relative flex flex-col h-[calc(100dvh-0.5rem)] sm:h-[calc(100dvh-0.75rem)] xl:h-full min-w-0 overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl [transform:translateZ(0)] [-webkit-transform:translateZ(0)]"
+          >
+            <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20 flex-shrink-0">
+              {topbar}
+            </header>
+
+            <div
+              ref={mainScrollRef}
+              className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth [-webkit-overflow-scrolling:touch] [overscroll-behavior-y:contain]"
+            >
+              <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
+                <div className="flex-1 min-w-0">
+                  {children}
+                </div>
+              </div>
+            </div>
+
+            {dock}
+          </main>
+
+          {rightPanel && (
+            <aside
+              inert={isAnyOverlayOpen ? true : undefined}
+              className={`${drawerBase} right-1 bg-[var(--surface)] p-1.5 px-2 xl:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+0.5rem)]'}`}
+            >
+              {rightPanel}
+            </aside>
+          )}
+        </>
       )}
     </div>
   );

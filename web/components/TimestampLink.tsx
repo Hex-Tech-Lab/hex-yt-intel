@@ -1,13 +1,20 @@
 'use client';
 
+import { useCallback } from 'react';
 import { Link } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
-import { useCallback } from 'react';
 
 export interface TimestampLinkProps {
   timestamp: string; // Format: HH:MM:SS or MM:SS or just seconds
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Render as a semantic `<button type="button">` instead of an `<a>`.
+   * Dimension-content timestamps are seek controls, not navigation links;
+   * the `href`-bearing `<a>` form is kept for contexts that genuinely need
+   * an anchor (default).
+   */
+  asButton?: boolean;
 }
 
 /**
@@ -41,10 +48,19 @@ export const parseTimestamp = (timestamp: string): number => {
 };
 
 /**
+ * Shared global-stylesheet class for seek buttons (styled in
+ * `web/app/globals.css`). Layout utilities stay inline; every visual state
+ * (hover/active/focus) lives in the single centralized rule so all
+ * timestamp buttons across dimension views restyle in one place.
+ */
+const SEEK_BUTTON_UTILITY_CLASS = 'inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors cursor-pointer';
+const SEEK_BUTTON_CLASS = `hx-timestamp-seek ${SEEK_BUTTON_UTILITY_CLASS}`;
+
+/**
  * TimestampLink component for clickable timestamps in video content
  * Clicking the timestamp seeks the video player to that position
  */
-export function TimestampLink({ timestamp, children, className = '' }: TimestampLinkProps) {
+export function TimestampLink({ timestamp, children, className = '', asButton = false }: TimestampLinkProps) {
   // Scoped selector, not `useVideoStore()` (whole-store subscription) --
   // this store now also carries currentPlaybackSeconds, updated 4x/sec
   // while playing (post-review finding, 2026-08-06); a whole-store
@@ -53,7 +69,7 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
   const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const seconds = parseTimestamp(timestamp);
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -71,6 +87,25 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
       }
     }
   }, [seconds, setSeekTo]);
+
+  if (asButton) {
+    return (
+      <button
+        type="button"
+        className={`${SEEK_BUTTON_CLASS} ${className}`}
+        onClick={handleClick}
+        aria-label={`Seek to ${timestamp}`}
+        data-timestamp={timestamp}
+      >
+        {children || (
+          <>
+            <span aria-hidden="true">⏱</span>
+            <span>{timestamp}</span>
+          </>
+        )}
+      </button>
+    );
+  }
 
   return (
     <Link

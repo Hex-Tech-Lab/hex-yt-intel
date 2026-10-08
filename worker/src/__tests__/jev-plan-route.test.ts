@@ -28,7 +28,7 @@ const PLAN_URL = `${APP_URL}/api/analyses/${ANALYSIS_ID}/plan`;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DELTA_TOKEN = 'HELLO_GROUNDED_TOKEN';
 
-const CASCADE = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku 4.5', providerOrder: ['anthropic'] }];
+const CASCADE = [{ model: 'test/model-a', name: 'Model A', providerOrder: ['anthropic'] }];
 
 function makePlan() {
   return {

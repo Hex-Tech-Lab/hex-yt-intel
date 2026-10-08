@@ -1,6 +1,9 @@
 {
   "framework": "nextjs",
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": {
+      "phase-c": true,
+      "*": false
+    }
   }
 }
