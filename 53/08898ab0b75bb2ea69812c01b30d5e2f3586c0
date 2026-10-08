@@ -1,0 +1,21 @@
+docs/reviews/pr442-triage-g5.md
+  s_f2d42573e639f0::t_76d5ad3f95e02b 1-49
+worker/src/middleware/cors.ts
+  s_f2d42573e639f0::t_d95652b2483acb 23-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5308898ab0b75bb2ea69812c01b30d5e2f3586c0",
+  "prompts": {},
+  "sessions": {
+    "s_f2d42573e639f0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee4fe087dffeYlA367qLgn0h8d",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
