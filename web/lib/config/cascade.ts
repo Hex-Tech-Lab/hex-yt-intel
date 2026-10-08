@@ -186,7 +186,12 @@ function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asser
  */
 export const CASCADE_MODEL_ALLOWLIST: readonly string[] = Array.from(
   new Set(
-    Object.values(CASCADE_FALLBACKS).flatMap((cascade) => cascade.map((item) => item.model)),
+    [
+      ...Object.values(CASCADE_FALLBACKS).flatMap((cascade) => cascade.map((item) => item.model)),
+      // Capability-registered models are legitimate registry choices even when no
+      // fallback tier uses them (e.g. haiku-4.5 kept for rollback after the 5.5 switch).
+      ...Object.keys(MODEL_CAPABILITIES),
+    ],
   ),
 ).sort();
 
@@ -211,7 +216,9 @@ function parseValidTokenCap(key: string, val: unknown, fallback: number): number
 
 async function resolveCascade(key: CascadeRegistryKey, fallback: readonly CascadeItem[]): Promise<CascadeItem[]> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
-    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS, ...REASONING_REGISTRY_KEYS],
+    // Reasoning keys are analysis-only: other cascades never read or validate them,
+    // so a bad analysis.reasoning.* value cannot break chat/digest/stance resolution.
+    [key, ...OUTPUT_TOKEN_REGISTRY_KEYS, ...(key === 'cascade.analysis' ? REASONING_REGISTRY_KEYS : [])],
     {
       [key]: fallback as CascadeItem[],
       'analysis.maxOutputTokens.haiku': OUTPUT_TOKEN_FALLBACKS.haiku,
@@ -224,7 +231,7 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
     haiku: parseValidTokenCap('analysis.maxOutputTokens.haiku', resolved['analysis.maxOutputTokens.haiku'], OUTPUT_TOKEN_FALLBACKS.haiku),
     default: parseValidTokenCap('analysis.maxOutputTokens.default', resolved['analysis.maxOutputTokens.default'], OUTPUT_TOKEN_FALLBACKS.default),
   };
-  const reasoning = {
+  const reasoning = key !== 'cascade.analysis' ? null : {
     grounded: parseReasoningEffort('analysis.reasoning.grounded', resolved['analysis.reasoning.grounded'], REASONING_FALLBACKS.grounded),
     projective: parseReasoningEffort('analysis.reasoning.projective', resolved['analysis.reasoning.projective'], REASONING_FALLBACKS.projective),
   };
@@ -242,12 +249,14 @@ async function resolveCascade(key: CascadeRegistryKey, fallback: readonly Cascad
   // analysis.maxOutputTokens.default fallback remains the live source for them.
   return items.map((item) => {
     const caps = MODEL_CAPABILITIES[item.model];
-    // Reasoning is stamped on EVERY tier; a model that mandates reasoning never gets 'none'.
+    // Analysis tiers all get a reasoning stamp; a model that mandates reasoning never gets 'none'.
     const noneAllowed = caps?.reasoningMandatory !== true;
-    const reasoningStamp = {
-      reasoningGrounded: reasoning.grounded === 'none' && !noneAllowed ? 'low' : reasoning.grounded,
-      reasoningProjective: reasoning.projective === 'none' && !noneAllowed ? 'low' : reasoning.projective,
-    } satisfies Pick<CascadeItem, 'reasoningGrounded' | 'reasoningProjective'>;
+    const reasoningStamp: Pick<CascadeItem, 'reasoningGrounded' | 'reasoningProjective'> = reasoning
+      ? {
+          reasoningGrounded: reasoning.grounded === 'none' && !noneAllowed ? 'low' : reasoning.grounded,
+          reasoningProjective: reasoning.projective === 'none' && !noneAllowed ? 'low' : reasoning.projective,
+        }
+      : {};
     if (!caps) return { ...item, ...reasoningStamp };
     if (caps.requiresProviderOrder && (!Array.isArray(item.providerOrder) || item.providerOrder.length === 0)) {
       throw new Error(`Cascade Registry SSOT Violation (${key}): model '${item.model}' requires a non-empty providerOrder`);

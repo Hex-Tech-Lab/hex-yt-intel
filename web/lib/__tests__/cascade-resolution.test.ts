@@ -169,3 +169,23 @@ describe('resolveCascade reasoning stamping (analysis.reasoning.*)', () => {
     await expect(resolveAnalysisCascade()).rejects.toThrow(/analysis\.reasoning\.grounded/);
   });
 });
+
+describe('reasoning keys are scoped to cascade.analysis (PR #443 review)', () => {
+  it('chat resolution neither reads nor validates analysis.reasoning.* (an invalid value cannot break it)', async () => {
+    getRegistrySettings.mockImplementation((keys, fallback) => {
+      const out = { ...fallback } as Record<string, unknown>;
+      out['analysis.reasoning.grounded'] = 'high';
+      return Promise.resolve(out as typeof fallback);
+    });
+    const items = await resolveChatCascade();
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i) => i.reasoningGrounded === undefined && i.reasoningProjective === undefined)).toBe(true);
+    const requestedKeys = getRegistrySettings.mock.calls.at(-1)?.[0] as string[];
+    expect(requestedKeys.some((k) => k.startsWith('analysis.reasoning.'))).toBe(false);
+  });
+
+  it('allowlist accepts capability-registered rollback models absent from fallbacks', () => {
+    expect(CASCADE_MODEL_ALLOWLIST).toContain('anthropic/claude-haiku-4.5');
+    expect(CASCADE_MODEL_ALLOWLIST).toContain('anthropic/claude-haiku-5.5');
+  });
+});
