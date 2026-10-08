@@ -17,7 +17,7 @@ import {
 
 const getRegistrySettings = vi.mocked(SupabaseSettingsAdapter.getRegistrySettings);
 
-const HAIKU_TIERS = CASCADE_FALLBACKS.analysis.filter((i) => i.model === 'anthropic/claude-haiku-4.5');
+const HAIKU_TIERS = CASCADE_FALLBACKS.analysis.filter((i) => i.model === 'anthropic/claude-haiku-5.5');
 
 beforeEach(() => {
   getRegistrySettings.mockReset();
@@ -28,7 +28,7 @@ beforeEach(() => {
 describe('resolveCascade capability stamping (ADR 041)', () => {
   it('stamps the haiku output cap + provider-pinning requirement on fallback items when the registry is absent', async () => {
     const items = await resolveAnalysisCascade();
-    const haiku = items.find((i) => i.name === 'Claude Haiku 4.5 (Vertex)');
+    const haiku = items.find((i) => i.name === 'Claude Haiku 5.5 (Vertex)');
     expect(haiku?.maxOutputTokens).toBe(8192);
     expect(haiku?.requiresProviderOrder).toBe(true);
     // Unbound tiers stay unstamped — the worker's forwarded default cap remains their live source.
@@ -38,7 +38,7 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
   });
 
   it('stamps capabilities by model ID onto registry-resolved items (DB values carry no capability fields)', async () => {
-    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku (Vertex)', providerOrder: ['google-vertex'] }];
+    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-5.5', name: 'Haiku (Vertex)', providerOrder: ['google-vertex'] }];
     getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = dbValue;
@@ -52,7 +52,7 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
   });
 
   it('rejects a tier requiring provider order when providerOrder is missing or empty', async () => {
-    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku (Vertex)' }];
+    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-5.5', name: 'Haiku (Vertex)' }];
     getRegistrySettings.mockImplementation((keys, fallback) => {
       const out = { ...fallback } as Record<string, unknown>;
       out['cascade.analysis'] = dbValue;
@@ -70,7 +70,7 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
     });
 
     const items = await resolveAnalysisCascade();
-    const haiku = items.find((i) => i.model === 'anthropic/claude-haiku-4.5');
+    const haiku = items.find((i) => i.model === 'anthropic/claude-haiku-5.5');
     expect(haiku?.maxOutputTokens).toBe(6000);
   });
 
@@ -110,12 +110,31 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
   });
 
   it('the ADR 040 allowlist still derives from the fallbacks (haiku included)', () => {
-    expect(CASCADE_MODEL_ALLOWLIST).toContain('anthropic/claude-haiku-4.5');
+    expect(CASCADE_MODEL_ALLOWLIST).toContain('anthropic/claude-haiku-5.5');
     expect(HAIKU_TIERS.length).toBe(4);
+  });
+
+  it('haiku 5.5 is capability-bound (8192 cap + provider pinning) and in the allowlist', async () => {
+    expect(CASCADE_MODEL_ALLOWLIST).toContain('anthropic/claude-haiku-5.5');
+    const dbValue: CascadeItem[] = [{ model: 'anthropic/claude-haiku-5.5', name: 'Haiku 5.5 (Vertex)', providerOrder: ['google-vertex'] }];
+    getRegistrySettings.mockImplementation((keys, fallback) => {
+      const out = { ...fallback } as Record<string, unknown>;
+      out['cascade.analysis'] = dbValue;
+      return Promise.resolve(out as typeof fallback);
+    });
+    const items = await resolveAnalysisCascade();
+    expect(items[0]?.maxOutputTokens).toBe(8192);
+    expect(items[0]?.requiresProviderOrder).toBe(true);
+  });
+
+  it('analysis fallback runs on haiku 5.5 tiers, not 4.5', () => {
+    const haikuModels = CASCADE_FALLBACKS.analysis.filter((i) => i.model.includes('haiku')).map((i) => i.model);
+    expect(haikuModels.length).toBe(4);
+    expect(haikuModels.every((m) => m === 'anthropic/claude-haiku-5.5')).toBe(true);
   });
 });
 
 function MODEL_CAPABILITIES_HAS(model: string): boolean {
   // chat cascade's models are not capability-bound (see MODEL_CAPABILITIES in cascade.ts)
-  return model === 'anthropic/claude-haiku-4.5';
+  return model === 'anthropic/claude-haiku-5.5';
 }

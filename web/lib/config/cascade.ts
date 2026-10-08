@@ -55,10 +55,10 @@ const ANALYSIS_CASCADE_FALLBACK: readonly CascadeItem[] = [
   // Provider order (2026-08-18, explicit user directive): Vertex/global first,
   // Azure second, Bedrock third -- same model/cost, Bedrock observed slower
   // in practice. Anthropic Direct kept as a fallback ahead of Bedrock.
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Vertex)', cost: 0.003, providerOrder: ['google-vertex'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Anthropic Direct)', cost: 0.003, providerOrder: ['anthropic'] },
 ];
@@ -131,6 +131,7 @@ export type CascadeRegistryKey =
  */
 const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requiresProviderOrder?: boolean }>> = {
   'anthropic/claude-haiku-4.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
+  'anthropic/claude-haiku-5.5': { tokenCapKey: 'haiku', requiresProviderOrder: true },
 };
 
 const OUTPUT_TOKEN_REGISTRY_KEYS = ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'] as const;
