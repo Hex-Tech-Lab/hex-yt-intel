@@ -35,6 +35,10 @@ export interface GroundedExtractionInput {
   waitUntil?: (promise: Promise<unknown>) => void;
 }
 
+/**
+ * Thrown when the extraction LLM output cannot be parsed or validated.
+ * `rawOutput` carries the untouched model text for diagnostics/remediation.
+ */
 export class GroundedExtractionError extends Error {
   constructor(
     message: string,
@@ -45,12 +49,23 @@ export class GroundedExtractionError extends Error {
   }
 }
 
+/**
+ * Runs Part A of the ADR 039 Epistemic Schism: one sterile extraction LLM pass
+ * over the transcript, strict payload validation, then a non-blocking ghost-row
+ * flush before Part B starts.
+ */
 export class GroundedExtractionEngine {
   constructor(
     private readonly promptBuilder: PromptBuilderPort,
     private readonly cascade: LLMCascadePort,
   ) {}
 
+  /**
+   * Builds the grounded-extraction prompt, streams the LLM response, validates
+   * it into a GroundedExtractionPayload, and schedules the ghost-row flush
+   * (non-blocking via `input.waitUntil` when supplied). Throws
+   * GroundedExtractionError on LLM or validation failure.
+   */
   async extractGroundedClaims(input: GroundedExtractionInput): Promise<GroundedExtractionPayload> {
     const { systemPrompt, userPrompt } = this.promptBuilder.buildGroundedExtractionPrompt(
       input.transcriptChunks,
@@ -108,10 +123,19 @@ export class GroundedExtractionEngine {
     if (input.waitUntil) {
       input.waitUntil(persistPromise);
     }
+    // Without waitUntil the promise is detached by design (ghost-row flush is
+    // best-effort); an unhandled rejection cannot escape because the catch
+    // above already absorbs every flush error.
 
     return payload;
   }
 
+  /**
+   * Parses raw LLM output into a GroundedExtractionPayload. Drops claims with
+   * an invalid timestampRange or empty verbatimQuote, de-duplicates claim IDs,
+   * and keeps the router-decided classification from `fallbackMetadata`.
+   * Throws GroundedExtractionError on unparseable or empty output.
+   */
   public static parseAndValidate(
     rawText: string,
     fallbackMetadata: GroundedExtractionInput['metadata'],
@@ -137,10 +161,22 @@ export class GroundedExtractionEngine {
     const rawClaims = Array.isArray(parsed.claims) ? parsed.claims : [];
     const unknowns = Array.isArray(parsed.unknowns) ? parsed.unknowns.filter((u): u is string => typeof u === 'string') : [];
 
+    // Reject payloads missing BOTH fields (`{}`, truncated output); an explicit
+    // `{claims: [], unknowns: []}` remains a legitimate zero-claim extraction.
+    if (!Array.isArray(parsed.claims) && !Array.isArray(parsed.unknowns)) {
+      throw new GroundedExtractionError(
+        'Extraction LLM returned neither claims nor unknowns (malformed/empty output).',
+        rawText,
+      );
+    }
+
+    const usedClaimIds = new Set<string>();
     const validatedClaims = rawClaims
       .map((rawClaim, index) => {
         const claimObj = rawClaim as Record<string, unknown>;
-        const id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
+        let id = typeof claimObj.id === 'string' && claimObj.id.trim() ? claimObj.id : `claim_${index + 1}`;
+        while (usedClaimIds.has(id)) id = `${id}_${index + 1}`;
+        usedClaimIds.add(id);
         const speaker = typeof claimObj.speaker === 'string' ? claimObj.speaker : undefined;
         const rawRange = Array.isArray(claimObj.timestampRange) ? (claimObj.timestampRange as unknown[]) : null;
         const hasValidRange =
@@ -155,9 +191,11 @@ export class GroundedExtractionEngine {
           : null;
         const verbatimQuote = typeof claimObj.verbatimQuote === 'string' ? claimObj.verbatimQuote.trim() : '';
         const atomicAssertion = typeof claimObj.atomicAssertion === 'string' ? claimObj.atomicAssertion : '';
-        const confidence = typeof claimObj.confidence === 'number' ? Math.max(0, Math.min(1, claimObj.confidence)) : 1.0;
+        // Absent model confidence is scored mid-range, never as certainty.
+        const confidence = typeof claimObj.confidence === 'number' ? Math.max(0, Math.min(1, claimObj.confidence)) : 0.5;
 
         if (!range || !verbatimQuote) {
+          console.warn(`[GroundedExtractionEngine] Dropping invalid claim at index ${index} (invalid timestampRange or empty verbatimQuote).`);
           return null;
         }
 
@@ -172,17 +210,16 @@ export class GroundedExtractionEngine {
       })
       .filter((claim): claim is NonNullable<typeof claim> => claim !== null);
 
+    // Sensor-router provenance (ADR 039): the classification route is decided
+    // upstream by routeFusion and is NOT overridable by the extraction model,
+    // which never sees the router's evidence. Only speaker/duration counts may
+    // be corrected by the model.
     const metaObj = (parsed.metadata && typeof parsed.metadata === 'object' ? parsed.metadata : {}) as Record<string, unknown>;
-    const VALID_ROUTES = new Set(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']);
-    const classification =
-      typeof metaObj.classification === 'string' && VALID_ROUTES.has(metaObj.classification)
-        ? (metaObj.classification as 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6')
-        : fallbackMetadata.classification;
 
     const metadata = {
       speakerCount: typeof metaObj.speakerCount === 'number' ? metaObj.speakerCount : fallbackMetadata.speakerCount,
       durationSeconds: typeof metaObj.durationSeconds === 'number' ? metaObj.durationSeconds : fallbackMetadata.durationSeconds,
-      classification,
+      classification: fallbackMetadata.classification,
     };
 
     return {

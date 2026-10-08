@@ -38,6 +38,10 @@ export interface ProjectiveSynthesisInput {
   persona?: string;
 }
 
+/**
+ * Thrown when the synthesis LLM output cannot be parsed or violates the
+ * ADR 039 grounding constraints. `rawOutput` carries the untouched model text.
+ */
 export class ProjectiveSynthesisError extends Error {
   constructor(
     message: string,
@@ -48,12 +52,22 @@ export class ProjectiveSynthesisError extends Error {
   }
 }
 
+/**
+ * Runs Part B of the ADR 039 Epistemic Schism: projective synthesis over
+ * Part A's validated claims only, with citation of valid claim IDs enforced.
+ */
 export class ProjectiveSynthesisEngine {
   constructor(
     private readonly promptBuilder: PromptBuilderPort,
     private readonly cascade: LLMCascadePort,
   ) {}
 
+  /**
+   * Builds the projective-synthesis prompt from the grounded payload, streams
+   * the LLM response, and validates it into a ProjectiveSynthesisPayload.
+   * Throws ProjectiveSynthesisError on invalid input, LLM failure, or an
+   * ungrounded/empty synthesis.
+   */
   async synthesizeProjections(input: ProjectiveSynthesisInput): Promise<ProjectiveSynthesisPayload> {
     if (!input.groundedPayload || !Array.isArray(input.groundedPayload.claims)) {
       throw new ProjectiveSynthesisError('Part B synthesis requires a valid Part A GroundedExtractionPayload.');
@@ -104,6 +118,13 @@ export class ProjectiveSynthesisEngine {
     );
   }
 
+  /**
+   * Parses raw synthesis LLM output into a ProjectiveSynthesisPayload.
+   * Filters citedClaimIds to valid claim IDs, requires the coreThesis and
+   * every projection to cite at least one valid claim, and skips malformed
+   * projection entries. Throws ProjectiveSynthesisError on unparseable or
+   * ungrounded output.
+   */
   public static parseAndValidate(
     rawText: string,
     groundedPayload: GroundedExtractionPayload,
@@ -132,11 +153,37 @@ export class ProjectiveSynthesisEngine {
       unknown
     >;
 
+    if (Object.keys(synthesisObj).length === 0) {
+      throw new ProjectiveSynthesisError(
+        'Synthesis LLM returned no synthesis object (empty output).',
+        rawText,
+      );
+    }
+
     const coreThesis = typeof synthesisObj.coreThesis === 'string' ? synthesisObj.coreThesis : '';
     const rawProjections = Array.isArray(synthesisObj.projections) ? synthesisObj.projections : [];
 
+    // ADR 039 Epistemic Schism constraint applies to the thesis too: it must
+    // cite at least one valid Part A claim ID, same as every projection.
+    // Vacuous when Part A produced zero claims — there is nothing to cite.
+    if (validClaimIds.size > 0) {
+      const thesisCitations = (coreThesis.match(/\[(claim_[^\]\s]+)\]/g) ?? [])
+        .map((token) => token.slice(1, -1).trim())
+        .filter((cid) => validClaimIds.has(cid));
+      if (thesisCitations.length === 0) {
+        throw new ProjectiveSynthesisError(
+          'Synthesis LLM produced a coreThesis without citing any valid Grounded Claim ID.',
+          rawText,
+        );
+      }
+    }
+
     const projections: StrategicProjection[] = rawProjections
       .map((proj, idx) => {
+        if (proj === null || typeof proj !== 'object' || Array.isArray(proj)) {
+          console.warn(`[ProjectiveSynthesisEngine] Skipping malformed projection at index ${idx}.`);
+          return null;
+        }
         const projRecord = proj as Record<string, unknown>;
         const id = typeof projRecord.id === 'string' && projRecord.id ? projRecord.id : `proj_${idx + 1}`;
         const cited = Array.isArray(projRecord.citedClaimIds)
