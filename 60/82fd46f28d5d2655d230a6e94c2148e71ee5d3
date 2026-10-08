@@ -1,0 +1,21 @@
+worker/src/__tests__/GroundedExtractionEngine.integration.test.ts
+  s_4075cc6448b8f7::t_26bd83cdac0609 1-100
+worker/src/services/LLMCascade.ts
+  s_4075cc6448b8f7::t_c47a9068f8a934 165-167,183,208-209,262-263,381-382,503-505
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6082fd46f28d5d2655d230a6e94c2148e71ee5d3",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
