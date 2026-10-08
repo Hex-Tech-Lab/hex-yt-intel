@@ -10,6 +10,7 @@
 | Item | State |
 |---|---|
 | `main` | `4c961adb` (#443). Production pipeline run 37775804469 fully green (migration, Vercel, worker, production health check). |
+| `main` later same day | `62cc459a` — #445 (this handover + dead `CombinerPass` removal) merged 2026-10-08 15:58 +03. Open PRs at weekly sync: #446 (Phase C shadow-mode wiring behind `analysis.pipeline.epistemic`), #447 (Jev commit guard from hex-expan), #448 (store server-fetched transcript segments at ingestion), #449 (UAT: metadata counts on restore, history status chips). |
 | PR #442 Phase C (RC) | **MERGED** `03c50a5f`. Prod migration `20261005020000_phase_c_epistemic_schema` recorded; all prod jobs + health check green; `/health/providers` all true. |
 | PR #443 Haiku 5.5 + per-stream reasoning | **MERGED** `4c961adb`. Migration `20261008120000_analysis_reasoning_effort_settings` applied by CI; rows verified (enum, defaults `none` / `low`). |
 | PR #444 OC config unification | **CLOSED unmerged** (user decision: local OC config does not belong in the repo). Its THOS + dead `CombinerPass` deletion moved to `chore/docs-and-cleanup`; the two local `opencode.json` files stay unified (200k, `jev-router/jev-auto`) untracked. |
@@ -82,3 +83,7 @@
 - **Graph pagination.** A `reviewThreads(first:100)` query undercounts; always paginate (85 vs 326 actual today).
 - **QualityEngine quirks.** The observability rule only recognises `console.error` / `Sentry.captureException` written directly in the catch. `.slice` / `.substring` / regex `.exec` in tests trigger false positives, so use `String.match`. Worker tests outside `worker/src/__tests__/` must be added to the include list in `web/vitest.config.ts`.
 - **Verify directive premises.** Several pasted directives assumed stale state: "already merged", "batches stalled", a nonexistent `claude-3-5-haiku` ID, a `NODE_ENV` gate that is always non-prod on Workers. Check live state first.
+
+## 6. Also merged 2026-10-04 → 10-05 (not covered above)
+
+#436 ADR 039 + Phase C scaffold; #437 Phase C 3-video micro-batch bake-off harness; #438 10X historical PR scan remediation (comments-tier3 idempotency, validate ghost-ack, jev fallback budget, embed phantom rows); #439 Deepgram Nova-2 + MultimodalProbeRunner adapters; #440 Part A grounded extraction engine; #441 Part B projective synthesis engine with Claim ID citations. Closed unmerged: #427, #428, #435 (earlier Phase B / bake-off / taxonomy drafts) and #444.
