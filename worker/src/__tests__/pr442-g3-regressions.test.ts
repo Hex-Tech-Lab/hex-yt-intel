@@ -138,15 +138,9 @@ describe('PR #442 group-3 regressions (PromptBuilder)', () => {
     });
     // The prompt tells the model the layout is "valid, raw JSON" -- the
     // example itself must parse, or the model copies an unparseable shape.
-    const start = systemPrompt.indexOf('{\n  "claims"');
-    expect(start).toBeGreaterThanOrEqual(0);
-    let depth = 0;
-    let end = start;
-    for (let i = start; i < systemPrompt.length; i++) {
-      if (systemPrompt[i] === '{') depth++;
-      else if (systemPrompt[i] === '}' && --depth === 0) { end = i; break; }
-    }
-    const example = JSON.parse(systemPrompt.slice(start, end + 1));
+    const exampleMatch = systemPrompt.match(/\{\n {2}"claims"[\s\S]*?\n\}/);
+    expect(exampleMatch).not.toBeNull();
+    const example = JSON.parse(exampleMatch![0]);
     expect(example.claims[0].timestampRange).toEqual([125, 140]);
   });
 

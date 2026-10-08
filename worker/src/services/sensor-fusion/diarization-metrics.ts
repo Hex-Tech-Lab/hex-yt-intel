@@ -120,8 +120,10 @@ export function redactMediaUrl(rawUrl: string | undefined): string {
     const parsed = new URL(rawUrl);
     return parsed.hostname;
   } catch {
-    // Never log the parse error: `URL` errors carry the full raw input
-    // (including signed query tokens) in their message/input fields.
+    // Never log the parse error itself: `URL` errors carry the full raw input
+    // (including signed query tokens) in their message/input fields. Log a
+    // fixed, input-free message so the failure is still observable.
+    console.error('[diarization-metrics] invalid audio URL (details redacted)');
     return 'redacted-invalid-url';
   }
 }
