@@ -8,21 +8,20 @@
  * (negatives, fractions, hex/exponent forms) is invalid.
  */
 export const videoCount = {
+  /** The count as a digit string, or null when the value is not a valid count. */
+  parseCount(value: unknown): string | null {
+    const digits = typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : '';
+    const n = Number(digits);
+    return digits !== '' && Number.isSafeInteger(n) && n >= 0 && String(n) === digits ? digits : null;
+  },
+
   /** Normalised count string for display; '0' when the value is not a valid count. */
   toCountValue(value: unknown): string {
-    if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0 ? String(value) : '0';
-    if (typeof value !== 'string') return '0';
-    const digits = value.trim();
-    return digits.length > 0 && [...digits].every((char) => char >= '0' && char <= '9') ? digits : '0';
+    return videoCount.parseCount(value) ?? '0';
   },
 
   /** First candidate that is a valid count (a valid 0 counts); '0' if none is. */
   pickCount(...candidates: unknown[]): string {
-    for (const candidate of candidates) {
-      const value = videoCount.toCountValue(candidate);
-      const isZero = candidate === 0 || (typeof candidate === 'string' && candidate.trim() === '0');
-      if (value !== '0' || isZero) return value;
-    }
-    return '0';
+    return candidates.map((candidate) => videoCount.parseCount(candidate)).find((count) => count !== null) ?? '0';
   },
 };
