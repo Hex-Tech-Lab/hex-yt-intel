@@ -12,17 +12,19 @@ elif [ "${hooks_dir#/}" = "$hooks_dir" ]; then
   hooks_dir="$top/$hooks_dir"  # git resolves a relative core.hooksPath from the working-tree root
 fi
 hook="$hooks_dir/pre-commit"
+# A symlinked hook (e.g. to a shared central script) is edited at its target, never detached.
+[ -L "$hook" ] && hook="$(readlink -f "$hook")"
 marker="# >>> vintel commit-guard >>>"
-mkdir -p "$hooks_dir"
+mkdir -p "$(dirname "$hook")"
 [ -f "$hook" ] || printf '#!/bin/sh\n' > "$hook"
 if grep -qF "$marker" "$hook"; then
   echo "commit-guard already installed in $hook"
   exit 0
 fi
-case "$(head -n1 "$hook")" in
-  '#!/bin/sh'*|'#!/bin/bash'*|'#!/usr/bin/env sh'*|'#!/usr/bin/env bash'*) ;;
-  *) echo "commit-guard: $hook is not a sh/bash script; add the guard call to it by hand" >&2; exit 1 ;;
-esac
+if ! head -n1 "$hook" | grep -Eq '^#!.*([/ ]|^#!)(sh|bash|dash)([[:space:]]|$)'; then
+  echo "commit-guard: $hook is not a sh/bash script; add the guard call to it by hand" >&2
+  exit 1
+fi
 block="$(cat <<'HOOK'
 # >>> vintel commit-guard >>>
 # Jev-backed secret / private-material gate over staged changes
@@ -34,8 +36,9 @@ fi
 # <<< vintel commit-guard <<<
 HOOK
 )"
-tmp="$(mktemp "$hooks_dir/.pre-commit.XXXXXX")"
+tmp="$(mktemp "$(dirname "$hook")/.pre-commit.XXXXXX")"
 { head -n1 "$hook"; printf '%s\n' "$block"; tail -n +2 "$hook"; } > "$tmp"
+chmod --reference="$hook" "$tmp" 2>/dev/null || chmod 755 "$tmp"  # keep the hook's own mode
 chmod +x "$tmp"
 mv "$tmp" "$hook"
 echo "commit-guard installed in $hook"

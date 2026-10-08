@@ -42,7 +42,7 @@ def _key():
                                 cwd=pathlib.Path(__file__).resolve().parent).stdout.strip()
         if common:
             candidates.append((pathlib.Path(__file__).resolve().parent / common).resolve().parent / "web" / ".env.local")
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, UnicodeError):
         pass  # not inside a git checkout: only this checkout's env file is tried
     for env in candidates:
         try:
