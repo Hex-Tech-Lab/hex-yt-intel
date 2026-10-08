@@ -1,0 +1,25 @@
+supabase/migrations/20261008120000_analysis_reasoning_effort_settings.sql
+  s_4075cc6448b8f7::t_4686329c8c6ebb 10-12,26-27,35-36
+web/lib/__tests__/cascade-resolution.test.ts
+  s_4075cc6448b8f7::t_4384b8731b724b 172-191
+web/lib/config/cascade.ts
+  s_4075cc6448b8f7::t_f3a53081b3fc6e 189-194,219-221,234,252,254-259
+web/lib/types/contracts.ts
+  s_4075cc6448b8f7::t_bb7c92f0a4c77e 259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c29969a43c5f45da64efa69dc969b97b203ce562",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
