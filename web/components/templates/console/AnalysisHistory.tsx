@@ -137,9 +137,6 @@ function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }
  */
 function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine }: { present: number[]; totalDimensions: number; auxChips?: ReactNode; auxChipsSecondLine?: ReactNode }) {
   const presentSet = new Set(present);
-  // Two FIXED lines (user decision 2026-09-30): dots + digest/description/
-  // channel meta on the first, comments/chapters/highlights always on the
-  // second -- the row height no longer depends on how the chips happen to wrap.
   // Dots on the first line; every status chip in ONE equal-column grid below, so
   // chips line up by column on every row (the old split rows aligned by flow).
   return (
@@ -166,7 +163,7 @@ function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine 
         })}
       </div>
       {(auxChips || auxChipsSecondLine) && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5 hx-chip-shadow">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5 hx-chip-grid">
           {auxChips}
           {auxChipsSecondLine}
         </div>

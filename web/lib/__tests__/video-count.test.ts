@@ -13,10 +13,19 @@ describe('toCountValue', () => {
   });
 
   it('falls back to 0 for missing, empty or non-numeric values', () => {
-    expect(toCountValue(undefined)).toBe(0);
+    expect(toCountValue()).toBe(0);
     expect(toCountValue(null)).toBe(0);
     expect(toCountValue('')).toBe(0);
     expect(toCountValue('n/a')).toBe(0);
     expect(toCountValue(Number.NaN)).toBe(0);
+  });
+
+  it('rejects negative, fractional and radix/exponent strings', () => {
+    expect(toCountValue(-5)).toBe(0);
+    expect(toCountValue(1.5)).toBe(0);
+    expect(toCountValue('-5')).toBe(0);
+    expect(toCountValue('1.5')).toBe(0);
+    expect(toCountValue('0x10')).toBe(0);
+    expect(toCountValue('1e3')).toBe(0);
   });
 });

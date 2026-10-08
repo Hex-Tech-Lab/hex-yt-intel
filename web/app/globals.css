@@ -556,6 +556,11 @@ div[data-chat-dock="true"] div[class*="content"] {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
 }
 
+/* Status-chip grid: its children are display:contents wrappers, so the chips sit one level down. */
+.hx-chip-grid > * > * {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
