@@ -58,3 +58,4 @@ export { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "
 export { HardcodedTierGrantRule, UntrustedTierFallbackRule, ServiceRoleAnonFallbackRule, RuntimeTierTrustRule } from "./security-lessons-20260924";
 export { SilentDefaultOnExternalResponseRule, ServerFetchWithoutTimeoutRule, ErrorPathAsymmetryRule, SuccessGuardedPersistenceRule } from "./reliability-lessons-20260924";
 export { UnconsumedStreamLeakRule, UnboundedBodyReadRule, NonIdempotentRetryRule, FailOpenUndefinedFilterRule } from "./artas-v3";
+export { StreamReaderWithoutFinallyRule, UnregisteredSettingsKeyRule } from "./lessons-20261009";
