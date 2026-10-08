@@ -1,0 +1,34 @@
+scripts/quality-engine/rules/__tests__/lessons-20261009.test.ts
+  s_c3159d04a49d90::t_dc7042f636060f 1-60,62-65,71,73-104
+  s_c3159d04a49d90::t_c67bcca0bd6e82 61,72
+  s_c3159d04a49d90::t_ad3184f0a8b241 66-70
+.memory/AGENT_LEDGER.md
+  s_c3159d04a49d90::t_de78d4f617ec15 1596-1598
+scripts/quality-engine/rules/index.ts
+  s_c3159d04a49d90::t_715dfd0c094808 61
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_c3159d04a49d90::t_de78d4f617ec15 239-253
+scripts/strict-merge.sh
+  s_c3159d04a49d90::t_232496c18ea499 1-92,102-108,110-130
+  s_c3159d04a49d90::t_94a91b647112c4 93-101,109
+scripts/quality-engine/rules/lessons-20261009.ts
+  s_c3159d04a49d90::t_ad3184f0a8b241 137-139
+  s_c3159d04a49d90::t_05eb7f6fb3f6d2 1-51,58-121,123-136,140,142-151,153-161
+  s_c3159d04a49d90::t_715dfd0c094808 52-57,122,141,152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3fe7764cd5a0b61cec11fec9bbab81db82513550",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
