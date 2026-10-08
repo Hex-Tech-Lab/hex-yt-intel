@@ -1,0 +1,19 @@
+web/components/containers/DashboardContainer.tsx
+  s_83a8c52a11f95a::t_7cc6b12da0adee 451-453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a47db85c5be870dcb09ac100c8d9814c6ad3fb4",
+  "prompts": {},
+  "sessions": {
+    "s_83a8c52a11f95a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee5167fd0ffeXFA4Xg4mw4sDH4",
+        "model": "@preset/glm-53-flash-on-cheap"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
