@@ -1,0 +1,29 @@
+docs/reviews/2026-10-08-cascade-config-signing-wip.patch
+  s_4075cc6448b8f7::t_e49482a511bd40 1-354
+docs/agent-prompts/2026-10-08-oc-pr442-triage-g3.md
+  s_4075cc6448b8f7::t_5b9ddc861ebf52 1-70
+docs/agent-prompts/2026-10-08-oc-pr442-triage-g5.md
+  s_4075cc6448b8f7::t_5b9ddc861ebf52 1-70
+docs/agent-prompts/2026-10-08-oc-pr442-triage-g2.md
+  s_4075cc6448b8f7::t_5b9ddc861ebf52 1-70
+docs/agent-prompts/2026-10-08-oc-pr442-triage-g4.md
+  s_4075cc6448b8f7::t_5b9ddc861ebf52 1-70
+docs/agent-prompts/2026-10-08-oc-pr442-triage-g1.md
+  s_4075cc6448b8f7::t_5b9ddc861ebf52 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ffa5ed819e9db620e993e999e28bdfee6ccd03c",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
