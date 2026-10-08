@@ -9,14 +9,18 @@ vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi
 
 const SECRET = 'test-hmac-secret';
 const ANALYSIS_ID = 'analysis-gc-1';
-const CLAIMS = { claims: [{ id: 'claim_01' }], unknowns: ['nothing on pricing'], metadata: { classification: 'S1' } };
+const CLAIMS = {
+  claims: [{ id: 'claim_01', timestampRange: [0, 4], verbatimQuote: 'q', atomicAssertion: 'a', confidence: 0.9 }],
+  unknowns: ['nothing on pricing'],
+  metadata: { speakerCount: 1, durationSeconds: 60, classification: 'S1' },
+};
 
-async function signedBody(overrides: Record<string, unknown> = {}, secret = SECRET) {
+async function signedBody(overrides: Record<string, unknown> = {}, secret = SECRET, groundedClaims: unknown = CLAIMS) {
   const exp = Date.now() + 60_000;
   const degradedSensors = false;
   const contentSig = await signEpistemicClaims(secret, ANALYSIS_ID, exp,
-    canonicalJson({ analysisId: ANALYSIS_ID, groundedClaims: CLAIMS, degradedSensors }));
-  return { analysisId: ANALYSIS_ID, groundedClaims: CLAIMS, degradedSensors, exp, contentSig, ...overrides };
+    canonicalJson({ analysisId: ANALYSIS_ID, groundedClaims, degradedSensors }));
+  return { analysisId: ANALYSIS_ID, groundedClaims, degradedSensors, exp, contentSig, ...overrides };
 }
 
 async function post(body: unknown, id = ANALYSIS_ID) {
@@ -64,5 +68,12 @@ describe('POST /api/analyses/[id]/grounded-claims', () => {
     persistGroundedClaims.mockResolvedValue({ updated: false });
     const res = await post(await signedBody());
     expect(res.status).toBe(404);
+  });
+
+  it('rejects signed claims that break the grounded-extraction contract (422, no write)', async () => {
+    const malformed = { claims: [{ id: 'claim_01' }], unknowns: [], metadata: { classification: 'S1' } };
+    const res = await post(await signedBody({}, SECRET, malformed));
+    expect(res.status).toBe(422);
+    expect(persistGroundedClaims).not.toHaveBeenCalled();
   });
 });

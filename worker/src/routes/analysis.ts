@@ -1460,7 +1460,6 @@ function buildStreamResponse(
       if (resolvedTranscript) {
         resolvedTranscriptText = resolvedTranscript;
       }
-      if (resolvedTranscriptText) onTranscriptResolved?.(resolvedTranscriptText);
       if (fetchResult.status === 'fulfilled' && fetchResult.value.channelMeta) {
         resolvedChannelMeta = fetchResult.value.channelMeta;
       }
@@ -1493,6 +1492,8 @@ function buildStreamResponse(
         controller.close();
         return;
       }
+      // Phase C shadow: only a transcript that passed the guard above.
+      onTranscriptResolved?.(resolvedTranscript);
 
       // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
       // BEFORE any grounded LLM call. Projective bundles never participate:

@@ -13,24 +13,22 @@ import { z } from 'zod';
 import { env } from '@/lib/env';
 import { verifyEpistemicClaims } from '@/lib/config/epistemic-shadow';
 import { canonicalJson } from '@/lib/utils/canonical-json';
+import { GroundedExtractionPayloadSchema } from '@/lib/types/contracts';
 import { SupabaseEpistemicAdapter } from '@/lib/adapters/SupabaseEpistemicAdapter';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
-const GroundedClaimsSchema = z.object({
-  claims: z.array(z.unknown()),
-  unknowns: z.array(z.string()),
-  metadata: z.record(z.string(), z.unknown()),
-});
-
+// groundedClaims stays opaque here: the signature covers the bytes the worker
+// sent, so it is verified first and the shared contract is enforced after.
 const PersistBodySchema = z.object({
   analysisId: z.string().min(1),
-  groundedClaims: GroundedClaimsSchema,
+  groundedClaims: z.unknown(),
   degradedSensors: z.boolean(),
   exp: z.number().finite(),
   contentSig: z.string().min(1),
 });
 
+/** Worker -> Vercel persist of one analysis's grounded claims (signed S2S). */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -58,11 +56,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
+  const contract = GroundedExtractionPayloadSchema.safeParse(groundedClaims);
+  if (!contract.success) {
+    return NextResponse.json({ error: 'Invalid grounded claims', details: contract.error.flatten() }, { status: 422 });
+  }
+
   try {
     const { updated } = await SupabaseEpistemicAdapter.persistGroundedClaims({
       analysisId,
-      groundedClaims,
-      unknowns: groundedClaims.unknowns,
+      groundedClaims: contract.data,
+      unknowns: contract.data.unknowns,
       degradedSensors,
     });
     if (!updated) {

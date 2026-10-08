@@ -54,7 +54,7 @@ describe('runEpistemicShadow', () => {
       expect(await input.persistGhostRow(GROUNDED)).toBe(true);
       return { classification: { route: 'S2', degradedSensors: true }, groundedExtraction: GROUNDED, projectiveSynthesis: {}, latencyMs: 5 };
     });
-    const posts: Array<{ url: string; body: any }> = [];
+    const posts: Array<{ url: string; body: Parameters<typeof verifyOnVercel>[0] }> = [];
     const fetchImpl = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       posts.push({ url: String(url), body: JSON.parse(String(init?.body)) });
       return Promise.resolve(new Response('{"ok":true}', { status: 200 }));

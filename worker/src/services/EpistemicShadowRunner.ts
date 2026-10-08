@@ -53,6 +53,7 @@ export function groundedClaimsCanonical(analysisId: string, groundedClaims: Grou
   return canonicalJson({ analysisId, groundedClaims, degradedSensors });
 }
 
+/** Signs and POSTs one grounded-claims write to Vercel; resolves false on rejection. */
 async function persistGroundedClaims(
   params: EpistemicShadowParams,
   groundedClaims: GroundedExtractionPayload,
@@ -90,6 +91,9 @@ export async function runEpistemicShadow(params: EpistemicShadowParams): Promise
       console.error("[EpistemicShadow] JEV text heuristics failed; routing with neutral intensities", error);
     }
 
+    // The partial write is tracked so the final write is always sent after it:
+    // otherwise a slow partial could land last and reset degradedSensors.
+    let partialWrite: Promise<boolean> = Promise.resolve(true);
     const dispatcher = new EpistemicPipelineDispatcher({ promptBuilder: params.promptBuilder, cascade: params.cascade });
     const result = await dispatcher.dispatchAnalysis({
       analysisId: params.analysisId,
@@ -101,8 +105,12 @@ export async function runEpistemicShadow(params: EpistemicShadowParams): Promise
       proceduralInstructionIntensity: intensities.procedural,
       tangentialFluffIntensity: intensities.fluff,
       // Part A flush: persist grounded claims as soon as extraction succeeds.
-      persistGhostRow: (payload) => persistGroundedClaims(params, payload, false),
+      persistGhostRow: (payload) => {
+        partialWrite = persistGroundedClaims(params, payload, false);
+        return partialWrite;
+      },
     });
+    await partialWrite.catch(() => false);
 
     // Final write carries the sensor-degradation verdict from the completed run.
     await persistGroundedClaims(params, result.groundedExtraction, result.classification.degradedSensors === true);
