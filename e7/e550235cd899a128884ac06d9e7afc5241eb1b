@@ -1,0 +1,25 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_4075cc6448b8f7::t_5cecba94656051 13,364-365
+web/hooks/useAutoRestoreAnalysis.ts
+  s_4075cc6448b8f7::t_8afd02e52f9d7b 12,239-240
+web/lib/__tests__/video-count.test.ts
+  s_4075cc6448b8f7::t_04839f9dab3e05 2-4
+web/lib/utils/video-count.ts
+  s_4075cc6448b8f7::t_105873d48f3338 10-17,19-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e7e550235cd899a128884ac06d9e7afc5241eb1b",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
