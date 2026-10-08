@@ -47,6 +47,11 @@ describe('calculateProbeTimestamps', () => {
     expect(new Set(starts).size).toBe(starts.length);
     expect(starts.length).toBeGreaterThan(0);
   });
+  it('collapses near-identical starts that overlap within one chunk length (16s clip)', () => {
+    const starts = calculateProbeTimestamps(16);
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toBeCloseTo(0.48, 3);
+  });
   it('caps at 15 samples for multi-hour videos, all inside the safe zone', () => {
     const duration = 36000;
     const starts = calculateProbeTimestamps(duration);
@@ -274,6 +279,30 @@ describe('jev text parser', () => {
         tangential_fluff_intensity: 1,
         turn_marker_count: 3,
       });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it('weights block scores by block length, so a short trailing block cannot dominate', async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(responses.shift()),
+      }),
+    );
+    const responses = [
+      { answers: { direct_address_intensity: { type: 'score', score: 3 }, procedural_instruction_intensity: { type: 'score', score: 3 }, tangential_fluff_intensity: { type: 'score', score: 3 } } },
+      { answers: { direct_address_intensity: { type: 'score', score: 0 }, procedural_instruction_intensity: { type: 'score', score: 0 }, tangential_fluff_intensity: { type: 'score', score: 0 } } },
+    ];
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      // 8000 chars scored 3/3/3, then a 100-char tail scored 0/0/0:
+      // length-weighted average rounds to 3, not the unweighted 2 (or 1.5-floor).
+      const transcript = `${'a'.repeat(JEV_TEXT_CHUNK_CHARS)}${'b'.repeat(100)}`;
+      const result = await new JevTextParser('key').analyze(transcript);
+      expect(result.direct_address_intensity).toBe(3);
+      expect(result.procedural_instruction_intensity).toBe(3);
+      expect(result.tangential_fluff_intensity).toBe(3);
     } finally {
       vi.unstubAllGlobals();
     }

@@ -140,25 +140,28 @@ export class JevTextParser {
     }
   }
 
-  /** Full text heuristics: block scores averaged into integers, plus the literal `>>` count of the whole transcript. */
+  /** Full text heuristics: block scores averaged to integers weighted by block length (a short trailing block counts proportionally, not as a full block), plus the literal `>>` count of the whole transcript. */
   async analyze(transcript: string): Promise<TextHeuristics> {
     const blocks = splitTranscript(transcript);
     if (blocks.length === 0) throw new JevTextResponseError('transcript is empty');
-    const totals: JevTextScores = {
+    let weightedTotalChars = 0;
+    const weightedTotals: JevTextScores = {
       direct_address_intensity: 0,
       procedural_instruction_intensity: 0,
       tangential_fluff_intensity: 0,
     };
     for (const block of blocks) {
       const scores = await this.scoreChunk(block);
-      totals.direct_address_intensity += scores.direct_address_intensity;
-      totals.procedural_instruction_intensity += scores.procedural_instruction_intensity;
-      totals.tangential_fluff_intensity += scores.tangential_fluff_intensity;
+      const weight = block.length;
+      weightedTotalChars += weight;
+      weightedTotals.direct_address_intensity += scores.direct_address_intensity * weight;
+      weightedTotals.procedural_instruction_intensity += scores.procedural_instruction_intensity * weight;
+      weightedTotals.tangential_fluff_intensity += scores.tangential_fluff_intensity * weight;
     }
     return {
-      direct_address_intensity: Math.round(totals.direct_address_intensity / blocks.length),
-      procedural_instruction_intensity: Math.round(totals.procedural_instruction_intensity / blocks.length),
-      tangential_fluff_intensity: Math.round(totals.tangential_fluff_intensity / blocks.length),
+      direct_address_intensity: Math.round(weightedTotals.direct_address_intensity / weightedTotalChars),
+      procedural_instruction_intensity: Math.round(weightedTotals.procedural_instruction_intensity / weightedTotalChars),
+      tangential_fluff_intensity: Math.round(weightedTotals.tangential_fluff_intensity / weightedTotalChars),
       turn_marker_count: countTurnMarkers(transcript),
     };
   }
