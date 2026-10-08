@@ -362,14 +362,21 @@ export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
 // ─── Epistemic Schism / Part A: Grounded Extraction ──────────────────────────
-export const ExtractedClaimSchema = z.object({
-  id: z.string().min(1),
-  speaker: z.string().optional(),
-  timestampRange: z.tuple([z.number().min(0), z.number().min(0)]),
-  verbatimQuote: z.string().min(1),
-  atomicAssertion: z.string().min(1),
-  confidence: z.number().min(0).max(1),
-});
+export const ExtractedClaimSchema = z
+  .object({
+    id: z.string().min(1),
+    speaker: z.string().optional(),
+    timestampRange: z.tuple([z.number().min(0), z.number().min(0)]),
+    verbatimQuote: z.string().min(1),
+    atomicAssertion: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+  })
+  // [startSeconds, endSeconds] — a reversed range (end before start) is
+  // malformed model output, not a valid interval.
+  .refine((claim) => claim.timestampRange[1] >= claim.timestampRange[0], {
+    message: 'timestampRange end must be >= start',
+    path: ['timestampRange'],
+  });
 
 export const GroundedExtractionMetadataSchema = z.object({
   speakerCount: z.number().int().min(0),
@@ -377,11 +384,18 @@ export const GroundedExtractionMetadataSchema = z.object({
   classification: z.enum(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']),
 });
 
-export const GroundedExtractionPayloadSchema = z.object({
-  claims: z.array(ExtractedClaimSchema),
-  unknowns: z.array(z.string()),
-  metadata: GroundedExtractionMetadataSchema,
-});
+export const GroundedExtractionPayloadSchema = z
+  .object({
+    claims: z.array(ExtractedClaimSchema),
+    unknowns: z.array(z.string()),
+    metadata: GroundedExtractionMetadataSchema,
+  })
+  // Duplicate claim IDs make downstream per-claim lookups ambiguous
+  // (indices/keys assumed unique); reject them at the boundary.
+  .refine(
+    (payload) => new Set(payload.claims.map((c) => c.id)).size === payload.claims.length,
+    { message: 'Duplicate claim IDs are not allowed', path: ['claims'] }
+  );
 
 export type ExtractedClaim = z.infer<typeof ExtractedClaimSchema>;
 export type GroundedExtractionMetadata = z.infer<typeof GroundedExtractionMetadataSchema>;
