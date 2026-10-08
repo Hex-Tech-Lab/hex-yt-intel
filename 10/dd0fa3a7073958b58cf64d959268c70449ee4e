@@ -1,0 +1,53 @@
+worker/src/__tests__/epistemic-shadow-runner.test.ts
+  s_4075cc6448b8f7::t_e97d62a0283934 1-81
+  s_4075cc6448b8f7::t_8d0492f96d181d 82
+worker/src/__tests__/epistemic-shadow-route.test.ts
+  s_4075cc6448b8f7::t_79173995df6707 1-116
+worker/src/services/EpistemicShadowRunner.ts
+  s_4075cc6448b8f7::t_5a28bc9cbfb052 1-120
+web/app/api/analyses/[id]/grounded-claims/route.ts
+  s_4075cc6448b8f7::t_e3f95f00778d22 1-76
+  s_4075cc6448b8f7::t_fd0769520b16ef 77
+.memory/AGENT_LEDGER.md
+  s_4075cc6448b8f7::t_3580e86e594c22 1578
+.qa-intel/baseline.json
+  s_4075cc6448b8f7::t_6aa864d325b964 20,42,49,56,77,84,91,98,105,112,119,126,133,140,147,154,161,168,175,182,189,196,203,210,224,231,238,245,252,259,266,272,280,322,329,336,343,399,406,413,420,510,518,525,532,539,546,553,560,567,574,609,616,623,630,692,700-770,772
+supabase/migrations/20261008150000_analysis_pipeline_epistemic_flag.sql
+  s_4075cc6448b8f7::t_6d4de45578ddea 1-18
+web/app/api/analyses/[id]/grounded-claims/__tests__/route.test.ts
+  s_4075cc6448b8f7::t_e5129c25c129b8 1-68
+web/hooks/useSSEStream.ts
+  s_4075cc6448b8f7::t_1bbae152c8e322 548-553
+web/lib/__tests__/create-analysis-jev-plan.test.ts
+  s_4075cc6448b8f7::t_e41f9f54f8c505 202-232
+web/lib/adapters/SupabaseEpistemicAdapter.ts
+  s_4075cc6448b8f7::t_c31d6edd2ced23 1-25
+web/lib/config/epistemic-shadow.ts
+  s_4075cc6448b8f7::t_73b38d0edbb247 1-87
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_4075cc6448b8f7::t_0d53c1567e1346 25,456-472,515
+web/vitest.config.ts
+  s_4075cc6448b8f7::t_62fd38f64019ef 99
+worker/src/routes/analysis.ts
+  s_4075cc6448b8f7::t_edf35a22286740 36-37,150-152,1200,1463,1984-2017
+worker/src/services/LLMCascade.test.ts
+  s_4075cc6448b8f7::t_5710a08dd7c895 151-181
+worker/src/services/LLMCascade.ts
+  s_4075cc6448b8f7::t_ceb669e6b45e21 167-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10dd0fa3a7073958b58cf64d959268c70449ee4e",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
