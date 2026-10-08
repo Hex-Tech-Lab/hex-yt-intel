@@ -217,7 +217,7 @@ Output format must be valid, raw JSON conforming strictly to this layout:
     {
       "id": "claim_01",
       "speaker": "Speaker Name or optional identifier",
-      "timestampRange": [start_seconds, end_seconds],
+      "timestampRange": [125, 140],
       "verbatimQuote": "exact quote from transcript",
       "atomicAssertion": "concise factual assertion made in the quote",
       "confidence": 1.0

@@ -130,14 +130,24 @@ describe('PR #442 group-3 regressions (PromptBuilder)', () => {
 
   const makeChunk = () => [{ text: 'hello', start: 0, end: 1 }];
 
-  it('grounded extraction example uses JSON-safe timestamp placeholder (i23)', () => {
+  it('grounded extraction output example is valid JSON (i23)', () => {
     const { systemPrompt } = builder.buildGroundedExtractionPrompt(makeChunk(), {
       speakerCount: 1,
       durationSeconds: 60,
       classification: 'S1',
     });
-    expect(systemPrompt).toContain('[start_seconds, end_seconds]');
-    expect(systemPrompt).not.toContain('startSeconds');
+    // The prompt tells the model the layout is "valid, raw JSON" -- the
+    // example itself must parse, or the model copies an unparseable shape.
+    const start = systemPrompt.indexOf('{\n  "claims"');
+    expect(start).toBeGreaterThanOrEqual(0);
+    let depth = 0;
+    let end = start;
+    for (let i = start; i < systemPrompt.length; i++) {
+      if (systemPrompt[i] === '{') depth++;
+      else if (systemPrompt[i] === '}' && --depth === 0) { end = i; break; }
+    }
+    const example = JSON.parse(systemPrompt.slice(start, end + 1));
+    expect(example.claims[0].timestampRange).toEqual([125, 140]);
   });
 
   it('projective example contains a valid single marketHorizon enum value (i22)', () => {
