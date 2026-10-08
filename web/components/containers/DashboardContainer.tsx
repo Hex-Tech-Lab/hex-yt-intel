@@ -448,7 +448,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           }
           if (timestamp) {
             const secs = parseTimestamp(timestamp);
-            if (secs > 0) setSeekTo(secs);
+            // `00:00` is a valid seek target; the retry path below already
+            // uses `>= 0` — keep the two consistent.
+            if (secs >= 0) setSeekTo(secs);
           } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
             // Race condition: dimension not yet streamed into store. This
             // retry path only makes sense mid-generation -- for a completed/

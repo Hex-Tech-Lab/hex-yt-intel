@@ -136,7 +136,9 @@ const MODEL_CAPABILITIES: Readonly<Record<string, { tokenCapKey?: 'haiku'; requi
 const OUTPUT_TOKEN_REGISTRY_KEYS = ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'] as const;
 const OUTPUT_TOKEN_FALLBACKS = { haiku: 8192, default: 16000 } as const;
 
+/** Validates a registry-resolved cascade array, throwing with a labeled SSOT-violation message. */
 function assertValidCascadeItems(key: CascadeRegistryKey, items: unknown): asserts items is CascadeItem[] {
+  /** Formats a labeled SSOT-violation error message for this key. */
   const label = (msg: string) => `Cascade Registry SSOT Violation (${key}): ${msg}`;
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error(label('registry-resolved value must be a non-empty array of cascade tiers'));
@@ -233,6 +235,12 @@ const DIARIZATION_CASCADE_FALLBACK: readonly DiarizationCascadeItem[] = [
   { provider: 'deepgram', name: 'Deepgram Nova-2', timeoutMs: 10000 },
 ];
 
+/**
+ * Resolves the diarization provider cascade from the Settings Registry
+ * (`cascade.diarization`), falling back to the hardcoded defaults when the
+ * key is unset or empty. Accepts both string-provider entries and full
+ * {@link DiarizationCascadeItem} objects; unallowlisted providers are dropped.
+ */
 export const resolveDiarizationCascade = async (): Promise<DiarizationCascadeItem[]> => {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
     ['cascade.diarization'],

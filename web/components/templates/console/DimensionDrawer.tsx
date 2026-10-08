@@ -179,28 +179,50 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const [drawerWidth, setDrawerWidth] = useState<number>(390);
   const isDraggingRef = useRef(false);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDraggingRef.current = true;
-    const startX = e.clientX;
-    const startWidth = drawerWidth;
+  // Shared clamp: min 320px, max min(80vw, 800px) — identical bounds for
+  // pointer drags and keyboard resize so both input paths stay in range.
+  const clampWidth = useCallback(
+    (width: number) => Math.min(Math.max(width, 320), Math.min(window.innerWidth * 0.8, 800)),
+    []
+  );
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const deltaX = startX - moveEvent.clientX;
-      const newWidth = Math.min(Math.max(startWidth + deltaX, 320), Math.min(window.innerWidth * 0.8, 800));
-      setDrawerWidth(newWidth);
-    };
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      const startX = e.clientX;
+      const startWidth = drawerWidth;
 
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (!isDraggingRef.current) return;
+        setDrawerWidth(clampWidth(startWidth + (startX - moveEvent.clientX)));
+      };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  }, [drawerWidth]);
+      const handlePointerUp = () => {
+        isDraggingRef.current = false;
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+      };
+
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+    },
+    [drawerWidth, clampWidth]
+  );
+
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 64 : 16;
+      let handled = true;
+      if (e.key === 'ArrowLeft') setDrawerWidth((w) => clampWidth(w + step));
+      else if (e.key === 'ArrowRight') setDrawerWidth((w) => clampWidth(w - step));
+      else if (e.key === 'Home') setDrawerWidth(clampWidth(800));
+      else if (e.key === 'End') setDrawerWidth(clampWidth(320));
+      else handled = false;
+      if (handled) e.preventDefault();
+    },
+    [clampWidth]
+  );
 
   if (!dimension) return null;
 
@@ -217,11 +239,20 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         style={{ width: `${drawerWidth}px`, maxWidth: '90vw' }}
         className="fixed right-0 top-0 bottom-0 bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
-        {/* Resize Handle */}
+        {/* Resize Handle — focusable separator: pointer drag + arrow-key
+            resize (Shift = larger step), Home/End jump to max/min. */}
         <div
-          onMouseDown={handleMouseDown}
-          className="absolute left-0 top-0 bottom-0 w-2 -translate-x-1 cursor-col-resize hover:bg-[var(--accent)]/30 transition-colors z-[102]"
-          title="Drag to resize panel"
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label="Resize panel"
+          aria-valuenow={Math.round(drawerWidth)}
+          aria-valuemin={320}
+          aria-valuemax={Math.round(Math.min(window.innerWidth * 0.8, 800))}
+          onPointerDown={handlePointerDown}
+          onKeyDown={handleResizeKeyDown}
+          className="absolute left-0 top-0 bottom-0 w-2 -translate-x-1 cursor-col-resize hover:bg-[var(--accent)]/30 transition-colors z-[102] focus-visible:bg-[var(--accent)]/50 focus-visible:outline-none"
+          title="Drag or use arrow keys to resize panel"
         />
 
         {/* Header */}

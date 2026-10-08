@@ -140,16 +140,24 @@ async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataRespo
 
     // Fallback: direct YouTube oEmbed resolution if Worker is unavailable or misconfigured
     try {
+      // Bounded timeout, same rationale as the main worker fetch above — an
+      // unbounded fallback fetch would hold the request open indefinitely.
+      const oembedController = new AbortController();
+      const oembedTimeout = setTimeout(() => oembedController.abort(), 3000);
       const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
         headers: { 'User-Agent': getRandomUserAgent() },
+        signal: oembedController.signal,
       });
+      clearTimeout(oembedTimeout);
       if (oembedRes.ok) {
         const oembed = (await oembedRes.json()) as { title?: string; author_name?: string; thumbnail_url?: string };
         return {
           title: oembed.title || 'YouTube Video',
           channelTitle: oembed.author_name || '',
           channelId: '',
-          publishedAt: new Date().toISOString(),
+          // oEmbed exposes no publish date. A real "now" timestamp masquerades
+          // as fresh data; empty string keeps "unknown" honest downstream.
+          publishedAt: '',
           duration: null,
           viewCount: '0',
           likeCount: '0',
