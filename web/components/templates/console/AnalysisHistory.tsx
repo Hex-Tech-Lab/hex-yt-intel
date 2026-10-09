@@ -232,9 +232,7 @@ const RETRY_ERROR_TOASTS: Record<string, string> = {
 };
 
 /** One page of an array. Typed on T[] so the copy reads as array slicing, not text truncation. */
-function pageWindow<T>(list: T[], page: number, size: number): T[] {
-  return list.slice(page * size, (page + 1) * size);
-}
+const pageWindow = <T,>(list: T[], page: number, size: number): T[] => list.slice(page * size, (page + 1) * size);
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
