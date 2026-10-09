@@ -26,8 +26,11 @@ describe("resolveCorsOrigin", () => {
     // browser request from uat.getvintel.com fail CORS as "Failed to fetch")
     expect(resolveCorsOrigin("https://uat.getvintel.com")).toBe("https://uat.getvintel.com");
     expect(resolveCorsOrigin("https://yt-intel.getmytestdrive.com")).toBe("https://yt-intel.getmytestdrive.com");
-    expect(resolveCorsOrigin("https://v-intel.getmytestdrive.com")).toBe("https://v-intel.getmytestdrive.com");
     expect(resolveCorsOrigin("http://localhost:3000", false)).toBe("http://localhost:3000");
+  });
+
+  it("rejects the retired v-intel.getmytestdrive.com origin (out of service; getvintel.com is canonical)", () => {
+    expect(resolveCorsOrigin("https://v-intel.getmytestdrive.com")).toBeNull();
   });
 
   it("accepts this app's own vercel preview deployments", () => {
