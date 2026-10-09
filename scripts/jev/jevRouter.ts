@@ -71,7 +71,9 @@ export async function askJev(
     });
     const body = await res.text();
     if (!res.ok) {
-      throw new Error(`Jev request failed: HTTP ${res.status} ${body}`);
+      // Provider bodies can echo signed URLs; drop query strings before the error reaches logs.
+      const redacted = body.replace(/https?:\/\/[^\s"'<>]+/g, (url) => url.replace(/\?.*$/, '?[redacted]'));
+      throw new Error(`Jev request failed: HTTP ${res.status} ${redacted}`);
     }
     return { response: JSON.parse(body) as JevResponse, latencyMs: Math.round(performance.now() - started) };
   } finally {
