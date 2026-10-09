@@ -23,13 +23,13 @@ let fetchMock: ReturnType<typeof vi.fn>;
 // Every ingestion call goes through here so the fetch mock is swapped out in
 // finally, even when the call rejects. afterEach is the backstop for tests that
 // fail before reaching a call.
-async function ingest(adapter: WorkerIngestionAdapter, videoId: string) {
+const ingest = async (adapter: WorkerIngestionAdapter, videoId: string) => {
   try {
     return await adapter.fetch(videoId);
   } finally {
     global.fetch = realFetch;
   }
-}
+};
 
 describe('WorkerIngestionAdapter', () => {
   afterEach(() => {
