@@ -1,0 +1,21 @@
+CLAUDE.md
+  s_c3159d04a49d90::t_6b52176f21986f 114
+worker/src/__tests__/cors.test.ts
+  s_c3159d04a49d90::t_94cfb5594f00ff 32-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "393c647c5259c2f6e6c8cbf8a9d1a9326fe00597",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
