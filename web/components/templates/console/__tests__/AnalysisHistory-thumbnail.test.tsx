@@ -174,4 +174,12 @@ describe('AnalysisHistory thumbnail fade (mockup v2)', () => {
     expect(css.match(/\.hx-halo[^{]*\{[^}]*\}/)?.[0] ?? '').not.toMatch(/mask-image/);
     expect(css.match(/\.hx-chip-shadow[^{]*\{[^}]*\}/)?.[0] ?? '').not.toMatch(/mask-image/);
   });
+
+  it('chip-grid shadow reaches chips through the display:contents wrappers and Tooltip boxes', () => {
+    // grid > wrapper(contents) > Tooltip(contents) > chip, or grid > wrapper > button (no tooltip).
+    const css = readFileSync(join(__dirname, '..', '..', '..', '..', 'app', 'globals.css'), 'utf-8');
+    const shadowRule = css.match(/\.hx-chip-grid[^{]*\{[^}]*box-shadow[^}]*\}/)?.[0] ?? '';
+    expect(shadowRule).toMatch(/\.hx-chip-grid > \* > \* > \*/);
+    expect(shadowRule).toMatch(/\.hx-chip-grid > \* > button/);
+  });
 });

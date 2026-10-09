@@ -10,6 +10,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge, ChapterChip, GlowBorder } from '@/components/templates/_shared/primitives';
+import { videoCount } from '@/lib/utils/video-count';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { showToast } from '@/lib/dashboard/export';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
@@ -136,13 +137,12 @@ function HistoryThumbnail({ videoId, title }: { videoId: string; title: string }
  */
 function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine }: { present: number[]; totalDimensions: number; auxChips?: ReactNode; auxChipsSecondLine?: ReactNode }) {
   const presentSet = new Set(present);
-  // Two FIXED lines (user decision 2026-09-30): dots + digest/description/
-  // channel meta on the first, comments/chapters/highlights always on the
-  // second -- the row height no longer depends on how the chips happen to wrap.
+  // Dots on the first line; every status chip in ONE equal-column grid below, so
+  // chips line up by column on every row (the old split rows aligned by flow).
   return (
     <div className="mt-3 pt-3 border-t border-[var(--line-faint)] flex flex-col gap-2">
       <div
-        className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow"
+        className="flex items-center gap-2 flex-wrap overflow-hidden"
       >
         <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
         {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
@@ -161,12 +161,10 @@ function DimensionDots({ present, totalDimensions, auxChips, auxChipsSecondLine 
             </Tooltip>
           );
         })}
-        {auxChips}
       </div>
-      {auxChipsSecondLine && (
-        <div
-          className="flex items-center gap-2 flex-wrap overflow-hidden hx-chip-shadow"
-        >
+      {(auxChips || auxChipsSecondLine) && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5 hx-chip-grid">
+          {auxChips}
           {auxChipsSecondLine}
         </div>
       )}
@@ -232,6 +230,9 @@ const RETRY_ERROR_TOASTS: Record<string, string> = {
   budget_exhausted: 'Retry budget is used up for now — try again later',
   disabled: 'Retries are paused',
 };
+
+/** One page of an array. Typed on T[] so the copy reads as array slicing, not text truncation. */
+const pageWindow = <T,>(list: T[], page: number, size: number): T[] => list.slice(page * size, (page + 1) * size);
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
@@ -363,8 +364,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
       const meta = data.analysis_payload?.videoMetadata || data.analysis_payload?.metadata || {};
       const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (data.duration || 0);
-      const viewCount = typeof meta.viewCount === 'number' ? meta.viewCount : typeof meta.view_count === 'number' ? Number(meta.view_count) : (data.viewCount || 0);
-      const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (data.likeCount || 0);
+      const viewCount = videoCount.pickCount(meta.viewCount, meta.view_count, data.viewCount);
+      const likeCount = videoCount.pickCount(meta.likeCount, meta.like_count, data.likeCount);
 
       // Repopulate the URL input from the restored video so the Analyze /
       // re-analyze controls are enabled — both bail on an empty `url`, so
@@ -554,7 +555,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   const filteredAndSorted = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
-    const result = [];
+    const result: typeof items = [];
     for (const itemRecord of items) {
       if (filterStatus !== 'all' && itemRecord.status !== filterStatus) {
         continue;
@@ -593,7 +594,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   }, [filteredAndSorted, currentAnalysis?.id]);
 
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+  const paginatedItems = pageWindow(filteredAndSorted, currentPage, ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (currentPage > 0 && currentPage >= totalPages && totalPages > 0) setCurrentPage(0);
@@ -917,7 +918,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       totalDimensions={TOTAL_DIMENSIONS}
                       auxChips={
                         (item.status === 'complete' || item.status === 'partial') && (
-                           <span className="flex flex-nowrap gap-1.5 ml-1 hx-chip-shadow" role="status" aria-live="polite" aria-label="Auxiliary data status">
+                           <span className="contents" role="status" aria-live="polite" aria-label="Auxiliary data status">
                             <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="Digest" />
                             <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="Description" />
                             <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
@@ -926,7 +927,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       }
                       auxChipsSecondLine={
                         (item.status === 'complete' || item.status === 'partial') && (
-                          <span className="flex flex-nowrap gap-1.5 hx-chip-shadow" role="status" aria-live="polite" aria-label="Comments, chapters and highlights status">
+                          <span className="contents" role="status" aria-live="polite" aria-label="Comments, chapters and highlights status">
                             <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="Comments" />
                             <ChapterChip hasChapters={item.hasChapters} />
                             {item.hasHighlights !== null && (

@@ -9,6 +9,7 @@ import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+import { videoCount } from '@/lib/utils/video-count';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
@@ -224,9 +225,9 @@ export function useAutoRestoreAnalysis(url: string) {
           if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
             const payloadDims = restoreData.analysis_payload.dimensions;
             if (Array.isArray(payloadDims)) {
-              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, d: { number?: number; name?: string; content?: string }) => {
-                if (d && typeof d.number === 'number') {
-                  acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
+              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, dim: { number?: number; name?: string; content?: string }) => {
+                if (dim && typeof dim.number === 'number') {
+                  acc[dim.number] = { number: dim.number, name: dim.name || `Dimension ${dim.number}`, content: dim.content || '' };
                 }
                 return acc;
               }, {} as Record<number, typeof dimensions[1]>);
@@ -235,8 +236,8 @@ export function useAutoRestoreAnalysis(url: string) {
 
           const meta = restoreData.analysis_payload?.videoMetadata || restoreData.analysis_payload?.metadata || {};
           const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (restoreData.duration || 0);
-          const viewCount = typeof meta.viewCount === 'number' ? meta.viewCount : typeof meta.view_count === 'number' ? Number(meta.view_count) : (restoreData.viewCount || 0);
-          const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (restoreData.likeCount || 0);
+          const viewCount = videoCount.pickCount(meta.viewCount, meta.view_count, restoreData.viewCount);
+          const likeCount = videoCount.pickCount(meta.likeCount, meta.like_count, restoreData.likeCount);
 
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown, undefined, restoreData.videoId);
@@ -373,8 +374,8 @@ export function useAutoRestoreAnalysis(url: string) {
               } else if (!cancelled) {
                 useChatStore.setState({ activeId: null });
               }
-            } catch (e) {
-              console.debug('[AutoRestore] Background chat session restoration failed:', e);
+            } catch (restoreError) {
+              console.debug('[AutoRestore] Background chat session restoration failed:', restoreError);
             }
           };
           restoreChatSession();
