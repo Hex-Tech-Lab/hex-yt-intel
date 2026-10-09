@@ -29,7 +29,6 @@ const PRODUCTION_ORIGINS = [
   // no separate prod-only data plane to protect. Revisit if UAT ever gets
   // an isolated database.
   "https://yt-intel.getmytestdrive.com",
-  "https://v-intel.getmytestdrive.com",
 ];
 
 // Kept separate from PRODUCTION_ORIGINS: localhost trust is dev-gated for BOTH

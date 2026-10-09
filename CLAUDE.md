@@ -111,7 +111,7 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 
 ## 4. INFRASTRUCTURE COORDINATES
 
-- **Vercel App**: `https://hex-yt-intel.vercel.app` (prod domains, parallel cutover as of 2026-07-25: `https://yt-intel.getmytestdrive.com` and `https://v-intel.getmytestdrive.com` — both valid until a hard cutoff to v-intel; CORS/appUrl allowlists updated in `worker/src/middleware/cors.ts`. Still needs, outside my access: Supabase Auth URL Configuration + Google OAuth client redirect URIs updated with the new domain.)
+- **Vercel App**: `https://hex-yt-intel.vercel.app` (build host). **Canonical domains (sole, mandated 2026-10-09):** Production `https://getvintel.com` (+ `https://www.getvintel.com`) and UAT `https://uat.getvintel.com`. `v-intel.getmytestdrive.com` is retired and out of service; do not reference it in code, config, or new docs. `yt-intel.getmytestdrive.com` is a legacy parallel domain still in the CORS allowlist. Worker CORS/appUrl allowlist: `worker/src/middleware/cors.ts`. Supabase Auth URL Configuration and Google OAuth redirect URIs must list the canonical domains (outside repo access).
 - **CF Worker**: `https://yt-intel.hex-tech-lab.workers.dev`
 - **DB Ref**: `adnmbikaqnxivalqoild` (Supabase — matches `NEXT_PUBLIC_SUPABASE_URL`)
 - **Redis**: Upstash (Rate limiting / KV Cache)
