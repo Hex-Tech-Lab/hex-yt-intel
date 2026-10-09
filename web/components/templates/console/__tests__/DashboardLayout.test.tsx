@@ -70,6 +70,32 @@ describe('DashboardLayout resizable panels', () => {
     );
   }
 
+  // ARTAS Vector 7: panels must render at relative percentages, not pixels.
+  // flex-grow carries the Group layout percentage (sidebar / center / right).
+  function panelGrowths(): Record<string, string> {
+    const grow: Record<string, string> = {};
+    for (const id of ['sidebar', 'center', 'right']) {
+      const el = document.getElementById(id) as HTMLElement | null;
+      if (el) grow[id] = el.style.flexGrow;
+    }
+    return grow;
+  }
+
+  it('defaults to 15 / 60 / 25 with a right panel (no pixel-collapsed widths)', async () => {
+    stubDesktopEnvironment();
+    renderLayout(<div>right-content</div>);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(panelGrowths()).toEqual({ sidebar: '15', center: '60', right: '25' });
+  });
+
+  it('restores a persisted 3col layout at mount; center takes the remainder', async () => {
+    window.localStorage.setItem('hex:layout:v1:3col', JSON.stringify({ sidebar: 20, right: 30 }));
+    stubDesktopEnvironment();
+    renderLayout(<div>right-content</div>);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(panelGrowths()).toEqual({ sidebar: '20', center: '50', right: '30' });
+  });
+
   it('below-xl (no matchMedia desktop) renders the drawer tree with no panel group', () => {
     vi.stubGlobal(
       'matchMedia',

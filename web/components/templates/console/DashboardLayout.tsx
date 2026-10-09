@@ -112,12 +112,23 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
   const { isDesktop, sidebarSize, rightSize, handleLayoutChanged } =
     useDashboardPanels(shape);
+  // Group layout in PERCENTAGES (Group's defaultLayout). Center takes the
+  // remainder so the panels always sum to 100. Per-panel defaultSize is not
+  // used: react-resizable-panels v4 reads a bare number as pixels, and a
+  // defaultSize that is not part of a Group defaultLayout did not apply.
+  const sidebarPct = sidebarSize ?? DEFAULT_LAYOUT[shape].sidebar;
+  const rightPct = shape === '3col' ? (rightSize ?? DEFAULT_LAYOUT[shape].right) : 0;
+  const centerPct = 100 - sidebarPct - rightPct;
+  const groupLayout: Record<string, number> =
+    shape === '3col'
+      ? { sidebar: sidebarPct, center: centerPct, right: rightPct }
+      : { sidebar: sidebarPct, center: centerPct };
 
   const groupRef = useGroupRef();
 
   // Register the imperative reset bridge: Reset Layout snaps the live
-  // Group back to its defaultSize props (via setLayout with the historic
-  // fixed-grid percentages) without a reload. Registered only while the
+  // Group back to its DEFAULT_LAYOUT percentages (via setLayout) without a
+  // reload. Registered only while the
   // desktop panel group is actually mounted.
   useEffect(() => {
     if (!isDesktop) return;
@@ -185,12 +196,12 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           groupRef={groupRef}
           id={`console-dashboard-${shape}`}
           orientation="horizontal"
+          defaultLayout={groupLayout}
           onLayoutChanged={onGroupLayoutChanged}
           className="col-span-full flex h-full min-h-0 gap-1 p-1 sm:p-1.5"
         >
           <Panel
             id="sidebar"
-            defaultSize={sidebarSize ?? 18}
             minSize="10%"
             maxSize="30%"
             className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--void)]"
@@ -243,7 +254,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
               <Separator className={separatorClass} aria-label="Resize intelligence panel" />
               <Panel
                 id="right"
-                defaultSize={rightSize ?? 18}
                 minSize="10%"
                 maxSize="35%"
                 className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 px-2"
