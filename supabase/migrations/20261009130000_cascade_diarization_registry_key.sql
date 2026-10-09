@@ -3,6 +3,8 @@
 -- setting_definitions row existed, so every lookup returned the code fallback
 -- and the cascade could never be tuned from settings.
 --
+-- Carries the ADR 040 cascadeRegistry validation marker so the admin save path
+-- dispatches to validateDiarizationCascadeValue (web/lib/config/cascade-validation.ts).
 -- Default matches DIARIZATION_CASCADE_FALLBACK. Each item is an object with
 -- provider, name and timeoutMs; the resolver normalizes items and falls back
 -- to the code default when the value is empty or invalid.
@@ -14,7 +16,7 @@ values
     'cascade.diarization',
     'system',
     'json',
-    '{}'::jsonb,
+    '{"kind": "cascadeRegistry"}'::jsonb,
     '[
       {"provider": "assemblyai", "name": "AssemblyAI Universal-1", "timeoutMs": 15000},
       {"provider": "deepgram", "name": "Deepgram Nova-2", "timeoutMs": 10000}
