@@ -1,0 +1,25 @@
+web/components/templates/console/DashboardLayout.tsx
+  s_c3159d04a49d90::t_90deaa526a821b 115-125,130-131,199
+web/components/templates/console/__tests__/DashboardLayout.test.tsx
+  s_c3159d04a49d90::t_29787a86a458e8 73-98
+web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts
+  s_c3159d04a49d90::t_28b29ff0ceb324 4,78-91
+web/lib/hooks/useDashboardLayout.ts
+  s_c3159d04a49d90::t_e48f5479196164 3,13-17,31-32,101-103,133-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd9ad83205ca1e056e15cd61a6c19d1b79257b58",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
