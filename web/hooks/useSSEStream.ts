@@ -549,7 +549,7 @@ export function useSSEStream() {
                   // request per analysis -- the first bundle, or under a K>1 Jev plan
                   // the first cell (the worker still resolves the full transcript).
                   ...((cellToken ? cellToken.jevChunkIndex === 0 && cellToken.chunkIndex === 1 : i === 0) && job.epistemicShadow
-                    ? { epistemicShadowSig: job.epistemicShadow.sig, epistemicShadowExp: job.epistemicShadow.exp }
+                    ? { epistemicShadowSig: job.epistemicShadow.sig, epistemicShadowExp: job.epistemicShadow.exp, epistemicShadowRetry: job.epistemicShadow.retry }
                     : {}),
                   priorPayloadMaxBytes: job.priorPayloadMaxBytes,
                   // R3b 2.3 (P1): forward the resolved Jev plan when present.

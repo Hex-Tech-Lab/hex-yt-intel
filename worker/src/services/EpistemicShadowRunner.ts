@@ -21,6 +21,7 @@ import { JevTextParser } from "./sensor-fusion/heuristics/jev-text-parser";
 import type { GroundedExtractionPayload } from "../types/grounded-extraction";
 import type { LLMCascadePort } from "../ports/LLMCascadePort";
 import type { PromptBuilderPort } from "../ports/PromptBuilderPort";
+import type { EpistemicPersistRetry } from "../../../web/lib/config/epistemic-shadow";
 
 /** How long a grounded-claims persist signature stays valid. */
 const CLAIMS_SIG_TTL_MS = 5 * 60 * 1000;
@@ -34,9 +35,13 @@ export interface EpistemicShadowParams {
   appUrl: string;
   signingSecret: string;
   openRouterApiKey: string;
+  /** Persist retry policy from the Vercel-signed grant (Settings Registry `analysis.pipeline.retry.epistemic`). */
+  persistRetry: EpistemicPersistRetry;
   promptBuilder: PromptBuilderPort;
   cascade: LLMCascadePort;
   fetchImpl?: typeof fetch;
+  /** Injected for tests so backoff does not wait in real time. */
+  sleepImpl?: (ms: number) => Promise<void>;
 }
 
 /** Body sent to Vercel's /api/analyses/[id]/grounded-claims route. */
@@ -53,8 +58,43 @@ export function groundedClaimsCanonical(analysisId: string, groundedClaims: Grou
   return canonicalJson({ analysisId, groundedClaims, degradedSensors });
 }
 
-/** Signs and POSTs one grounded-claims write to Vercel; resolves false on rejection. */
-async function persistGroundedClaims(
+/**
+ * One grounded-claims POST, bounded by the per-attempt deadline. Returns the HTTP
+ * status, or "network" when the request itself failed. Body cleanup is best-effort
+ * and never changes the classification, so a completed 2xx is never re-sent.
+ */
+async function postClaimsOnce(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: RequestInit,
+  attemptTimeoutMs: number,
+  analysisId: string,
+  attempt: number,
+): Promise<number | "network"> {
+  let res: Response;
+  try {
+    res = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(attemptTimeoutMs) });
+  } catch (error) {
+    console.error("[EpistemicShadow] grounded-claims persist network error", { analysisId, attempt, error });
+    return "network";
+  }
+  res.body?.cancel().catch(() => undefined);
+  return res.status;
+}
+
+/** Maps one attempt's status to the next step: stop with success, retry, or give up. */
+function persistVerdict(status: number | "network"): "done" | "retry" | "final" {
+  if (status === "network") return "retry";
+  if (status >= 200 && status < 300) return "done";
+  return status >= 500 || status === 429 ? "retry" : "final";
+}
+
+/**
+ * Signs and POSTs one grounded-claims write to Vercel. Retries 5xx, 429 and
+ * network errors within the signed attempt budget and backoff; any other 4xx is
+ * final. Resolves false only after the row is given up on, so the caller can report it.
+ */
+export async function persistGroundedClaims(
   params: EpistemicShadowParams,
   groundedClaims: GroundedExtractionPayload,
   degradedSensors: boolean,
@@ -63,17 +103,25 @@ async function persistGroundedClaims(
   const canonical = groundedClaimsCanonical(params.analysisId, groundedClaims, degradedSensors);
   const contentSig = await signEpistemicClaims(params.signingSecret, params.analysisId, exp, canonical);
   const body: GroundedClaimsPersistBody = { analysisId: params.analysisId, groundedClaims, degradedSensors, exp, contentSig };
-  const res = await (params.fetchImpl ?? fetch)(
-    `${params.appUrl.replace(/\/+$/, "")}/api/analyses/${encodeURIComponent(params.analysisId)}/grounded-claims`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
-  );
-  if (!res.ok) {
-    await res.body?.cancel();
-    console.error("[EpistemicShadow] grounded-claims persist rejected", { analysisId: params.analysisId, status: res.status });
-    return false;
+  const url = `${params.appUrl.replace(/\/+$/, "")}/api/analyses/${encodeURIComponent(params.analysisId)}/grounded-claims`;
+  const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const sleep = params.sleepImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const { maxAttempts, backoffDelays, attemptTimeoutMs } = params.persistRetry;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) await sleep(backoffDelays[attempt - 1] ?? 0);
+    const status = await postClaimsOnce(params.fetchImpl ?? fetch, url, init, attemptTimeoutMs, params.analysisId, attempt);
+    const verdict = persistVerdict(status);
+    if (verdict === "done") return true;
+    if (status !== "network") console.error("[EpistemicShadow] grounded-claims persist rejected", { analysisId: params.analysisId, status, attempt });
+    if (verdict === "final") return false;
   }
-  await res.body?.cancel();
-  return true;
+  Sentry.captureMessage("EpistemicShadow: grounded-claims persist gave up after retries", {
+    level: "error",
+    tags: { operation: "epistemic-shadow-persist" },
+    extra: { analysisId: params.analysisId, attempts: maxAttempts },
+  });
+  return false;
 }
 
 /** Runs the shadow pipeline end to end. Never throws: failures are logged and reported to Sentry. */

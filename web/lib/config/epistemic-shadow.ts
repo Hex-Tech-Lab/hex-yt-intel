@@ -24,6 +24,61 @@ export const EPISTEMIC_SHADOW_TTL_MS = 10 * 60 * 1000;
 /** Registry key gating shadow mode. */
 export const EPISTEMIC_PIPELINE_FLAG_KEY = 'analysis.pipeline.epistemic' as const;
 
+/** Registry key for the grounded-claims persist retry policy (Settings Registry, never hardcoded). */
+export const EPISTEMIC_PERSIST_RETRY_KEY = 'analysis.pipeline.retry.epistemic' as const;
+
+/**
+ * Bounded retry policy for the grounded-claims persist. `maxAttempts` counts the
+ * first attempt; `backoffDelays[i]` is the wait before attempt i+2, so its length
+ * is always maxAttempts - 1; `attemptTimeoutMs` bounds each POST.
+ */
+export interface EpistemicPersistRetry {
+  maxAttempts: number;
+  backoffDelays: number[];
+  attemptTimeoutMs: number;
+}
+
+/** Used only when the registry key is absent or its value fails validation. */
+export const EPISTEMIC_PERSIST_RETRY_DEFAULT: EpistemicPersistRetry = { maxAttempts: 3, backoffDelays: [250, 500], attemptTimeoutMs: 10_000 };
+
+const MAX_PERSIST_ATTEMPTS = 10;
+const MAX_BACKOFF_MS = 60_000;
+const MIN_ATTEMPT_TIMEOUT_MS = 1_000;
+const MAX_ATTEMPT_TIMEOUT_MS = 60_000;
+/**
+ * Backoff plus all attempt timeouts must finish inside the grounded-claims signature
+ * window (5 min, worker CLAIMS_SIG_TTL_MS) with margin, or late attempts would carry
+ * an expired exp.
+ */
+const MAX_TOTAL_PERSIST_MS = 4 * 60 * 1000;
+
+/** Field-level checks: integer ranges, delay count matching the attempts, and each delay in bounds. */
+function hasValidFields(maxAttempts: unknown, backoffDelays: unknown, attemptTimeoutMs: unknown): boolean {
+  if (!Number.isInteger(maxAttempts) || !Number.isInteger(attemptTimeoutMs)) return false;
+  const attempts = maxAttempts as number;
+  const timeout = attemptTimeoutMs as number;
+  if (attempts < 1 || attempts > MAX_PERSIST_ATTEMPTS) return false;
+  if (timeout < MIN_ATTEMPT_TIMEOUT_MS || timeout > MAX_ATTEMPT_TIMEOUT_MS) return false;
+  if (!Array.isArray(backoffDelays) || backoffDelays.length !== attempts - 1) return false;
+  return backoffDelays.every((ms) => Number.isInteger(ms) && ms >= 0 && ms <= MAX_BACKOFF_MS);
+}
+
+/** Validates a registry value into a retry policy, or null when malformed. */
+export function parseEpistemicPersistRetry(value: unknown): EpistemicPersistRetry | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { maxAttempts, backoffDelays, attemptTimeoutMs } = value as { maxAttempts?: unknown; backoffDelays?: unknown; attemptTimeoutMs?: unknown };
+  if (!hasValidFields(maxAttempts, backoffDelays, attemptTimeoutMs)) return null;
+  const delays = backoffDelays as number[];
+  const timeline = delays.reduce((total, ms) => total + ms, 0) + (maxAttempts as number) * (attemptTimeoutMs as number);
+  if (timeline > MAX_TOTAL_PERSIST_MS) return null;
+  return { maxAttempts: maxAttempts as number, backoffDelays: [...delays], attemptTimeoutMs: attemptTimeoutMs as number };
+}
+
+/** Canonical text of a retry policy, bound into the grant signature. */
+function retryCanonical(retry: EpistemicPersistRetry): string {
+  return `${retry.maxAttempts}:${retry.backoffDelays.join(',')}:${retry.attemptTimeoutMs}`;
+}
+
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -41,10 +96,18 @@ function timingSafeEqualHex(left: string, right: string): boolean {
   return diff === 0;
 }
 
-/** Vercel side: grant shadow mode for one analysis. */
-export async function signEpistemicShadow(secret: string, analysisId: string, nowMs: number = Date.now()): Promise<{ sig: string; exp: number }> {
+/**
+ * Vercel side: grant shadow mode for one analysis. The retry policy is bound into
+ * the signature, so a browser that relays the grant cannot raise its own attempts.
+ */
+export async function signEpistemicShadow(
+  secret: string,
+  analysisId: string,
+  retry: EpistemicPersistRetry,
+  nowMs: number = Date.now(),
+): Promise<{ sig: string; exp: number }> {
   const exp = nowMs + EPISTEMIC_SHADOW_TTL_MS;
-  const sig = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on`);
+  const sig = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on:${retryCanonical(retry)}`);
   return { sig, exp };
 }
 
@@ -54,12 +117,15 @@ export async function verifyEpistemicShadowSig(params: {
   analysisId: string;
   sig: unknown;
   exp: unknown;
+  retry: unknown;
   nowMs?: number;
 }): Promise<boolean> {
   const { secret, analysisId, sig, exp } = params;
   if (!secret || !analysisId || typeof sig !== 'string' || typeof exp !== 'number' || !Number.isFinite(exp)) return false;
+  const retry = parseEpistemicPersistRetry(params.retry);
+  if (!retry) return false;
   if ((params.nowMs ?? Date.now()) > exp) return false;
-  const expected = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on`);
+  const expected = await hmacSha256Hex(secret, `${EPISTEMIC_SHADOW_PURPOSE}:${analysisId}:${exp}:on:${retryCanonical(retry)}`);
   return timingSafeEqualHex(expected, sig);
 }
 
