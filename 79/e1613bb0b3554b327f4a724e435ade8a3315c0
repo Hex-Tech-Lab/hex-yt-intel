@@ -1,0 +1,19 @@
+supabase/migrations/20261009130000_cascade_diarization_registry_key.sql
+  s_c3159d04a49d90::t_bb108e22a1e79f 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79e1613bb0b3554b327f4a724e435ade8a3315c0",
+  "prompts": {},
+  "sessions": {
+    "s_c3159d04a49d90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f18db70-6883-4ae3-8367-4481da8fad4b",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
