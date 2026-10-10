@@ -1,0 +1,26 @@
+web/hooks/useStreamReattach.ts
+  s_4075cc6448b8f7::t_0d3218b30f2ea5 45-49,58-62,64,67-68,70-71,76
+  s_4075cc6448b8f7::t_6357db74b6aede 22-28
+  s_4075cc6448b8f7::t_192e34c7d4c904 97-99,101,105-109,111,115-119,122-123,125-130,139
+web/hooks/__tests__/useStreamReattach.test.tsx
+  s_4075cc6448b8f7::t_3382c2930e22a9 1-89
+  s_4075cc6448b8f7::t_d6967c2256b809 90
+.qa-intel/baseline.json
+  s_4075cc6448b8f7::t_b9c45f53c30c7b 841-847
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66774da9285bf0012da9bcd98d4d19aed4f26bfb",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
