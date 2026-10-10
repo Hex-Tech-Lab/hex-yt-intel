@@ -5,5 +5,19 @@
       "phase-c": true,
       "*": false
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "v-intel.getmytestdrive.com"
+        }
+      ],
+      "destination": "https://getvintel.com/:path*",
+      "statusCode": 301,
+      "permanent": true
+    }
+  ]
 }
