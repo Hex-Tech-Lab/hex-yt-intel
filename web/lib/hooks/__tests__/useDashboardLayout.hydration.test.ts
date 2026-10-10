@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useDashboardPanels } from '../useDashboardLayout';
+import { DEFAULT_LAYOUT, requestDashboardLayoutReset, useDashboardPanels } from '../useDashboardLayout';
 
 describe('useDashboardPanels hydration', () => {
   beforeEach(() => {
@@ -74,5 +74,19 @@ describe('useDashboardPanels hydration', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(result.current.sidebarSize).toBe(12);
     expect(result.current.rightSize).toBe(33);
+  });
+
+  it('defaults are relative percentages: 3col 15 / 60 / 25, 2col 15 / 85 (ARTAS Vector 7)', () => {
+    expect(DEFAULT_LAYOUT['3col']).toEqual({ sidebar: 15, right: 25 });
+    expect(DEFAULT_LAYOUT['2col']).toEqual({ sidebar: 15, right: 0 });
+    expect(100 - DEFAULT_LAYOUT['3col'].sidebar - DEFAULT_LAYOUT['3col'].right).toBe(60);
+  });
+
+  it('Reset Layout clears both stored shapes (TopBar circuit breaker)', () => {
+    window.localStorage.setItem('hex:layout:v1:2col', JSON.stringify({ sidebar: 22 }));
+    window.localStorage.setItem('hex:layout:v1:3col', JSON.stringify({ sidebar: 20, right: 30 }));
+    requestDashboardLayoutReset();
+    expect(window.localStorage.getItem('hex:layout:v1:2col')).toBeNull();
+    expect(window.localStorage.getItem('hex:layout:v1:3col')).toBeNull();
   });
 });

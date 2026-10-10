@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 /**
  * Resizable desktop panel layout for DashboardLayout (PR #442, Task 4).
@@ -10,8 +10,11 @@ import { useCallback, useEffect, useState } from 'react';
  * written by the 3-column desktop and vice versa -- percentages would
  * silently collide across different panel counts.
  *
- * Defaults match the previous fixed grid at a ~1440px viewport:
- * 260px sidebar / fluid center / 390px right => ~18% / 64% / 18%.
+ * Defaults are relative percentages: left 15% / center 60% / right 25% in the
+ * 3-column layout, left 15% / center 85% in the 2-column layout. These are
+ * percentages on purpose. react-resizable-panels treats a numeric defaultSize
+ * as PIXELS (v4), so a bare `18` produced an 18px panel, clamped up to the
+ * 10% minimum and read as a collapsed column (ARTAS Vector 7).
  *
  * All storage access is try/catch wrapped: private-mode browsing and
  * quota errors must never break render, and a corrupt value falls back
@@ -25,10 +28,8 @@ export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
-  '2col': { sidebar: 18, right: 0 },
-  // Right panel gets the ~390px column from the historic fixed grid
-  // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
-  '3col': { sidebar: 18, right: 27 },
+  '2col': { sidebar: 15, right: 0 },
+  '3col': { sidebar: 15, right: 25 },
 };
 
 export const SIDEBAR_MIN = 10;
@@ -97,7 +98,9 @@ export function clearPersistedLayouts(): void {
 export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(false);
 
-  useEffect(() => {
+  // Layout effect: the desktop panel group mounts before the browser paints,
+  // so the saved layout is applied on the first visible frame.
+  useLayoutEffect(() => {
     const mql = window.matchMedia('(min-width: 1280px)');
     const update = () => setIsDesktop(mql.matches);
     update();
@@ -127,7 +130,9 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
     shape,
   });
 
-  useEffect(() => {
+  // Layout effect, same batch as useIsDesktop: the saved sizes are in state
+  // before the Group mounts and before the first paint.
+  useLayoutEffect(() => {
     setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
   }, [shape]);
 
