@@ -10,8 +10,9 @@ import { useCallback, useEffect, useState } from 'react';
  * written by the 3-column desktop and vice versa -- percentages would
  * silently collide across different panel counts.
  *
- * Defaults match the previous fixed grid at a ~1440px viewport:
- * 260px sidebar / fluid center / 390px right => ~18% / 64% / 18%.
+ * Defaults (2026-10-09 directive): sidebar 15%, center 60%, right 25% in the
+ * 3-column shape (2-column: sidebar 15%, center 85%). DEFAULT_LAYOUT is the single
+ * source of truth for these numbers; the component reads it, never literals.
  *
  * All storage access is try/catch wrapped: private-mode browsing and
  * quota errors must never break render, and a corrupt value falls back
@@ -25,10 +26,8 @@ export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
-  '2col': { sidebar: 18, right: 0 },
-  // Right panel gets the ~390px column from the historic fixed grid
-  // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
-  '3col': { sidebar: 18, right: 27 },
+  '2col': { sidebar: 15, right: 0 },
+  '3col': { sidebar: 15, right: 25 },
 };
 
 export const SIDEBAR_MIN = 10;
@@ -121,12 +120,17 @@ export interface UseDashboardPanelsResult {
 
 export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult {
   const isDesktop = useIsDesktop();
-  // Undefined until hydrated: Group then falls back to its own
-  // defaultSize props (which mirror the historic fixed grid).
-  const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>({
-    shape,
-  });
+  // Read the saved layout during the first client render, not in an effect.
+  // The desktop Group mounts after isDesktop flips and applies its defaultSize
+  // only at mount, so a size that arrives later never reaches the panel and the
+  // saved layout was ignored on refresh. Server render has no window: it gets
+  // the defaults, and the Group is never in server HTML (isDesktop starts false),
+  // so there is no hydration mismatch.
+  const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>(() =>
+    typeof window === 'undefined' ? { shape } : { shape, ...(readPersistedLayout(shape) ?? {}) }
+  );
 
+  // Re-read when the shape switches (the initial read above covers mount).
   useEffect(() => {
     setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
   }, [shape]);
