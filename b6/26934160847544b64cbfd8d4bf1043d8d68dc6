@@ -1,0 +1,25 @@
+docs/architecture/decisions/ADR-042-dashboard-resizable-panels-and-seek-controls.md
+  s_4075cc6448b8f7::t_b7b0ce8b9f4d0a 13
+web/components/templates/console/DashboardLayout.tsx
+  s_4075cc6448b8f7::t_a81f9a16c7f277 115-117,188-190,199,252
+web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts
+  s_4075cc6448b8f7::t_0d94fb5a8234d6 4,78-94
+web/lib/hooks/useDashboardLayout.ts
+  s_4075cc6448b8f7::t_68678a16126610 13-15,29-30,123-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b626934160847544b64cbfd8d4bf1043d8d68dc6",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
