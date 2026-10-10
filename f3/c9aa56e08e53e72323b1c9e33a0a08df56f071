@@ -1,0 +1,30 @@
+web/lib/__tests__/retry-diagnostics.test.ts
+  s_4075cc6448b8f7::t_7e06277bcf50c3 1-101
+web/lib/usecases/RetryMissingDimensionsUseCase.ts
+  s_4075cc6448b8f7::t_12908a74684d94 68-91
+web/app/api/analyses/[id]/retry/route.ts
+  s_4075cc6448b8f7::t_d4b883d875847e 117-121,126-130,132
+  s_4075cc6448b8f7::t_4dc8631cdb298f 41-42
+  s_4075cc6448b8f7::t_04efc7a62eb2e9 23
+  s_4075cc6448b8f7::t_c32ccf6c579ba6 91
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_4075cc6448b8f7::t_ed96ed1cae7c3b 27-43,49-66
+  s_4075cc6448b8f7::t_28f7bc3bf1462b 44-48
+  s_4075cc6448b8f7::t_1d4f07877fd8e7 243,251-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3c9aa56e08e53e72323b1c9e33a0a08df56f071",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
