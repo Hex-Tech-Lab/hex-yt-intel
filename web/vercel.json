@@ -5,7 +5,7 @@
       "has": [
         {
           "type": "host",
-          "value": "v-intel.getmytestdrive.com"
+          "value": "v-intel\\.getmytestdrive\\.com"
         }
       ],
       "destination": "https://getvintel.com/:path*",
