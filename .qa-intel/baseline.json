@@ -768,5 +768,12 @@
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'this.metadataIngestion.fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/dashboard/HighlightsScrubber.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (573 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
   }
 ]
