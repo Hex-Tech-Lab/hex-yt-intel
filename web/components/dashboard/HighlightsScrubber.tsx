@@ -465,9 +465,11 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           media-time poll: it advances with speech, freezes when playback
           pauses, never loops, and is static text under
           prefers-reduced-motion by construction (no animation at all). */}
-      <div className="flex items-center justify-between gap-2 mt-2">
+      {/* Mobile: ticker takes a full-width row, speed + nav sit on the row below.
+          From sm up the three share one row (ticker flexes, controls keep their width). */}
+      <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center sm:justify-between">
         <div
-          className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
+          className="w-full sm:flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
           data-testid="verbatim-caption"
           aria-live="polite"
         >
@@ -523,7 +525,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0">
           {/* Real fix (live report, 2026-08-21): height was left to derive
               from padding + line-height (21px rendered) while HighlightsNav's
               own strip derives its height from its fixed h-4 buttons (18px
