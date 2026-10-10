@@ -1,0 +1,27 @@
+scripts/quality-engine/rules/__tests__/lessons-20261010.test.ts
+  s_4075cc6448b8f7::t_5f5ce0bd428d02 1-90
+scripts/quality-engine/rules/lessons-20261010.ts
+  s_4075cc6448b8f7::t_ef2593805bc30f 1-131
+.memory/AGENT_LEDGER.md
+  s_4075cc6448b8f7::t_0dbaacd9358acf 1609-1614
+docs/history/cubic_ledger.md
+  s_4075cc6448b8f7::t_54219e24aa760d 1-18
+scripts/quality-engine/rules/index.ts
+  s_4075cc6448b8f7::t_111f17c9c34824 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1de39a0a8f23e02addef4b4a01796fd8e2f9dc1c",
+  "prompts": {},
+  "sessions": {
+    "s_4075cc6448b8f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32a3b5ff-c75f-40f7-9a56-c5ce1e2b1701",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
