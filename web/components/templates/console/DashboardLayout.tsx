@@ -112,6 +112,9 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
   const { isDesktop, sidebarSize, rightSize, handleLayoutChanged } =
     useDashboardPanels(shape);
+  // Default sizes come from DEFAULT_LAYOUT, the single source of truth shared
+  // with the Reset Layout sink below.
+  const defaults = DEFAULT_LAYOUT[shape];
 
   const groupRef = useGroupRef();
 
@@ -182,6 +185,9 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
 
       {showDesktopPanels ? (
         <Group
+          // Remount on shape switch so each panel group takes its defaultSize
+          // from the current shape instead of a stale mounted one.
+          key={shape}
           groupRef={groupRef}
           id={`console-dashboard-${shape}`}
           orientation="horizontal"
@@ -190,7 +196,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         >
           <Panel
             id="sidebar"
-            defaultSize={sidebarSize ?? 18}
+            defaultSize={sidebarSize ?? defaults.sidebar}
             minSize="10%"
             maxSize="30%"
             className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--void)]"
@@ -243,7 +249,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
               <Separator className={separatorClass} aria-label="Resize intelligence panel" />
               <Panel
                 id="right"
-                defaultSize={rightSize ?? 18}
+                defaultSize={rightSize ?? defaults.right}
                 minSize="10%"
                 maxSize="35%"
                 className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 px-2"

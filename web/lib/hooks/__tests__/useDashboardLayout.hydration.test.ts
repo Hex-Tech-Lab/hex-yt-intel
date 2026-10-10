@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useDashboardPanels } from '../useDashboardLayout';
+import { useDashboardPanels, DEFAULT_LAYOUT } from '../useDashboardLayout';
 
 describe('useDashboardPanels hydration', () => {
   beforeEach(() => {
@@ -74,5 +74,22 @@ describe('useDashboardPanels hydration', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(result.current.sidebarSize).toBe(12);
     expect(result.current.rightSize).toBe(33);
+  });
+
+  it('defaults are 15 / 60 / 25 in the 3-column shape (centre derived)', () => {
+    expect(DEFAULT_LAYOUT['3col']).toEqual({ sidebar: 15, right: 25 });
+    expect(100 - DEFAULT_LAYOUT['3col'].sidebar - DEFAULT_LAYOUT['3col'].right).toBe(60);
+    expect(DEFAULT_LAYOUT['2col'].sidebar).toBe(15);
+  });
+
+  it('the first client render already carries the persisted sizes (no flash to defaults)', () => {
+    window.localStorage.setItem('hex:layout:v1:3col', JSON.stringify({ sidebar: 20, right: 30 }));
+    const firstRenderSizes: Array<number | undefined> = [];
+    renderHook(() => {
+      const panels = useDashboardPanels('3col');
+      firstRenderSizes.push(panels.sidebarSize);
+      return panels;
+    });
+    expect(firstRenderSizes[0]).toBe(20);
   });
 });
