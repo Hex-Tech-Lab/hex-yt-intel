@@ -1,0 +1,30 @@
+web/components/templates/console/__tests__/DashboardLayout.defaultLayout.test.tsx
+  s_0e11f90dae68e0::t_4165f2f4923b20 3,10,13,19-21,84,139-166
+  s_0e11f90dae68e0::t_8efa2b3157a53e 167
+web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts
+  s_0e11f90dae68e0::t_8cfbaac8eeedd0 15,22,29,36,43,51,64,70
+web/lib/hooks/useDashboardLayout.ts
+  s_0e11f90dae68e0::t_98502d26eecb89 129-133,139-140,143-146,151-152,158-165,172,178-184,187-188
+web/components/templates/console/DashboardLayout.tsx
+  s_0e11f90dae68e0::t_6bde8d3c8b5a8f 3
+  s_0e11f90dae68e0::t_1a956850ebb6e1 114,117-119,122-131
+  s_0e11f90dae68e0::t_f52091288ca111 132
+.memory/AGENT_LEDGER.md
+  s_0e11f90dae68e0::t_502242b922e24f 1582
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71c923853ea0e48b295542b673d97aa7cfbc541a",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
