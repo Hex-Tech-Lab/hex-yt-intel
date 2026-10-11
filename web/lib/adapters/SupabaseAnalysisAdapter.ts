@@ -88,14 +88,17 @@ interface AnalysisRecord {
  * read these columns, but before this only the blob in validation_report.metadata
  * was written, so channel/date/thumbnail stayed null on every row.
  */
-export function metadataColumns(videoId: string, metadata: AnalysisJobMetadata | undefined): Record<string, string> {
-  const cols: Record<string, string> = {
+type MetadataColumns = { thumbnail_url: string; channel_title?: string; channel_id?: string; published_at?: string };
+
+export function metadataColumns(videoId: string, metadata: AnalysisJobMetadata | undefined): MetadataColumns {
+  const cols: MetadataColumns = {
     thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
   };
   if (metadata?.channelTitle) cols.channel_title = metadata.channelTitle;
   if (metadata?.channelId) cols.channel_id = metadata.channelId;
   // publishedAt is z.string() with no date check; a non-date would fail the whole row update.
-  if (metadata?.publishedAt && !Number.isNaN(Date.parse(metadata.publishedAt))) cols.published_at = metadata.publishedAt;
+  const published = metadata?.publishedAt;
+  if (published && /^\d{4}-\d{2}-\d{2}/.test(published) && !Number.isNaN(Date.parse(published))) cols.published_at = published;
   return cols;
 }
 
@@ -232,7 +235,6 @@ export class SupabaseAnalysisAdapter {
         .from('analyses')
         .update({
           title: params.title,
-          channel_title: params.validationReport.metadata?.channelTitle || '',
           ...metadataColumns(params.videoId, params.validationReport.metadata),
           // Only overwrite on an actual signal; a retry/refresh call with no UA
           // (or an unparseable one) must not clobber the platform recorded on
@@ -304,7 +306,7 @@ export class SupabaseAnalysisAdapter {
     // present. `reserve_analysis_quota` doesn't accept either column, so a
     // single follow-up update covers both fields the RPC can't set directly, plus the
     // video-metadata columns (the RPC only stores the validation_report blob).
-    const followUpUpdate: Record<string, string> = metadataColumns(params.videoId, params.validationReport.metadata);
+    const followUpUpdate: Record<string, string> = { ...metadataColumns(params.videoId, params.validationReport.metadata) };
     if (params.transcriptHash) followUpUpdate.transcript_hash = params.transcriptHash;
     if (params.clientPlatform) followUpUpdate.client_platform = params.clientPlatform;
 

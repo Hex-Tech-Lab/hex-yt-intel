@@ -29,4 +29,8 @@ describe('metadataColumns', () => {
   it('drops a publishedAt that is not a date rather than failing the row update', () => {
     expect(metadataColumns('abc', { channelTitle: 'c', publishedAt: 'not-a-date' } as never)).not.toHaveProperty('published_at');
   });
+
+  it('drops a parseable but non-ISO publishedAt the timestamptz column may reject', () => {
+    expect(metadataColumns('abc', { channelTitle: 'c', publishedAt: 'Sep 1 2026' } as never)).not.toHaveProperty('published_at');
+  });
 });
