@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_ea70dbcfbecfea 1582
+web/lib/__tests__/aux-remediation-adapter-idempotency.test.ts
+  s_291078cde7ba1a::t_faed939ecb5017 6
+web/lib/__tests__/aux-remediation-enqueue-orphan.test.ts
+  s_291078cde7ba1a::t_9d9cf65f55706b 22,65-68,102,105
+web/lib/services/aux-remediation.ts
+  s_291078cde7ba1a::t_b3c63890a8cb17 263,268-272,274-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d202b840208c82dc2a028eadfd820feec487a44",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
