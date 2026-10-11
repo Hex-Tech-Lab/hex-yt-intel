@@ -6,6 +6,10 @@ import {
   requestDashboardLayoutReset,
   readStoredLayoutForTest,
   toGroupLayout,
+  SIDEBAR_MIN,
+  SIDEBAR_MAX,
+  RIGHT_MIN,
+  RIGHT_MAX,
 } from '../useDashboardLayout';
 
 const KEY_2COL = 'hex:layout:v1:2col';
@@ -83,10 +87,24 @@ describe('toGroupLayout', () => {
     expect(layout).not.toHaveProperty('right');
   });
 
-  it('default 3col and 2col layouts are 15/60/25 and 15/85', () => {
+  it('default 3col and 2col layouts are 18/52/30 and 18/82', () => {
     expect(toGroupLayout('3col', DEFAULT_LAYOUT['3col'].sidebar, DEFAULT_LAYOUT['3col'].right))
-      .toEqual({ sidebar: 15, center: 60, right: 25 });
+      .toEqual({ sidebar: 18, center: 52, right: 30 });
     expect(toGroupLayout('2col', DEFAULT_LAYOUT['2col'].sidebar, DEFAULT_LAYOUT['2col'].right))
-      .toEqual({ sidebar: 15, center: 85 });
+      .toEqual({ sidebar: 18, center: 82 });
+  });
+});
+
+describe('DEFAULT_LAYOUT bounds', () => {
+  it('every default sits inside the panel min/max, so it is never clamped or rejected as out-of-range', () => {
+    for (const shape of ['2col', '3col'] as const) {
+      const { sidebar, right } = DEFAULT_LAYOUT[shape];
+      expect(sidebar).toBeGreaterThanOrEqual(SIDEBAR_MIN);
+      expect(sidebar).toBeLessThanOrEqual(SIDEBAR_MAX);
+      if (shape === '3col') {
+        expect(right).toBeGreaterThanOrEqual(RIGHT_MIN);
+        expect(right).toBeLessThanOrEqual(RIGHT_MAX);
+      }
+    }
   });
 });
