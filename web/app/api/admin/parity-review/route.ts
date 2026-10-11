@@ -10,8 +10,9 @@ import { requireAdmin } from '@/lib/utils/require-admin';
 /**
  * GET /api/admin/parity-review -- serves the Haiku-4.5-vs-GPT-OSS-120B parity
  * test batch for the internal side-by-side review page
- * (web/app/admin/parity-review). Reads directly from the repo-tracked JSON
- * dump at docs/research/2026-08-18-parity-batch-results.json rather than a DB
+ * (web/app/admin/parity-review). Reads the JSON dump from the private
+ * companion checkout (docs/private/research/, git-ignored since 2026-10-11),
+ * falling back to the legacy docs/research/ location, rather than a DB
  * table -- this is a one-off manual-review artifact from a parallel research
  * task, not durable app data.
  *
@@ -22,7 +23,8 @@ import { requireAdmin } from '@/lib/utils/require-admin';
  * KNOWN LIMITATION (Cubic P0 review, 2026-08-18): this reads the JSON off
  * the local filesystem relative to `process.cwd()`. That's fine for local
  * dev, but a real Vercel deployment does not guarantee `docs/` is bundled
- * into the serverless function's filesystem -- a full storage-layer
+ * (or the git-ignored docs/private/) into the serverless function's
+ * filesystem -- a full storage-layer
  * migration (e.g. move the artifact into Supabase Storage or a DB table) is
  * out of scope for this fix. The route now at least fails explicitly rather
  * than silently returning bad/empty data: schema validation below means a
@@ -46,16 +48,58 @@ const ParityBatchSchema = z.object({
   videos: z.array(ParityVideoSchema),
 });
 
+const PARITY_FILE = '2026-08-18-parity-batch-results.json';
+const PARITY_FILE_CANDIDATES: [string, ...string[]] = [
+  path.join(process.cwd(), '..', 'docs', 'private', 'research', PARITY_FILE),
+  path.join(process.cwd(), '..', 'docs', 'research', PARITY_FILE),
+];
+
+function isErrnoCode(err: unknown, code: string): boolean {
+  return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
+}
+
+/** Thrown when no candidate exists; carries every path that was tried. */
+class ParityFileMissingError extends Error {
+  readonly code = 'ENOENT';
+  constructor(readonly tried: string[]) {
+    super(`parity batch file not found in: ${tried.join(', ')}`);
+  }
+}
+
+/**
+ * Returns the first candidate that exists. A fallback past the first
+ * (private) path is reported to Sentry, so a stale legacy copy is never
+ * served silently. Non-ENOENT read errors propagate unchanged.
+ */
+async function readFirstExisting(candidates: [string, ...string[]]): Promise<string> {
+  for (const [index, candidate] of candidates.entries()) {
+    try {
+      const raw = await readFile(candidate, 'utf-8');
+      if (index > 0) {
+        Sentry.captureMessage('admin parity-review served a fallback copy', {
+          level: 'warning',
+          tags: { operation: 'admin_parity_review_read' },
+          extra: { served: candidate, missing: candidates.filter((_, i) => i < index) },
+        });
+      }
+      return raw;
+    } catch (err) {
+      // ENOENT is the expected "not here" signal: try the next candidate.
+      if (!isErrnoCode(err, 'ENOENT')) throw err;
+      Sentry.addBreadcrumb({ category: 'admin_parity_review', message: `parity file absent: ${candidate}` });
+    }
+  }
+  throw new ParityFileMissingError(candidates);
+}
+
 export async function GET(): Promise<NextResponse> {
   const adminResult = await requireAdmin('admin/parity-review:GET');
   if (!adminResult.ok) {
     return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
   }
 
-  const filePath = path.join(process.cwd(), '..', 'docs', 'research', '2026-08-18-parity-batch-results.json');
-
   try {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFirstExisting(PARITY_FILE_CANDIDATES);
     const parsed = JSON.parse(raw);
 
     const validation = ParityBatchSchema.safeParse(parsed);
@@ -72,11 +116,16 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json({ available: true, data: validation.data });
   } catch (err) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code === 'ENOENT') {
+    if (err instanceof ParityFileMissingError) {
+      // Absent from both docs/private/research/ and docs/research/: expected on
+      // deployments without the git-ignored private checkout (e.g. Vercel).
+      // 'not_generated_yet' therefore also covers "not present on this host";
+      // the log line lists the paths tried so the two cases can be told apart.
+      console.warn('[admin/parity-review] parity batch file missing', { tried: err.tried });
       return NextResponse.json({ available: false, reason: 'not_generated_yet' });
     }
     Sentry.captureException(err, { tags: { operation: 'admin_parity_review_read' } });
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to read parity batch results' }, { status: 500 });
+    // Fixed message: the raw error can contain absolute server paths.
+    return NextResponse.json({ error: 'Failed to read parity batch results' }, { status: 500 });
   }
 }
