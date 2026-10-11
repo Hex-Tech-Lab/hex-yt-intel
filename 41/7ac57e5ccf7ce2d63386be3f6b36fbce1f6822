@@ -1,0 +1,19 @@
+scripts/quality-engine/__tests__/strict-merge.test.ts
+  s_291078cde7ba1a::t_1ff5fa1c0b1399 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "417ac57e5ccf7ce2d63386be3f6b36fbce1f6822",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
