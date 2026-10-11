@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
 import { Group, Panel, Separator, useGroupRef } from 'react-resizable-panels';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
@@ -111,7 +111,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // localStorage layout (2-column vs 3-column -- rightPanel is optional,
   // and mixing percentages across different panel counts would collide).
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
-  const { isDesktop, hydrated, groupLayout, handleLayoutChanged } =
+  const { isDesktop, hydrated, groupLayout, layouts, handleLayoutChanged } =
     useDashboardPanels(shape);
 
   // groupLayout is PERCENTAGES: react-resizable-panels v4 reads a bare number
@@ -120,15 +120,17 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const groupRef = useGroupRef();
 
   // Shape switch (2col <-> 3col): the Group stays mounted, so apply the saved
-  // sizes for the new shape to it directly. useEffectEvent reads the latest
-  // groupLayout without re-running on every drag.
-  const applyShapeLayout = useEffectEvent(() => {
-    groupRef.current?.setLayout(groupLayout);
+  // sizes for the new shape to it directly. The ref holds the latest layouts
+  // (updated before the apply effect runs, since layout effects run in order),
+  // so the apply effect does not re-run on every drag.
+  const layoutsRef = useRef(layouts);
+  useLayoutEffect(() => {
+    layoutsRef.current = layouts;
   });
   useLayoutEffect(() => {
     if (!isDesktop || !hydrated) return;
-    applyShapeLayout();
-  }, [shape, isDesktop, hydrated]);
+    groupRef.current?.setLayout(layoutsRef.current[shape]);
+  }, [shape, isDesktop, hydrated, groupRef]);
 
   // Register the imperative reset bridge: Reset Layout snaps the live
   // Group back to DEFAULT_LAYOUT percentages via setLayout without a reload.

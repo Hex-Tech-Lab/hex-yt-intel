@@ -130,6 +130,8 @@ export interface UseDashboardPanelsResult {
   hydrated: boolean;
   /** Percent layout for the active shape: saved sizes when present, else DEFAULT_LAYOUT. */
   groupLayout: Record<string, number>;
+  /** Percent layout for BOTH shapes, so a shape switch can apply the other one without a remount. */
+  layouts: Record<LayoutShape, Record<string, number>>;
   /** Persist on `Group`'s `onLayoutChanged`. Ignores reports whose panel ids belong to the other shape. */
   handleLayoutChanged: (layout: { [panelId: string]: number }) => void;
   /** Reset Layout: clears both keys and snaps back to defaults immediately. */
@@ -172,24 +174,31 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
   // Reset Layout clears storage and the live Group. Drop the in-memory copy
   // too, or the next shape switch would re-apply the pre-reset sizes.
   useEffect(() => {
-    const clear = () => setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
+    const clear = () => {
+      setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
+    };
     resetListeners.add(clear);
     return () => {
       resetListeners.delete(clear);
     };
   }, []);
 
-  const current = saved?.[shape] ?? null;
-  const groupLayout = toGroupLayout(
-    shape,
-    current?.sidebar ?? DEFAULT_LAYOUT[shape].sidebar,
-    current?.right ?? DEFAULT_LAYOUT[shape].right
-  );
+  const layoutFor = (target: LayoutShape): Record<string, number> => {
+    const current = saved?.[target] ?? null;
+    return toGroupLayout(
+      target,
+      current?.sidebar ?? DEFAULT_LAYOUT[target].sidebar,
+      current?.right ?? DEFAULT_LAYOUT[target].right
+    );
+  };
+  const layouts = { '2col': layoutFor('2col'), '3col': layoutFor('3col') };
+  const groupLayout = layouts[shape];
 
   return {
     isDesktop,
     hydrated: saved !== null,
     groupLayout,
+    layouts,
     handleLayoutChanged,
     resetLayout,
   };
@@ -220,7 +229,9 @@ export function requestDashboardLayoutReset(): void {
   clearPersistedLayouts();
   resetSink?.('2col');
   resetSink?.('3col');
-  resetListeners.forEach((listener) => listener());
+  resetListeners.forEach((listener) => {
+    listener();
+  });
 }
 
 /**
