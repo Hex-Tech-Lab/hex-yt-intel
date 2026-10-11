@@ -10,8 +10,9 @@ import { requireAdmin } from '@/lib/utils/require-admin';
 /**
  * GET /api/admin/parity-review -- serves the Haiku-4.5-vs-GPT-OSS-120B parity
  * test batch for the internal side-by-side review page
- * (web/app/admin/parity-review). Reads directly from the repo-tracked JSON
- * dump at docs/research/2026-08-18-parity-batch-results.json rather than a DB
+ * (web/app/admin/parity-review). Reads the JSON dump from the private
+ * companion checkout (docs/private/research/, git-ignored since 2026-10-11),
+ * falling back to the legacy docs/research/ location, rather than a DB
  * table -- this is a one-off manual-review artifact from a parallel research
  * task, not durable app data.
  *
@@ -46,16 +47,35 @@ const ParityBatchSchema = z.object({
   videos: z.array(ParityVideoSchema),
 });
 
+const PARITY_FILE = '2026-08-18-parity-batch-results.json';
+const PARITY_FILE_CANDIDATES = [
+  path.join(process.cwd(), '..', 'docs', 'private', 'research', PARITY_FILE),
+  path.join(process.cwd(), '..', 'docs', 'research', PARITY_FILE),
+];
+
+/** Returns the first candidate that exists; rethrows ENOENT from the last one. */
+async function readFirstExisting(candidates: string[]): Promise<string> {
+  let lastErr: unknown;
+  for (const candidate of candidates) {
+    try {
+      return await readFile(candidate, 'utf-8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      Sentry.addBreadcrumb({ category: 'admin_parity_review', message: `parity file absent: ${candidate}` });
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 export async function GET(): Promise<NextResponse> {
   const adminResult = await requireAdmin('admin/parity-review:GET');
   if (!adminResult.ok) {
     return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
   }
 
-  const filePath = path.join(process.cwd(), '..', 'docs', 'research', '2026-08-18-parity-batch-results.json');
-
   try {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFirstExisting(PARITY_FILE_CANDIDATES);
     const parsed = JSON.parse(raw);
 
     const validation = ParityBatchSchema.safeParse(parsed);

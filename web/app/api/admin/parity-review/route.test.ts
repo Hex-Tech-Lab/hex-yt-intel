@@ -1,0 +1,63 @@
+/**
+ * docs/research/ was untracked on 2026-10-11 (PR #462); the parity dump now
+ * lives in the git-ignored private companion checkout. The route must read
+ * docs/private/research first and only fall back to the legacy path.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const requireAdminMock = vi.fn();
+const readFileMock = vi.fn();
+
+vi.mock('@/lib/utils/require-admin', () => ({ requireAdmin: requireAdminMock }));
+vi.mock('node:fs/promises', () => ({ readFile: readFileMock }));
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), addBreadcrumb: vi.fn() }));
+
+const VALID = JSON.stringify({ videos: [{ video_id: 'v1', dimensions: {} }] });
+const enoent = () => Object.assign(new Error('missing'), { code: 'ENOENT' });
+
+describe('GET /api/admin/parity-review', () => {
+  beforeEach(() => {
+    requireAdminMock.mockReset().mockResolvedValue({ ok: true, userId: 'admin-1' });
+    readFileMock.mockReset();
+  });
+
+  it('reads the private research copy first', async () => {
+    readFileMock.mockResolvedValueOnce(VALID);
+    const { GET } = await import('./route');
+
+    const body = await (await GET()).json();
+
+    expect(body.available).toBe(true);
+    expect(readFileMock).toHaveBeenCalledTimes(1);
+    expect(String(readFileMock.mock.calls[0][0])).toMatch(/docs[\\/]private[\\/]research[\\/]2026-08-18-parity-batch-results\.json$/);
+  });
+
+  it('falls back to the legacy docs/research path when the private copy is absent', async () => {
+    readFileMock.mockRejectedValueOnce(enoent()).mockResolvedValueOnce(VALID);
+    const { GET } = await import('./route');
+
+    const body = await (await GET()).json();
+
+    expect(body.available).toBe(true);
+    expect(String(readFileMock.mock.calls[1][0])).toMatch(/docs[\\/]research[\\/]2026-08-18-parity-batch-results\.json$/);
+  });
+
+  it('returns available:false when neither copy exists', async () => {
+    readFileMock.mockRejectedValue(enoent());
+    const { GET } = await import('./route');
+
+    const body = await (await GET()).json();
+
+    expect(body).toEqual({ available: false, reason: 'not_generated_yet' });
+  });
+
+  it('does not mask a non-ENOENT read error as missing', async () => {
+    readFileMock.mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'EACCES' }));
+    const { GET } = await import('./route');
+
+    const res = await GET();
+
+    expect(res.status).toBe(500);
+    expect(readFileMock).toHaveBeenCalledTimes(1);
+  });
+});
