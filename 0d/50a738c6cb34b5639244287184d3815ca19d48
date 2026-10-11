@@ -1,0 +1,21 @@
+scripts/quality-engine/rules/__tests__/security-lessons-20261010.test.ts
+  s_0e11f90dae68e0::t_a29dde6574e1e5 88
+scripts/quality-engine/rules/security-lessons-20261010.ts
+  s_0e11f90dae68e0::t_5a24ca7a8c1c84 146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d50a738c6cb34b5639244287184d3815ca19d48",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
