@@ -54,6 +54,12 @@ describe("AdvisoryLockIsolationGuardRule", () => {
       "CREATE FUNCTION g() RETURNS void AS $$ IF current_setting('transaction_isolation') <> 'read committed' THEN RAISE; END IF; PERFORM pg_advisory_xact_lock(1); $$;";
     expect(AdvisoryLockIsolationGuardRule.check(ctx("supabase/migrations/a.sql", sql))).toHaveLength(0);
   });
+
+  test("a string mention of transaction_isolation (not a guard) does not silence the rule", () => {
+    const sql =
+      "CREATE FUNCTION g() RETURNS void AS $$ RAISE NOTICE 'transaction_isolation not checked'; PERFORM pg_advisory_xact_lock(1); $$;";
+    expect(AdvisoryLockIsolationGuardRule.check(ctx("supabase/migrations/a.sql", sql))).toHaveLength(1);
+  });
 });
 
 describe("IpHeaderSinkRule", () => {
@@ -70,6 +76,11 @@ describe("IpHeaderSinkRule", () => {
   test("a file ending in client-ip.ts outside the helper path is NOT exempt", () => {
     const code = 'const ip = headers.get("x-real-ip");';
     expect(IpHeaderSinkRule.check(ctx("web/app/other/client-ip.ts", code))).toHaveLength(1);
+  });
+
+  test("fires on bracket access to an IP header", () => {
+    const code = 'const ip = req.headers["x-real-ip"];';
+    expect(IpHeaderSinkRule.check(ctx("web/app/api/x/route.ts", code))).toHaveLength(1);
   });
 
   test("the canonical helper path is exempt", () => {

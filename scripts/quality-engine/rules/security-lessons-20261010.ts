@@ -107,7 +107,10 @@ export const AdvisoryLockIsolationGuardRule: Rule = {
     const findings: Finding[] = [];
     for (const seg of segments) {
       if (!/pg_advisory_xact_lock/i.test(seg)) continue;
-      if (/transaction_isolation/i.test(seg)) continue;
+      // Only a real guard counts: current_setting('transaction_isolation') or
+      // SHOW transaction_isolation. A bare mention (log text, a RAISE message)
+      // no longer silences the rule (ARTAS V24, sweep 2026-10-11).
+      if (/current_setting\s*\(\s*'transaction_isolation'|show\s+transaction_isolation/i.test(seg)) continue;
       const name = /^\s*([\w."]+)\s*\(/.exec(seg)?.[1];
       findings.push({
         file: normalizePosixPath(ctx.filePath),
@@ -138,7 +141,7 @@ export const IpHeaderSinkRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath) || CLIENT_IP_HELPER_PATH.test(filePath)) return [];
     const code = stripComments(sourceText(ctx), "ts");
-    const re = /headers\.get\(\s*["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*\)/i;
+    const re = /headers(?:\.get\(\s*|\[\s*)["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*[)\]]/i;
     const m = re.exec(code);
     if (!m) return [];
     return [
