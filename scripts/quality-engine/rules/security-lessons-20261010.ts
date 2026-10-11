@@ -30,7 +30,8 @@ const CLIENT_IP_HELPER_PATH = /(^|\/)web\/lib\/client-ip\.ts$/;
 /**
  * Removes comments so rules only match executable text. String and template
  * literals are copied verbatim, so a "//" or "--" inside a string survives.
- * Comments are replaced by a space (line comments keep their newline).
+ * Block comments become a space; line comments are dropped but their
+ * newline is kept.
  */
 export function stripComments(text: string, lang: RuleLanguage): string {
   let out = "";
@@ -89,13 +90,16 @@ const CREATE_FUNCTION = /create\s+(?:or\s+replace\s+)?function/i;
 
 /**
  * (L1) MVCC snapshot parity. A plpgsql function that takes an advisory lock
- * AFTER reading its own snapshot must also refuse non-READ-COMMITTED isolation.
- * Under REPEATABLE READ the snapshot predates the lock wait, so a concurrent
- * refusal is invisible to the gate (PR #97, CodeRabbit + Cubic P1).
+ * must also refuse non-READ-COMMITTED isolation: under REPEATABLE READ the
+ * snapshot predates the lock wait, so a concurrent refusal is invisible to the
+ * gate (PR #97, CodeRabbit + Cubic P1).
  *
- * Checks each `create [or replace] function` body separately, on comment-free
- * SQL, so a lock in one function is never excused by an isolation mention in
- * another. Reports one finding per offending function body.
+ * What the rule checks: any segment that calls pg_advisory_xact_lock must also
+ * READ the isolation level (current_setting('transaction_isolation') or SHOW
+ * transaction_isolation). It does not verify that the read is a refusal, or
+ * that it comes before the lock; review does. Segments are the text before the
+ * first `create [or replace] function` plus each function body, on
+ * comment-free SQL, so a guard in one function never excuses a lock in another.
  */
 export const AdvisoryLockIsolationGuardRule: Rule = {
   name: "advisory-lock-isolation-guard",
@@ -137,7 +141,8 @@ export const AdvisoryLockIsolationGuardRule: Rule = {
 export const IpHeaderSinkRule: Rule = {
   name: "ip-header-direct-read",
   scope: "file",
-  // TS/JS only: stripComments(..., "ts") would mis-strip SQL comments.
+  // TS-family files only (the engine's "ts" language): stripComments(..., "ts")
+  // would mis-strip SQL comments.
   languages: ["ts"],
   check: (ctx: RuleContext): Finding[] => {
     const filePath = normalizePosixPath(ctx.filePath);
@@ -152,7 +157,7 @@ export const IpHeaderSinkRule: Rule = {
         severity: "medium",
         title: "Security: client IP read from a header directly",
         why: `Direct read of ${m[1]} lets each site parse IPs differently. Empty or port-suffixed values then reach audit sinks, and x-forwarded-for is client-supplied outside a proxy.`,
-        fix: "Use clientIp(headers) from web/lib/client-ip.ts. The helper lives in hex-expan-press and this repo does not have it yet, so add it at web/lib/client-ip.ts first. It validates each candidate and never returns an empty string.",
+        fix: "Use clientIp(headers) from web/lib/client-ip.ts. The helper lives in hex-expan-press and this repo does not have it yet, so add it at web/lib/client-ip.ts first. The intended helper validates each candidate and never returns an empty string.",
       },
     ];
   },
@@ -160,15 +165,16 @@ export const IpHeaderSinkRule: Rule = {
 
 /**
  * (L3) Launch-path isolation. Application code must not set REPEATABLE READ or
- * SERIALIZABLE for a request that goes on to the launch gate. The gate refuses
- * that isolation, so a request that sets it fails at runtime. Flags the setting
- * in non-test source, matching any whitespace between the words and ignoring
- * comments.
+ * SERIALIZABLE for a request that goes on to the launch gate, which refuses
+ * that isolation. The rule cannot see the launch path, so it flags the setting
+ * in ANY non-test TS source (ISOLATION LEVEL, SET [default_]transaction_isolation,
+ * set_config forms), ignoring comments; reviewers dismiss off-path hits.
  */
 export const LaunchPathIsolationLiteralRule: Rule = {
   name: "launch-path-isolation-literal",
   scope: "file",
-  // TS/JS only: stripComments(..., "ts") would mis-strip SQL comments.
+  // TS-family files only (the engine's "ts" language): stripComments(..., "ts")
+  // would mis-strip SQL comments.
   languages: ["ts"],
   check: (ctx: RuleContext): Finding[] => {
     const filePath = normalizePosixPath(ctx.filePath);
