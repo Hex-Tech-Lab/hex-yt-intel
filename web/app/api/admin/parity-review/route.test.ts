@@ -68,4 +68,36 @@ describe('GET /api/admin/parity-review', () => {
     expect(captureExceptionMock).toHaveBeenCalledTimes(1);
     expect((await res.json()).error).toBe('Failed to read parity batch results');
   });
+
+  it('refuses non-admins without reading any file', async () => {
+    requireAdminMock.mockResolvedValueOnce({ ok: false, status: 403, error: 'Forbidden' });
+    const { GET } = await import('./route');
+
+    const res = await GET();
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'Forbidden' });
+    expect(readFileMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 and reports to Sentry when the file fails schema validation', async () => {
+    readFileMock.mockResolvedValueOnce(JSON.stringify({ videos: [{ dimensions: {} }] }));
+    const { GET } = await import('./route');
+
+    const res = await GET();
+
+    expect(res.status).toBe(500);
+    expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the fixed 500 message for malformed JSON', async () => {
+    readFileMock.mockResolvedValueOnce('{not json');
+    const { GET } = await import('./route');
+
+    const res = await GET();
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('Failed to read parity batch results');
+    expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -23,7 +23,8 @@ import { requireAdmin } from '@/lib/utils/require-admin';
  * KNOWN LIMITATION (Cubic P0 review, 2026-08-18): this reads the JSON off
  * the local filesystem relative to `process.cwd()`. That's fine for local
  * dev, but a real Vercel deployment does not guarantee `docs/` is bundled
- * into the serverless function's filesystem -- a full storage-layer
+ * (or the git-ignored docs/private/) into the serverless function's
+ * filesystem -- a full storage-layer
  * migration (e.g. move the artifact into Supabase Storage or a DB table) is
  * out of scope for this fix. The route now at least fails explicitly rather
  * than silently returning bad/empty data: schema validation below means a
@@ -116,8 +117,10 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ available: true, data: validation.data });
   } catch (err) {
     if (err instanceof ParityFileMissingError) {
-      // Expected on deployments without the git-ignored private checkout;
-      // logged so a missing file is distinguishable from a never-generated one.
+      // Absent from both docs/private/research/ and docs/research/: expected on
+      // deployments without the git-ignored private checkout (e.g. Vercel).
+      // 'not_generated_yet' therefore also covers "not present on this host";
+      // the log line lists the paths tried so the two cases can be told apart.
       console.warn('[admin/parity-review] parity batch file missing', { tried: err.tried });
       return NextResponse.json({ available: false, reason: 'not_generated_yet' });
     }
