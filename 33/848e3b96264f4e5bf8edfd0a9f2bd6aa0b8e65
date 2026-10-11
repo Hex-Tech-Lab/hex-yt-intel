@@ -1,0 +1,19 @@
+supabase/migrations/20261012013000_backfill_analysis_metadata_columns.sql
+  s_291078cde7ba1a::t_d18884b774aa40 6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33848e3b96264f4e5bf8edfd0a9f2bd6aa0b8e65",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
