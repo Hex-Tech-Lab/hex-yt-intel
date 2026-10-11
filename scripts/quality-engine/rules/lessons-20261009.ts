@@ -84,7 +84,8 @@ let manifestCache: Set<string> | null = null;
 /**
  * Keys registered in setting_definitions, read from supabase/migrations. Each registry
  * row is matched as `'<key>', '<tier>',` with tier system|admin|user; a row in another
- * shape or tier is not read, and its key would then be reported as unregistered.
+ * shape or tier is not read, and its key may then be reported as unregistered when
+ * its prefix is registered elsewhere.
  * The directory is found by walking up from the cwd, so the rule works when the
  * scanner or a test runs from a package dir such as web/. Returns an empty set when
  * no migrations directory exists, which disables the rule rather than flagging every key.
