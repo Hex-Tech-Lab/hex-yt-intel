@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 /**
  * Resizable desktop panel layout for DashboardLayout (PR #442, Task 4).
@@ -167,13 +167,17 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
     [shape]
   );
 
-  const resetLayout = useCallback(() => {
-    clearPersistedLayouts();
-    setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
-    // Snap the live Group back to defaults via the panels' imperative
-    // handles (registered below through the shared reset sink).
-    resetSink?.(shape);
-  }, [shape]);
+  const resetLayout = useCallback(() => requestDashboardLayoutReset(), []);
+
+  // Reset Layout clears storage and the live Group. Drop the in-memory copy
+  // too, or the next shape switch would re-apply the pre-reset sizes.
+  useEffect(() => {
+    const clear = () => setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
+    resetListeners.add(clear);
+    return () => {
+      resetListeners.delete(clear);
+    };
+  }, []);
 
   const current = saved?.[shape] ?? null;
   const groupLayout = toGroupLayout(
@@ -203,6 +207,9 @@ export function registerResetSink(sink: ResetSink | null): void {
   resetSink = sink;
 }
 
+// Hooks subscribe here to drop their in-memory copy of the saved layouts.
+const resetListeners = new Set<() => void>();
+
 /**
  * TopBar-facing entry point for the header's Reset Layout button:
  * clears BOTH shape keys and snaps the live Group (if mounted) back to
@@ -213,6 +220,7 @@ export function requestDashboardLayoutReset(): void {
   clearPersistedLayouts();
   resetSink?.('2col');
   resetSink?.('3col');
+  resetListeners.forEach((listener) => listener());
 }
 
 /**

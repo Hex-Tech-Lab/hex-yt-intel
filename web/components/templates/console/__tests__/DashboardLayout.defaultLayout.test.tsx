@@ -31,7 +31,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/store/useUIStore', () => {
-  const noop = () => {};
+  const noop = () => undefined;
   return {
     useUIStore: (_selector?: (state: Record<string, unknown>) => unknown) =>
       _selector
@@ -164,5 +164,28 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     expect(setLayout).toHaveBeenCalledWith({ sidebar: 22, center: 58, right: 20 });
     // Switching shape must not overwrite the stored 2col layout.
     expect(window.localStorage.getItem(KEY_2COL)).toBe(JSON.stringify({ sidebar: 20 }));
+  });
+
+  it('Reset, then a shape switch, applies the defaults and not the pre-reset sizes', () => {
+    window.localStorage.setItem(KEY_2COL, JSON.stringify({ sidebar: 24 }));
+    window.localStorage.setItem(KEY_3COL, JSON.stringify({ sidebar: 22, right: 20 }));
+    const view = render(
+      <DashboardLayout sidebar={<div>sidebar-content</div>} topbar={<div>topbar</div>} rightPanel={<div>right-content</div>}>
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+    act(() => {
+      requestDashboardLayoutReset();
+    });
+    setLayout.mockClear();
+
+    view.rerender(
+      <DashboardLayout sidebar={<div>sidebar-content</div>} topbar={<div>topbar</div>}>
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+
+    const last = setLayout.mock.calls.at(-1)?.[0];
+    expect(last).toEqual({ sidebar: 15, center: 85 }); // not the saved 2col sidebar=24
   });
 });
