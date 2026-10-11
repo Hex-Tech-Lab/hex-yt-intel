@@ -1237,5 +1237,12 @@
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
     "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (1210 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
   }
 ]

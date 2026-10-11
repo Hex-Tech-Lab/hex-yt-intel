@@ -45,12 +45,12 @@ function reconstructGroundingMarkdown(analysisMarkdown: string | null, analysisP
 
 function formatTimestamp(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${m}:${String(s).padStart(2, '0')}`;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
 /**
@@ -83,14 +83,15 @@ interface AnalysisRecord {
   billing_status: string | null;
 }
 
+type MetadataColumns = { thumbnail_url: string; channel_title?: string; channel_id?: string; published_at?: string };
+
 /**
  * Video-metadata columns derived from the job metadata. The dashboard and history
  * read these columns, but before this only the blob in validation_report.metadata
- * was written, so channel/date/thumbnail stayed null on every row.
+ * was written, so channel_id/published_at/thumbnail_url stayed null on every row (and
+ * channel_title was written only on the stub-update path).
  */
-type MetadataColumns = { thumbnail_url: string; channel_title?: string; channel_id?: string; published_at?: string };
-
-export function metadataColumns(videoId: string, metadata: AnalysisJobMetadata | undefined): MetadataColumns {
+export function metadataColumns(videoId: string, metadata?: AnalysisJobMetadata): MetadataColumns {
   const cols: MetadataColumns = {
     thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
   };
@@ -141,8 +142,8 @@ export class SupabaseAnalysisAdapter {
       const payload = existing.analysis_payload as Record<string, unknown>;
       
       const raw = Array.isArray(payload.dimensions) ? payload.dimensions : Object.values(payload.dimensions ?? {});
-      const dimensions = raw.reduce<Record<string, unknown>>((acc, d: any) => {
-        if (d && typeof d.number === 'number') acc[d.number] = d;
+      const dimensions = raw.reduce<Record<string, unknown>>((acc, dim: any) => {
+        if (dim && typeof dim.number === 'number') acc[dim.number] = dim;
         return acc;
       }, {});
 

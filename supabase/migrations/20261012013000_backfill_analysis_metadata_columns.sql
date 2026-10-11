@@ -2,7 +2,8 @@
 -- Until the SupabaseAnalysisAdapter fix in this PR, only the metadata blob was
 -- written, so channel_id / published_at / thumbnail_url were null on every row
 -- (and channel_title on rows created by the first-call path).
--- Fills empty columns only and never overwrites a value already set.
+-- Only rows with a null channel_id (and a channelId in the blob) are touched; within
+-- those rows, a value already set is never overwritten.
 -- published_at is set only from a parseable date; pg_input_is_valid is checked
 -- in SET (not WHERE) because it returns NULL for a NULL input, which in WHERE
 -- would skip the whole row, and a bad cast would roll back the entire update.
