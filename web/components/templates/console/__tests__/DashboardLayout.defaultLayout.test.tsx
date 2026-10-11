@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement, useEffect, type ReactNode } from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, cleanup, render } from '@testing-library/react';
 import { DashboardLayout } from '../DashboardLayout';
 import { requestDashboardLayoutReset } from '@/lib/hooks/useDashboardLayout';
