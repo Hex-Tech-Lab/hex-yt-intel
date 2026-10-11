@@ -12,8 +12,8 @@ const SCRIPT = path.resolve(__dirname, "../../strict-merge.sh");
 
 const NO_THREADS = { nodes: [], hasNextPage: false };
 type Threads = { nodes: object[]; hasNextPage?: boolean };
-const threadsJson = (t: Threads) =>
-  JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: t.hasNextPage ?? false }, nodes: t.nodes } } } } });
+const threadsJson = (threadSet: Threads) =>
+  JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: threadSet.hasNextPage ?? false }, nodes: threadSet.nodes } } } } });
 
 // threads: reply to the first graphql call; lateThreads: reply to the second
 // (the pre-merge re-check). `gh pr merge` args are logged to <bin>/merge.log.
