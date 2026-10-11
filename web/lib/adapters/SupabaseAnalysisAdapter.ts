@@ -84,12 +84,6 @@ interface AnalysisRecord {
 }
 
 /**
- * Supabase-backed analysis storage adapter implementing AnalysisPersistencePort.
- * Provides cache lookups, stub creation/updates, result persistence, history retrieval,
- * ownership verification, digest management, and analysis reaping operations.
- * All operations include Sentry error tracking and console logging for debugging.
- */
-/**
  * Video-metadata columns derived from the job metadata. The dashboard and history
  * read these columns, but before this only the blob in validation_report.metadata
  * was written, so channel/date/thumbnail stayed null on every row.
@@ -100,10 +94,17 @@ export function metadataColumns(videoId: string, metadata: AnalysisJobMetadata |
   };
   if (metadata?.channelTitle) cols.channel_title = metadata.channelTitle;
   if (metadata?.channelId) cols.channel_id = metadata.channelId;
-  if (metadata?.publishedAt) cols.published_at = metadata.publishedAt;
+  // publishedAt is z.string() with no date check; a non-date would fail the whole row update.
+  if (metadata?.publishedAt && !Number.isNaN(Date.parse(metadata.publishedAt))) cols.published_at = metadata.publishedAt;
   return cols;
 }
 
+/**
+ * Supabase-backed analysis storage adapter implementing AnalysisPersistencePort.
+ * Provides cache lookups, stub creation/updates, result persistence, history retrieval,
+ * ownership verification, digest management, and analysis reaping operations.
+ * All operations include Sentry error tracking and console logging for debugging.
+ */
 export class SupabaseAnalysisAdapter {
   /** Retrieve cached analysis for user/video, extracting dimensions from markdown or payload. */
   static async findCachedAnalysis(params: {

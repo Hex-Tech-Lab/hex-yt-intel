@@ -235,8 +235,8 @@ export function useAutoRestoreAnalysis(url: string) {
           }
 
           // Newer rows keep video metadata only in validation_report.metadata (the payload has no
-          // videoMetadata/metadata key), so fall back to it or description/views/likes restore empty.
-          const meta = restoreData.analysis_payload?.videoMetadata || restoreData.analysis_payload?.metadata || restoreData.validation_report?.metadata || {};
+          // videoMetadata/metadata key), so merge it under the payload fields or description/views/likes restore empty.
+          const meta = { ...(restoreData.validation_report?.metadata || {}), ...(restoreData.analysis_payload?.videoMetadata || restoreData.analysis_payload?.metadata || {}) };
           const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (restoreData.duration || 0);
           const viewCount = videoCount.pickCount(meta.viewCount, meta.view_count, restoreData.viewCount);
           const likeCount = videoCount.pickCount(meta.likeCount, meta.like_count, restoreData.likeCount);

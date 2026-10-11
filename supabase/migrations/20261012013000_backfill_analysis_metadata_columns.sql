@@ -4,10 +4,11 @@
 -- (and channel_title on rows created by the first-call path).
 -- Fills empty columns only and never overwrites a value already set.
 update public.analyses set
-  channel_title = coalesce(nullif(channel_title, ''), validation_report->'metadata'->>'channelTitle'),
+  channel_title = coalesce(nullif(channel_title, ''), validation_report->'metadata'->>'channelTitle', channel_title),
   channel_id    = validation_report->'metadata'->>'channelId',
   published_at  = coalesce(published_at, (validation_report->'metadata'->>'publishedAt')::timestamptz),
   thumbnail_url = coalesce(thumbnail_url, 'https://i.ytimg.com/vi/' || video_id || '/hqdefault.jpg')
 where channel_id is null
   and validation_report->'metadata'->>'channelId' is not null
-  and (validation_report->'metadata'->>'publishedAt') ~ '^\d{4}-\d{2}-\d{2}';
+  -- skip unparseable dates instead of letting one bad cast roll back the whole update
+  and pg_input_is_valid(validation_report->'metadata'->>'publishedAt', 'timestamptz');

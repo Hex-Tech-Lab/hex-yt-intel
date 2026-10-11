@@ -25,4 +25,8 @@ describe('metadataColumns', () => {
       thumbnail_url: 'https://i.ytimg.com/vi/abc/hqdefault.jpg',
     });
   });
+
+  it('drops a publishedAt that is not a date rather than failing the row update', () => {
+    expect(metadataColumns('abc', { channelTitle: 'c', publishedAt: 'not-a-date' } as never)).not.toHaveProperty('published_at');
+  });
 });
