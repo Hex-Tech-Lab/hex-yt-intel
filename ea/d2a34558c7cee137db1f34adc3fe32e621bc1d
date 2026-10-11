@@ -1,0 +1,27 @@
+supabase/migrations/20261012013000_backfill_analysis_metadata_columns.sql
+  s_291078cde7ba1a::t_6e71e798f4664a 7,13-14
+web/components/templates/console/AnalysisHistory.tsx
+  s_291078cde7ba1a::t_7e84822b15a819 366-367
+web/hooks/useAutoRestoreAnalysis.ts
+  s_291078cde7ba1a::t_7de067b1c3b161 238-239
+web/lib/__tests__/analysis-metadata-columns.test.ts
+  s_291078cde7ba1a::t_b11b845e761d74 28-31
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_291078cde7ba1a::t_818c5c80773dc5 97-98,102-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ead2a34558c7cee137db1f34adc3fe32e621bc1d",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
