@@ -253,6 +253,7 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Gate rule**: the Lint gate is a diff-scoped comparison against `.qa-intel/baseline.json`. Any touched file is re-scanned, and every finding whose `file:title` key is absent from the baseline fails the job.
 
 ### 2026-10-11 — ARTAS v4 registry (V24–V32) and rule landing from `audit/artas-v3`
+
 - **File**: `.memory/ARTAS_REGISTRY.md`, `scripts/quality-engine/rules/artas-rules.ts`, `scripts/quality-engine/rules/lessons-20261009.ts`, `.qa-intel/baseline.json`
 - **Symptom**: the 23-vector registry and its rules lived only on the unmerged `audit/artas-v3` branch since 2026-10-08. Review findings from yt-intel #436–#462 and hex-expan-press #70–#99 (437 items) were never mapped to vectors.
 - **Root cause**: the branch was parked because its rules flag existing code (lint would go red), and no one owned landing it.

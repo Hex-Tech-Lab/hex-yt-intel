@@ -31,6 +31,25 @@ describe("StreamReaderWithoutFinallyRule", () => {
     expect(findings[0].title).toBe("Stream reader not released in a finally block");
   });
 
+  test("a finally that releases a DIFFERENT reader does not count", () => {
+    const findings = run(StreamReaderWithoutFinallyRule, `
+      export async function drain(a: Response, b: Response) {
+        const ra = a.body!.getReader();
+        const rb = b.body!.getReader();
+        try { await rb.read(); await ra.read(); } finally { rb.releaseLock(); }
+      }`);
+    expect(findings).toHaveLength(1);
+  });
+
+  test("optional-chained release of the same reader counts", () => {
+    const findings = run(StreamReaderWithoutFinallyRule, `
+      export async function drain(res: Response) {
+        const reader = res.body?.getReader();
+        try { await reader?.read(); } finally { reader?.releaseLock(); }
+      }`);
+    expect(findings).toHaveLength(0);
+  });
+
   test("passes when a finally releases the lock", () => {
     const findings = run(StreamReaderWithoutFinallyRule, `
       export async function drain(res: Response) {

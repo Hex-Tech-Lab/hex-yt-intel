@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
 import { Project } from "ts-morph";
-import * as legacyRules from "../index";
 import type { Rule } from "../../domain/Rule";
 import {
   UnconsumedStreamLeakRule,
@@ -300,6 +299,62 @@ describe("NonIdempotentRetryRule (V19)", () => {
 });
 
 describe("FailOpenUndefinedFilterRule (V05)", () => {
+  test("a null check AFTER the query does not suppress (Cubic P1)", () => {
+    const findings = check(
+      FailOpenUndefinedFilterRule,
+      "web/lib/services/late-guard.ts",
+      `
+      export async function getSubgraph(userId?: string) {
+        const { data } = await supabase.from("nodes").select("*").eq("owner_id", userId);
+        if (!userId) return [];
+        return data;
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test(".filter(col, op, value) checks the third argument", () => {
+    const findings = check(
+      FailOpenUndefinedFilterRule,
+      "web/lib/services/filter3.ts",
+      `
+      export async function q(userId?: string) {
+        return supabase.from("nodes").select("*").filter("owner_id", "eq", userId);
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("a guard on a $-named identifier is recognised (regex-escaped)", () => {
+    const findings = check(
+      FailOpenUndefinedFilterRule,
+      "web/lib/services/dollar.ts",
+      `
+      export async function q($userId?: string) {
+        if (!$userId) throw new Error("missing");
+        return supabase.from("nodes").select("*").eq("owner_id", $userId);
+      }
+      `,
+    );
+    expect(findings.length).toBe(0);
+  });
+
+  test("an optional param of the same name in ANOTHER function does not taint this one", () => {
+    const findings = check(
+      FailOpenUndefinedFilterRule,
+      "web/lib/services/scope.ts",
+      `
+      export function other(userId?: string) { return userId; }
+      export async function q(userId: string) {
+        return supabase.from("nodes").select("*").eq("owner_id", userId);
+      }
+      `,
+    );
+    expect(findings.length).toBe(0);
+  });
+
   test("positive: optional parameter passed as filter value, no guard", () => {
     const findings = check(
       FailOpenUndefinedFilterRule,

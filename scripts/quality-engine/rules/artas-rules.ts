@@ -368,9 +368,9 @@ export const FailOpenUndefinedFilterRule: Rule = {
     const reported = new Set<number>();
 
     /** Syntactic "maybe undefined/null" fallback: parameter declared `?:` or typed `| undefined`/`| null`. */
-    const isSyntacticallyOptionalIdentifier = (ident: string): boolean => {
+    const isSyntacticallyOptionalIdentifier = (ident: string, scope: Node | undefined): boolean => {
       let hit = false;
-      source.forEachDescendant((n) => {
+      (scope ?? source).forEachDescendant((n) => {
         if (!Node.isParameterDeclaration(n)) return;
         if (n.getName() !== ident) return;
         if (n.isOptional()) {
@@ -383,10 +383,13 @@ export const FailOpenUndefinedFilterRule: Rule = {
       return hit;
     };
 
-    const hasGuardOn = (fn: Node | undefined, ident: string): boolean => {
-      const text = fn ? fn.getText() : source.getText();
+    /** A null guard on `ident` that appears before the filter call (a later check cannot protect a query that already ran). */
+    const hasGuardBefore = (fn: Node | undefined, ident: string, callStart: number): boolean => {
+      const scope = fn ?? source;
+      const text = source.getFullText().slice(scope.getStart(), callStart);
+      const id = ident.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       return new RegExp(
-        `if\\s*\\(\\s*!\\s*${ident}\\b|if\\s*\\(\\s*${ident}\\s*==+\\s*(null|undefined)|${ident}\\s*\\?\\?`,
+        `if\\s*\\(\\s*!\\s*${id}\\b|if\\s*\\(\\s*${id}\\s*==+\\s*(null|undefined)|${id}\\s*\\?\\?`,
       ).test(text);
     };
 
@@ -399,7 +402,9 @@ export const FailOpenUndefinedFilterRule: Rule = {
       const args = node.getArguments();
       // .eq(col, value) — value is the 2nd arg. .match({...}) takes an object: skip.
       if (method === "match" || args.length < 2) return;
-      const valueArg = args[1]!;
+      // .filter(col, operator, value): the value is the 3rd argument.
+      const valueArg = method === "filter" ? args[2] : args[1];
+      if (!valueArg) return;
       // Unwrap a single-element array literal: .in("col", [userId])
       const inner = Node.isArrayLiteralExpression(valueArg) && valueArg.getElements().length === 1
         ? valueArg.getElements()[0]!
@@ -423,11 +428,11 @@ export const FailOpenUndefinedFilterRule: Rule = {
           /* checker unavailable */
         }
       }
-      if (!maybeNullish && isSyntacticallyOptionalIdentifier(ident)) maybeNullish = true;
+      const fn = findEnclosingFunction(node);
+      if (!maybeNullish && isSyntacticallyOptionalIdentifier(ident, fn)) maybeNullish = true;
       if (!maybeNullish) return;
 
-      const fn = findEnclosingFunction(node);
-      if (hasGuardOn(fn, ident)) return;
+      if (hasGuardBefore(fn, ident, node.getStart())) return;
 
       const key = node.getStart();
       if (reported.has(key)) return;

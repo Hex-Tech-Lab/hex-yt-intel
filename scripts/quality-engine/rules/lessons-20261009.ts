@@ -33,7 +33,8 @@ function findEnclosingFunctionBody(node: Node): Node | undefined {
 
 /**
  * A reader taken from a stream must be released on every exit path. Passes when the
- * enclosing function has a try/finally whose finally block releases the lock or cancels.
+ * enclosing function has a try/finally whose finally block releases or cancels that
+ * same reader (matched by its variable name when it has one).
  */
 export const StreamReaderWithoutFinallyRule: Rule = {
   name: "lessons-20261009-stream-reader-no-finally",
@@ -49,10 +50,19 @@ export const StreamReaderWithoutFinallyRule: Rule = {
       const callee = node.getExpression();
       if (!Node.isPropertyAccessExpression(callee) || callee.getName() !== "getReader") return;
 
+      // Tie the cleanup to THIS reader: `const r = x.getReader()` must be
+      // released as `r.releaseLock()` / `r.cancel()`. An unnamed reader can
+      // only be released through its stream, so `.cancel(` still counts there.
+      const decl = node.getParentIfKind(SyntaxKind.VariableDeclaration);
+      const name = decl?.getName();
+      const id = name?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const releases = id
+        ? new RegExp(`\\b${id}\\s*\\??\\.\\s*(?:releaseLock|cancel)\\s*\\(`)
+        : /releaseLock\s*\(|\.cancel\s*\(/;
       const scope: Node = findEnclosingFunctionBody(node) ?? source;
       const released = scope.getDescendantsOfKind(SyntaxKind.TryStatement).some((t) => {
         const fin = t.getFinallyBlock();
-        return !!fin && /releaseLock\s*\(|\.cancel\s*\(/.test(fin.getText());
+        return !!fin && releases.test(fin.getText());
       });
       if (released) return;
 

@@ -108,8 +108,7 @@ fi
 
 # An empty rollup means no check reported at all; that is not a pass.
 if [[ "$(jq '.statusCheckRollup | length' <<<"$PR_JSON")" -eq 0 ]]; then
-  echo "  GATE FAILED: no status checks reported for this PR head." >&2
-  exit 1
+  VIOLATIONS+=("no status checks reported for this PR head")
 fi
 
 # Check rows come in two shapes: CheckRun (name, status, conclusion) and
@@ -159,6 +158,17 @@ fi
 echo "  GATE PASSED: 0 unresolved threads, all checks passing or bypassed, mergeable."
 
 if [[ "$MERGE" -eq 1 ]]; then
+  # Re-check threads right before merging: one opened after the snapshot above
+  # must still block (--match-head-commit only guards against new pushes).
+  LATE_OPEN=$(gh api graphql -F owner="$OWNER" -F name="$NAME" -F number="$PR" -f query='
+    query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+        reviewThreads(first: 100) { nodes { isResolved } } } } }' \
+    --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length')
+  if [[ "$LATE_OPEN" -gt 0 ]]; then
+    echo "  REFUSED - $LATE_OPEN review thread(s) opened after the gate check" >&2
+    exit 1
+  fi
   gh pr merge "$PR" --squash --match-head-commit "$HEAD_SHA"
   echo "  MERGED #$PR (squash) at $HEAD_SHA"
 fi

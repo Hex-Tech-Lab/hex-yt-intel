@@ -40,7 +40,7 @@ describe("strict-merge.sh", () => {
   test("refuses a PR that reports no status checks at all", () => {
     const result = runWithGh({ ...OPEN_PR, statusCheckRollup: [] }, ["123"]);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("no status checks reported");
+    expect(result.stdout).toContain("no status checks reported");
   });
 
   test("rejects a non-numeric PR argument", () => {
