@@ -7,10 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const requireAdminMock = vi.fn();
 const readFileMock = vi.fn();
+const captureExceptionMock = vi.fn();
+const captureMessageMock = vi.fn();
 
 vi.mock('@/lib/utils/require-admin', () => ({ requireAdmin: requireAdminMock }));
 vi.mock('node:fs/promises', () => ({ readFile: readFileMock }));
-vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), addBreadcrumb: vi.fn() }));
+vi.mock('@sentry/nextjs', () => ({ captureException: captureExceptionMock, captureMessage: captureMessageMock, addBreadcrumb: vi.fn() }));
 
 const VALID = JSON.stringify({ videos: [{ video_id: 'v1', dimensions: {} }] });
 const enoent = () => Object.assign(new Error('missing'), { code: 'ENOENT' });
@@ -19,6 +21,8 @@ describe('GET /api/admin/parity-review', () => {
   beforeEach(() => {
     requireAdminMock.mockReset().mockResolvedValue({ ok: true, userId: 'admin-1' });
     readFileMock.mockReset();
+    captureExceptionMock.mockReset();
+    captureMessageMock.mockReset();
   });
 
   it('reads the private research copy first', async () => {
@@ -29,6 +33,7 @@ describe('GET /api/admin/parity-review', () => {
 
     expect(body.available).toBe(true);
     expect(readFileMock).toHaveBeenCalledTimes(1);
+    expect(captureMessageMock).not.toHaveBeenCalled();
     expect(String(readFileMock.mock.calls[0][0])).toMatch(/docs[\\/]private[\\/]research[\\/]2026-08-18-parity-batch-results\.json$/);
   });
 
@@ -39,6 +44,7 @@ describe('GET /api/admin/parity-review', () => {
     const body = await (await GET()).json();
 
     expect(body.available).toBe(true);
+    expect(captureMessageMock).toHaveBeenCalledTimes(1);
     expect(String(readFileMock.mock.calls[1][0])).toMatch(/docs[\\/]research[\\/]2026-08-18-parity-batch-results\.json$/);
   });
 
@@ -59,5 +65,7 @@ describe('GET /api/admin/parity-review', () => {
 
     expect(res.status).toBe(500);
     expect(readFileMock).toHaveBeenCalledTimes(1);
+    expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+    expect((await res.json()).error).toBe('Failed to read parity batch results');
   });
 });

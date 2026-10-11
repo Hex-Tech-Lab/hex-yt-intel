@@ -48,24 +48,47 @@ const ParityBatchSchema = z.object({
 });
 
 const PARITY_FILE = '2026-08-18-parity-batch-results.json';
-const PARITY_FILE_CANDIDATES = [
+const PARITY_FILE_CANDIDATES: [string, ...string[]] = [
   path.join(process.cwd(), '..', 'docs', 'private', 'research', PARITY_FILE),
   path.join(process.cwd(), '..', 'docs', 'research', PARITY_FILE),
 ];
 
-/** Returns the first candidate that exists; rethrows ENOENT from the last one. */
-async function readFirstExisting(candidates: string[]): Promise<string> {
-  let lastErr: unknown;
-  for (const candidate of candidates) {
+function isErrnoCode(err: unknown, code: string): boolean {
+  return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
+}
+
+/** Thrown when no candidate exists; carries every path that was tried. */
+class ParityFileMissingError extends Error {
+  readonly code = 'ENOENT';
+  constructor(readonly tried: string[]) {
+    super(`parity batch file not found in: ${tried.join(', ')}`);
+  }
+}
+
+/**
+ * Returns the first candidate that exists. A fallback past the first
+ * (private) path is reported to Sentry, so a stale legacy copy is never
+ * served silently. Non-ENOENT read errors propagate unchanged.
+ */
+async function readFirstExisting(candidates: [string, ...string[]]): Promise<string> {
+  for (const [index, candidate] of candidates.entries()) {
     try {
-      return await readFile(candidate, 'utf-8');
+      const raw = await readFile(candidate, 'utf-8');
+      if (index > 0) {
+        Sentry.captureMessage('admin parity-review served a fallback copy', {
+          level: 'warning',
+          tags: { operation: 'admin_parity_review_read' },
+          extra: { served: candidate, missing: candidates.filter((_, i) => i < index) },
+        });
+      }
+      return raw;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      // ENOENT is the expected "not here" signal: try the next candidate.
+      if (!isErrnoCode(err, 'ENOENT')) throw err;
       Sentry.addBreadcrumb({ category: 'admin_parity_review', message: `parity file absent: ${candidate}` });
-      lastErr = err;
     }
   }
-  throw lastErr;
+  throw new ParityFileMissingError(candidates);
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -92,11 +115,14 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json({ available: true, data: validation.data });
   } catch (err) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code === 'ENOENT') {
+    if (err instanceof ParityFileMissingError) {
+      // Expected on deployments without the git-ignored private checkout;
+      // logged so a missing file is distinguishable from a never-generated one.
+      console.warn('[admin/parity-review] parity batch file missing', { tried: err.tried });
       return NextResponse.json({ available: false, reason: 'not_generated_yet' });
     }
     Sentry.captureException(err, { tags: { operation: 'admin_parity_review_read' } });
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to read parity batch results' }, { status: 500 });
+    // Fixed message: the raw error can contain absolute server paths.
+    return NextResponse.json({ error: 'Failed to read parity batch results' }, { status: 500 });
   }
 }
