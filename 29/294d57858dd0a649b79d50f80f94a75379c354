@@ -1,0 +1,28 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_291078cde7ba1a::t_70d3f8ebc8bfda 145-146
+  s_291078cde7ba1a::t_412b48a5e2f7ad 48-53,86-87,91-92,94
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_e9c0a92edc0b7a 1581
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_2d569ad51c88c5 1240-1246,1248
+supabase/migrations/20261012013000_backfill_analysis_metadata_columns.sql
+  s_291078cde7ba1a::t_f839f6b4485187 5-6
+web/lib/adapters/__tests__/supabase-analysis-adapter.test.ts
+  s_291078cde7ba1a::t_75b87ad94b9576 2,242-273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29294d57858dd0a649b79d50f80f94a75379c354",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
