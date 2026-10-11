@@ -137,6 +137,8 @@ export const AdvisoryLockIsolationGuardRule: Rule = {
 export const IpHeaderSinkRule: Rule = {
   name: "ip-header-direct-read",
   scope: "file",
+  // TS/JS only: stripComments(..., "ts") would mis-strip SQL comments.
+  languages: ["ts"],
   check: (ctx: RuleContext): Finding[] => {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath) || CLIENT_IP_HELPER_PATH.test(filePath)) return [];
@@ -166,6 +168,8 @@ export const IpHeaderSinkRule: Rule = {
 export const LaunchPathIsolationLiteralRule: Rule = {
   name: "launch-path-isolation-literal",
   scope: "file",
+  // TS/JS only: stripComments(..., "ts") would mis-strip SQL comments.
+  languages: ["ts"],
   check: (ctx: RuleContext): Finding[] => {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath)) return [];
