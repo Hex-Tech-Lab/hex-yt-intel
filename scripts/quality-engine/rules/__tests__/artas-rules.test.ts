@@ -224,10 +224,8 @@ describe("NonIdempotentRetryRule (V19)", () => {
       if (method !== "GET" && method !== "HEAD") return fetch(url, { method });
       `,
     );
-    // The loop itself is inside sendWithRetry; the guard text lives in the
-    // same file but a different function — the rule's enclosing-function
-    // scope means this shape still fires unless the gate is inside the
-    // function. Rewrite: this test asserts the UNGATED loop fires once.
+    // The gate lives in a different function from the retry loop, so the
+    // rule's per-function scope still reports this loop once.
     expect(findings.length).toBe(1);
   });
 

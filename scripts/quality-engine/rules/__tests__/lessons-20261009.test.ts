@@ -11,8 +11,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Rule } from "../../domain/Rule";
 
-// Settings-key checks read the real supabase/migrations manifest, so these tests
-// run from the repo root (the same directory the engine uses).
+// Settings-key checks read the real supabase/migrations manifest, found by walking
+// up from the cwd, so these run from the repo root or any subdirectory.
 function run(rule: Rule, code: string, filePath = "web/lib/example.ts") {
   const project = new Project({ useInMemoryFileSystem: true });
   const ast = project.createSourceFile(filePath, code);

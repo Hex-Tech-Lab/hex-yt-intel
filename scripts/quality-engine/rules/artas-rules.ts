@@ -13,8 +13,8 @@ function isTestFile(f: string): boolean {
 }
 
 /**
- * ARTAS v3 structural vectors (2026-10-08) — Phase 2 QualityEngine arming.
- * Source: .memory/ARTAS_REGISTRY.md (23-vector interrogation registry). Four
+ * ARTAS structural vectors (v3 rules, 2026-10-08) — Phase 2 QualityEngine arming.
+ * Source: .memory/ARTAS_REGISTRY.md (32-vector v4 registry). Four
  * vectors marked [QE] get a static rule here; the rest stay review-only.
  * Each rule carries a positive-fire test on the historical incident shape and
  * a negative-control test on the fixed/safe shape; see
@@ -145,7 +145,7 @@ export const UnconsumedStreamLeakRule: Rule = {
  * AST pattern: a call `.arrayBuffer()` on a response expression, inside a
  * function with NO byte-limit evidence earlier in the same function body —
  * i.e. no `content-length` header read compared to a number and no reader
- * loop carrying a byte counter. First-party hard-coded URL reads are exempt
+ * loop carrying a byte counter. Hard-coded allowlisted-host URL reads are exempt
  * only when trivially determinable (the fetch URL argument is a string
  * literal or template literal with no substitutions); any other case accepts
  * the hit.
@@ -178,10 +178,10 @@ export const UnboundedBodyReadRule: Rule = {
       // Top-level module code: no enclosing function — conservatively flag.
       const fnText = fn ? fn.getText() : source.getText();
 
-      // First-party hard-coded URL exemption (trivially determinable): the
-      // nearest fetch call in the same function whose URL argument is a pure
-      // string/template literal with no substitutions and points at a
-      // non-localhost first-party host.
+      // Hard-coded URL exemption (trivially determinable): the function is
+      // exempt if ANY fetch call in it has a pure string/template literal URL
+      // (no substitutions) on an allowlisted host: youtube, ytimg, google,
+      // supabase.
       const fetchCalls = fn
         ? fn.getDescendants().filter((d): d is import("ts-morph").CallExpression => {
             if (!Node.isCallExpression(d)) return false;
@@ -343,9 +343,9 @@ export const NonIdempotentRetryRule: Rule = {
  * that is a parameter declared optional (`?:`) or typed `| undefined`/`| null`,
  * with NO preceding null guard on the identifier (`if (!x)`, `if (x == null)`,
  * `if (x != null)`, `if (x === undefined)`, `x ?? ...`) in the same function.
- * Severity high — PostgREST treats a missing/null value as "no filter"
- * semantics in this failure shape, returning rows that should have matched
- * nothing.
+ * Severity high — a null/undefined filter value can make the filter
+ * degenerate and return rows that should have matched nothing (unverified
+ * against current supabase-js/PostgREST; see the rule's `why`).
  *
  * Accepted limitations: (1) the type-checker path depends on the Project
  * being created with real tsconfig; in the engine's in-memory/AST-only mode
