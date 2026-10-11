@@ -54,6 +54,7 @@ export default defineConfig({
       'components/**/*.test.{ts,tsx}',
       'store/**/*.test.{ts,tsx}',
       'app/api/admin/logs/**/*.test.ts',
+      'app/api/admin/parity-review/**/*.test.ts',
       'app/api/test-auth/**/*.test.ts',
       // ADR 021 Phase 2: the analyses/check route gained an auth-bearing
       // sibling test (qa-intel high finding: authorization-relevant file

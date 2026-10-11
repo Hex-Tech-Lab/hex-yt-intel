@@ -1,12 +1,13 @@
 'use client';
 
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
 import { Group, Panel, Separator, useGroupRef } from 'react-resizable-panels';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 import {
   DEFAULT_LAYOUT,
   registerResetSink,
+  toGroupLayout,
   useDashboardPanels,
   type LayoutShape,
 } from '@/lib/hooks/useDashboardLayout';
@@ -110,15 +111,30 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // localStorage layout (2-column vs 3-column -- rightPanel is optional,
   // and mixing percentages across different panel counts would collide).
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
-  const { isDesktop, sidebarSize, rightSize, handleLayoutChanged } =
+  const { isDesktop, hydrated, groupLayout, layouts, handleLayoutChanged } =
     useDashboardPanels(shape);
 
+  // groupLayout is PERCENTAGES: react-resizable-panels v4 reads a bare number
+  // as pixels, and a Group reads defaultLayout only at mount. It is the mount
+  // value; later changes are applied imperatively below.
   const groupRef = useGroupRef();
 
+  // Shape switch (2col <-> 3col): the Group stays mounted, so apply the saved
+  // sizes for the new shape to it directly. The ref holds the latest layouts
+  // (updated before the apply effect runs, since layout effects run in order),
+  // so the apply effect does not re-run on every drag.
+  const layoutsRef = useRef(layouts);
+  useLayoutEffect(() => {
+    layoutsRef.current = layouts;
+  });
+  useLayoutEffect(() => {
+    if (!isDesktop || !hydrated) return;
+    groupRef.current?.setLayout(layoutsRef.current[shape]);
+  }, [shape, isDesktop, hydrated, groupRef]);
+
   // Register the imperative reset bridge: Reset Layout snaps the live
-  // Group back to its defaultSize props (via setLayout with the historic
-  // fixed-grid percentages) without a reload. Registered only while the
-  // desktop panel group is actually mounted.
+  // Group back to DEFAULT_LAYOUT percentages via setLayout without a reload.
+  // Registered only while the desktop panel group is actually mounted.
   useEffect(() => {
     if (!isDesktop) return;
     registerResetSink(() => {
@@ -127,11 +143,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       // DEFAULT_LAYOUT so the reset target and the hydrated defaults share
       // one source of truth.
       const { sidebar, right } = DEFAULT_LAYOUT[shape];
-      groupRef.current?.setLayout(
-        shape === '3col'
-          ? { sidebar, center: 100 - sidebar - right, right }
-          : { sidebar, center: 100 - sidebar }
-      );
+      groupRef.current?.setLayout(toGroupLayout(shape, sidebar, right));
     });
     return () => registerResetSink(null);
   }, [isDesktop, shape, groupRef]);
@@ -185,12 +197,12 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           groupRef={groupRef}
           id={`console-dashboard-${shape}`}
           orientation="horizontal"
+          defaultLayout={groupLayout}
           onLayoutChanged={onGroupLayoutChanged}
           className="col-span-full flex h-full min-h-0 gap-1 p-1 sm:p-1.5"
         >
           <Panel
             id="sidebar"
-            defaultSize={sidebarSize ?? 18}
             minSize="10%"
             maxSize="30%"
             className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--void)]"
@@ -243,7 +255,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
               <Separator className={separatorClass} aria-label="Resize intelligence panel" />
               <Panel
                 id="right"
-                defaultSize={rightSize ?? 18}
                 minSize="10%"
                 maxSize="35%"
                 className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 px-2"
