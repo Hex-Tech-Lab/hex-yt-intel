@@ -188,4 +188,27 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     const last = setLayout.mock.calls.at(-1)?.[0];
     expect(last).toEqual({ sidebar: 15, center: 85 }); // not the saved 2col sidebar=24
   });
+
+  it('3col -> 2col (reverse) keeps the Group mounted and applies the saved 2col sizes via setLayout', () => {
+    window.localStorage.setItem(KEY_2COL, JSON.stringify({ sidebar: 20 }));
+    window.localStorage.setItem(KEY_3COL, JSON.stringify({ sidebar: 22, right: 20 }));
+
+    const view = render(
+      <DashboardLayout sidebar={<div>sidebar-content</div>} topbar={<div>topbar</div>} rightPanel={<div>right-content</div>}>
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+    expect(mounts.count).toBe(1);
+    setLayout.mockClear();
+
+    view.rerender(
+      <DashboardLayout sidebar={<div>sidebar-content</div>} topbar={<div>topbar</div>}>
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+
+    expect(mounts.count).toBe(1);
+    expect(setLayout).toHaveBeenLastCalledWith({ sidebar: 20, center: 80 });
+    expect(window.localStorage.getItem(KEY_3COL)).toBe(JSON.stringify({ sidebar: 22, right: 20 }));
+  });
 });
