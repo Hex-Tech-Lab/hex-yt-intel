@@ -85,7 +85,7 @@ describe("IpHeaderSinkRule", () => {
   });
 
   test("fires on optional-chained reads", () => {
-    for (const code of ['const ip = req.headers?.get("x-real-ip");', 'const ip = req.headers?.["x-forwarded-for"];']) {
+    for (const code of ['const ip = req.headers?.get("x-real-ip");', 'const ip = req.headers?.["x-forwarded-for"];', 'const ip = req.headers.get?.("x-real-ip");']) {
       expect(IpHeaderSinkRule.check(ctx("web/app/api/x/route.ts", code))).toHaveLength(1);
     }
   });

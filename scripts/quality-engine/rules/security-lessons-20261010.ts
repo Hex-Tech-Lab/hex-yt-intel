@@ -143,7 +143,7 @@ export const IpHeaderSinkRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath) || CLIENT_IP_HELPER_PATH.test(filePath)) return [];
     const code = stripComments(sourceText(ctx), "ts");
-    const re = /headers(?:\??\.get\(\s*|(?:\?\.)?\[\s*)["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*[)\]]/i;
+    const re = /headers(?:\??\.get(?:\?\.)?\(\s*|(?:\?\.)?\[\s*)["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*[)\]]/i;
     const m = re.exec(code);
     if (!m) return [];
     return [
