@@ -91,11 +91,11 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('3col with no saved layout mounts with 15/60/25 on the first Group render', () => {
+  it('3col with no saved layout mounts with 18/52/30 on the first Group render', () => {
     renderThreeCol();
 
     expect(groupCalls.length).toBeGreaterThan(0);
-    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 15, center: 60, right: 25 });
+    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 52, right: 30 });
   });
 
   it('3col restores a saved layout before the Group mounts (first render, not after)', () => {
@@ -119,22 +119,22 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     expect(groupCalls[0].defaultLayout).not.toHaveProperty('right');
   });
 
-  it('a corrupt saved layout falls back to the 15/60/25 default', () => {
+  it('a corrupt saved layout falls back to the 18/52/30 default', () => {
     window.localStorage.setItem(KEY_3COL, 'not-json{{{');
 
     renderThreeCol();
 
-    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 15, center: 60, right: 25 });
+    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 52, right: 30 });
   });
 
-  it('Reset Layout snaps the live Group to 15/60/25 via setLayout', () => {
+  it('Reset Layout snaps the live Group to 18/52/30 via setLayout', () => {
     renderThreeCol();
 
     act(() => {
       requestDashboardLayoutReset();
     });
 
-    expect(setLayout).toHaveBeenCalledWith({ sidebar: 15, center: 60, right: 25 });
+    expect(setLayout).toHaveBeenCalledWith({ sidebar: 18, center: 52, right: 30 });
   });
 
   it('2col -> 3col keeps the Group mounted and applies the saved 3col sizes via setLayout', () => {
@@ -186,7 +186,7 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     );
 
     const last = setLayout.mock.calls.at(-1)?.[0];
-    expect(last).toEqual({ sidebar: 15, center: 85 }); // not the saved 2col sidebar=24
+    expect(last).toEqual({ sidebar: 18, center: 82 }); // not the saved 2col sidebar=24
   });
 
   it('3col -> 2col (reverse) keeps the Group mounted and applies the saved 2col sizes via setLayout', () => {

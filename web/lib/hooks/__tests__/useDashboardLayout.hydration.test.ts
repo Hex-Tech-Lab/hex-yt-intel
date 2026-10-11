@@ -26,14 +26,14 @@ describe('useDashboardPanels hydration', () => {
     window.localStorage.setItem('hex:layout:v1:2col', 'not-json{{{');
     const { result } = renderHook(() => useDashboardPanels('2col'));
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(result.current.groupLayout).toEqual({ sidebar: 15, center: 85 }); // 2col defaults
+    expect(result.current.groupLayout).toEqual({ sidebar: 18, center: 82 }); // 2col defaults
   });
 
   it('out-of-range values rejected -> defaults', async () => {
     window.localStorage.setItem('hex:layout:v1:2col', JSON.stringify({ sidebar: 99 }));
     const { result } = renderHook(() => useDashboardPanels('2col'));
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(result.current.groupLayout).toEqual({ sidebar: 15, center: 85 });
+    expect(result.current.groupLayout).toEqual({ sidebar: 18, center: 82 });
   });
 
   it('handleLayoutChanged persists valid layouts', async () => {
@@ -48,7 +48,7 @@ describe('useDashboardPanels hydration', () => {
     const { result } = renderHook(() => useDashboardPanels('2col'));
     await new Promise((resolve) => setTimeout(resolve, 20));
     act(() => { result.current.handleLayoutChanged({ center: 100 }); });
-    expect(result.current.groupLayout).toEqual({ sidebar: 15, center: 85 });
+    expect(result.current.groupLayout).toEqual({ sidebar: 18, center: 82 });
     expect(window.localStorage.getItem('hex:layout:v1:2col')).toBeNull();
   });
 
