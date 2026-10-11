@@ -775,5 +775,467 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (573 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/scripts/contract-auditor.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/scripts/contract-auditor.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/embeddings.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
+    "severity": "high",
+    "title": "Settings key not registered in setting_definitions",
+    "why": "Key 'chat.turnLimit.light' is looked up in code but has no setting_definitions row, so the registry always returns the code fallback and the value can never be overridden.",
+    "fix": "Add an insert into setting_definitions (key, tier, data_type, validation, default_value, description, owner_role) in a migration, or correct the key to a registered one."
+  },
+  {
+    "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
+    "severity": "high",
+    "title": "Settings key not registered in setting_definitions",
+    "why": "Key 'chat.turnLimit.max' is looked up in code but has no setting_definitions row, so the registry always returns the code fallback and the value can never be overridden.",
+    "fix": "Add an insert into setting_definitions (key, tier, data_type, validation, default_value, description, owner_role) in a migration, or correct the key to a registered one."
+  },
+  {
+    "file": "web/lib/services/sentry-telemetry.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/services/sentry-telemetry.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/services/openrouter.ts",
+    "severity": "high",
+    "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
+    "why": "A recursive retry function (callOpenRouter) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/services/openrouter.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!validation.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/intelligence/relations-engine.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "web/lib/hooks/useEntitlements.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/lib/adapters/OpenRouterCompletionAdapter.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useUsageSummary.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/hooks/useSSEStream.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useRelations.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "web/hooks/useRelations.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useGlobalGraph.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useExecutiveDigest.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/hooks/useEagerVideoMetadata.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useCommentInsights.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/hooks/useChapters.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/hooks/useAuxElementStatus.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/components/templates/console/AnalysisHistory.tsx",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/components/dashboard/ShareButton.tsx",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/app/waitlist/page.tsx",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/app/atlas/AtlasClient.tsx",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/app/atlas/AtlasClient.tsx",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/app/api/webhooks/transcript-purge/route.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "web/app/api/chat/conversations/[id]/messages/route.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "web/app/api/admin/settings/[key]/route.ts",
+    "severity": "high",
+    "title": "ARTAS V05: query filter value can be undefined/null (fail-open)",
+    "why": ".eq('supabase\n      .from('setting_definitions')\n      .select('data_type, validation')', key) receives a value typed as possibly undefined/null with no preceding null guard \u2014 when the value is missing the filter degenerates instead of matching nothing (ARTAS_REGISTRY V05; get_temporal_subgraph auth.uid() IS NULL fail-open IDOR).",
+    "fix": "Guard the value before the query (throw/return when undefined/null), or fail closed by constructing a never-matching predicate \u2014 never pass a possibly-nullish value into a filter."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "worker/src/services/TranscriptExtractor.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/services/ProjectiveSynthesisEngine.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/services/MetadataScraper.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/services/LLMCascade.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "worker/src/services/JevCommentClassifier.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/services/GroundedExtractionEngine.ts",
+    "severity": "medium",
+    "title": "Stream reader not released in a finally block",
+    "why": "getReader() takes the stream lock. Without a finally that calls releaseLock() or cancel(), an exception or early return leaves the stream locked and its underlying connection open.",
+    "fix": "Wrap the reads in try { ... } finally { reader.releaseLock(); } (or reader.cancel() on the error path)."
+  },
+  {
+    "file": "worker/src/services/CommentClassifier.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/services/sensor-fusion/heuristics/jev-text-parser.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/services/providers/TranscriptApiProvider.ts",
+    "severity": "high",
+    "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
+    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/services/providers/TranscriptApiProvider.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/services/providers/DecodoTranscriptProvider.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/services/providers/ApifyTranscriptProvider.ts",
+    "severity": "high",
+    "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
+    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/services/providers/ApifyTranscriptProvider.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/routes/analysis.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/routes/analysis.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/queue-consumers/comments-tier3.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/queue-consumers/comments-tier3.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
+  },
+  {
+    "file": "worker/src/queue-consumers/comments-tier3.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "res.status===404 branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/queue-consumers/comments-tier3.ts",
+    "severity": "medium",
+    "title": "ARTAS V20: response body not cancelled on early-exit path",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
+  },
+  {
+    "file": "worker/src/adapters/AssemblyAIAdapter.ts",
+    "severity": "high",
+    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   }
 ]
