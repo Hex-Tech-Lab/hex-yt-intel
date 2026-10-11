@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 /**
  * Resizable desktop panel layout for DashboardLayout (PR #442, Task 4).
@@ -10,8 +10,9 @@ import { useCallback, useEffect, useState } from 'react';
  * written by the 3-column desktop and vice versa -- percentages would
  * silently collide across different panel counts.
  *
- * Defaults match the previous fixed grid at a ~1440px viewport:
- * 260px sidebar / fluid center / 390px right => ~18% / 64% / 18%.
+ * Defaults are percentages: 3-column 15% / 60% / 25%, 2-column 15% / 85%.
+ * react-resizable-panels v4 reads a bare number as PIXELS, so every size
+ * handed to a Group must be a percentage (see toGroupLayout).
  *
  * All storage access is try/catch wrapped: private-mode browsing and
  * quota errors must never break render, and a corrupt value falls back
@@ -25,11 +26,24 @@ export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
-  '2col': { sidebar: 18, right: 0 },
-  // Right panel gets the ~390px column from the historic fixed grid
-  // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
-  '3col': { sidebar: 18, right: 27 },
+  '2col': { sidebar: 15, right: 0 },
+  '3col': { sidebar: 15, right: 25 },
 };
+
+/**
+ * Panel-id -> percent layout for a Group, with center taking the remainder
+ * so the panels always sum to 100. Single source for both the mount-time
+ * defaultLayout and the Reset Layout setLayout call.
+ */
+export function toGroupLayout(
+  shape: LayoutShape,
+  sidebar: number,
+  right: number
+): Record<string, number> {
+  return shape === '3col'
+    ? { sidebar, center: 100 - sidebar - right, right }
+    : { sidebar, center: 100 - sidebar };
+}
 
 export const SIDEBAR_MIN = 10;
 export const SIDEBAR_MAX = 30;
@@ -88,6 +102,9 @@ export function clearPersistedLayouts(): void {
   }
 }
 
+// Hooks subscribe here to drop their in-memory copy of the saved layouts.
+const resetListeners = new Set<() => void>();
+
 /**
  * Tracks the `(min-width: 1280px)` xl breakpoint. SSR-safe: returns false
  * during SSR and the first client render, then syncs in an effect (no
@@ -97,7 +114,9 @@ export function clearPersistedLayouts(): void {
 export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(false);
 
-  useEffect(() => {
+  // Layout effect: runs before paint, so the desktop Group mounts with the
+  // right breakpoint state on its first visible frame.
+  useLayoutEffect(() => {
     const mql = window.matchMedia('(min-width: 1280px)');
     const update = () => setIsDesktop(mql.matches);
     update();
@@ -110,54 +129,81 @@ export function useIsDesktop(): boolean {
 
 export interface UseDashboardPanelsResult {
   isDesktop: boolean;
-  /** Active-shape sizes, hydrated from storage (defaults pre-hydration). */
-  sidebarSize: number | undefined;
-  rightSize: number | undefined;
-  /** Persist on `Group`'s `onLayoutChanged` (Layout: panelId -> percent); also mirrors into ref state. */
+  /** True once the saved layouts for BOTH shapes are read (before first paint). */
+  hydrated: boolean;
+  /** Percent layout for the active shape: saved sizes when present, else DEFAULT_LAYOUT. */
+  groupLayout: Record<string, number>;
+  /** Percent layout for BOTH shapes, so a shape switch can apply the other one without a remount. */
+  layouts: Record<LayoutShape, Record<string, number>>;
+  /** Persist on `Group`'s `onLayoutChanged`. Ignores reports whose panel ids belong to the other shape. */
   handleLayoutChanged: (layout: { [panelId: string]: number }) => void;
   /** Reset Layout: clears both keys and snaps back to defaults immediately. */
   resetLayout: () => void;
 }
 
+type SavedLayouts = Record<LayoutShape, { sidebar: number; right: number } | null>;
+
 export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult {
   const isDesktop = useIsDesktop();
-  // Undefined until hydrated: Group then falls back to its own
-  // defaultSize props (which mirror the historic fixed grid).
-  const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>({
-    shape,
-  });
+  // Both shapes are read once, before the Group mounts, so a 2col<->3col
+  // switch already has its saved sizes in memory and never falls back to
+  // defaults. Null until that read happens (SSR and first client render).
+  const [saved, setSaved] = useState<SavedLayouts | null>(null);
 
-  useEffect(() => {
-    setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
-  }, [shape]);
+  // Layout effect, not useEffect: the saved sizes must be in state before the
+  // Group mounts (Group reads defaultLayout once, at mount) and before paint.
+  useLayoutEffect(() => {
+    setSaved({ '2col': readPersistedLayout('2col'), '3col': readPersistedLayout('3col') });
+  }, []);
 
   const handleLayoutChanged = useCallback(
     (layout: { [panelId: string]: number }) => {
       const sidebar = layout.sidebar;
       if (typeof sidebar !== 'number' || !Number.isFinite(sidebar)) return;
-      const right = shape === '3col' ? layout.right : undefined;
-      if (shape === '3col' && (typeof right !== 'number' || !Number.isFinite(right))) return;
-      setSizes({ shape, ...(shape === '3col' ? { sidebar, right: right as number } : { sidebar }) });
-      persistLayout(shape, sidebar, typeof right === 'number' ? right : 0);
+      // The library can report the other shape's group during a switch. A
+      // report belongs to this shape only if its panel ids match it.
+      if (shape === '2col' && 'right' in layout) return;
+      if (shape === '3col' && typeof layout.right !== 'number') return;
+      const right = shape === '3col' ? (layout.right as number) : 0;
+      if (!Number.isFinite(right)) return;
+      persistLayout(shape, sidebar, right);
+      setSaved((prev) => (prev ? { ...prev, [shape]: { sidebar, right } } : prev));
     },
     [shape]
   );
 
-  const resetLayout = useCallback(() => {
-    clearPersistedLayouts();
-    setSizes({ shape });
-    // Snap the live Group back to defaults via the panels' imperative
-    // handles (registered below through the shared reset sink).
-    resetSink?.(shape);
-  }, [shape]);
+  const resetLayout = useCallback(() => requestDashboardLayoutReset(), []);
+
+  // Reset Layout clears storage and the live Group. Drop the in-memory copy
+  // too, or the next shape switch would re-apply the pre-reset sizes.
+  useEffect(() => {
+    /** Forgets the cached saved layouts so a later shape switch uses defaults. */
+    const clear = () => {
+      setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
+    };
+    resetListeners.add(clear);
+    return () => {
+      resetListeners.delete(clear);
+    };
+  }, []);
+
+  /** Group layout for a shape: saved sizes when present, else DEFAULT_LAYOUT. */
+  const layoutFor = (target: LayoutShape): Record<string, number> => {
+    const current = saved?.[target] ?? null;
+    return toGroupLayout(
+      target,
+      current?.sidebar ?? DEFAULT_LAYOUT[target].sidebar,
+      current?.right ?? DEFAULT_LAYOUT[target].right
+    );
+  };
+  const layouts = { '2col': layoutFor('2col'), '3col': layoutFor('3col') };
+  const groupLayout = layouts[shape];
 
   return {
     isDesktop,
-    // Sizes are tagged with the shape that produced them; when the shape
-    // switches (rightPanel toggles), the pending sizes are stale and must
-    // NOT leak into the other shape's panel group (PR #442 review 6b).
-    sidebarSize: sizes.shape === shape ? sizes.sidebar : undefined,
-    rightSize: sizes.shape === shape ? sizes.right : undefined,
+    hydrated: saved !== null,
+    groupLayout,
+    layouts,
     handleLayoutChanged,
     resetLayout,
   };
@@ -185,6 +231,9 @@ export function requestDashboardLayoutReset(): void {
   clearPersistedLayouts();
   resetSink?.('2col');
   resetSink?.('3col');
+  resetListeners.forEach((listener) => {
+    listener();
+  });
 }
 
 /**

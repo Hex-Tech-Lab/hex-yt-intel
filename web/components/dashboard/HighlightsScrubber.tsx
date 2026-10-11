@@ -59,6 +59,9 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Caption language for the ticker. No translated transcript is in the segment
+  // payload yet, so TRANS. shows a stub; see the translation-stub branch below.
+  const [captionLang, setCaptionLang] = useState<'orig' | 'trans'>('orig');
   // Tracks which analysisId `data` actually belongs to -- CodeRabbit finding
   // on PR #298: `data` alone isn't enough to guard the fetch effect below,
   // since switching to a NEW analysisId while the OLD analysisId's `data`
@@ -468,12 +471,17 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
       {/* Mobile: ticker takes a full-width row, speed + nav sit on the row below.
           From sm up the three share one row (ticker flexes, controls keep their width). */}
       <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
         <div
-          className="w-full sm:flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
+          className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
           data-testid="verbatim-caption"
           aria-live="polite"
         >
-          {activeHighlight && playingIdx !== null ? (
+          {captionLang === 'trans' ? (
+            <span data-testid="translation-stub" className="italic text-[var(--ink-muted)] text-xs truncate">
+              Translation pending...
+            </span>
+          ) : activeHighlight && playingIdx !== null ? (
             <div className="flex items-center gap-2 w-full min-w-0 overflow-hidden">
               <span className="font-mono text-[10px] text-emerald-400 font-semibold shrink-0 select-none bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/50">
                 {playingIdx + 1}/{data.highlights.length}
@@ -523,6 +531,16 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
               {data.highlights.length} keypoints ready to play
             </span>
           )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCaptionLang((lang) => (lang === 'orig' ? 'trans' : 'orig'))}
+          aria-pressed={captionLang === 'trans'}
+          aria-label="Toggle caption language: original or translation"
+          className="h-8 shrink-0 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-2 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+        >
+          {captionLang === 'trans' ? 'TRANS.' : 'ORIG.'}
+        </button>
         </div>
 
         <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0">

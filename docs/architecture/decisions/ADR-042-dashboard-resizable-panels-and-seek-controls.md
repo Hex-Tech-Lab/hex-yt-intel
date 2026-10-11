@@ -10,7 +10,7 @@
 1. **Library:** `react-resizable-panels` 4.x (Group/Panel/Separator API). No library CSS is imported; handles are Tailwind/Astryx utilities only (CLAUDE.md §5 frozen stack).
 2. **Desktop only.** The panel group mounts only at `xl+` (`useIsDesktop`, `matchMedia('(min-width: 1280px)')`, SSR default `false`). Below `xl` the original drawer tree (backdrop, Escape, body scroll lock, `inert`) is rendered unchanged.
 3. **Persistence keyed by layout shape.** `rightPanel` is optional, so percentages are stored per shape: `hex:layout:v1:2col` / `hex:layout:v1:3col`. Reads happen post-hydration; values are range-validated and corrupt/out-of-range data falls back to defaults. Every storage access is try/catch with `console.error('[DashboardLayout]', error)`. Sizes from one shape are never applied to the other.
-4. **Defaults reproduce the old grid at 1440px:** sidebar 18%, right 27% (≈390px), centre the remainder. `DEFAULT_LAYOUT` in `web/lib/hooks/useDashboardLayout.ts` is the single source; the reset path derives from it.
+4. **Defaults are percentages:** 3-column sidebar 15%, centre 60%, right 25%; 2-column sidebar 15%, centre 85%. `DEFAULT_LAYOUT` in `web/lib/hooks/useDashboardLayout.ts` is the single source; the mount-time `defaultLayout` and the reset path both derive from it through `toGroupLayout`. (Revised 2026-10-11 from 18/55/27; the old values were pixel-interpreted by the library, which broke persistence.)
 5. **Reset** is an icon button in `TopBar` (`xl` only) calling `requestDashboardLayoutReset()`, which clears both keys and applies defaults through the live Group's imperative `setLayout` via a single-slot registered sink (exactly one `DashboardLayout` is mounted at a time). No reload.
 
 **B. Timestamp seek controls**

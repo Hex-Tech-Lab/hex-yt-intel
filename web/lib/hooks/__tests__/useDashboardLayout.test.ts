@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  DEFAULT_LAYOUT,
   registerResetSink,
   requestDashboardLayoutReset,
   readStoredLayoutForTest,
+  toGroupLayout,
 } from '../useDashboardLayout';
 
 const KEY_2COL = 'hex:layout:v1:2col';
@@ -65,5 +67,26 @@ describe('dashboard layout persistence', () => {
     setItem(KEY_2COL, JSON.stringify({ sidebar: 30 }));
     expect(() => requestDashboardLayoutReset()).not.toThrow();
     expect(window.localStorage.getItem(KEY_2COL)).toBeNull();
+  });
+});
+
+describe('toGroupLayout', () => {
+  it('3col: sidebar/center/right in percent, summing to 100', () => {
+    const layout = toGroupLayout('3col', 15, 25);
+    expect(layout).toEqual({ sidebar: 15, center: 60, right: 25 });
+    expect(Object.values(layout).reduce((total, percent) => total + percent, 0)).toBe(100);
+  });
+
+  it('2col: sidebar/center only, no right key', () => {
+    const layout = toGroupLayout('2col', 15, 0);
+    expect(layout).toEqual({ sidebar: 15, center: 85 });
+    expect(layout).not.toHaveProperty('right');
+  });
+
+  it('default 3col and 2col layouts are 15/60/25 and 15/85', () => {
+    expect(toGroupLayout('3col', DEFAULT_LAYOUT['3col'].sidebar, DEFAULT_LAYOUT['3col'].right))
+      .toEqual({ sidebar: 15, center: 60, right: 25 });
+    expect(toGroupLayout('2col', DEFAULT_LAYOUT['2col'].sidebar, DEFAULT_LAYOUT['2col'].right))
+      .toEqual({ sidebar: 15, center: 85 });
   });
 });
