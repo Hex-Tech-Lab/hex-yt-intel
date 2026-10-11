@@ -1,7 +1,14 @@
 import { describe, test, expect } from "vitest";
 import { Project } from "ts-morph";
 import * as legacyRules from "../index";
-import { StreamReaderWithoutFinallyRule, UnregisteredSettingsKeyRule } from "../lessons-20261009";
+import {
+  StreamReaderWithoutFinallyRule,
+  UnregisteredSettingsKeyRule,
+  _resetSettingsManifestCacheForTest,
+} from "../lessons-20261009";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type { Rule } from "../../domain/Rule";
 
 // Settings-key checks read the real supabase/migrations manifest, so these tests
@@ -100,5 +107,44 @@ describe("lessons-20261009 rules — production registration", () => {
     for (const rule of [StreamReaderWithoutFinallyRule, UnregisteredSettingsKeyRule]) {
       expect((rule as { scope?: string }).scope).toBe("file");
     }
+  });
+
+  describe("migrations directory lookup", () => {
+    const original = process.cwd();
+    const UNREGISTERED = `export const CAP_KEY = 'analysis.layer2.priorPayloadMaxBytess';`;
+
+    function withCwd(dir: string, fn: () => void) {
+      try {
+        process.chdir(dir);
+        _resetSettingsManifestCacheForTest();
+        fn();
+      } finally {
+        process.chdir(original);
+        _resetSettingsManifestCacheForTest();
+      }
+    }
+
+    test("walks up from a nested directory to find supabase/migrations", () => {
+      const root = mkdtempSync(path.join(tmpdir(), "qe-walkup-"));
+      mkdirSync(path.join(root, "supabase", "migrations"), { recursive: true });
+      // One registered key, so the manifest is non-empty and the rule is active.
+      writeFileSync(
+        path.join(root, "supabase", "migrations", "0001_settings.sql"),
+        "insert into setting_definitions values ('analysis.other.key', 'system', 1);\n"
+      );
+      const nested = path.join(root, "web", "lib");
+      mkdirSync(nested, { recursive: true });
+      // Manifest found by walking up, so an unregistered key is flagged even from web/lib.
+      withCwd(nested, () => {
+        expect(run(UnregisteredSettingsKeyRule, UNREGISTERED)).toHaveLength(1);
+      });
+    });
+
+    test("disables itself when no migrations directory exists anywhere above", () => {
+      const bare = mkdtempSync(path.join(tmpdir(), "qe-nomig-"));
+      withCwd(bare, () => {
+        expect(run(UnregisteredSettingsKeyRule, UNREGISTERED)).toHaveLength(0);
+      });
+    });
   });
 });
