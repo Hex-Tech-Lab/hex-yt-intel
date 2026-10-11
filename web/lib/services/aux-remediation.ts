@@ -260,32 +260,26 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   // cheaply; the DB unique index (uq_comment_sample_runs_system_per_analysis)
   // covers the true race between concurrent finalizes.
   //
-  // The two probe lookups run BEFORE the insert, so a probe failure must be
+  // The probe lookups run BEFORE the insert, so a probe failure must be
   // contained here, not thrown into the caller: both persist-route call
   // sites (.catch()) and the harness per-gap loop do catch, but fail-closed
   // in the service guarantees no paid run is ever started on an uncertain
   // probe — and the error is still reported (log + Sentry).
+  //
+  // There is deliberately no "payload already has comments" skip: the sample
+  // run is what produces the comment classifications behind the sentiment
+  // UI, so skipping it whenever the payload carried >= 10 comments left most
+  // analyses with no sentiment at all (owner report 2026-10-12).
   try {
-    const {
-      'comments.system.minUsableComments': minUsableComments,
-      'comments.system.staleRunMinutes': staleRunMinutes,
-    } = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['comments.system.minUsableComments', 'comments.system.staleRunMinutes'],
-      { 'comments.system.minUsableComments': 10, 'comments.system.staleRunMinutes': 30 }
+    const { 'comments.system.staleRunMinutes': staleRunMinutes } = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.system.staleRunMinutes'],
+      { 'comments.system.staleRunMinutes': 30 }
     );
     // A run stuck pending/sampling past the cutoff would otherwise hold the
     // unique index forever; release it before the existence check.
     await SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns(params.analysisId, Number(staleRunMinutes));
     if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
       console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
-      return false;
-    }
-
-    // Skip: the analysis already has usable comments (at least
-    // comments.system.minUsableComments, default 10) — below that the run is
-    // needed for data density (directive 2026-10-03).
-    if (await SupabaseAuxRemediationAdapter.analysisHasUsableComments(params.analysisId, Number(minUsableComments))) {
-      console.info('[aux-remediation] analysis already has usable comments, skipping enqueue', { analysisId: params.analysisId });
       return false;
     }
   } catch (err) {

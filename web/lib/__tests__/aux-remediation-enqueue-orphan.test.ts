@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const insertSystemCommentSampleRun = vi.hoisted(() => vi.fn());
 const markSampleRunFailed = vi.hoisted(() => vi.fn());
 const hasSystemSampleRun = vi.hoisted(() => vi.fn());
-const analysisHasUsableComments = vi.hoisted(() => vi.fn());
 const failStaleSystemSampleRuns = vi.hoisted(() => vi.fn());
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
@@ -20,7 +19,7 @@ vi.mock('@/lib/stream-token', () => ({
 vi.mock('@/lib/adapters', () => ({ SupabasePersistenceAdapter: class {} }));
 vi.mock('@/lib/qstash-client', () => ({ publishEmbeddingTask: vi.fn() }));
 vi.mock('@/lib/adapters/SupabaseAuxRemediationAdapter', () => ({
-  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed, hasSystemSampleRun, analysisHasUsableComments, failStaleSystemSampleRuns },
+  SupabaseAuxRemediationAdapter: { insertSystemCommentSampleRun, markSampleRunFailed, hasSystemSampleRun, failStaleSystemSampleRuns },
 }));
 vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   SupabaseSettingsAdapter: { getRegistrySettings: vi.fn((_keys: string[], fallback: Record<string, unknown>) => Promise.resolve(fallback)) },
@@ -34,7 +33,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   insertSystemCommentSampleRun.mockResolvedValue({ id: 'run-1', alreadyQueued: false });
   hasSystemSampleRun.mockResolvedValue(false);
-  analysisHasUsableComments.mockResolvedValue(false);
   failStaleSystemSampleRuns.mockResolvedValue(undefined);
 });
 
@@ -64,10 +62,10 @@ describe('enqueueSystemCommentSampleRun', () => {
     expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
   });
 
-  it('skips entirely when the analysis already has usable comments (#416 follow-up)', async () => {
-    analysisHasUsableComments.mockResolvedValue(true);
-    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
-    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
+  it('still enqueues when the payload already carries comments: the run is what feeds the sentiment UI (owner report 2026-10-12)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 202 })));
+    expect(await enqueueSystemCommentSampleRun(params)).toBe(true);
+    expect(insertSystemCommentSampleRun).toHaveBeenCalled();
   });
 
   it('releases stale pending/sampling runs (registry staleRunMinutes, default 30) BEFORE the existence check', async () => {
@@ -77,11 +75,6 @@ describe('enqueueSystemCommentSampleRun', () => {
     await enqueueSystemCommentSampleRun(params);
     expect(failStaleSystemSampleRuns).toHaveBeenCalledWith(params.analysisId, 30);
     expect(order).toEqual(['stale', 'exists']);
-  });
-
-  it('passes the registry minUsableComments (default 10) to the usable-comments probe', async () => {
-    await enqueueSystemCommentSampleRun(params);
-    expect(analysisHasUsableComments).toHaveBeenCalledWith(params.analysisId, 10);
   });
 
   it('treats a unique-violation insert (lost race) as already-queued: no enqueue, no error, no failure marking', async () => {
@@ -106,10 +99,10 @@ describe('enqueueSystemCommentSampleRun', () => {
   it('marks the run failed when the registry settings lookup throws (orphaned-pending bug, #416 follow-up)', async () => {
     vi.doMock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
       // Only the post-insert sampling-config lookup fails; the pre-insert
-      // minUsableComments lookup resolves so the run row is inserted first.
+      // staleRunMinutes lookup resolves so the run row is inserted first.
       SupabaseSettingsAdapter: {
         getRegistrySettings: vi.fn((keys: string[], fallback: Record<string, unknown>) =>
-          keys.includes('comments.system.minUsableComments') ? Promise.resolve(fallback) : Promise.reject(new Error('db down'))),
+          keys.includes('comments.system.staleRunMinutes') ? Promise.resolve(fallback) : Promise.reject(new Error('db down'))),
       },
     }));
     vi.resetModules();
@@ -129,12 +122,4 @@ describe('enqueueSystemCommentSampleRun', () => {
     expect(captureException).toHaveBeenCalledWith(err, expect.objectContaining({ contexts: expect.objectContaining({ auxRemediation: expect.objectContaining({ phase: 'comments_enqueue_probe' }) }) }));
   });
 
-  it('contains an analysisHasUsableComments probe rejection: logs + Sentry, returns false, no insert (probe containment, #424 r3)', async () => {
-    const { captureException } = await import('@sentry/nextjs');
-    const err = new Error('probe db down');
-    analysisHasUsableComments.mockRejectedValue(err);
-    expect(await enqueueSystemCommentSampleRun(params)).toBe(false);
-    expect(insertSystemCommentSampleRun).not.toHaveBeenCalled();
-    expect(captureException).toHaveBeenCalledWith(err, expect.objectContaining({ contexts: expect.objectContaining({ auxRemediation: expect.objectContaining({ phase: 'comments_enqueue_probe' }) }) }));
-  });
 });
