@@ -1,0 +1,29 @@
+web/lib/hooks/useDashboardLayout.ts
+  s_0e11f90dae68e0::t_00bef44a872def 29-30
+  s_0e11f90dae68e0::t_64dc12a28d37c7 13-15
+web/components/templates/console/__tests__/DashboardLayout.defaultLayout.test.tsx
+  s_0e11f90dae68e0::t_820400f0b97789 1-134
+docs/architecture/decisions/ADR-042-dashboard-resizable-panels-and-seek-controls.md
+  s_0e11f90dae68e0::t_cfeb06888fbd1a 13
+web/lib/hooks/__tests__/useDashboardLayout.test.ts
+  s_0e11f90dae68e0::t_46c513a95620b0 4,8
+  s_0e11f90dae68e0::t_49945b76178ae2 72-92
+.memory/AGENT_LEDGER.md
+  s_0e11f90dae68e0::t_d2602d9a561bd8 1581
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5cf88d9e74a087fcc7f781b2177bc91636f5b8f",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
