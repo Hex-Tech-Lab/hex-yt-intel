@@ -10,8 +10,9 @@ import { useCallback, useLayoutEffect, useState } from 'react';
  * written by the 3-column desktop and vice versa -- percentages would
  * silently collide across different panel counts.
  *
- * Defaults match the previous fixed grid at a ~1440px viewport:
- * 260px sidebar / fluid center / 390px right => ~18% / 64% / 18%.
+ * Defaults are percentages: 3-column 15% / 60% / 25%, 2-column 15% / 85%.
+ * react-resizable-panels v4 reads a bare number as PIXELS, so every size
+ * handed to a Group must be a percentage (see toGroupLayout).
  *
  * All storage access is try/catch wrapped: private-mode browsing and
  * quota errors must never break render, and a corrupt value falls back
@@ -25,10 +26,8 @@ export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
-  '2col': { sidebar: 18, right: 0 },
-  // Right panel gets the ~390px column from the historic fixed grid
-  // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
-  '3col': { sidebar: 18, right: 27 },
+  '2col': { sidebar: 15, right: 0 },
+  '3col': { sidebar: 15, right: 25 },
 };
 
 /**
