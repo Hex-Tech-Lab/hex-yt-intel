@@ -1,0 +1,21 @@
+web/app/api/admin/parity-review/route.test.ts
+  s_0e11f90dae68e0::t_5348f4ab33b6dc 10-11,15,24-25,36,47,68-69
+web/app/api/admin/parity-review/route.ts
+  s_0e11f90dae68e0::t_507663a2d3bdd0 51,56-74,76-84,86-87,91,118-121,125-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46413da44d6ed98ecd3714e9350dc47b0360593b",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
