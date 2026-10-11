@@ -126,55 +126,66 @@ export function useIsDesktop(): boolean {
 
 export interface UseDashboardPanelsResult {
   isDesktop: boolean;
-  /** Active-shape sizes, hydrated from storage (defaults pre-hydration). */
-  sidebarSize: number | undefined;
-  rightSize: number | undefined;
-  /** Persist on `Group`'s `onLayoutChanged` (Layout: panelId -> percent); also mirrors into ref state. */
+  /** True once the saved layouts for BOTH shapes are read (before first paint). */
+  hydrated: boolean;
+  /** Percent layout for the active shape: saved sizes when present, else DEFAULT_LAYOUT. */
+  groupLayout: Record<string, number>;
+  /** Persist on `Group`'s `onLayoutChanged`. Ignores reports whose panel ids belong to the other shape. */
   handleLayoutChanged: (layout: { [panelId: string]: number }) => void;
   /** Reset Layout: clears both keys and snaps back to defaults immediately. */
   resetLayout: () => void;
 }
 
+type SavedLayouts = Record<LayoutShape, { sidebar: number; right: number } | null>;
+
 export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult {
   const isDesktop = useIsDesktop();
-  // Undefined until restored: the caller then uses DEFAULT_LAYOUT.
-  const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>({
-    shape,
-  });
+  // Both shapes are read once, before the Group mounts, so a 2col<->3col
+  // switch already has its saved sizes in memory and never falls back to
+  // defaults. Null until that read happens (SSR and first client render).
+  const [saved, setSaved] = useState<SavedLayouts | null>(null);
 
   // Layout effect, not useEffect: the saved sizes must be in state before the
   // Group mounts (Group reads defaultLayout once, at mount) and before paint.
   useLayoutEffect(() => {
-    setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
-  }, [shape]);
+    setSaved({ '2col': readPersistedLayout('2col'), '3col': readPersistedLayout('3col') });
+  }, []);
 
   const handleLayoutChanged = useCallback(
     (layout: { [panelId: string]: number }) => {
       const sidebar = layout.sidebar;
       if (typeof sidebar !== 'number' || !Number.isFinite(sidebar)) return;
-      const right = shape === '3col' ? layout.right : undefined;
-      if (shape === '3col' && (typeof right !== 'number' || !Number.isFinite(right))) return;
-      setSizes({ shape, ...(shape === '3col' ? { sidebar, right: right as number } : { sidebar }) });
-      persistLayout(shape, sidebar, typeof right === 'number' ? right : 0);
+      // The library can report the other shape's group during a switch. A
+      // report belongs to this shape only if its panel ids match it.
+      if (shape === '2col' && 'right' in layout) return;
+      if (shape === '3col' && typeof layout.right !== 'number') return;
+      const right = shape === '3col' ? (layout.right as number) : 0;
+      if (!Number.isFinite(right)) return;
+      persistLayout(shape, sidebar, right);
+      setSaved((prev) => (prev ? { ...prev, [shape]: { sidebar, right } } : prev));
     },
     [shape]
   );
 
   const resetLayout = useCallback(() => {
     clearPersistedLayouts();
-    setSizes({ shape });
+    setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
     // Snap the live Group back to defaults via the panels' imperative
     // handles (registered below through the shared reset sink).
     resetSink?.(shape);
   }, [shape]);
 
+  const current = saved?.[shape] ?? null;
+  const groupLayout = toGroupLayout(
+    shape,
+    current?.sidebar ?? DEFAULT_LAYOUT[shape].sidebar,
+    current?.right ?? DEFAULT_LAYOUT[shape].right
+  );
+
   return {
     isDesktop,
-    // Sizes are tagged with the shape that produced them; when the shape
-    // switches (rightPanel toggles), the pending sizes are stale and must
-    // NOT leak into the other shape's panel group (PR #442 review 6b).
-    sidebarSize: sizes.shape === shape ? sizes.sidebar : undefined,
-    rightSize: sizes.shape === shape ? sizes.right : undefined,
+    hydrated: saved !== null,
+    groupLayout,
     handleLayoutChanged,
     resetLayout,
   };

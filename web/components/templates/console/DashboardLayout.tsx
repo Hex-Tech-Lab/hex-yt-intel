@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react';
 import { Group, Panel, Separator, useGroupRef } from 'react-resizable-panels';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
@@ -111,21 +111,24 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // localStorage layout (2-column vs 3-column -- rightPanel is optional,
   // and mixing percentages across different panel counts would collide).
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
-  const { isDesktop, sidebarSize, rightSize, handleLayoutChanged } =
+  const { isDesktop, hydrated, groupLayout, handleLayoutChanged } =
     useDashboardPanels(shape);
 
-  // Group layout in PERCENTAGES, passed as the Group's defaultLayout. Center
-  // takes the remainder so panels always sum to 100. Per-panel defaultSize is
-  // not used: react-resizable-panels v4 reads a bare number as PIXELS, and
-  // defaultSize is read only at mount, so a restored value arriving after
-  // mount was ignored (the saved layout never applied).
-  const groupLayout = toGroupLayout(
-    shape,
-    sidebarSize ?? DEFAULT_LAYOUT[shape].sidebar,
-    shape === '3col' ? (rightSize ?? DEFAULT_LAYOUT[shape].right) : 0
-  );
-
+  // groupLayout is PERCENTAGES: react-resizable-panels v4 reads a bare number
+  // as pixels, and a Group reads defaultLayout only at mount. It is the mount
+  // value; later changes are applied imperatively below.
   const groupRef = useGroupRef();
+
+  // Shape switch (2col <-> 3col): the Group stays mounted, so apply the saved
+  // sizes for the new shape to it directly. useEffectEvent reads the latest
+  // groupLayout without re-running on every drag.
+  const applyShapeLayout = useEffectEvent(() => {
+    groupRef.current?.setLayout(groupLayout);
+  });
+  useLayoutEffect(() => {
+    if (!isDesktop || !hydrated) return;
+    applyShapeLayout();
+  }, [shape, isDesktop, hydrated]);
 
   // Register the imperative reset bridge: Reset Layout snaps the live
   // Group back to DEFAULT_LAYOUT percentages via setLayout without a reload.
@@ -189,7 +192,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
 
       {showDesktopPanels ? (
         <Group
-          key={shape}
           groupRef={groupRef}
           id={`console-dashboard-${shape}`}
           orientation="horizontal"

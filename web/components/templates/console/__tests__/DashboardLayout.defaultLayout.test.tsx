@@ -1,20 +1,24 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createElement, type ReactNode } from 'react';
+import { createElement, useEffect, type ReactNode } from 'react';
 import { act, cleanup, render } from '@testing-library/react';
 import { DashboardLayout } from '../DashboardLayout';
 import { requestDashboardLayoutReset } from '@/lib/hooks/useDashboardLayout';
 
 // Captures the props every Group render receives, so the test can check the
 // layout the Group mounted with (the library reads defaultLayout only at mount).
-const { groupCalls, setLayout } = vi.hoisted(() => ({
+const { groupCalls, setLayout, mounts } = vi.hoisted(() => ({
   groupCalls: [] as Array<{ defaultLayout?: Record<string, number> }>,
   setLayout: vi.fn(),
+  mounts: { count: 0 },
 }));
 
 vi.mock('react-resizable-panels', () => ({
   Group: (props: { children?: ReactNode; defaultLayout?: Record<string, number> }) => {
     groupCalls.push({ defaultLayout: props.defaultLayout });
+    useEffect(() => {
+      mounts.count += 1;
+    }, []);
     return createElement('div', { 'data-group': '' }, props.children);
   },
   Panel: (props: { children?: ReactNode }) => createElement('div', null, props.children),
@@ -77,6 +81,7 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
   beforeEach(() => {
     window.localStorage.clear();
     groupCalls.length = 0;
+    mounts.count = 0;
     setLayout.mockClear();
     stubDesktop();
   });
@@ -130,5 +135,34 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     });
 
     expect(setLayout).toHaveBeenCalledWith({ sidebar: 15, center: 60, right: 25 });
+  });
+
+  it('2col -> 3col keeps the Group mounted and applies the saved 3col sizes via setLayout', () => {
+    window.localStorage.setItem(KEY_2COL, JSON.stringify({ sidebar: 20 }));
+    window.localStorage.setItem(KEY_3COL, JSON.stringify({ sidebar: 22, right: 20 }));
+
+    const view = render(
+      <DashboardLayout sidebar={<div>sidebar-content</div>} topbar={<div>topbar</div>}>
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+    expect(mounts.count).toBe(1);
+
+    view.rerender(
+      <DashboardLayout
+        sidebar={<div>sidebar-content</div>}
+        topbar={<div>topbar</div>}
+        rightPanel={<div>right-content</div>}
+      >
+        <div>main-content</div>
+      </DashboardLayout>
+    );
+
+    // No destructive remount: the same Group instance survives the switch.
+    expect(mounts.count).toBe(1);
+    // Saved 3col sizes are applied to the live Group.
+    expect(setLayout).toHaveBeenCalledWith({ sidebar: 22, center: 58, right: 20 });
+    // Switching shape must not overwrite the stored 2col layout.
+    expect(window.localStorage.getItem(KEY_2COL)).toBe(JSON.stringify({ sidebar: 20 }));
   });
 });
