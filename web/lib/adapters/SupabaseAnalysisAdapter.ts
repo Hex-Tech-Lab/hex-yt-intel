@@ -89,6 +89,21 @@ interface AnalysisRecord {
  * ownership verification, digest management, and analysis reaping operations.
  * All operations include Sentry error tracking and console logging for debugging.
  */
+/**
+ * Video-metadata columns derived from the job metadata. The dashboard and history
+ * read these columns, but before this only the blob in validation_report.metadata
+ * was written, so channel/date/thumbnail stayed null on every row.
+ */
+export function metadataColumns(videoId: string, metadata: AnalysisJobMetadata | undefined): Record<string, string> {
+  const cols: Record<string, string> = {
+    thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+  };
+  if (metadata?.channelTitle) cols.channel_title = metadata.channelTitle;
+  if (metadata?.channelId) cols.channel_id = metadata.channelId;
+  if (metadata?.publishedAt) cols.published_at = metadata.publishedAt;
+  return cols;
+}
+
 export class SupabaseAnalysisAdapter {
   /** Retrieve cached analysis for user/video, extracting dimensions from markdown or payload. */
   static async findCachedAnalysis(params: {
@@ -217,6 +232,7 @@ export class SupabaseAnalysisAdapter {
         .update({
           title: params.title,
           channel_title: params.validationReport.metadata?.channelTitle || '',
+          ...metadataColumns(params.videoId, params.validationReport.metadata),
           // Only overwrite on an actual signal; a retry/refresh call with no UA
           // (or an unparseable one) must not clobber the platform recorded on
           // the original request.
@@ -285,8 +301,9 @@ export class SupabaseAnalysisAdapter {
     // Store transcript hash (ADR 006: cache key based on input transcript) and the
     // UA-derived client platform (cosmetic device signal, RCA 2026-07-24) if
     // present. `reserve_analysis_quota` doesn't accept either column, so a
-    // single follow-up update covers both fields the RPC can't set directly.
-    const followUpUpdate: Record<string, string> = {};
+    // single follow-up update covers both fields the RPC can't set directly, plus the
+    // video-metadata columns (the RPC only stores the validation_report blob).
+    const followUpUpdate: Record<string, string> = metadataColumns(params.videoId, params.validationReport.metadata);
     if (params.transcriptHash) followUpUpdate.transcript_hash = params.transcriptHash;
     if (params.clientPlatform) followUpUpdate.client_platform = params.clientPlatform;
 
@@ -301,7 +318,7 @@ export class SupabaseAnalysisAdapter {
           tags: { operation: 'analysis-persist-stub-followup' },
           extra: { analysisId, videoId: params.videoId },
         });
-        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash / client platform:', followUpError.message);
+        console.warn('[SupabaseAnalysisAdapter] Failed to store follow-up columns (transcript hash / client platform / video metadata):', followUpError.message);
       }
     }
 
