@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 /**
  * Resizable desktop panel layout for DashboardLayout (PR #442, Task 4).
@@ -30,6 +30,21 @@ export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: numbe
   // (260px sidebar / fluid center / 390px right) => ~18% / ~27% at 1440px.
   '3col': { sidebar: 18, right: 27 },
 };
+
+/**
+ * Panel-id -> percent layout for a Group, with center taking the remainder
+ * so the panels always sum to 100. Single source for both the mount-time
+ * defaultLayout and the Reset Layout setLayout call.
+ */
+export function toGroupLayout(
+  shape: LayoutShape,
+  sidebar: number,
+  right: number
+): Record<string, number> {
+  return shape === '3col'
+    ? { sidebar, center: 100 - sidebar - right, right }
+    : { sidebar, center: 100 - sidebar };
+}
 
 export const SIDEBAR_MIN = 10;
 export const SIDEBAR_MAX = 30;
@@ -97,7 +112,9 @@ export function clearPersistedLayouts(): void {
 export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(false);
 
-  useEffect(() => {
+  // Layout effect: runs before paint, so the desktop Group mounts with the
+  // right breakpoint state on its first visible frame.
+  useLayoutEffect(() => {
     const mql = window.matchMedia('(min-width: 1280px)');
     const update = () => setIsDesktop(mql.matches);
     update();
@@ -121,13 +138,14 @@ export interface UseDashboardPanelsResult {
 
 export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult {
   const isDesktop = useIsDesktop();
-  // Undefined until hydrated: Group then falls back to its own
-  // defaultSize props (which mirror the historic fixed grid).
+  // Undefined until restored: the caller then uses DEFAULT_LAYOUT.
   const [sizes, setSizes] = useState<{ shape: LayoutShape; sidebar?: number; right?: number }>({
     shape,
   });
 
-  useEffect(() => {
+  // Layout effect, not useEffect: the saved sizes must be in state before the
+  // Group mounts (Group reads defaultLayout once, at mount) and before paint.
+  useLayoutEffect(() => {
     setSizes({ shape, ...(readPersistedLayout(shape) ?? {}) });
   }, [shape]);
 
