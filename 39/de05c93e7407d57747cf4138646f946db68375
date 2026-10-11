@@ -1,0 +1,19 @@
+web/components/templates/console/__tests__/DashboardLayout.defaultLayout.test.tsx
+  s_0e11f90dae68e0::t_8c657e6581f38a 191-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39de05c93e7407d57747cf4138646f946db68375",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
