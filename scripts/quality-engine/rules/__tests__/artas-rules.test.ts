@@ -7,7 +7,7 @@ import {
   UnboundedBodyReadRule,
   NonIdempotentRetryRule,
   FailOpenUndefinedFilterRule,
-} from "../artas-v3";
+} from "../artas-rules";
 
 const project = new Project({ useInMemoryFileSystem: true });
 

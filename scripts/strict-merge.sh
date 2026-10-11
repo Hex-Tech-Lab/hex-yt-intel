@@ -8,11 +8,13 @@
 #   --merge   on pass, squash-merge with --match-head-commit set to the head SHA
 #             the gate just checked, so a push that lands after the gate is refused.
 #             Without --merge the script only gates and exits 0 on pass.
-# Exit: 0 gate passed, 1 gate refused or error.
+# Merged/closed PRs run in audit mode (threads + checks only, never merge);
+# drafts are gated normally but --merge refuses them.
+# Exit: 0 gate passed / audit clean, 1 gate refused, audit found debt, or error.
 set -euo pipefail
 
 usage() {
-  sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
   exit 1
 }
 
@@ -66,13 +68,30 @@ DRAFT=$(jq -r '.isDraft' <<<"$PR_JSON")
 MERGEABLE=$(jq -r '.mergeable' <<<"$PR_JSON")
 MSTATE=$(jq -r '.mergeStateStatus' <<<"$PR_JSON")
 
-[[ "$STATE" == "OPEN" ]] || VIOLATIONS+=("PR state is $STATE, not OPEN")
-[[ "$DRAFT" == "false" ]] || VIOLATIONS+=("PR is a draft")
-[[ "$MERGEABLE" == "MERGEABLE" ]] || VIOLATIONS+=("mergeable is $MERGEABLE (conflicts or unknown)")
-case "$MSTATE" in
-  CLEAN|HAS_HOOKS|UNSTABLE) ;;
-  *) VIOLATIONS+=("mergeStateStatus is $MSTATE (GitHub would block this merge)") ;;
+# MERGED/CLOSED: audit mode. Mergeability is meaningless after the fact, but
+# unresolved threads and failing checks are still reported (leftover debt).
+# Draft: gated like any open PR; only --merge refuses, since GitHub cannot
+# merge a draft.
+AUDIT=0
+NOTES=()
+case "$STATE" in
+  OPEN) ;;
+  MERGED|CLOSED) AUDIT=1; NOTES+=("AUDIT: PR is $STATE (mergeability not checked; never merges)") ;;
+  *) VIOLATIONS+=("PR state is $STATE") ;;
 esac
+if [[ "$DRAFT" == "true" ]]; then
+  NOTES+=("PR is a draft")
+  [[ "$MERGE" -eq 1 ]] && VIOLATIONS+=("--merge refused: PR is a draft (mark it ready first)")
+fi
+if [[ "$AUDIT" -eq 0 ]]; then
+  [[ "$MERGEABLE" == "MERGEABLE" ]] || VIOLATIONS+=("mergeable is $MERGEABLE (conflicts or unknown)")
+  case "$MSTATE" in
+    CLEAN|HAS_HOOKS|UNSTABLE) ;;
+    DRAFT) [[ "$DRAFT" == "true" ]] || VIOLATIONS+=("mergeStateStatus is DRAFT") ;;
+    *) VIOLATIONS+=("mergeStateStatus is $MSTATE (GitHub would block this merge)") ;;
+  esac
+fi
+[[ "$AUDIT" -eq 1 && "$MERGE" -eq 1 ]] && VIOLATIONS+=("--merge refused: PR is $STATE")
 
 HAS_NEXT=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$THREADS_JSON")
 if [[ "$HAS_NEXT" == "true" ]]; then
@@ -116,18 +135,27 @@ done <<<"$CHECKS_TSV"
 
 echo "strict-merge: PR #$PR - $TITLE"
 echo "  head: $HEAD_SHA"
+for n in "${NOTES[@]+"${NOTES[@]}"}"; do echo "  NOTE: $n"; done
 if [[ ${#BYPASSED_SEEN[@]} -gt 0 ]]; then
   echo "  BYPASSED (explicit --bypass): $(IFS=';'; echo "${BYPASSED_SEEN[*]}")"
 fi
 
 if [[ ${#VIOLATIONS[@]} -gt 0 ]]; then
-  echo "  REFUSED - ${#VIOLATIONS[@]} gate violation(s):"
+  if [[ "$AUDIT" -eq 1 ]]; then
+    echo "  AUDIT FOUND ${#VIOLATIONS[@]} item(s) left behind:"
+  else
+    echo "  REFUSED - ${#VIOLATIONS[@]} gate violation(s):"
+  fi
   for v in "${VIOLATIONS[@]}"; do
     echo "    - $v"
   done
   exit 1
 fi
 
+if [[ "$AUDIT" -eq 1 ]]; then
+  echo "  AUDIT CLEAN: 0 unresolved threads, all checks passing or bypassed."
+  exit 0
+fi
 echo "  GATE PASSED: 0 unresolved threads, all checks passing or bypassed, mergeable."
 
 if [[ "$MERGE" -eq 1 ]]; then

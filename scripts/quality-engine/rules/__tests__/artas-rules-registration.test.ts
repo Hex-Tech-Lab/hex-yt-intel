@@ -5,14 +5,14 @@ import {
   UnboundedBodyReadRule,
   NonIdempotentRetryRule,
   FailOpenUndefinedFilterRule,
-} from "../artas-v3";
+} from "../artas-rules";
 
 // Same rationale as the 2026-09-05/20260924 registration tests: direct
 // .check() unit tests prove rule logic but not that the production
 // registration path (rules/index.ts exports -> verify-quality-engine.ts's
 // Object.values(legacyRules)) actually wires the rules into the real scan.
 
-describe("artas-v3 rules — production registration", () => {
+describe("ARTAS rules — production registration", () => {
   test("all four rules are present in the real Object.values(legacyRules) registration set", () => {
     const registered = Object.values(legacyRules);
     expect(registered).toContain(UnconsumedStreamLeakRule);

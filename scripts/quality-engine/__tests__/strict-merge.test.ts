@@ -53,4 +53,30 @@ describe("strict-merge.sh", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("unknown flag");
   });
+  const PASSING = [{ name: "CI", conclusion: "SUCCESS" }];
+
+  test("draft PR is gated normally (passes when clean)", () => {
+    const r = runWithGh({ ...OPEN_PR, isDraft: true, mergeStateStatus: "DRAFT", statusCheckRollup: PASSING }, ["123"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("NOTE: PR is a draft");
+    expect(r.stdout).toContain("GATE PASSED");
+  });
+
+  test("draft PR refuses --merge", () => {
+    const r = runWithGh({ ...OPEN_PR, isDraft: true, mergeStateStatus: "DRAFT", statusCheckRollup: PASSING }, ["123", "--merge"]);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("--merge refused: PR is a draft");
+  });
+
+  test("merged PR runs in audit mode and is clean when nothing is left", () => {
+    const r = runWithGh({ ...OPEN_PR, state: "MERGED", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN", statusCheckRollup: PASSING }, ["123"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("AUDIT CLEAN");
+  });
+
+  test("merged PR audit reports failing checks left behind", () => {
+    const r = runWithGh({ ...OPEN_PR, state: "MERGED", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN", statusCheckRollup: [{ name: "Lint", conclusion: "FAILURE" }] }, ["123"]);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("AUDIT FOUND 1 item(s)");
+  });
 });

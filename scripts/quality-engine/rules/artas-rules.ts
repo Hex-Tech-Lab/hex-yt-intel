@@ -18,7 +18,7 @@ function isTestFile(f: string): boolean {
  * vectors marked [QE] get a static rule here; the rest stay review-only.
  * Each rule carries a positive-fire test on the historical incident shape and
  * a negative-control test on the fixed/safe shape; see
- * scripts/quality-engine/rules/__tests__/artas-v3.test.ts.
+ * scripts/quality-engine/rules/__tests__/artas-rules.test.ts.
  */
 
 const BODY_CONSUMERS = [".text()", ".json()", ".arrayBuffer()", ".blob()"];

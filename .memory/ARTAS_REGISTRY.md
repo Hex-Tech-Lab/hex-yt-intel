@@ -15,7 +15,7 @@ occurs; (2) ask the *break question*; (3) a finding needs a concrete input/state
 outcome, cited by file:line. "Could be risky" is not a finding.
 
 **Static enforcement:** vectors marked **[QE]** have a QualityEngine rule in
-`scripts/quality-engine/rules/artas-v3.ts`. All others are review-only.
+`scripts/quality-engine/rules/artas-rules.ts`. All others are review-only.
 
 ---
 
