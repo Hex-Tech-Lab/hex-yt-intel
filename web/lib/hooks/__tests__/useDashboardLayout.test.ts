@@ -74,7 +74,7 @@ describe('toGroupLayout', () => {
   it('3col: sidebar/center/right in percent, summing to 100', () => {
     const layout = toGroupLayout('3col', 15, 25);
     expect(layout).toEqual({ sidebar: 15, center: 60, right: 25 });
-    expect(Object.values(layout).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(Object.values(layout).reduce((total, percent) => total + percent, 0)).toBe(100);
   });
 
   it('2col: sidebar/center only, no right key', () => {

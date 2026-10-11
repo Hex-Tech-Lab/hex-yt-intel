@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, cleanup, render } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
+import { act, cleanup, render } from '@testing-library/react';
 import { DashboardLayout } from '../DashboardLayout';
 import { requestDashboardLayoutReset } from '@/lib/hooks/useDashboardLayout';
 
@@ -122,7 +122,7 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 15, center: 60, right: 25 });
   });
 
-  it('Reset Layout snaps the live Group to 15/60/25 via setLayout', async () => {
+  it('Reset Layout snaps the live Group to 15/60/25 via setLayout', () => {
     renderThreeCol();
 
     act(() => {
