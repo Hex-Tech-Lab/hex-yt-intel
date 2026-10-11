@@ -45,12 +45,12 @@ function reconstructGroundingMarkdown(analysisMarkdown: string | null, analysisP
 
 function formatTimestamp(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${m}:${String(s).padStart(2, '0')}`;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
 /**
@@ -81,6 +81,26 @@ interface AnalysisRecord {
   validation_passed: boolean | null;
   validation_report: { status?: string } | null;
   billing_status: string | null;
+}
+
+type MetadataColumns = { thumbnail_url: string; channel_title?: string; channel_id?: string; published_at?: string };
+
+/**
+ * Video-metadata columns derived from the job metadata. The dashboard and history
+ * read these columns, but before this only the blob in validation_report.metadata
+ * was written, so channel_id/published_at/thumbnail_url stayed null on every row (and
+ * channel_title was written only on the stub-update path).
+ */
+export function metadataColumns(videoId: string, metadata?: AnalysisJobMetadata): MetadataColumns {
+  const cols: MetadataColumns = {
+    thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+  };
+  if (metadata?.channelTitle) cols.channel_title = metadata.channelTitle;
+  if (metadata?.channelId) cols.channel_id = metadata.channelId;
+  // publishedAt is z.string() with no date check; a non-date would fail the whole row update.
+  const published = metadata?.publishedAt;
+  if (published && /^\d{4}-\d{2}-\d{2}/.test(published) && !Number.isNaN(Date.parse(published))) cols.published_at = published;
+  return cols;
 }
 
 /**
@@ -122,8 +142,8 @@ export class SupabaseAnalysisAdapter {
       const payload = existing.analysis_payload as Record<string, unknown>;
       
       const raw = Array.isArray(payload.dimensions) ? payload.dimensions : Object.values(payload.dimensions ?? {});
-      const dimensions = raw.reduce<Record<string, unknown>>((acc, d: any) => {
-        if (d && typeof d.number === 'number') acc[d.number] = d;
+      const dimensions = raw.reduce<Record<string, unknown>>((acc, dim: any) => {
+        if (dim && typeof dim.number === 'number') acc[dim.number] = dim;
         return acc;
       }, {});
 
@@ -216,7 +236,7 @@ export class SupabaseAnalysisAdapter {
         .from('analyses')
         .update({
           title: params.title,
-          channel_title: params.validationReport.metadata?.channelTitle || '',
+          ...metadataColumns(params.videoId, params.validationReport.metadata),
           // Only overwrite on an actual signal; a retry/refresh call with no UA
           // (or an unparseable one) must not clobber the platform recorded on
           // the original request.
@@ -285,8 +305,9 @@ export class SupabaseAnalysisAdapter {
     // Store transcript hash (ADR 006: cache key based on input transcript) and the
     // UA-derived client platform (cosmetic device signal, RCA 2026-07-24) if
     // present. `reserve_analysis_quota` doesn't accept either column, so a
-    // single follow-up update covers both fields the RPC can't set directly.
-    const followUpUpdate: Record<string, string> = {};
+    // single follow-up update covers both fields the RPC can't set directly, plus the
+    // video-metadata columns (the RPC only stores the validation_report blob).
+    const followUpUpdate: Record<string, string> = { ...metadataColumns(params.videoId, params.validationReport.metadata) };
     if (params.transcriptHash) followUpUpdate.transcript_hash = params.transcriptHash;
     if (params.clientPlatform) followUpUpdate.client_platform = params.clientPlatform;
 
@@ -301,7 +322,7 @@ export class SupabaseAnalysisAdapter {
           tags: { operation: 'analysis-persist-stub-followup' },
           extra: { analysisId, videoId: params.videoId },
         });
-        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash / client platform:', followUpError.message);
+        console.warn('[SupabaseAnalysisAdapter] Failed to store follow-up columns (transcript hash / client platform / video metadata):', followUpError.message);
       }
     }
 

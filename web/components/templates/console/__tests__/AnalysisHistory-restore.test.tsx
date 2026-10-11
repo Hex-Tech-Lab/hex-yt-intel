@@ -107,7 +107,7 @@ const RESTORE_RESPONSE = {
   streaming: null,
 };
 
-function mockFetchRouter() {
+function mockFetchRouter(restoreResponse: object = RESTORE_RESPONSE) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
     if (url.includes('/api/analyses/overview')) {
@@ -117,7 +117,7 @@ function mockFetchRouter() {
     }
     if (url.includes(`/api/analyses/${HISTORY_ITEM.analysisId}`)) {
       return Promise.resolve(
-        new Response(JSON.stringify(RESTORE_RESPONSE), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        new Response(JSON.stringify(restoreResponse), { status: 200, headers: { 'Content-Type': 'application/json' } })
       );
     }
     if (url.includes('/api/chat/conversations')) {
@@ -166,6 +166,26 @@ describe('AnalysisHistory restore flow (real component, real click)', () => {
       cleanup();
       vi.unstubAllGlobals();
     }
+  });
+
+  it('restores description/views/likes from validation_report.metadata when the payload has no metadata key', async () => {
+    // Recall-shape row: analysis_payload carries no videoMetadata/metadata, the
+    // real values live only in validation_report.metadata.
+    const fetchMock = mockFetchRouter({
+      ...RESTORE_RESPONSE,
+      analysis_payload: { ...ANALYSIS_PAYLOAD, videoMetadata: undefined },
+      validation_report: { metadata: { description: 'Graph View tutorial', viewCount: 5000, likeCount: 42, publishedAt: '2026-09-01T00:00:00Z' } },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(createElement(AnalysisHistory));
+    fireEvent.click(await screen.findByText('Restore Flow Test Video'));
+    await waitFor(() => {
+      expect(useAnalysisStore.getState().videoMetadata?.description).toBe('Graph View tutorial');
+    });
+    const meta = useAnalysisStore.getState().videoMetadata;
+    expect(String(meta?.viewCount)).toBe('5000');
+    expect(String(meta?.likeCount)).toBe('42');
+    expect(meta?.publishedAt).toBe('2026-09-01T00:00:00Z');
   });
 
   it('clicking a history row hydrates rawAnalysis + synthesis nucleus, and sets persona/KG/classification/monetization exactly once', async () => {
