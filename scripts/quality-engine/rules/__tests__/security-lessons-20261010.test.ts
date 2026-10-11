@@ -55,6 +55,12 @@ describe("AdvisoryLockIsolationGuardRule", () => {
     expect(AdvisoryLockIsolationGuardRule.check(ctx("supabase/migrations/a.sql", sql))).toHaveLength(0);
   });
 
+  test("negative control: SHOW transaction_isolation counts as a guard", () => {
+    const sql =
+      "CREATE FUNCTION g() RETURNS void AS $$ DECLARE lvl text; BEGIN SHOW transaction_isolation INTO lvl; PERFORM pg_advisory_xact_lock(1); END; $$;";
+    expect(AdvisoryLockIsolationGuardRule.check(ctx("supabase/migrations/a.sql", sql))).toHaveLength(0);
+  });
+
   test("a string mention of transaction_isolation (not a guard) does not silence the rule", () => {
     const sql =
       "CREATE FUNCTION g() RETURNS void AS $$ RAISE NOTICE 'transaction_isolation not checked'; PERFORM pg_advisory_xact_lock(1); $$;";
@@ -78,6 +84,12 @@ describe("IpHeaderSinkRule", () => {
     expect(IpHeaderSinkRule.check(ctx("web/app/other/client-ip.ts", code))).toHaveLength(1);
   });
 
+  test("fires on optional-chained reads", () => {
+    for (const code of ['const ip = req.headers?.get("x-real-ip");', 'const ip = req.headers?.["x-forwarded-for"];']) {
+      expect(IpHeaderSinkRule.check(ctx("web/app/api/x/route.ts", code))).toHaveLength(1);
+    }
+  });
+
   test("fires on bracket access to an IP header", () => {
     const code = 'const ip = req.headers["x-real-ip"];';
     expect(IpHeaderSinkRule.check(ctx("web/app/api/x/route.ts", code))).toHaveLength(1);
@@ -97,6 +109,20 @@ describe("LaunchPathIsolationLiteralRule", () => {
 
   test("a phrase only in a comment does not fire", () => {
     const code = "// isolation level repeatable read is refused\nconst x = 1;";
+    expect(LaunchPathIsolationLiteralRule.check(ctx("web/lib/launch.ts", code))).toHaveLength(0);
+  });
+  test("fires on SET / set_config forms of the isolation level", () => {
+    for (const code of [
+      "await sql`SET default_transaction_isolation = 'serializable'`;",
+      "await sql`SET transaction_isolation TO 'repeatable read'`;",
+      "await sql`select set_config('transaction_isolation', 'serializable', true)`;",
+    ]) {
+      expect(LaunchPathIsolationLiteralRule.check(ctx("web/lib/launch.ts", code))).toHaveLength(1);
+    }
+  });
+
+  test("negative control: read committed is not flagged", () => {
+    const code = "await sql`SET transaction_isolation = 'read committed'`;";
     expect(LaunchPathIsolationLiteralRule.check(ctx("web/lib/launch.ts", code))).toHaveLength(0);
   });
 });

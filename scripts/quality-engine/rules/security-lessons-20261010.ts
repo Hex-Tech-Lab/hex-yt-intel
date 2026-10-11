@@ -141,7 +141,7 @@ export const IpHeaderSinkRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath) || CLIENT_IP_HELPER_PATH.test(filePath)) return [];
     const code = stripComments(sourceText(ctx), "ts");
-    const re = /headers(?:\.get\(\s*|\[\s*)["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*[)\]]/i;
+    const re = /headers(?:\??\.get\(\s*|(?:\?\.)?\[\s*)["'](x-forwarded-for|x-real-ip|x-vercel-forwarded-for)["']\s*[)\]]/i;
     const m = re.exec(code);
     if (!m) return [];
     return [
@@ -170,7 +170,16 @@ export const LaunchPathIsolationLiteralRule: Rule = {
     const filePath = normalizePosixPath(ctx.filePath);
     if (isTestFile(filePath)) return [];
     const code = stripComments(sourceText(ctx), "ts");
-    if (!/isolation\s+level\s+(repeatable\s+read|serializable)/i.test(code)) return [];
+    // ISOLATION LEVEL ..., SET [default_]transaction_isolation = ..., and
+    // set_config('[default_]transaction_isolation', ...) all set the level.
+    const LEVEL = String.raw`(?:repeatable\s+read|serializable)`;
+    const setsLevel = new RegExp(
+      String.raw`isolation\s+level\s+${LEVEL}` +
+        String.raw`|(?:default_)?transaction_isolation\s*(?:=|to)\s*['"]?${LEVEL}` +
+        String.raw`|set_config\s*\(\s*['"](?:default_)?transaction_isolation['"]\s*,\s*['"]${LEVEL}`,
+      "i"
+    );
+    if (!setsLevel.test(code)) return [];
     return [
       {
         file: filePath,
