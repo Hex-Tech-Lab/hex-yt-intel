@@ -42,7 +42,7 @@ outcome, cited by file:line. "Could be risky" is not a finding.
 
 | ID | Vector | Trigger | Break question | Known incident |
 |---|---|---|---|---|
-| V10 | SSRF Exhaustion **[QE]** | Fetching user-influenced URLs; reading response bodies | Can an attacker point it at an internal/metadata host, or a huge/endless body that is buffered whole (`.arrayBuffer()`, `.text()`, `.json()`) without a byte cap? | hex-expan ExpanPress `arrayBuffer` bypass |
+| V10 | SSRF Exhaustion **[QE: `.arrayBuffer()` only; `.text()`/`.json()` are review-only]** | Fetching user-influenced URLs; reading response bodies | Can an attacker point it at an internal/metadata host, or a huge/endless body that is buffered whole (`.arrayBuffer()`, `.text()`, `.json()`) without a byte cap? | hex-expan ExpanPress `arrayBuffer` bypass |
 | V11 | Credential Leakage | Logs, Sentry extras, error bodies, client bundles, URLs | Can a secret, token, signed URL or PII reach a log line, error response, client chunk or query string? | Sensitive vars pulled empty via `vercel env pull` |
 | V12 | Implicit Infra | Code relying on env/region/filesystem/runtime assumptions | What unstated platform assumption must hold (env var set, region, writable FS, Node vs Edge API, cron registered) — and what happens when it doesn't? | `APP_URL` stale in wrangler; hex-expan predictable `.tmp-${pid}` atomic write |
 | V13 | IPv6 Bracket Bypass | Host/IP allowlists, SSRF guards, origin checks | Do `[::1]`, `[::ffff:127.0.0.1]`, `fe80::/10`, `0.0.0.0/8`, decimal/octal IPv4 evade the check? Is the check on the parsed host, not the string? | hex-expan PR82: fe80::/10 full range, 0.0.0.0/8 |

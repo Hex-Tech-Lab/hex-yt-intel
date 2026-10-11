@@ -253,6 +253,50 @@ describe("NonIdempotentRetryRule (V19)", () => {
     );
     expect(findings.length).toBe(0);
   });
+
+  test("bare 'GET'/'HEAD' string literals without a method comparison do not exempt (V24)", () => {
+    const findings = check(
+      NonIdempotentRetryRule,
+      "worker/src/lib/retry-fetch-logged.ts",
+      `
+      export async function sendWithRetry(url: string) {
+        log.debug("safe verbs are 'GET' and 'HEAD'");
+        let attempts = 0;
+        while (attempts < 3) {
+          try {
+            return await fetch(url, { method: "POST" });
+          } catch (e) {
+            attempts++;
+          }
+        }
+        throw new Error("exhausted");
+      }
+      `,
+    );
+    expect(findings.length).toBe(1);
+  });
+
+  test("negative control: allowlist includes() gate is honored", () => {
+    const findings = check(
+      NonIdempotentRetryRule,
+      "worker/src/lib/retry-fetch-allowlist.ts",
+      `
+      export async function sendWithRetry(url: string, method: string) {
+        if (!["GET", "HEAD"].includes(method)) return fetch(url, { method });
+        let attempts = 0;
+        while (attempts < 3) {
+          try {
+            return await fetch(url, { method });
+          } catch (e) {
+            attempts++;
+          }
+        }
+        throw new Error("exhausted");
+      }
+      `,
+    );
+    expect(findings.length).toBe(0);
+  });
 });
 
 describe("FailOpenUndefinedFilterRule (V05)", () => {

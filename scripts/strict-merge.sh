@@ -87,6 +87,12 @@ if [[ "$OPEN_THREADS" -gt 0 ]]; then
     | select(.isResolved == false) | "\(.path):\(.line // "?")"' <<<"$THREADS_JSON")
 fi
 
+# An empty rollup means no check reported at all; that is not a pass.
+if [[ "$(jq '.statusCheckRollup | length' <<<"$PR_JSON")" -eq 0 ]]; then
+  echo "  GATE FAILED: no status checks reported for this PR head." >&2
+  exit 1
+fi
+
 # Check rows come in two shapes: CheckRun (name, status, conclusion) and
 # StatusContext (context, state). Passing = SUCCESS, SKIPPED or NEUTRAL.
 BYPASSED_SEEN=()

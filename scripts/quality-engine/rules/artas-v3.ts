@@ -40,10 +40,20 @@ function findEnclosingFunction(node: Node): Node | undefined {
   return undefined;
 }
 
-/** Functions whose body text includes 'GET' and 'HEAD' (string-literal checks). */
+/**
+ * Functions that gate on the request method: a comparison of a method value
+ * against 'GET' and 'HEAD' (`method === 'GET'`, `m !== "HEAD"`), or an
+ * allowlist call such as `['GET', 'HEAD'].includes(method)`. Bare string
+ * literals elsewhere (a log line, a comment-like string) no longer exempt the
+ * function (V24 detector evasion, ARTAS sweep 2026-10-11).
+ */
 function textContainsBothGetAndHead(fn: Node): boolean {
   const text = fn.getText();
-  return /['"`]GET['"`]/.test(text) && /['"`]HEAD['"`]/.test(text);
+  const compares = (verb: string) =>
+    new RegExp(`(?:\\bmethod\\w*|\\.method)\\s*(?:===|!==|==|!=)\\s*['"\`]${verb}['"\`]|['"\`]${verb}['"\`]\\s*(?:===|!==|==|!=)\\s*(?:\\w+\\.)?method`, "i").test(text);
+  const allowlist = /\[\s*['"`](?:GET|HEAD)['"`]\s*,\s*['"`](?:GET|HEAD)['"`]\s*\]\s*\.includes\(/.test(text)
+    || /new Set\(\s*\[\s*['"`](?:GET|HEAD)['"`]\s*,\s*['"`](?:GET|HEAD)['"`]\s*\]\s*\)/.test(text);
+  return allowlist || (compares("GET") && compares("HEAD"));
 }
 
 /**
