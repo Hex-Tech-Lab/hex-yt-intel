@@ -1,0 +1,33 @@
+.memory/ARTAS_REGISTRY.md
+  s_0e11f90dae68e0::t_b14ea5ef95a33d 79-80
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0e11f90dae68e0::t_4f5759b56a51c5 256
+scripts/quality-engine/__tests__/strict-merge.test.ts
+  s_0e11f90dae68e0::t_cb60ec42709b04 43
+scripts/quality-engine/rules/__tests__/artas-rules.test.ts
+  s_0e11f90dae68e0::t_062fa323c12544 302-357
+scripts/quality-engine/rules/__tests__/lessons-20261009.test.ts
+  s_0e11f90dae68e0::t_366540eaedd9c2 34-52
+scripts/quality-engine/rules/artas-rules.ts
+  s_0e11f90dae68e0::t_08d11b23830fa9 371,373,386-390,392,405-407,431-432,435
+scripts/quality-engine/rules/lessons-20261009.ts
+  s_0e11f90dae68e0::t_6a53a0193c2755 36-37,53-61,65
+scripts/strict-merge.sh
+  s_0e11f90dae68e0::t_ae679a2c628cfb 111,161-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3d424d2a07d21617a78af4b07e5bee66dce3a6d",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
