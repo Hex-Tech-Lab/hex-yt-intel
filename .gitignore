@@ -57,3 +57,6 @@ testsprite_tests/tmp/config.json
 
 # agent scratch output (never commit)
 .scratch/
+
+# Research corpus is private IP (2026-10-11): kept locally under docs/private/research, never pushed.
+docs/research/
