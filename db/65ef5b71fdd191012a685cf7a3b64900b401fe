@@ -1,0 +1,25 @@
+scripts/quality-engine/rules/__tests__/artas-rules.test.ts
+  s_291078cde7ba1a::t_bd6560533ac61e 227-228
+scripts/quality-engine/rules/__tests__/lessons-20261009.test.ts
+  s_291078cde7ba1a::t_fb68e16d3d8f4f 14-15
+scripts/quality-engine/rules/artas-rules.ts
+  s_291078cde7ba1a::t_c1d8f5202d2376 16-17,148,181-184,346-348
+scripts/quality-engine/rules/lessons-20261009.ts
+  s_291078cde7ba1a::t_fd00b2107e7649 86-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db65ef5b71fdd191012a685cf7a3b64900b401fe",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
