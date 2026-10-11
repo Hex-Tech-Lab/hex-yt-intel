@@ -102,6 +102,9 @@ export function clearPersistedLayouts(): void {
   }
 }
 
+// Hooks subscribe here to drop their in-memory copy of the saved layouts.
+const resetListeners = new Set<() => void>();
+
 /**
  * Tracks the `(min-width: 1280px)` xl breakpoint. SSR-safe: returns false
  * during SSR and the first client render, then syncs in an effect (no
@@ -174,6 +177,7 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
   // Reset Layout clears storage and the live Group. Drop the in-memory copy
   // too, or the next shape switch would re-apply the pre-reset sizes.
   useEffect(() => {
+    /** Forgets the cached saved layouts so a later shape switch uses defaults. */
     const clear = () => {
       setSaved((prev) => (prev ? { '2col': null, '3col': null } : prev));
     };
@@ -183,6 +187,7 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
     };
   }, []);
 
+  /** Group layout for a shape: saved sizes when present, else DEFAULT_LAYOUT. */
   const layoutFor = (target: LayoutShape): Record<string, number> => {
     const current = saved?.[target] ?? null;
     return toGroupLayout(
@@ -215,9 +220,6 @@ let resetSink: ResetSink | null = null;
 export function registerResetSink(sink: ResetSink | null): void {
   resetSink = sink;
 }
-
-// Hooks subscribe here to drop their in-memory copy of the saved layouts.
-const resetListeners = new Set<() => void>();
 
 /**
  * TopBar-facing entry point for the header's Reset Layout button:
