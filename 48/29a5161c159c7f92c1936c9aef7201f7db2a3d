@@ -1,0 +1,39 @@
+.memory/AGENT_LEDGER.md
+  s_0e11f90dae68e0::t_6ea73076688144 1579
+.memory/ARTAS_REGISTRY.md
+  s_0e11f90dae68e0::t_ab6ab52450ab4b 1-101
+.qa-intel/baseline.json
+  s_0e11f90dae68e0::t_9595100a586fd4 778-1239,1241
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0e11f90dae68e0::t_fe8f7a22f4a129 239-260
+scripts/quality-engine/rules/__tests__/artas-v3-registration.test.ts
+  s_0e11f90dae68e0::t_f3fbe162894d51 1-37
+scripts/quality-engine/rules/__tests__/artas-v3.test.ts
+  s_0e11f90dae68e0::t_6a4c156dda0170 1-321
+scripts/quality-engine/rules/__tests__/lessons-20261009.test.ts
+  s_0e11f90dae68e0::t_bcd9d85a8aa520 1-104
+scripts/quality-engine/rules/artas-v3.ts
+  s_0e11f90dae68e0::t_da2411069a25f1 1-436
+scripts/quality-engine/rules/index.ts
+  s_0e11f90dae68e0::t_4e180f398fb09f 60-61
+scripts/quality-engine/rules/lessons-20261009.ts
+  s_0e11f90dae68e0::t_bc67e90dff843a 1-170
+scripts/strict-merge.sh
+  s_0e11f90dae68e0::t_7cfbdc7b7708ec 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4829a5161c159c7f92c1936c9aef7201f7db2a3d",
+  "prompts": {},
+  "sessions": {
+    "s_0e11f90dae68e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8b70c17-68b5-4a98-af27-63e5e2d95de9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
