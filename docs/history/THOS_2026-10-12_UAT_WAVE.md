@@ -1,6 +1,8 @@
 # THOS 2026-10-12: UAT Wave
 
-Wave foreman handover. CC was out of quota; the wave was finished by the foreman agent with strict-merge gates. All merges went into `uat`. Nothing was merged into `main`.
+Wave foreman handover. CC was out of quota; the wave was finished by the foreman agent with strict-merge gates.
+
+Verified facts: PRs #467-#485 are merged to `main`. PRs #486-#495 are merged to `uat` only and are pending promotion.
 
 ## Merged PRs (2026-10-12, #467-#495)
 
@@ -47,7 +49,8 @@ Merged to `uat` (not yet on `main`):
 
 - PRs 486-495 above.
 - Migrations only apply on `main` (CI `supabase db push` runs on main). PR 486 (advisor fixes) and PR 491 (Settings Registry panel widths) therefore take effect in production only after promotion.
-- PR 494 changes the comment sample run to an atomic claim. Two at-least-once deliveries can no longer both run paid classification.
+- PR 494 changes the comment sample run to an atomic claim. It does NOT prevent double paid classification: a retry after a timed-out claim, and the fall-through when every claim attempt fails, can both still run paid classification.
+- PR 486's `get_temporal_subgraph` body raises Postgres 42702 (ambiguous `anchor_id`/`depth`) on every call that passes the ownership check. Fixed in a new migration, `20261013100000_fix_get_temporal_subgraph_ambiguous_columns.sql`, which does not edit the merged file. Not applied to any database.
 
 ## Open items
 
@@ -58,12 +61,19 @@ Merged to `uat` (not yet on `main`):
 - DB split: `docs/ops/db-split-plan.md` (PR 488) recommends a second Supabase project for UAT. Not executed.
 - Dimension 7: the `prompt_definitions` table may override code prompts. Verify before trusting code-level prompt changes (PR 471, PR 492).
 - Chat cascade and HMAC: PR 493 removes the broken deploy-hmac-secret workflow and adds a rotation runbook. Rotation itself is still an ops task.
+- **Pre-go-live gate (open, not done): rotate `STREAM_HMAC_SECRET`.** The owner confirms it has NOT been rotated. Rotation happens only before go-live. Update Vercel and the worker together, in the same change window. This is not a blocker for `uat`.
+
+## Promotion sign-off (owner fills in before promoting `uat` to `main`)
+
+- `uat` SHA checked: `<TO FILL: owner>`
+- `main` SHA checked: `<TO FILL: owner>`
+- Date and sign-off: `<TO FILL: owner>`
 
 ## New process
 
 - Work lands on the `uat` branch first. `main` is promoted from `uat` only with owner sign-off.
 - Each OC or AGY task is supervised by a Haiku supervisor. The supervisor watches live logs and diffs, and kills drifting runs (two-strike rule).
-- OC model: `haiku-oc` on Vertex only. Do not route OC to other providers without owner approval.
+- OC model: default `glm-preset/@preset/glm-53-flash-on-cheap` (the server-side OpenRouter preset). Alternate pinned entry: `glm-mb/z-ai/glm-5.3-flash`. This follows the CLAUDE.md "OC model standard". Any change to the OC model, provider, or config must be reported to the owner in the same turn.
 - Merges use `scripts/strict-merge.sh` with the bypass list for DeepSource, Codacy, and CodeFactor. Those three checks were ACTION_REQUIRED on every PR this wave and were bypassed explicitly, not ignored silently.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
