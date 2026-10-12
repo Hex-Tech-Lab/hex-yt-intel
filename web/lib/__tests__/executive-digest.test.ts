@@ -88,7 +88,9 @@ describe('T4 key takeaways cap (prompt wording)', () => {
   });
 
   it('parser keeps a 12-bullet digest as-is (no silent truncation below the cap)', () => {
-    const bullets = Array.from({ length: 12 }, (_, i) => `- Point ${i + 1}`).join('\n');
+    const lines: string[] = [];
+    for (let i = 1; i <= 12; i += 1) lines.push(`- Point ${i}`);
+    const bullets = lines.join('\n');
     const md = `#### 0.1 Snapshot\nS\n\n#### 0.2 Overview\nO\n\n#### 0.3 Key Takeaways\n${bullets}\n\n#### 0.4 Detailed Summary\nD`;
     const digest = parseExecutiveDigest(md);
     expect(digest.takeaways).toHaveLength(12);
