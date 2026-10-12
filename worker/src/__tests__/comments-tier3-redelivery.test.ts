@@ -21,7 +21,7 @@ import { handleCommentsTier3Message } from '../queue-consumers/comments-tier3';
 import type { VideoComment } from '../ports/CommentIngestionPort';
 import type { CommentsTier3QueueMessage } from '../routes/comments';
 
-vi.mock('@sentry/cloudflare', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
+vi.mock('@sentry/cloudflare', () => ({ captureMessage: vi.fn(), captureException: vi.fn(), addBreadcrumb: vi.fn() }));
 vi.mock('../services/JevCommentClassifier', () => ({
   JevCommentClassifier: class {
     classifyBatchWithCost = classifierMock;

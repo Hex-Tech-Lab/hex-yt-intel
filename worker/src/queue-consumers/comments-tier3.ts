@@ -78,14 +78,24 @@ async function readSampleRunStatus(
   const content = canonicalJson({ sampleRunId, userId });
   const sig = await signBoundContent(env.STREAM_HMAC_SECRET, "comments-tier3", sampleRunId, exp, content);
   const url = `${appUrl}/api/comments/persist-sample-run?sampleRunId=${encodeURIComponent(sampleRunId)}&userId=${encodeURIComponent(userId)}&exp=${exp}&sig=${encodeURIComponent(sig)}`;
-  const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS) });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`sample-run status probe non-ok: ${res.status}`);
-  const body = (await res.json()) as { status?: unknown };
-  if (body.status !== 'pending' && body.status !== 'sampling' && body.status !== 'completed' && body.status !== 'failed') {
-    throw new Error(`sample-run status probe returned an unrecognized status: ${JSON.stringify(body.status)}`);
+  let res: Response | undefined;
+  try {
+    res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS) });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`sample-run status probe non-ok: ${res.status}`);
+    const body = (await res.json()) as { status?: unknown };
+    if (body.status !== 'pending' && body.status !== 'sampling' && body.status !== 'completed' && body.status !== 'failed') {
+      throw new Error(`sample-run status probe returned an unrecognized status: ${JSON.stringify(body.status)}`);
+    }
+    return body.status;
+  } finally {
+    await releaseUnreadBody(res);
   }
-  return body.status;
+}
+
+/** Cancel a response body nobody read, so the connection is released on every exit path (ARTAS V20). */
+async function releaseUnreadBody(res: Response | undefined): Promise<void> {
+  if (res && !res.bodyUsed) await res.body?.cancel().catch((err: unknown) => console.debug('[comments-tier3-consumer] body cancel failed', { err: String(err) }));
 }
 
 export interface PersistClassificationRow {
@@ -152,13 +162,18 @@ async function postSampleRunResult(
   };
   const sig = await signBoundContent(env.STREAM_HMAC_SECRET, "comments-tier3", sampleRunId, exp, canonicalJson(writeBody));
 
-  const res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...writeBody, sig, exp }),
-    signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
-  });
-  return res.ok ? { ok: true } : { ok: false, httpStatus: res.status };
+  let res: Response | undefined;
+  try {
+    res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...writeBody, sig, exp }),
+      signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
+    });
+    return res.ok ? { ok: true } : { ok: false, httpStatus: res.status };
+  } finally {
+    await releaseUnreadBody(res);
+  }
 }
 
 async function reportSampleRunResult(
@@ -376,6 +391,9 @@ export async function handleCommentsTier3Message(
   if (priorStatus === "sampling" || priorStatus === "completed" || priorStatus === "failed") {
     // skipcq: JS-0827
     console.info(`[comments-tier3-consumer] redelivery guard: run already ${priorStatus}; skipping paid work`, { sampleRunId, videoId });
+    if (priorStatus === "failed") {
+      Sentry.addBreadcrumb({ category: "comments-tier3", level: "warning", message: "message for a run already marked failed; acked without work", data: { sampleRunId, videoId } });
+    }
     return;
   }
 

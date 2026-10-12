@@ -44,6 +44,15 @@ describe('enqueueSystemCommentSampleRun', () => {
     vi.unstubAllGlobals();
   });
 
+  it('cancels the unread response body on the non-ok path so the socket is released (ARTAS V20)', async () => {
+    const res = new Response('down', { status: 503 });
+    const cancel = vi.spyOn(res.body!, 'cancel');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res));
+    await enqueueSystemCommentSampleRun(params);
+    expect(cancel).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('leaves the run pending (the worker owns it) when the enqueue succeeds', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 202 })));
     expect(await enqueueSystemCommentSampleRun(params)).toBe(true);

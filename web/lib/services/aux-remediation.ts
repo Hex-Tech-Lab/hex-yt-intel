@@ -215,8 +215,9 @@ export async function findAnalysesWithMissingAux(opts?: { limit?: number }): Pro
  */
 async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Record<string, unknown> | null } | null> {
   const token = await signChannelMetaToken(gap.id, gap.videoId);
+  let res: Response | undefined;
   try {
-    const res = await fetch(`${env.cloudflareWorkerUrl}/channel-meta/fetch`, {
+    res = await fetch(`${env.cloudflareWorkerUrl}/channel-meta/fetch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoId: gap.videoId, analysisId: gap.id, sig: token.sig, exp: token.exp }),
@@ -232,6 +233,8 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
     console.error('[aux-remediation] channel-meta fetch threw', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'channel_meta_fetch', analysisId: gap.id } } });
     return null;
+  } finally {
+    await releaseUnreadBody(res);
   }
 }
 
@@ -382,8 +385,9 @@ async function enqueueInsertedSystemSampleRun(
     return false;
   }
 
+  let res: Response | undefined;
   try {
-    const res = await fetch(`${env.cloudflareWorkerUrl}/comments/tier3/enqueue`, {
+    res = await fetch(`${env.cloudflareWorkerUrl}/comments/tier3/enqueue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -406,7 +410,14 @@ async function enqueueInsertedSystemSampleRun(
     Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: params.analysisId } } });
     await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRowId);
     return false;
+  } finally {
+    await releaseUnreadBody(res);
   }
+}
+
+/** Cancel a response body nobody read, so the socket is released on every exit path (ARTAS V20). */
+async function releaseUnreadBody(res: Response | undefined): Promise<void> {
+  if (res && !res.bodyUsed) await res.body?.cancel().catch((err: unknown) => console.debug('[aux-remediation] body cancel failed', { err: String(err) }));
 }
 
 /**
