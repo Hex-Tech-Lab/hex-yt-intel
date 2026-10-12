@@ -1,0 +1,24 @@
+web/components/containers/ProDashboardView.tsx
+  s_291078cde7ba1a::t_92eca2aacb298e 200-202
+  s_291078cde7ba1a::t_ba3dca825eaf60 19
+web/components/templates/console/CommentInsightsCard.tsx
+  s_291078cde7ba1a::t_319ce27757715a 37-54
+web/components/templates/console/__tests__/CommentInsightsUnavailable.test.tsx
+  s_291078cde7ba1a::t_c004918d498b5e 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d83d1a9f4f6f9f81b407ee7d63b049cec034c98",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
