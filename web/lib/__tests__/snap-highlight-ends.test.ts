@@ -44,6 +44,11 @@ describe('snapHighlightEnds – review fixes', () => {
     expect(snapHighlightEnds([highlight(0, 5)], segs, 60)[0]?.end).toBe(10);
   });
 
+  it('takes a "because" line after a completed sentence (FOLLOW_THROUGH)', () => {
+    const segs = [{ start: 0, text: 'That is the main point.' }, { start: 10, text: 'because it halves the cost.' }, { start: 20, text: 'x' }];
+    expect(snapHighlightEnds([highlight(0, 5)], segs, 60)[0]?.end).toBe(20);
+  });
+
   it('never extends into the next highlight', () => {
     const out = snapHighlightEnds([highlight(10, 15), highlight(18, 30)], segments, 60);
     expect(out[0]?.end).toBe(18);
