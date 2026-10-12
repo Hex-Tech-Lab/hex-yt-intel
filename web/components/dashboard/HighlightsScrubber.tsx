@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Tooltip } from '@astryxdesign/core';
 import { GlowBorder, Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, separateSegments, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightsRetryDelayMs, getSpeakingSeconds, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS, separateSegments } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
@@ -294,13 +294,10 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
-  const activeDuration = activeHighlight
-    ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur) + (data?.contextLeadSeconds ?? 0)
-    : segDurFallback;
   const { revealedText, usingVerbatim } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
-    activeDuration,
+    activeHighlight ? getSpeakingSeconds(activeHighlight, minDur, maxDur) : 0,
     elapsedInSegmentSeconds,
     activeHighlight?.verbatimExcerpt ?? null,
     data?.tickerWordsPerSecond,

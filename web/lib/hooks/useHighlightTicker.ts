@@ -1,5 +1,18 @@
 'use client';
 
+// Bounds on a per-segment derived pace: real speech sits well inside these
+// (stored excerpts p10 2.6 / p90 4.4 words/s); outside them the excerpt or
+// the timing is suspect, so the pace is clamped rather than trusted.
+const MIN_WORDS_PER_SECOND = 1.5;
+const MAX_WORDS_PER_SECOND = 6;
+
+/** Words per second for the reveal: the speaker's own pace from a verbatim
+ *  excerpt over its speaking span (clamped), else the registry fallback. */
+function revealPace(usingVerbatim: boolean, totalWords: number, speakingSeconds: number, fallback: number): number {
+  if (!usingVerbatim || speakingSeconds <= 0) return fallback;
+  return Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speakingSeconds));
+}
+
 /**
  * Drives the highlights-reel "ticker" text reveal (2026-08-20 redesign --
  * no existing precedent for this piece, per the dispatch prompt). While a
@@ -55,10 +68,9 @@
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
-  // Positionally-kept for API compatibility (all callers pass it; it drove
-  // the old duration-ratio mapping). No longer read since the bug-2 fix
-  // (2026-09-30) moved the reveal to a words-per-second pace.
-  _segmentDurationSeconds: number,
+  // The highlight's own speaking length (end - start): unclamped and without
+  // the lead-in, so words / speakingSeconds is the speaker's pace (T10).
+  speakingSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
   wordsPerSecond = 2.5,
@@ -97,8 +109,17 @@ export function useHighlightTicker(
   // (it keeps the last readable position) instead of scrolling faster.
   // floor + fraction keeps steady word pacing even for long texts (the
   // old ceil-on-ratio rushed early words when totalWords >> duration).
+  //
+  // T10 (2026-10-12, owner: "ticker always 1-3 words behind the speaker"):
+  // the fixed pace lags real speech -- stored verbatim excerpts run a median
+  // 3.37 words/s (p10 2.6, p90 4.4, 565 rows) against the 2.5 default. A
+  // verbatim excerpt IS the segment's speech, so its words over the
+  // highlight's raw end - start is the speaker's actual pace. The registry pace
+  // stays the fallback for paraphrased labels (the source of the original
+  // "too fast" bug-2 report) and for a degenerate speaking window.
+  const pace = revealPace(usingVerbatim, totalWords, speakingSeconds, wordsPerSecond);
   const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
-  const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * wordsPerSecond));
+  const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * pace));
   const baseCount = Math.floor(revealedFloat);
   const fraction = revealedFloat - baseCount;
   const revealedWordCount = Math.min(totalWords, baseCount + (fraction > 0 ? 1 : 0));

@@ -285,6 +285,17 @@ export function calculateEffectiveHighlightBudget(
 export const calculateHighlightBudgetSeconds = calculateAttentionBoundedBudget;
 
 /**
+ * A highlight's own speaking length (end - start) for ticker pacing, or 0 when
+ * it can't be trusted: legacy rows stored end = next highlight's start (often
+ * minutes), so a span outside [minDur, maxDur] falls back to the registry pace.
+ */
+export function getSpeakingSeconds(highlight: { start: number; end?: number | null }, minDur: number, maxDur: number): number {
+  if (highlight.end == null) return 0;
+  const span = highlight.end - highlight.start;
+  return span >= minDur && span <= maxDur ? span : 0;
+}
+
+/**
  * Makes consecutive playback segments disjoint (owner report T8: clips repeated
  * the previous clip's last words). A segment starting before the previous one
  * ended is moved to start there, and every segment's lead-in is floored at the
