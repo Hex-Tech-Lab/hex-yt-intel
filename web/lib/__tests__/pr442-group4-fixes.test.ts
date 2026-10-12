@@ -77,6 +77,24 @@ describe("CombinerPass.reduceDimensions", () => {
     expect(out[0].content).toContain("Short but different");
   });
 
+  it("keeps the extra detail when an incoming block is a superset of an existing block", () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, "#### 1.1 Overview\nAlpha launch happened in March with strong adoption across all segments\n\nBeta program expanded to twelve customers."),
+      mk(1, "#### 1.1 Overview\nAlpha launch happened in March with strong adoption across all segments by June"),
+    ]);
+    expect(out[0].content).toContain("by June");
+    expect(out[0].content).toContain("Beta program expanded");
+  });
+
+  it("does not collapse facts that differ only by sign", () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, "#### 1.1 Overview\nChurn fell -5% in Q2."),
+      mk(1, "#### 1.1 Overview\nChurn fell 5% in Q2."),
+    ]);
+    expect(out[0].content).toContain("-5%");
+    expect(out[0].content).toContain("Churn fell 5% in Q2");
+  });
+
   it("deduplicates multi-section Dimensions (e.g. 2.1 to 2.4) across multiple chunks", () => {
     const chunk1 = [
       "#### 2.1 Header Intelligence",

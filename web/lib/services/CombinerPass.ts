@@ -39,6 +39,8 @@ function normalizeForComparison(text: string): string {
     .toLowerCase()
     .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?|timestamp not provided[^\]]*)\s*\]/giu, '')
     .replace(/\(\s*approximate[^)]*\)/giu, '')
+    // Keep a leading minus sign (e.g. "-5%") so opposite-signed facts do not collapse.
+    .replace(/(^|\s)-(?=\d)/gu, '$1minus')
     .replace(/[^\w\s]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim();
@@ -193,7 +195,10 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
 
     if (isDuplicate && matchIdx >= 0) {
       const exBlock = mergedBlocks[matchIdx]!;
-      if (hasRealTimestamps(inBlock) && !hasRealTimestamps(exBlock)) {
+      // A longer incoming block that contains the existing one carries extra detail: keep it.
+      const incomingIsSuperset =
+        normalizeForComparison(inBlock).length > normalizeForComparison(exBlock).length;
+      if (incomingIsSuperset || (hasRealTimestamps(inBlock) && !hasRealTimestamps(exBlock))) {
         mergedBlocks[matchIdx] = inBlock;
       }
     } else if (!isDuplicate) {
