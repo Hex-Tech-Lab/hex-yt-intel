@@ -147,7 +147,10 @@ export const fetchKeyInfo = async (url: string): Promise<number> => {
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { Authorization: `Bearer ${env.openrouterApiKey}` },
+      headers: {
+        Authorization: `Bearer ${env.openrouterApiKey}`,
+        'X-Title': 'vIntel - Remediation Budget Check',
+      },
       signal: controller.signal,
     });
   } finally {

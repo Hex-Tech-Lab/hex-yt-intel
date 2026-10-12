@@ -736,7 +736,10 @@ export async function fetchOpenRouterLogs(searchParams: URLSearchParams): Promis
   const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
   try {
     const res = await fetch('https://openrouter.ai/api/v1/activity', {
-      headers: { Authorization: `Bearer ${key}` },
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'X-Title': 'vIntel - Admin Activity Log',
+      },
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');

@@ -223,14 +223,16 @@ export class SupabaseAuxRemediationAdapter {
     if (error) console.error('[aux-remediation] markSampleRunFailed failed', { sampleRunId, err: error.message });
   }
 
-  static async markSampleRunSampling(sampleRunId: string, mode?: 'uncapped' | 'cochran'): Promise<void> {
+  static async markSampleRunSampling(sampleRunId: string, mode?: 'uncapped' | 'cochran'): Promise<{ claimed: boolean }> {
     const service = getSupabaseServiceClient();
-    const { error } = await service
+    const { data, error, count } = await service
       .from('comment_sample_runs')
-      .update({ status: 'sampling', ...(mode ? { mode } : {}) })
+      .update({ status: 'sampling', ...(mode ? { mode } : {}) }, { count: 'exact' })
       .eq('id', sampleRunId)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select('id');
     if (error) throw error;
+    return { claimed: (count ?? data?.length ?? 0) > 0 };
   }
 
   /** Final status write for a finished run: completed_at + cochran_n. */
