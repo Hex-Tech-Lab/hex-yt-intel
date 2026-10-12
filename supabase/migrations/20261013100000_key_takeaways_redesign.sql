@@ -1,5 +1,6 @@
 -- T4 key takeaways redesign (2026-10-13). Bumps two live prompts:
---   * prompt.executive_digest.system  v2 -> v3  (section 0.3 Key Takeaways only;
+--   * prompt.executive_digest.system  v2 -> v3  (full v3 text; only section 0.3 differs from v2 --
+--     keep in sync with web/lib/prompts/fallbacks/executive-digest.fallback.ts;
 --     cap 3-12 bullets, aim 5-9, fused quotable stances, ranked by weight)
 --   * prompt.chat_grounding.instructions v10 -> v11  (appends a KEY TAKEAWAYS
 --     TABLE rule mirroring the digest's takeaways, timestamp ranges per element)

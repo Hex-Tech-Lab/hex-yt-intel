@@ -113,6 +113,9 @@ function stripBullets(line: string): string {
  * rather than render an empty card). Tolerant of a leading ```-fence and of the
  * model omitting one tier.
  */
+/** Upper bound on 0.3 Key Takeaways; matches the digest prompt's 3–12 cap. */
+const MAX_TAKEAWAYS = 12;
+
 export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveDigest | null {
   if (!raw || !raw.trim()) return null;
 
@@ -152,7 +155,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
         const trimmed = l.replace(/^\s+/u, '');
         return trimmed.startsWith('-') || trimmed.startsWith('•');
       })
-      .slice(0, 10)
+      .slice(0, MAX_TAKEAWAYS)
       .map(stripBullets);
 
     // Fallback: if no bullet lines found, use first 3-5 non-empty lines as takeaways
@@ -178,7 +181,8 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
   const takeaways = (sections.takeaways ?? '')
     .split(/\r?\n/u)
     .map(stripBullets)
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0)
+    .slice(0, MAX_TAKEAWAYS);
 
   return {
     snapshot: sections.snapshot ?? markdown.slice(0, 500),
