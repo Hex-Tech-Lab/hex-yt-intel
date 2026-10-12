@@ -1,0 +1,37 @@
+docs/agent-prompts/2026-10-12-oc-t20-contract-warnings.md
+  s_291078cde7ba1a::t_5443abae7237fb 1-229
+web/hooks/useAutoRestoreAnalysis.ts
+  s_291078cde7ba1a::t_7f8746897ebbea 98-101,199-202
+web/lib/adapters/PaddleBillingAdapter.ts
+  s_291078cde7ba1a::t_293dfdcd926e0d 270-271
+web/lib/adapters/__tests__/paddle-billing-adapter.test.ts
+  s_291078cde7ba1a::t_452d7b71cf0023 74-84
+web/lib/jev/stored-plan.ts
+  s_291078cde7ba1a::t_c38dcef6992ba3 103-110,113
+web/lib/usecases/ProcessPaddleWebhookUseCase.ts
+  s_291078cde7ba1a::t_52ed928db2007a 28-29,34-35,82-85
+web/vitest.config.ts
+  s_291078cde7ba1a::t_94a8e520a4c2ba 127-129
+worker/src/services/JevCommentClassifier.test.ts
+  s_291078cde7ba1a::t_0785858d6ce106 1-36
+worker/src/services/sensor-fusion/heuristics/jev-text-parser.test.ts
+  s_291078cde7ba1a::t_ab826c4ed1787f 1-33
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.test.ts
+  s_291078cde7ba1a::t_e71423742ef869 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "668abe028b196df0e496ef60e96481e4f5364467",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}

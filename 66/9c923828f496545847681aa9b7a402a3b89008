@@ -1,0 +1,33 @@
+web/lib/usecases/ProcessPaddleWebhookUseCase.ts
+  s_291078cde7ba1a::t_beafc5fc8f053c 29-30,83
+worker/src/services/JevCommentClassifier.test.ts
+  s_291078cde7ba1a::t_20170c38ccf6b2 18
+worker/src/services/sensor-fusion/heuristics/jev-text-parser.test.ts
+  s_291078cde7ba1a::t_3b5eb63f0e80e2 16
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.test.ts
+  s_6513b372e0befd::t_a9f9bb7254ebbc 16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "669c923828f496545847681aa9b7a402a3b89008",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_6513b372e0befd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ecf00c276ffejuHBjZ133XSDVn",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
