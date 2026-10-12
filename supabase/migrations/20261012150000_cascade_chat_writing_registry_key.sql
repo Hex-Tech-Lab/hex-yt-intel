@@ -13,11 +13,11 @@ values
     'json',
     '{"kind": "cascadeRegistry"}'::jsonb,
     '[
-      {"model": "anthropic/claude-haiku-5.5", "name": "Haiku 5.5 (Vertex)", "providerOrder": ["google-vertex"]},
-      {"model": "anthropic/claude-haiku-5.5", "name": "Haiku 5.5 (Anthropic)", "providerOrder": ["anthropic"]},
+      {"model": "anthropic/claude-haiku-5.5", "name": "Claude Haiku 5.5 (Vertex)", "cost": 0.0015, "providerOrder": ["google-vertex"]},
+      {"model": "anthropic/claude-haiku-5.5", "name": "Claude Haiku 5.5 (Anthropic Direct)", "cost": 0.0015, "providerOrder": ["anthropic"]},
       {"model": "openai/gpt-oss-120b", "name": "gpt-oss-120b (Groq)", "cost": 0.00015, "providerOrder": ["groq"]}
     ]'::jsonb,
-    'Chat cascade for creative-writing requests (blog, LinkedIn, script, post...): array of {model, name, providerOrder} tried in order.',
+    'Chat cascade for creative-writing requests (blog, LinkedIn, script, post...): array of {model, name, cost, providerOrder} tried in order.',
     'admin'
   )
 on conflict (key) do nothing;
