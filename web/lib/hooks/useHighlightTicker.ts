@@ -52,13 +52,19 @@
  * the legacy ratio path's test compatibility and is no longer used by
  * the pace mapping.
  */
+// Bounds on a per-segment derived pace: real speech sits well inside these
+// (stored excerpts p10 2.6 / p90 4.4 words/s); outside them the excerpt or
+// the timing is suspect, so the pace is clamped rather than trusted.
+const MIN_WORDS_PER_SECOND = 1.5;
+const MAX_WORDS_PER_SECOND = 6;
+
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
-  // Positionally-kept for API compatibility (all callers pass it; it drove
-  // the old duration-ratio mapping). No longer read since the bug-2 fix
-  // (2026-09-30) moved the reveal to a words-per-second pace.
-  _segmentDurationSeconds: number,
+  // Played length of the segment INCLUDING the lead-in (callers add it).
+  // With a verbatim excerpt, words / (duration - leadIn) is the speaker's
+  // own pace for this segment (T10, 2026-10-12).
+  segmentDurationSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
   wordsPerSecond = 2.5,
@@ -97,8 +103,21 @@ export function useHighlightTicker(
   // (it keeps the last readable position) instead of scrolling faster.
   // floor + fraction keeps steady word pacing even for long texts (the
   // old ceil-on-ratio rushed early words when totalWords >> duration).
-  const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
-  const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * wordsPerSecond));
+  //
+  // T10 (2026-10-12, owner: "ticker always 1-3 words behind the speaker"):
+  // the fixed pace lags real speech -- stored verbatim excerpts run a median
+  // 3.37 words/s (p10 2.6, p90 4.4, 565 rows) against the 2.5 default. A
+  // verbatim excerpt IS the segment's speech, so its words over the
+  // segment's speaking time is the speaker's actual pace. The registry pace
+  // stays the fallback for paraphrased labels (the source of the original
+  // "too fast" bug-2 report) and for a degenerate speaking window.
+  const lead = Math.max(0, leadInSeconds);
+  const speechWindow = segmentDurationSeconds - lead;
+  const pace = usingVerbatim && speechWindow > 0
+    ? Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speechWindow))
+    : wordsPerSecond;
+  const speechSeconds = Math.max(0, elapsedSeconds - lead);
+  const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * pace));
   const baseCount = Math.floor(revealedFloat);
   const fraction = revealedFloat - baseCount;
   const revealedWordCount = Math.min(totalWords, baseCount + (fraction > 0 ? 1 : 0));

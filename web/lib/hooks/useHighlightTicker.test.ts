@@ -191,3 +191,24 @@ describe('useHighlightTicker usingVerbatim flag', () => {
     expect(result.current.revealedText).not.toMatch(/^\s*$/);
   });
 });
+
+describe('useHighlightTicker – verbatim pace follows the speaker (T10)', () => {
+  const thirtyWords = Array.from({ length: 30 }, (unused, position) => `w${position}`).join(' ');
+
+  it('paces a verbatim excerpt by its own words over the speaking window, not the 2.5 default', () => {
+    // 30 words over a 10s window (12s played - 2s lead-in) = 3 words/s.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 12, 6, thirtyWords, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(12); // 4s of speech x 3 words/s
+  });
+
+  it('keeps the registry pace for a paraphrased label (no verbatim)', () => {
+    const { result } = renderHook(() => useHighlightTicker(0, thirtyWords, 12, 6, null, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(10);
+  });
+
+  it('clamps an implausible derived pace', () => {
+    // 30 words in a 1s window would be 30 words/s; clamped to 6.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 3, 3, thirtyWords, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(6);
+  });
+});
