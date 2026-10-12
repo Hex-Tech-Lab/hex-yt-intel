@@ -90,7 +90,7 @@ export async function signStreamTokenV2(params: StreamTokenV2Params): Promise<{ 
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
 }
 
-export async function signChatToken(conversationId: string, userId: string, models: string[] = [], payloadDigest?: string): Promise<{ sig: string; exp: number }> {
+export async function signChatToken(conversationId: string, userId: string, models: string[], payloadDigest: string): Promise<{ sig: string; exp: number }> {
   const exp = Date.now() + TOKEN_TTL_MS;
   const msg = chatTokenMessage(conversationId, userId, exp, models, payloadDigest);
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
@@ -122,7 +122,7 @@ export async function signChannelMetaToken(analysisId: string, videoId: string):
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
 }
 
-export async function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = [], payloadDigest?: string): Promise<boolean> {
+export async function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[], payloadDigest: string): Promise<boolean> {
   if (Date.now() > exp) return false;
   const msg = chatTokenMessage(conversationId, userId, exp, models, payloadDigest);
   const expected = await hmacHex(env.streamHmacSecret, msg);

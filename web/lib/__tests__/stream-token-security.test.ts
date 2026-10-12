@@ -481,18 +481,18 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const userId = 'user-1';
       const models = ['claude'];
 
-      const token = await signChatToken(conversationId, userId, models);
+      const token = await signChatToken(conversationId, userId, models, 'digest');
 
       // Should verify for correct user/conversation
-      const result1 = await verifyChatToken(conversationId, userId, token.exp, token.sig, models);
+      const result1 = await verifyChatToken(conversationId, userId, token.exp, token.sig, models, 'digest');
       expect(result1).toBe(true);
 
       // Should NOT verify for different user
-      const result2 = await verifyChatToken(conversationId, 'user-2', token.exp, token.sig, models);
+      const result2 = await verifyChatToken(conversationId, 'user-2', token.exp, token.sig, models, 'digest');
       expect(result2).toBe(false);
 
       // Should NOT verify for different conversation
-      const result3 = await verifyChatToken('conv-2', userId, token.exp, token.sig, models);
+      const result3 = await verifyChatToken('conv-2', userId, token.exp, token.sig, models, 'digest');
       expect(result3).toBe(false);
     });
 
@@ -506,10 +506,10 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const userId = 'user-1';
       const models = ['claude'];
 
-      const token = await signChatToken(conversationId, userId, models);
+      const token = await signChatToken(conversationId, userId, models, 'digest');
 
       // Manually create an old expiry
-      const result = await verifyChatToken(conversationId, userId, Date.now() - 1_000, token.sig, models);
+      const result = await verifyChatToken(conversationId, userId, Date.now() - 1_000, token.sig, models, 'digest');
       expect(result).toBe(false);
     });
 
@@ -524,10 +524,10 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const models1 = ['claude', 'gpt'];
       const models2 = ['claude']; // Different models
 
-      const token = await signChatToken(conversationId, userId, models1);
+      const token = await signChatToken(conversationId, userId, models1, 'digest');
 
       // Should NOT verify with different models
-      const result = await verifyChatToken(conversationId, userId, token.exp, token.sig, models2);
+      const result = await verifyChatToken(conversationId, userId, token.exp, token.sig, models2, 'digest');
       expect(result).toBe(false);
     });
 
@@ -543,7 +543,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const userId = 'user-1';
 
       const streamToken = await signStreamToken(videoId, analysisId);
-      const chatToken = await signChatToken(conversationId, userId);
+      const chatToken = await signChatToken(conversationId, userId, [], 'digest');
 
       // Signatures must be different (different purposes)
       expect(streamToken.sig).not.toBe(chatToken.sig);

@@ -20,8 +20,7 @@ export function chatPayloadDigest(payload: ChatSignedPayload): Promise<string> {
   return sha256HexIsomorphic(canonicalJson({ tier, grounding, history, cascade }));
 }
 
-/** The signed chat message. `digest` omitted = the legacy (models-only) format. */
-export function chatTokenMessage(conversationId: string, userId: string, exp: number, models: readonly string[], digest?: string): string {
-  const base = `chat:${conversationId}:${userId}:${exp}:${[...models].sort().join(',')}`;
-  return digest ? `${base}:${digest}` : base;
+/** The signed chat message; `digest` is chatPayloadDigest of the relayed payload. */
+export function chatTokenMessage(conversationId: string, userId: string, exp: number, models: readonly string[], digest: string): string {
+  return `chat:${conversationId}:${userId}:${exp}:${[...models].sort().join(',')}:${digest}`;
 }

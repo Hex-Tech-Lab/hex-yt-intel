@@ -311,8 +311,6 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     return c.json({ error: "Invalid token", reason: "invalid_signature" }, 401);
   }
 
-  const trustedCascade = req.cascade;
-
   const encoder = new TextEncoder();
   const grounding = typeof req.grounding === "string" ? req.grounding : "";
   const history = Array.isArray(req.history) ? req.history : [];
@@ -357,7 +355,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       sendEvent("meta", {
         tier: req.tier || "free",
         models: req.models || [],
-        cascade: trustedCascade ? trustedCascade.map((c) => c.model) : [],
+        cascade: req.cascade ? req.cascade.map((c) => c.model) : [],
         requestId: req.requestId,
       });
 
@@ -400,7 +398,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, trustedCascade, req.userId);
+        }, req.models, req.cascade, req.userId);
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
