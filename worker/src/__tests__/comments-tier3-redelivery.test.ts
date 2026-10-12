@@ -141,6 +141,7 @@ describe('handleCommentsTier3Message — redelivery pre-check (Finding A)', () =
     expect(posts).toHaveLength(0); // no heartbeat, no terminal report
     expect(scraperInstances).toHaveLength(0); // no YouTube fetch at all
     expect(classifierMock).not.toHaveBeenCalled(); // no LLM spend
+    if (priorStatus === 'failed') expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({ category: 'comments-tier3' }));
   });
 
   it.each(['pending'] as const)('run status %s -> proceeds with the full pipeline', async (priorStatus) => {
