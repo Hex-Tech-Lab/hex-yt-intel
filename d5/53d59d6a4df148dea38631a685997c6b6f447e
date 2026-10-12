@@ -1,0 +1,31 @@
+docs/ops/db-split-plan.md
+  s_6513b372e0befd::t_ed5db74cc976d1 1-72
+.memory/AGENT_LEDGER.md
+  s_6513b372e0befd::t_1b005e772af530 1585
+docs/agent-prompts/2026-10-12-oc-db-split-plan.md
+  s_291078cde7ba1a::t_99f9b52dd94c93 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d553d59d6a4df148dea38631a685997c6b6f447e",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_6513b372e0befd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ecf00c276ffejuHBjZ133XSDVn",
+        "model": "anthropic/claude-haiku-5.5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
