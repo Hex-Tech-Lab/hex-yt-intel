@@ -1,4 +1,6 @@
 import React from 'react';
+import { normalizeTableRowWidth, stepFence, stripRateFormula, UNESCAPED_PIPE, type OpenFence } from './markdown-table-width';
+import { promoteSectionHeadings } from './section-headings';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
 // functions are actually unit-testable -- vitest/esbuild can't parse this
@@ -15,7 +17,9 @@ export { fmtUsd, fmtUsdPrecise, fmtCentsToUsd } from './currency';
 export function preprocessMarkdown(content: string): string {
   if (!content) return '';
 
-  let processed = content;
+  // Merge over-wide body rows (a literal pipe inside a cell) before the
+  // column-count pass below, so that pass sees matching widths.
+  let processed = promoteSectionHeadings(stripRateFormula(normalizeTableRowWidth(content)));
 
   // Normalize table column count across header/delimiter/data rows.
   //
@@ -35,9 +39,12 @@ export function preprocessMarkdown(content: string): string {
   // blank line / table end), pad the header with empty labels to match, and
   // set the delimiter to that same count -- never truncate real data.
   const rawLines = processed.split(/\r?\n/);
+  /** True when a trimmed line starts and ends with a pipe, i.e. is a pipe-table row. */
   const isTableRow = (row: string) => row.startsWith('|') && row.endsWith('|');
+  /** True when a trimmed line is a pipe-table delimiter row such as `|---|:--|`. */
   const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(row);
-  const countCols = (row: string) => row.split('|').filter(cell => cell.trim() !== '').length;
+  // Escaped pipes (`\|`) inside a cell are not column separators.
+  const countCols = (row: string) => row.split(UNESCAPED_PIPE).filter(cell => cell.trim() !== '').length;
 
   // /simplify review (2026-08-20): reused the existing fenced-code-block
   // guard pattern from this same function's tab-table pass below (was
@@ -93,12 +100,12 @@ export function preprocessMarkdown(content: string): string {
   let inFence = false;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+    const line = lines[i] ?? '';
     if (line.trim().startsWith('```')) {
       inFence = !inFence;
       if (inTable && tableHeaderIndex !== -1) {
         // Exited tab table due to code block start: insert separator
-        const headerLine = lines[tableHeaderIndex]!;
+        const headerLine = lines[tableHeaderIndex] ?? '';
         const colCount = headerLine.split('|').length - 2;
         if (colCount > 0) {
           const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
@@ -126,7 +133,7 @@ export function preprocessMarkdown(content: string): string {
     } else {
       if (inTable && tableHeaderIndex !== -1) {
         // Exited tab table: insert the separator line right after the header
-        const headerLine = lines[tableHeaderIndex]!;
+        const headerLine = lines[tableHeaderIndex] ?? '';
         const colCount = headerLine.split('|').length - 2;
         if (colCount > 0) {
           const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
@@ -141,7 +148,7 @@ export function preprocessMarkdown(content: string): string {
 
   // Handle table ending at the end of the content
   if (inTable && tableHeaderIndex !== -1) {
-    const headerLine = lines[tableHeaderIndex]!;
+    const headerLine = lines[tableHeaderIndex] ?? '';
     const colCount = headerLine.split('|').length - 2;
     if (colCount > 0) {
       const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
@@ -190,12 +197,12 @@ function findBacktickSpans(line: string): [number, number][] {
   return spans;
 }
 
+/** Returns [start, end] offsets of each `[text](url)` link in a line. */
 function findMarkdownLinkSpans(line: string): [number, number][] {
   const spans: [number, number][] = [];
   const linkRegex = /\[([^\]]*)\]\(([^)]*)\)/g;
-  let m;
-  while ((m = linkRegex.exec(line)) !== null) {
-    spans.push([m.index, m.index + m[0].length - 1]);
+  for (const match of line.matchAll(linkRegex)) {
+    spans.push([match.index, match.index + match[0].length - 1]);
   }
   return spans;
 }
@@ -204,30 +211,36 @@ function isInsideSpan(offset: number, length: number, spans: [number, number][])
   return spans.some(([start, end]) => offset >= start && offset + length - 1 <= end);
 }
 
+/** Turns bare timestamps in prose and table cells into `#t=` seek links, skipping code, links, fences and durations. */
 export function linkifyTimestamps(markdown: string): string {
   if (!markdown) return '';
-  const lines = markdown.split('\n');
-  let inFence = false;
+  const lines = markdown.split(/\r?\n/);
+  let fence: OpenFence | null = null;
   const out: string[] = [];
 
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
   const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
+  const durationRowPattern = /^\s*\|\s*\**\s*(?:(?:total|video)\s+)?(?:duration|length|runtime)\s*\**\s*\|/i;
+  const loneTimestampCodeRegex = /`(\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?(?:\s*[–—-]\s*\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?)?)`/g;
 
-  for (const line of lines) {
-    if (line.trim().startsWith('```')) {
-      inFence = !inFence;
+  for (let line of lines) {
+    const step = stepFence(line.trim(), fence);
+    fence = step.open;
+    if (step.isDelimiter || fence) {
       out.push(line);
       continue;
     }
-    if (inFence) {
+    // skip if line contains ISO datetime pattern (e.g. 2024-01-15T16:30:00),
+    // or is a length row ("| Duration | 00:17:41 |"): a video's total length
+    // is not a moment in it, so it must not render as a seek control (T12).
+    if (isoDatePattern.test(line) || durationRowPattern.test(line)) {
       out.push(line);
       continue;
     }
-    // skip if line contains ISO datetime pattern (e.g. 2024-01-15T16:30:00)
-    if (isoDatePattern.test(line)) {
-      out.push(line);
-      continue;
-    }
+    // The model writes timestamps as `[00:05:00]`. A backtick span whose ENTIRE
+    // content is a timestamp or timestamp range is unwrapped (backticks dropped)
+    // so the pass below linkifies it. Any other inline code stays untouched.
+    line = line.replace(loneTimestampCodeRegex, '$1');
 
     const backtickSpans = findBacktickSpans(line);
     const linkSpans = findMarkdownLinkSpans(line);
@@ -245,12 +258,12 @@ export function linkifyTimestamps(markdown: string): string {
       // reject invalid time parts (seconds or minutes ≥ 60)
       const parts = clean.split(':');
       if (parts.length === 3) {
-        const mm = parseInt(parts[1]!, 10);
-        const ss = parseInt(parts[2]!, 10);
+        const mm = parseInt(parts[1] ?? '', 10);
+        const ss = parseInt(parts[2] ?? '', 10);
         if (mm >= 60 || ss >= 60) return match;
       } else if (parts.length === 2) {
-        const mm = parseInt(parts[0]!, 10);
-        const ss = parseInt(parts[1]!, 10);
+        const mm = parseInt(parts[0] ?? '', 10);
+        const ss = parseInt(parts[1] ?? '', 10);
         if (mm >= 60 || ss >= 60) return match;
       }
 
