@@ -134,7 +134,7 @@ export function PublicHighlightsReel({
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
-  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeHighlight ? getSpeakingSeconds(activeHighlight, minDur, maxDur) : 0, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond, playingIdx !== null && clampedSegments[playingIdx] ? clampedSegments[playingIdx].start - leadInFor(clampedSegments[playingIdx], contextLeadSeconds) : 0);
+  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeHighlight ? getSpeakingSeconds(activeHighlight, minDur, maxDur) : 0, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond, playingIdx !== null && activeHighlight && clampedSegments[playingIdx] ? activeHighlight.start - leadInFor(clampedSegments[playingIdx], contextLeadSeconds) : 0);
 
   if (highlights.length === 0) return null;
 

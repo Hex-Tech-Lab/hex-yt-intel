@@ -295,15 +295,15 @@ export function getSpeakingSeconds(highlight: { start: number; end?: number | nu
   return span >= minDur && span <= maxDur ? span : 0;
 }
 
+/** Playback length given to a highlight wholly contained in the one before it. */
+const CONTAINED_SEGMENT_SECONDS = 0.05;
+
 /**
  * Makes consecutive playback segments disjoint (owner report T8: clips repeated
  * the previous clip's last words). A segment starting before the previous one
  * ended is moved to start there, and every segment's lead-in is floored at the
  * previous segment's end, so no clip replays another's audio.
  */
-/** Playback length given to a highlight wholly contained in the one before it. */
-const CONTAINED_SEGMENT_SECONDS = 0.05;
-
 export function separateSegments<T extends { start: number; end: number }>(segments: readonly T[]): Array<T & { leadFloor?: number }> {
   const out: Array<T & { leadFloor?: number }> = [];
   for (const segment of segments) {

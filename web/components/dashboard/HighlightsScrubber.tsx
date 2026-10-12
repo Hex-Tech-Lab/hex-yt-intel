@@ -303,7 +303,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     data?.tickerWordsPerSecond,
     // Playback opens at max(0, start - contextLead), so the real lead-in is clamped near 0s.
     // ...and never before the previous clip's end (leadFloor, T8).
-    playingIdx !== null && segments[playingIdx] ? segments[playingIdx].start - leadInFor(segments[playingIdx], data?.contextLeadSeconds ?? 0) : 0
+    playingIdx !== null && activeHighlight && segments[playingIdx] ? activeHighlight.start - leadInFor(segments[playingIdx], data?.contextLeadSeconds ?? 0) : 0
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
