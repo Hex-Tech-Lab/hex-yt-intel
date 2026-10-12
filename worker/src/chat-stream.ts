@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/cloudflare";
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CASCADE_FALLBACKS } from "../../web/lib/config/cascade";
+import { chatPayloadDigest, chatTokenMessage } from "../../web/lib/utils/chat-payload-digest";
 
 // Deploy-time snapshot only -- see CASCADE_FALLBACKS' doc comment in cascade.ts.
 // Real per-request values come from ChatStreamRequest.cascade, registry-resolved
@@ -279,15 +280,25 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
 
+  // Preferred: the signature also covers grounding/history/tier/cascade
+  // (chatPayloadDigest). Legacy models-only tokens are accepted only for the
+  // rollout window (Vercel and the worker deploy independently); for those the
+  // client-relayed cascade is ignored below. Remove the legacy branch once
+  // every live token carries the digest.
+  const payloadDigest = await chatPayloadDigest({ tier: req.tier, grounding: req.grounding, history: req.history, cascade: req.cascade });
+  let legacySignature = false;
   for (const s of secretsToTry) {
     if (!s) continue;
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
-    const expected = await hmacHex(s, msg);
-
-    if (timingSafeEqualHex(expected, req.sig)) {
+    const models = req.models ?? [];
+    if (timingSafeEqualHex(await hmacHex(s, chatTokenMessage(req.conversationId, req.userId, req.exp, models, payloadDigest)), req.sig)) {
       signingKey = s;
       isTokenValid = true;
+      break;
+    }
+    if (timingSafeEqualHex(await hmacHex(s, chatTokenMessage(req.conversationId, req.userId, req.exp, models)), req.sig)) {
+      signingKey = s;
+      isTokenValid = true;
+      legacySignature = true;
       break;
     }
   }
@@ -308,6 +319,16 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       keyFpFallback,
     });
     return c.json({ error: "Invalid token", reason: "invalid_signature" }, 401);
+  }
+
+  // An unsigned cascade could name any model on our key; legacy tokens fall back to the signed model list.
+  const trustedCascade = legacySignature ? undefined : req.cascade;
+  if (legacySignature) {
+    Sentry.captureMessage("chat-stream: legacy models-only signature accepted", {
+      level: "warning",
+      tags: { operation: "chat-sig-legacy" },
+      extra: { conversationId: req.conversationId },
+    });
   }
 
   const encoder = new TextEncoder();
@@ -354,7 +375,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       sendEvent("meta", {
         tier: req.tier || "free",
         models: req.models || [],
-        cascade: req.cascade ? req.cascade.map((c) => c.model) : [],
+        cascade: trustedCascade ? trustedCascade.map((c) => c.model) : [],
         requestId: req.requestId,
       });
 
@@ -397,7 +418,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, req.cascade, req.userId);
+        }, req.models, trustedCascade, req.userId);
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
