@@ -112,7 +112,11 @@ const handleChatStreamError = (
 };
 
 /** Read an SSE stream, dispatching each `data: {...}` JSON object. */
-async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => void): Promise<void> {
+async function readSSE(
+  res: Response,
+  onEvent: (e: Record<string, unknown>) => void,
+  timeoutMs: number = 25000
+): Promise<void> {
   if (!res.body) throw new Error('No stream body');
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -120,13 +124,13 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   let frameCount = 0;
   let eventCount = 0;
 
-  // 25s maximum streaming read per Law #2 in GEMINI.md
+  // Maximum streaming read per configured timeoutMs (fallback 25s per Law #2 in GEMINI.md)
   // qa-intel compliance key: setError (handled in sendMessage/setPersistState)
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
     reader.cancel().catch(() => {});
-  }, 25000);
+  }, timeoutMs);
 
   try {
     if (isDebugEnabled()) console.log('[ChatStore] SSE stream reading started');
@@ -135,7 +139,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
       if (done) {
         if (isDebugEnabled()) console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
         if (timedOut) {
-          throw new DOMException('Stream timed out after 25s', 'AbortError');
+          throw new DOMException(`Stream timed out after ${timeoutMs}ms`, 'AbortError');
         }
         break;
       }
@@ -281,6 +285,10 @@ export const useChatStore = create<ChatState>((set, get) => {
         console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
       }
 
+      const clientTimeoutMs = (typeof job.payload?.timeoutMs === 'number' && job.payload.timeoutMs > 0)
+        ? job.payload.timeoutMs
+        : 50000;
+
       const streamRes = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,7 +299,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
           requestId: clientMsgId,
         }),
-        signal: AbortSignal.timeout(50000),
+        signal: AbortSignal.timeout(clientTimeoutMs),
       });
 
       if (isDebugEnabled()) {
@@ -370,7 +378,7 @@ export const useChatStore = create<ChatState>((set, get) => {
               break;
           }
         }
-      });
+      }, clientTimeoutMs);
 
       // Delivered + persisted → clear the outbox entry.
       outbox.remove(clientMsgId);

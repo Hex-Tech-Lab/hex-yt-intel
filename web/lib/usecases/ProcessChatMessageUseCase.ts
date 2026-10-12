@@ -37,6 +37,11 @@ const CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number> = {
 // supabase/migrations/20260725130000_chat_transcript_range_leadin_settings.sql.
 const CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK = 5;
 
+// Fallbacks used only if the settings registry is unreachable -- see
+// supabase/migrations/20261012170000_chat_stream_timeout_settings.sql.
+const CHAT_STREAM_TIMEOUT_MS_FALLBACK = 50_000;
+const CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK = 90_000;
+
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
   userId: string;
@@ -71,6 +76,8 @@ export interface ProcessChatMessageSuccess {
     // access) instead of via a client-side keyword regex on conversation text,
     // which had no relationship to whether the sample was actually incomplete.
     hasMoreComments?: boolean;
+    // Client and worker timeout in milliseconds resolved from Settings Registry (T20)
+    timeoutMs?: number;
   };
 }
 
@@ -542,11 +549,31 @@ export class ProcessChatMessageUseCase {
         ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
         : await resolveChatCascade());
 
-    // 10. Generate cryptographic stream token
+    // 10. Resolve streaming timeout from Settings Registry
+    // T20: decoupling hardcoded 50s timeout into settings registry. Writing requests
+    // use chat.stream.writingTimeoutMs (default 90s); standard chat uses chat.stream.timeoutMs (default 50s).
+    const timeoutSettings = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.stream.timeoutMs', 'chat.stream.writingTimeoutMs'],
+      {
+        'chat.stream.timeoutMs': CHAT_STREAM_TIMEOUT_MS_FALLBACK,
+        'chat.stream.writingTimeoutMs': CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK,
+      }
+    );
+    const resolvedTimeoutMs = writingCascade
+      ? Number(timeoutSettings['chat.stream.writingTimeoutMs']) || CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK
+      : Number(timeoutSettings['chat.stream.timeoutMs']) || CHAT_STREAM_TIMEOUT_MS_FALLBACK;
+
+    // 11. Generate cryptographic stream token
     // The browser relays these to the worker; signing their digest stops a
     // signed-in user from editing what the LLM sees or which models run.
     const relayedHistory = history.map((m) => ({ role: m.role, content: m.content }));
-    const payloadDigest = await chatPayloadDigest({ tier, grounding, history: relayedHistory, cascade: chatCascade });
+    const payloadDigest = await chatPayloadDigest({
+      tier,
+      grounding,
+      history: relayedHistory,
+      cascade: chatCascade,
+      timeoutMs: resolvedTimeoutMs,
+    });
     let sig: string;
     let exp: number;
     try {
@@ -587,6 +614,7 @@ export class ProcessChatMessageUseCase {
           history: relayedHistory,
           models: chatModels,
           cascade: chatCascade,
+          timeoutMs: resolvedTimeoutMs,
           // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
           // actually vary by conversation content instead of always falling
           // through to the static fallback (this field was previously never

@@ -69,6 +69,24 @@ describe('chat payload signature', () => {
     expect(res.status).toBe(401);
   });
 
+  it('accepts a digest-bound token with explicit timeoutMs', async () => {
+    stubOpenRouter();
+    const exp = Date.now() + 60_000;
+    const payloadWithTimeout = { ...base, timeoutMs: 90_000 };
+    const sig = await hmac(chatTokenMessage(base.conversationId, base.userId, exp, base.models, await chatPayloadDigest(payloadWithTimeout)));
+    const res = await handleChatStream(ctx({ ...payloadWithTimeout, exp, sig }));
+    expect(res.status).toBe(200);
+    await drain(res);
+  });
+
+  it('rejects a token when the relayed timeoutMs was tampered with', async () => {
+    const exp = Date.now() + 60_000;
+    const payloadWithTimeout = { ...base, timeoutMs: 50_000 };
+    const sig = await hmac(chatTokenMessage(base.conversationId, base.userId, exp, base.models, await chatPayloadDigest(payloadWithTimeout)));
+    const res = await handleChatStream(ctx({ ...payloadWithTimeout, timeoutMs: 120_000, exp, sig }));
+    expect(res.status).toBe(401);
+  });
+
   it('rejects a legacy models-only token (no payload digest)', async () => {
     const exp = Date.now() + 60_000;
     const sig = await hmac(`chat:${base.conversationId}:${base.userId}:${exp}:${base.models.join(',')}`);
