@@ -211,10 +211,12 @@ export function resolveHighlightOverlaps(
   return resolved;
 }
 
-// A line that completes the previous one's point: a figure, or an explicit
-// follow-through ("because", "which means", ...). Owner report T25: clips
-// stopped right before the number that finished the statement.
-const PAYOFF_LINE = /\d|%|\$|\b(?:because|which means|that means|so that|that's why|for example|for instance)\b/iu;
+// The next line completes the point when the current one stops mid-sentence
+// ("we moved the whole stack over," -> "and it cut our bill by 40 percent")
+// or the next line opens with an explicit follow-through. A digit alone is
+// not enough: "we have 5 minutes left" is not a payoff (Cubic #472).
+const SENTENCE_END = /[.!?]["')\]]*\s*$/u;
+const FOLLOW_THROUGH = /^\s*(?:because|which means|that means|so that|that's why|for example|for instance)\b/iu;
 
 /**
  * Snaps each highlight's end to a transcript line boundary and, when the
@@ -228,17 +230,21 @@ export function snapHighlightEnds(
   maxSegmentDurationSeconds: number,
 ): ExtractedHighlight[] {
   const starts = segments.map((segment) => segment.start);
-  return highlights.map((highlight) => {
-    const limit = highlight.start + maxSegmentDurationSeconds;
-    // Index of the line containing the current end (last line starting before it).
+  const sorted = [...highlights].sort((left, right) => left.start - right.start);
+  return sorted.map((highlight, position) => {
+    // Never reach into the next highlight: snapping must not shorten or drop
+    // the clip that follows (Cubic #472).
+    const limit = Math.min(highlight.start + maxSegmentDurationSeconds, sorted[position + 1]?.start ?? Infinity);
     let index = -1;
     for (let i = 0; i < starts.length && (starts[i] ?? Infinity) < highlight.end; i++) index = i;
     const lineEnd = starts[index + 1];
     if (index < 0 || lineEnd === undefined) return highlight;
     let end = lineEnd <= limit ? Math.max(highlight.end, lineEnd) : highlight.end;
+    const currentLine = segments[index];
     const nextLine = segments[index + 1];
     const nextEnd = starts[index + 2];
-    if (end === lineEnd && nextLine && nextEnd !== undefined && nextEnd <= limit && PAYOFF_LINE.test(nextLine.text)) end = nextEnd;
+    const continues = currentLine !== undefined && !SENTENCE_END.test(currentLine.text);
+    if (end === lineEnd && nextLine && nextEnd !== undefined && nextEnd <= limit && (continues || FOLLOW_THROUGH.test(nextLine.text))) end = nextEnd;
     return end === highlight.end ? highlight : { ...highlight, end };
   });
 }

@@ -256,11 +256,12 @@ export class ExtractHighlightsUseCase {
     // Cost: ~ceil(duration / window) cheap-cascade calls instead of 1
     // (measured ~$0.011 vs ~$0.007 for the reported 32-min video).
     const lastSegmentStart = segments[segments.length - 1]?.start ?? 0;
+    // Each line's end is the next line's start; built once for every window and retry.
+    const withEnds = segments.map((segment, i) => ({ ...segment, end: segments[i + 1]?.start }));
     const harvest = computeHarvestWindows(lastSegmentStart, HIGHLIGHTS_COVERAGE_WINDOW_SECONDS, maxCount);
 
     const harvestWindow = async (harvestWindowIndex: number): Promise<WindowOutcome> => {
       const window = harvest.windows[harvestWindowIndex]!;
-      const withEnds = segments.map((segment, i) => ({ ...segment, end: segments[i + 1]?.start }));
       const windowSegments = withEnds.filter((segment) => segment.start >= window.start && segment.start < window.end);
       if (windowSegments.length === 0) return { status: 'empty', highlights: [] };
       // Read-ahead (T25): a moment starting near the window's end may finish

@@ -37,3 +37,16 @@ describe('buildHighlightsWindowedUserMessage – line ends and read-ahead', () =
     expect(message).toContain('[300-305] b');
   });
 });
+
+describe('snapHighlightEnds – review fixes', () => {
+  it('does not take a digit line when the current sentence already ended', () => {
+    const segs = [{ start: 0, text: 'That is the main point.' }, { start: 10, text: 'We have 5 minutes left.' }, { start: 20, text: 'x' }];
+    expect(snapHighlightEnds([highlight(0, 5)], segs, 60)[0]?.end).toBe(10);
+  });
+
+  it('never extends into the next highlight', () => {
+    const out = snapHighlightEnds([highlight(10, 15), highlight(18, 30)], segments, 60);
+    expect(out[0]?.end).toBe(18);
+    expect(out[1]?.start).toBe(18);
+  });
+});
