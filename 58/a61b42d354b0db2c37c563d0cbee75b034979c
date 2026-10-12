@@ -1,0 +1,35 @@
+docs/agent-prompts/2026-10-13-agy-t5-highlights-reel.md
+  s_291078cde7ba1a::t_46bb0c262a092f 1-90
+  s_291078cde7ba1a::t_7cdaf1d740d71c 91-102
+web/components/dashboard/__tests__/HighlightsScrubber-remount.test.tsx
+  s_291078cde7ba1a::t_fee047c1d6b514 1-72
+web/components/dashboard/HighlightsScrubber.tsx
+  s_291078cde7ba1a::t_94abbf48a92926 129-145,152,156-164
+web/store/useVideoStore.ts
+  s_291078cde7ba1a::t_cab4fb48cef852 80
+  s_291078cde7ba1a::t_94764bbd5f3a7c 71-76
+  s_291078cde7ba1a::t_e40fe2e4ff50f6 35-44
+web/lib/hooks/useSegmentPlayback.ts
+  s_291078cde7ba1a::t_fc5add85d618b8 290-299
+  s_291078cde7ba1a::t_e5dbe8ffed0d9d 209,211-226
+  s_291078cde7ba1a::t_83ed5fe55b0a7c 80
+  s_291078cde7ba1a::t_550c149e028fb4 276
+  s_291078cde7ba1a::t_a694caf1d8aba4 81-88
+  s_291078cde7ba1a::t_eee188eac3279f 332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58a61b42d354b0db2c37c563d0cbee75b034979c",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
