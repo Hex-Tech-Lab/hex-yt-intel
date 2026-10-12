@@ -274,6 +274,7 @@ Generate one **System: [Name]** block for EVERY distinct tool, repository, produ
   1. [Step] — [parameters, duration]
   2. [Step] — [parameters, duration]
 - **Success metrics**, **common pitfalls**, **troubleshooting guide**, **risk factors & mitigation**.
+- **Empty fields**: if the transcript does not state some of a block's fields (for example pricing, headcount, timeline), do NOT write one placeholder per field. Write exactly ONE line listing all of them, in the form **Not stated in the video: field one, field two, field three** (for example: Not stated in the video: pricing, headcount, timeline).
 
 #### 7.2 Execution Sequencing & Dependencies
 
