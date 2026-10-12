@@ -15,7 +15,8 @@ import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
-import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
+import { resolveChatCascade, resolveChatWritingCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
+import { isWritingRequest } from '@/lib/utils/chat-intent';
 import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
 import { chatPayloadDigest } from '@/lib/utils/chat-payload-digest';
 
@@ -517,17 +518,23 @@ export class ProcessChatMessageUseCase {
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
 
-    // 9. Resolve LLM models based on reasoning flag
-    const chatModels = isReasoning
+    // 9. Resolve LLM models based on reasoning flag. T21: a creative-writing
+    // request (blog, LinkedIn post, script...) uses cascade.chatWriting; the
+    // signed model list is taken from that same cascade so the two agree.
+    const writingCascade = !isReasoning && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
+    const chatModels = writingCascade
+      ? writingCascade.map((item) => item.model)
+      : isReasoning
       ? await this.modelResolution.resolveModels(tier, 'reasoning')
       : await this.modelResolution.resolveModels(tier, 'chat');
     // Full registry-resolved tiers (with providerOrder), forwarded to the worker
     // alongside chatModels -- see ChatStreamRequest.cascade in worker/src/chat-stream.ts.
     // Free-vs-paid reasoning cascade (same rationale as SettingsModelAdapter;
     // tiers differ by volume, never by model).
-    const chatCascade: CascadeItem[] = isReasoning
-      ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
-      : await resolveChatCascade();
+    const chatCascade: CascadeItem[] = writingCascade
+      ?? (isReasoning
+        ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
+        : await resolveChatCascade());
 
     // 10. Generate cryptographic stream token
     // The browser relays these to the worker; signing their digest stops a
