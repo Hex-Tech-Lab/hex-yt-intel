@@ -38,6 +38,7 @@ function YouTubeThumbnail({ videoId, className }: { videoId: string; className: 
 
 export function VideoPlayerCard() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<VideoPlayerPort | null>(null);
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
@@ -49,14 +50,15 @@ export function VideoPlayerCard() {
   // a whole-store subscription would re-render this entire component (and
   // re-run every other effect's dependency check) on every one of its own
   // writes for no reason (post-review finding, 2026-08-06).
-  const isPlaying = useVideoStore((s) => s.isPlaying);
-  const seekTo = useVideoStore((s) => s.seekTo);
-  const clearSeek = useVideoStore((s) => s.clearSeek);
-  const setPlaying = useVideoStore((s) => s.setPlaying);
-  const setCurrentPlaybackSeconds = useVideoStore((s) => s.setCurrentPlaybackSeconds);
-  const playbackRate = useVideoStore((s) => s.playbackRate);
-  const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
-  const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
+  const isPlaying = useVideoStore((state) => state.isPlaying);
+  const seekTo = useVideoStore((state) => state.seekTo);
+  const clearSeek = useVideoStore((state) => state.clearSeek);
+  const revealRequest = useVideoStore((state) => state.revealRequest);
+  const setPlaying = useVideoStore((state) => state.setPlaying);
+  const setCurrentPlaybackSeconds = useVideoStore((state) => state.setCurrentPlaybackSeconds);
+  const playbackRate = useVideoStore((state) => state.playbackRate);
+  const videoMetadata = useAnalysisStore((state) => state.videoMetadata);
+  const nucleusVideoId = useSynthesisNucleus((state) => state.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
   // Facade pattern: the visible thumbnail+play-button is shown until the
@@ -135,7 +137,7 @@ export function VideoPlayerCard() {
       onError: (err) => {
         if (cancelled) return;
         console.error('[VideoPlayerCard]', { message: err.message, videoId });
-        const parsedCode = /YouTube error: (\d+)/.exec(err.message)?.[1];
+        const parsedCode = err.message.match(/YouTube error: (\d+)/)?.[1];
         const code = parsedCode ? Number(parsedCode) : null;
         setPlaybackError({ code, message: err.message });
       },
@@ -215,6 +217,15 @@ export function VideoPlayerCard() {
     if (containerRef.current) containerRef.current.innerHTML = '';
   }, [embedRestricted]);
 
+  // T15: a timestamp click (chat, dimensions, entities) scrolls the player
+  // into view with a smooth motion so the seek is visible; reduced-motion
+  // users get an instant jump. Skipped on mount (revealRequest 0).
+  useEffect(() => {
+    if (revealRequest === 0) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    cardRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }, [revealRequest]);
+
   useEffect(() => {
     if (seekTo === null) return;
     // A transcript timestamp click while still on the facade expresses the
@@ -282,8 +293,8 @@ export function VideoPlayerCard() {
     return () => clearInterval(intervalId);
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
-  const isTransitioning = useVideoStore((s) => s.isTransitioning);
-  const transitionDirection = useVideoStore((s) => s.transitionDirection);
+  const isTransitioning = useVideoStore((state) => state.isTransitioning);
+  const transitionDirection = useVideoStore((state) => state.transitionDirection);
 
   if (!mounted || !videoId) return null;
 
@@ -295,13 +306,13 @@ export function VideoPlayerCard() {
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}${
     fallbackSeek !== null ? `&t=${Math.floor(fallbackSeek)}s` : ''
   }`;
-  const formatTime = (s: number) => {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = Math.floor(s % 60);
-    return h > 0
-      ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-      : `${m}:${String(sec).padStart(2, '0')}`;
+  const formatTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${minutes}:${String(seconds).padStart(2, '0')}`;
   };
 
   // RCA (2026-07-22): this used to conditionally render the two overlay
@@ -328,7 +339,7 @@ export function VideoPlayerCard() {
   };
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
+    <div ref={cardRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg scroll-mt-3">
       <HighlightsTransitionOverlay
         active={isTransitioning}
         direction={transitionDirection ?? 'forward'}

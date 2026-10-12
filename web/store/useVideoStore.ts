@@ -19,6 +19,12 @@ export interface VideoState {
   transitionDirection: 'forward' | 'backward' | null;
   setPlaying: (isPlaying: boolean) => void;
   setSeekTo: (seconds: number) => void;
+  /** Incremented by a user-initiated seek (a timestamp or entity click) so the
+   *  player scrolls itself into view (T15). The highlights reel seeks with
+   *  plain setSeekTo and never moves the page. */
+  revealRequest: number;
+  /** setSeekTo plus a request to bring the player into view. */
+  seekAndReveal: (seconds: number) => void;
   setCurrentPlaybackSeconds: (seconds: number | null) => void;
   setPlaybackRate: (rate: number) => void;
   setEntityTimeSeekEnabled: (enabled: boolean) => void;
@@ -49,6 +55,8 @@ export const useVideoStore = create<VideoState>((set) => ({
   // loads cued-but-paused and renders as a black frame until the user
   // presses play once. RCA 2026-07-30.
   setSeekTo: (seconds) => set({ seekTo: seconds, pendingNav: 'console', isPlaying: true }),
+  revealRequest: 0,
+  seekAndReveal: (seconds) => set((state) => ({ seekTo: seconds, pendingNav: 'console', isPlaying: true, revealRequest: state.revealRequest + 1 })),
   setCurrentPlaybackSeconds: (seconds) => set({ currentPlaybackSeconds: seconds }),
   clearPendingNav: () => set({ pendingNav: null }),
   clearSeek: () => set({ seekTo: null }),

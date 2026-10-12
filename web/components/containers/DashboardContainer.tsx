@@ -393,7 +393,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       startTransition(() => setSelectedNodeId(id));
       if (!id) return;
 
-      const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
+      const { entityTimeSeekEnabled, seekAndReveal } = useVideoStore.getState();
       // displayGraph, not graph: WordCloud renders displayGraph (which can
       // be the streaming nucleusKnowledgeGraph while graph is still empty --
       // see displayGraph's own comment above), so a click there must resolve
@@ -450,7 +450,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             const secs = parseTimestamp(timestamp);
             // `00:00` is a valid seek target; the retry path below already
             // uses `>= 0` — keep the two consistent.
-            if (secs >= 0) setSeekTo(secs);
+            if (secs >= 0) seekAndReveal(secs);
           } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
             // Race condition: dimension not yet streamed into store. This
             // retry path only makes sense mid-generation -- for a completed/
@@ -482,7 +482,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 )?.timestamp ?? null;
               if (retryTs) {
                 const secs = parseTimestamp(retryTs);
-                if (secs >= 0) setSeekTo(secs);
+                if (secs >= 0) seekAndReveal(secs);
               }
             });
           }
