@@ -105,6 +105,9 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
   );
 }
 
+/** Class that globals.css keys the user-bubble ::selection highlight on. */
+export const USER_BUBBLE_SELECTION_CLASS = 'user-chat-bubble';
+
 /**
  * Hoisted to module scope (mirrors SelectedDimensionReadout's
  * `readoutComponents`) so it isn't recreated per message per render.
@@ -119,7 +122,7 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
  * that IS a real React-level override point Astryx exposes, just scoped to
  * text-node patterns rather than table structure.
  */
-const chatMarkdownComponents: MarkdownComponents = {
+export const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
     <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{children}</p>
   ),
@@ -685,7 +688,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               <ChatMessageBubble
                 variant="filled"
                 className={isUser
-                  ? 'user-chat-bubble !rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
+                  ? `${USER_BUBBLE_SELECTION_CLASS} !rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5`
                   // max-w bumped 92% -> 98% (2026-08-02, live user report): the
                   // assistant bubble was leaving a wide unused margin on desktop
                   // for markdown-table responses ("how many comments?",
