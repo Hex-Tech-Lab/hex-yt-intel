@@ -1,0 +1,28 @@
+web/lib/utils/__tests__/section-headings.test.ts
+  s_291078cde7ba1a::t_e3aa663fd6e7c9 1-27
+web/lib/utils/format.tsx
+  s_291078cde7ba1a::t_03b8058bd7dd55 22
+  s_291078cde7ba1a::t_6054c30ad45227 3
+web/lib/utils/section-headings.ts
+  s_291078cde7ba1a::t_771e38cde087de 1-32
+web/lib/utils/__tests__/markdown-table-width.test.ts
+  s_291078cde7ba1a::t_a1aaef2a89ed30 42
+web/lib/utils/markdown-table-width.ts
+  s_291078cde7ba1a::t_2b4b8f473097f1 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a610616633c611179195935deb8966e805278ed2",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
