@@ -1,0 +1,23 @@
+supabase/migrations/20261012150000_cascade_chat_writing_registry_key.sql
+  s_291078cde7ba1a::t_fab4372c75d9ac 16-17,20
+web/lib/__tests__/cascade-resolution.test.ts
+  s_291078cde7ba1a::t_30db3f54c3fe21 12,104-109
+web/lib/config/cascade.ts
+  s_291078cde7ba1a::t_e6942fc42dd439 48-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b472fbe027dfd685dc95c82197c84c8e15da043",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
