@@ -39,7 +39,7 @@ describe('preprocessMarkdown with a literal pipe in a table cell', () => {
       '| --- | --- |',
       '| Channel | Nate Herk | AI Automation (no URL in input) |',
     ].join('\n'));
-    const rows = out.split('\n');
+    const rows = out.split(/\r?\n/);
     expect(rows[0]).toBe('| Field | Value |');
     expect(rows[1]).toBe('|---|---|');
     expect(rows[2]).toBe('| Channel | Nate Herk \\| AI Automation (no URL in input) |');

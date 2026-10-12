@@ -20,7 +20,7 @@ const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(ro
  */
 export function normalizeTableRowWidth(markdown: string): string {
   if (!markdown) return '';
-  const lines = markdown.split('\n');
+  const lines = markdown.split(/\r?\n/);
   let inFence = false;
 
   for (let i = 0; i < lines.length - 1; i++) {

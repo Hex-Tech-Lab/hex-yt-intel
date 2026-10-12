@@ -1,5 +1,6 @@
 import React from 'react';
 import { normalizeTableRowWidth } from './markdown-table-width';
+import { promoteSectionHeadings } from './section-headings';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
 // functions are actually unit-testable -- vitest/esbuild can't parse this
@@ -18,7 +19,7 @@ export function preprocessMarkdown(content: string): string {
 
   // Merge over-wide body rows (a literal pipe inside a cell) before the
   // column-count pass below, so that pass sees matching widths.
-  let processed = normalizeTableRowWidth(content);
+  let processed = promoteSectionHeadings(normalizeTableRowWidth(content));
 
   // Normalize table column count across header/delimiter/data rows.
   //
