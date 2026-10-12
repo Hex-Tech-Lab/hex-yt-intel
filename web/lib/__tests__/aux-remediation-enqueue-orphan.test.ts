@@ -46,7 +46,7 @@ describe('enqueueSystemCommentSampleRun', () => {
 
   it('cancels the unread response body on the non-ok path so the socket is released (ARTAS V20)', async () => {
     const res = new Response('down', { status: 503 });
-    const cancel = vi.spyOn(res.body!, 'cancel');
+    const cancel = vi.spyOn(res.body as ReadableStream, 'cancel');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res));
     await enqueueSystemCommentSampleRun(params);
     expect(cancel).toHaveBeenCalled();
