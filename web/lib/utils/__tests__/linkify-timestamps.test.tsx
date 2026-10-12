@@ -1,0 +1,26 @@
+import { describe, it, expect } from 'vitest';
+import { linkifyTimestamps } from '../format';
+
+describe('linkifyTimestamps – backticked timestamps', () => {
+  it('turns a backticked lone timestamp into a link, dropping the backticks', () => {
+    expect(linkifyTimestamps('See `[00:05:00]` for details')).toBe(
+      'See [⏱ 00:05:00](#t=300) for details',
+    );
+  });
+
+  it('turns a backticked range into two links', () => {
+    expect(linkifyTimestamps('Span `[00:07:30]–[00:08:30]` here')).toBe(
+      'Span [⏱ 00:07:30](#t=450)–[⏱ 00:08:30](#t=510) here',
+    );
+  });
+
+  it('leaves backticked non-timestamp code unchanged', () => {
+    const input = 'Run `npm test` or `at 00:05:00 later` now';
+    expect(linkifyTimestamps(input)).toBe(input);
+  });
+
+  it('leaves a timestamp inside a fenced code block unchanged', () => {
+    const input = '```\n[00:05:00]\n`00:05:00`\n```';
+    expect(linkifyTimestamps(input)).toBe(input);
+  });
+});

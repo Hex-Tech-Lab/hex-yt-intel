@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeTableRowWidth } from './markdown-table-width';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
 // functions are actually unit-testable -- vitest/esbuild can't parse this
@@ -15,7 +16,9 @@ export { fmtUsd, fmtUsdPrecise, fmtCentsToUsd } from './currency';
 export function preprocessMarkdown(content: string): string {
   if (!content) return '';
 
-  let processed = content;
+  // Merge over-wide body rows (a literal pipe inside a cell) before the
+  // column-count pass below, so that pass sees matching widths.
+  let processed = normalizeTableRowWidth(content);
 
   // Normalize table column count across header/delimiter/data rows.
   //
@@ -37,7 +40,8 @@ export function preprocessMarkdown(content: string): string {
   const rawLines = processed.split(/\r?\n/);
   const isTableRow = (row: string) => row.startsWith('|') && row.endsWith('|');
   const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(row);
-  const countCols = (row: string) => row.split('|').filter(cell => cell.trim() !== '').length;
+  // Escaped pipes (`\|`) inside a cell are not column separators.
+  const countCols = (row: string) => row.split(/(?<!\\)\|/).filter(cell => cell.trim() !== '').length;
 
   // /simplify review (2026-08-20): reused the existing fenced-code-block
   // guard pattern from this same function's tab-table pass below (was
@@ -193,9 +197,8 @@ function findBacktickSpans(line: string): [number, number][] {
 function findMarkdownLinkSpans(line: string): [number, number][] {
   const spans: [number, number][] = [];
   const linkRegex = /\[([^\]]*)\]\(([^)]*)\)/g;
-  let m;
-  while ((m = linkRegex.exec(line)) !== null) {
-    spans.push([m.index, m.index + m[0].length - 1]);
+  for (const match of line.matchAll(linkRegex)) {
+    spans.push([match.index, match.index + match[0].length - 1]);
   }
   return spans;
 }
@@ -206,14 +209,15 @@ function isInsideSpan(offset: number, length: number, spans: [number, number][])
 
 export function linkifyTimestamps(markdown: string): string {
   if (!markdown) return '';
-  const lines = markdown.split('\n');
+  const lines = markdown.split(/\r?\n/);
   let inFence = false;
   const out: string[] = [];
 
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
   const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
+  const loneTimestampCodeRegex = /`(\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?(?:\s*[–—-]\s*\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?)?)`/g;
 
-  for (const line of lines) {
+  for (let line of lines) {
     if (line.trim().startsWith('```')) {
       inFence = !inFence;
       out.push(line);
@@ -228,6 +232,10 @@ export function linkifyTimestamps(markdown: string): string {
       out.push(line);
       continue;
     }
+    // The model writes timestamps as `[00:05:00]`. A backtick span whose ENTIRE
+    // content is a timestamp or timestamp range is unwrapped (backticks dropped)
+    // so the pass below linkifies it. Any other inline code stays untouched.
+    line = line.replace(loneTimestampCodeRegex, '$1');
 
     const backtickSpans = findBacktickSpans(line);
     const linkSpans = findMarkdownLinkSpans(line);
