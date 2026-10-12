@@ -1,6 +1,7 @@
 import React from 'react';
 import { normalizeTableRowWidth, stepFence, stripRateFormula, UNESCAPED_PIPE, type OpenFence } from './markdown-table-width';
 import { promoteSectionHeadings } from './section-headings';
+import { shortenInsufficientData } from './insufficient-data';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
 // functions are actually unit-testable -- vitest/esbuild can't parse this
@@ -19,7 +20,7 @@ export function preprocessMarkdown(content: string): string {
 
   // Merge over-wide body rows (a literal pipe inside a cell) before the
   // column-count pass below, so that pass sees matching widths.
-  let processed = promoteSectionHeadings(stripRateFormula(normalizeTableRowWidth(content)));
+  let processed = shortenInsufficientData(promoteSectionHeadings(stripRateFormula(normalizeTableRowWidth(content))));
 
   // Normalize table column count across header/delimiter/data rows.
   //
