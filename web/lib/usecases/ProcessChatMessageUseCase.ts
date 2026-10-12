@@ -523,7 +523,8 @@ export class ProcessChatMessageUseCase {
     // signed model list is taken from that same cascade so the two agree.
     // Free tier keeps the normal chat cascade for writing too (owner: free cost
     // first; gpt-oss is ~3x cheaper than Haiku 5.5 per OpenRouter, 2026-10-12).
-    const writingCascade = !isReasoning && tier !== 'free' && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
+    const isPaidTier = tier === 'light' || tier === 'pro' || tier === 'max' || tier === 'enterprise';
+    const writingCascade = !isReasoning && isPaidTier && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
     const chatModels = writingCascade
       ? [...new Set(writingCascade.map((item) => item.model))]
       : isReasoning
