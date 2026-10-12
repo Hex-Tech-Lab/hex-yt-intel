@@ -1,0 +1,42 @@
+web/store/__tests__/useChatStore-persist-watchdog.test.ts
+  s_291078cde7ba1a::t_33c1775b055290 1-119,121-154
+  s_291078cde7ba1a::t_9e887f36027b3b 120
+  s_291078cde7ba1a::t_3659703a755317 155-157
+web/store/__tests__/useChatStore-resilience.test.ts
+  s_291078cde7ba1a::t_766eae8b07a4e0 158-159
+web/store/useChatStore.ts
+  s_291078cde7ba1a::t_a96218af13c5ab 610-611
+  s_291078cde7ba1a::t_dbbf8ca0c70f0a 199-203
+  s_291078cde7ba1a::t_60098536273171 299-305
+  s_291078cde7ba1a::t_ee3977ce03910d 591-592
+  s_291078cde7ba1a::t_85e01cb4af36ba 176-180
+  s_291078cde7ba1a::t_f89bccab0600ec 130
+  s_291078cde7ba1a::t_0e594094d064f3 637
+  s_291078cde7ba1a::t_0c2076ac3c8e2c 401-405
+  s_291078cde7ba1a::t_b79e44a54f3b18 81-85
+  s_291078cde7ba1a::t_2d75986b7ac6fa 722
+  s_291078cde7ba1a::t_32ae97a8fc864f 132,137-140
+  s_291078cde7ba1a::t_ac0dde29bb2b25 181
+  s_291078cde7ba1a::t_bab7b960871061 149
+  s_291078cde7ba1a::t_3c58741261b234 536-537
+  s_291078cde7ba1a::t_145ed8db80c3f9 122
+  s_291078cde7ba1a::t_4828591ca18481 204
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_40116db5344a4c 1591-1595
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67f6768cf61d8db563a6f18a752918642a1f96a9",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
