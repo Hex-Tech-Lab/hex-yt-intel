@@ -521,7 +521,9 @@ export class ProcessChatMessageUseCase {
     // 9. Resolve LLM models based on reasoning flag. T21: a creative-writing
     // request (blog, LinkedIn post, script...) uses cascade.chatWriting; the
     // signed model list is taken from that same cascade so the two agree.
-    const writingCascade = !isReasoning && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
+    // Free tier keeps the normal chat cascade for writing too (owner: free cost
+    // first; gpt-oss is ~3x cheaper than Haiku 5.5 per OpenRouter, 2026-10-12).
+    const writingCascade = !isReasoning && tier !== 'free' && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
     const chatModels = writingCascade
       ? [...new Set(writingCascade.map((item) => item.model))]
       : isReasoning

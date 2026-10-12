@@ -33,9 +33,9 @@ function build() {
   return { usecase, tokenCrypto };
 }
 
-async function run(content: string) {
+async function run(content: string, tier = 'pro') {
   const { usecase, tokenCrypto } = build();
-  const result = await usecase.execute({ conversationId: 'conv-1', userId: 'user-1', tier: 'pro', content } as never);
+  const result = await usecase.execute({ conversationId: 'conv-1', userId: 'user-1', tier, content } as never);
   const payload = (result as { data?: { payload?: { models: string[]; cascade: Array<{ model: string }> } } }).data?.payload;
   return { payload, signedModels: tokenCrypto.signChatToken.mock.calls[0]?.[0]?.models };
 }
@@ -45,6 +45,11 @@ describe('chat writing route (T21)', () => {
     const { payload, signedModels } = await run('Write a LinkedIn post about the main takeaway');
     expect(payload?.cascade.map((c) => c.model)).toEqual(['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5']);
     expect(signedModels).toEqual(['anthropic/claude-haiku-5.5']);
+  });
+
+  it('free tier keeps the chat cascade even for writing (cost)', async () => {
+    const { payload } = await run('Write a LinkedIn post about the main takeaway', 'free');
+    expect(payload?.cascade.map((c) => c.model)).toEqual(['openai/gpt-oss-120b']);
   });
 
   it('a normal question keeps the chat cascade', async () => {
