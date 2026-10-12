@@ -225,3 +225,12 @@ describe('getSpeakingSeconds', () => {
     expect(getSpeakingSeconds({ start: 10, end: null }, 3, 20)).toBe(0);
   });
 });
+
+describe('useHighlightTicker – shifted legacy clip (T8)', () => {
+  it('starts the reveal part-way into the excerpt when the clip opens after its words began', () => {
+    const tenWords = 'a b c d e f g h i j';
+    // Clip opened 2s after its own start (leadIn -2); 0s elapsed at 2.5 w/s fallback (no speaking span) -> 5 words already spoken.
+    const { result } = renderHook(() => useHighlightTicker(0, tenWords, 0, 0, null, 2.5, -2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(5);
+  });
+});
