@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_abe81d8916ab57 1583-1584
+web/lib/config/dashboard-panels.test.ts
+  s_291078cde7ba1a::t_ff26d397526487 13-18
+web/lib/config/dashboard-panels.ts
+  s_291078cde7ba1a::t_fa9f16181f2900 33,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c88a80a351b57492849473e19d70ba82afced2e",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
