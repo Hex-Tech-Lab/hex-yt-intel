@@ -54,18 +54,26 @@ function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<n
 export function buildHighlightsWindowedSystemPrompt(quota: number, maxSegmentDurationSeconds: number): string {
   return `You select the most noteworthy moments from an excerpt of a video transcript, for a highlights reel. This excerpt covers one time window of a longer video. Pick the moments a viewer would most want to jump to: key claims, demos, numbers, decisions, and narrative turns. Mundane filler, pleasantries, and navigation chatter are never noteworthy.
 
-Output ONLY a JSON array, no prose or markdown fence (possibly empty []). Each element: {"start": <number, seconds, MUST exactly match a segment's start time from the input -- never invent or interpolate a timestamp>, "end": <number, seconds, one decimal place, the real end of the moment's topic, MUST satisfy end > start and duration <= ${maxSegmentDurationSeconds}, typically 15-60s, natural topic boundaries>, "label": <string, one short sentence describing the moment>, "parent_takeaway_idx": <integer 0-indexed [Index X] of the listed takeaway this moment best matches, or null if none matches> }.
+Output ONLY a JSON array, no prose or markdown fence (possibly empty []). Each element: {"start": <number, seconds, MUST exactly match the first number of a line in the TRANSCRIPT EXCERPT -- never invent or interpolate a timestamp>, "end": <number, seconds: the END time of the line where the point is complete -- include the follow-up that finishes it (the figure, the example, the "because"), even if it runs into the following context; MUST satisfy end > start and duration <= ${maxSegmentDurationSeconds}>, "label": <string, one short sentence describing the moment>, "parent_takeaway_idx": <integer 0-indexed [Index X] of the listed takeaway this moment best matches, or null if none matches> }.
 
 Select at most ${quota} moments from this excerpt -- fewer if the excerpt is thin, but include every genuinely strong moment. Never fabricate a timestamp that isn't one of the given segment start times.`;
 }
 
-export function buildHighlightsWindowedUserMessage(segments: Array<{ start: number; text: string }>, quota: number, takeaways?: string[]): string {
+export function buildHighlightsWindowedUserMessage(segments: Array<{ start: number; text: string; end?: number }>, quota: number, takeaways?: string[], contextSegments: Array<{ start: number; text: string; end?: number }> = []): string {
   const promptTakeaways = (takeaways || []).slice(0, MAX_PROMPT_TAKEAWAYS /* ellipsis: array slice, not string truncation ... */);
   const takeawaysSection = promptTakeaways.length > 0
     ? `--- KEY TAKEAWAYS (for optional matching via parent_takeaway_idx -- the excerpt's own strongest moments still count even when nothing matches) ---\n${promptTakeaways.map((takeaway, i) => `[Index ${i}] ${takeaway}`).join('\n')}\n\n`
     : '';
-  const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
-  return `${takeawaysSection}--- TRANSCRIPT EXCERPT (select up to ${quota} moments) ---\n${lines}`;
+  // Each line carries its end time (T25): with start times only, the model
+  // guessed where a moment ends and guessed short (42% of clips sat at the
+  // 15s floor), cutting off the payoff that followed.
+  const formatLine = (segment: { start: number; text: string; end?: number }) =>
+    segment.end !== undefined ? `[${segment.start}-${segment.end}] ${segment.text}` : `[${segment.start}] ${segment.text}`;
+  const lines = segments.map(formatLine).join('\n');
+  const context = contextSegments.length > 0
+    ? `\n--- FOLLOWING CONTEXT (read only to find where a moment ends; never start a moment here) ---\n${contextSegments.map(formatLine).join('\n')}`
+    : '';
+  return `${takeawaysSection}--- TRANSCRIPT EXCERPT (select up to ${quota} moments) ---\n${lines}${context}`;
 }
 
 export interface ExtractedHighlight {
@@ -201,4 +209,36 @@ export function resolveHighlightOverlaps(
     resolved.push({ ...highlight, start, end });
   }
   return resolved;
+}
+
+// A line that completes the previous one's point: a figure, or an explicit
+// follow-through ("because", "which means", ...). Owner report T25: clips
+// stopped right before the number that finished the statement.
+const PAYOFF_LINE = /\d|%|\$|\b(?:because|which means|that means|so that|that's why|for example|for instance)\b/iu;
+
+/**
+ * Snaps each highlight's end to a transcript line boundary and, when the
+ * next line carries the payoff, takes that line too, never past
+ * start + maxSegmentDurationSeconds. Lines span [start_i, start_i+1); the
+ * final line has no known end, so a highlight ending there is left alone.
+ */
+export function snapHighlightEnds(
+  highlights: ExtractedHighlight[],
+  segments: ReadonlyArray<{ start: number; text: string }>,
+  maxSegmentDurationSeconds: number,
+): ExtractedHighlight[] {
+  const starts = segments.map((segment) => segment.start);
+  return highlights.map((highlight) => {
+    const limit = highlight.start + maxSegmentDurationSeconds;
+    // Index of the line containing the current end (last line starting before it).
+    let index = -1;
+    for (let i = 0; i < starts.length && (starts[i] ?? Infinity) < highlight.end; i++) index = i;
+    const lineEnd = starts[index + 1];
+    if (index < 0 || lineEnd === undefined) return highlight;
+    let end = lineEnd <= limit ? Math.max(highlight.end, lineEnd) : highlight.end;
+    const nextLine = segments[index + 1];
+    const nextEnd = starts[index + 2];
+    if (end === lineEnd && nextLine && nextEnd !== undefined && nextEnd <= limit && PAYOFF_LINE.test(nextLine.text)) end = nextEnd;
+    return end === highlight.end ? highlight : { ...highlight, end };
+  });
 }

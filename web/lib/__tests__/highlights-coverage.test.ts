@@ -49,7 +49,8 @@ function makeWindowAwareCompletion(perCall = 1, failWindowFirstStarts: number[] 
   const failSet = new Set(failWindowFirstStarts);
   return {
     complete: vi.fn().mockImplementation(({ user }: { user: string }) => {
-      const starts = [...user.matchAll(/\[(\d+(?:\.\d+)?)\]/g)].map((m) => Number(m[1]));
+      // Lines are "[start-end] text" (T25); context lines follow the excerpt.
+      const starts = [...user.matchAll(/\[(\d+(?:\.\d+)?)(?:-[\d.]+)?\]/g)].map((m) => Number(m[1]));
       // Content-based deterministic failure: keyed on the window's FIRST
       // segment start, so the initial call AND any bounded retry both fail
       // for the same window (call-count-based mocking can't distinguish).
