@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_b698a0af7bce82 14-17
+supabase/migrations/20261012180000_fix_db_security_advisors.sql
+  s_291078cde7ba1a::t_902204de4b7a93 1-202
+worker/src/__tests__/chat-payload-signature.test.ts
+  s_291078cde7ba1a::t_db9202c63cc43c 96-172,174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb0398e9bc08036fcbf95f799c46bafe8f256194",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
