@@ -52,6 +52,7 @@ export function SimpleDashboardView({
               channelTitle={videoMetadata.channelTitle}
               viewCount={videoMetadata.viewCount}
               likeCount={videoMetadata.likeCount}
+              commentCount={videoMetadata.commentCount}
               duration={videoMetadata.duration || 0}
               publishedAt={videoMetadata.publishedAt}
               description={videoMetadata.description}

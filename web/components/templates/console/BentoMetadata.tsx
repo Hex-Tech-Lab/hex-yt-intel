@@ -69,11 +69,25 @@ const linkifyDescription = (text: string) => {
   });
 };
 
+const toCount = (count: string | number | undefined): number =>
+  typeof count === 'number' ? count : parseInt(count ?? '', 10);
+
+/** (likes + comments) / views as a percentage; '—' when views are unknown or zero. */
+export function formatEngagement(views: string | number, likes: string | number, comments?: string | number): string {
+  const viewNum = toCount(views);
+  if (!Number.isFinite(viewNum) || viewNum <= 0) return '—';
+  const interactions = (Number.isFinite(toCount(likes)) ? toCount(likes) : 0) + (Number.isFinite(toCount(comments)) ? toCount(comments) : 0);
+  const pct = (interactions / viewNum) * 100;
+  return `${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
+}
+
 export interface BentoMetadataProps {
   title: string;
   channelTitle: string;
   viewCount: string | number;
   likeCount: string | number;
+  /** Optional: older callers and restored rows may not carry it. */
+  commentCount?: string | number;
   duration: number;
   publishedAt: string;
   description?: string;
@@ -89,6 +103,7 @@ export function BentoMetadata({
   channelTitle,
   viewCount,
   likeCount,
+  commentCount,
   duration,
   publishedAt,
   description,
@@ -134,19 +149,30 @@ export function BentoMetadata({
     return hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // T11: six compact stat cards (3x2 beside the title on xl). Engagement is
+  // (likes + comments) / views from YouTube's own counts -- value only.
+  const stats = [
+    { icon: 'solar:eye-linear', value: formatViews(viewCount), label: 'Views' },
+    { icon: 'solar:heart-linear', value: formatViews(likeCount), label: 'Likes' },
+    { icon: 'solar:chat-round-dots-linear', value: commentCount === undefined ? '—' : formatViews(commentCount), label: 'Comments' },
+    { icon: 'solar:graph-up-linear', value: formatEngagement(viewCount, likeCount, commentCount), label: 'Engagement' },
+    { icon: 'solar:clock-circle-linear', value: formatDuration(duration), label: 'Length' },
+    { icon: 'solar:calendar-linear', value: new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }), label: 'Date' },
+  ];
+
   return (
     <motion.section
       variants={container}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-12 gap-3 mt-6 sm:mt-8"
+      className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-12 gap-3 mt-6 sm:mt-8"
     >
       {/* Title Card (Large) */}
       <MotionCard
         variants={item}
         variant="default"
         padding={0}
-        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-3 p-3 sm:p-4"
+        className="col-span-2 sm:col-span-3 xl:col-span-6 xl:row-span-2 min-w-0 flex flex-col justify-between gap-3 p-3 sm:p-4"
       >
         <MonoLabel index="01">video intelligence context</MonoLabel>
         <div className="min-w-0">
@@ -181,53 +207,19 @@ export function BentoMetadata({
         </div>
       </MotionCard>
 
-      {/* View Count (Small) */}
-      <MotionCard
-        variants={item}
-        variant="default"
-        padding={0}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
-      >
-        <Icon icon="solar:eye-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
-        <span className="text-lg font-bold text-[var(--ink)]">{formatViews(viewCount)}</span>
-        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Views</span>
-      </MotionCard>
-
-      {/* Like Count (Small) */}
-      <MotionCard
-        variants={item}
-        variant="default"
-        padding={0}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
-      >
-        <Icon icon="solar:heart-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
-        <span className="text-lg font-bold text-[var(--ink)]">{formatViews(likeCount)}</span>
-        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Likes</span>
-      </MotionCard>
-
-      {/* Duration (Small) */}
-      <MotionCard
-        variants={item}
-        variant="default"
-        padding={0}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
-      >
-        <Icon icon="solar:clock-circle-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
-        <span className="text-lg font-bold text-[var(--ink)]">{formatDuration(duration)}</span>
-        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Length</span>
-      </MotionCard>
-
-      {/* Published (Small) */}
-      <MotionCard
-        variants={item}
-        variant="default"
-        padding={0}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
-      >
-        <Icon icon="solar:calendar-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
-        <span className="text-[13px] font-bold text-[var(--ink)]">{new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}</span>
-        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Date</span>
-      </MotionCard>
+      {stats.map((stat) => (
+        <MotionCard
+          key={stat.label}
+          variants={item}
+          variant="default"
+          padding={0}
+          className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-2.5"
+        >
+          <Icon icon={stat.icon} size={16} className="mb-0.5 text-[var(--ink-muted)]" />
+          <span className="text-[15px] font-bold text-[var(--ink)]">{stat.value}</span>
+          <span className="text-[10px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">{stat.label}</span>
+        </MotionCard>
+      ))}
     </motion.section>
   );
 }
