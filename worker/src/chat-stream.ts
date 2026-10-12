@@ -92,8 +92,6 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Run the chat cascade, committing to the first model that produces tokens. The model
- *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
 /** How the cascade ended; lets the caller pick the right user message and skip persisting a disconnect. */
 export type ChatCascadeOutcome = 'served' | 'partial' | 'client_abort' | 'budget_spent' | 'exhausted';
 
@@ -106,6 +104,8 @@ export interface ChatCascadeResult {
   outcome: ChatCascadeOutcome;
 }
 
+/** Run the chat cascade, committing to the first model that produces tokens. The model
+ *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
 export async function streamChatCascade(
   apiKey: string,
   grounding: string,
