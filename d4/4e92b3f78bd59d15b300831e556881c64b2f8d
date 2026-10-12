@@ -1,0 +1,32 @@
+web/components/dashboard/HighlightsTrack.tsx
+  s_291078cde7ba1a::t_e4b4fa01e79677 117,119-120
+  s_291078cde7ba1a::t_22ecd1e73c564f 134,136
+  s_291078cde7ba1a::t_141cc14004b3d5 330
+web/components/dashboard/HighlightsScrubber.tsx
+  s_291078cde7ba1a::t_f99fdfdc8b0dd2 611
+  s_291078cde7ba1a::t_26bbd674bb05ff 17-54
+  s_291078cde7ba1a::t_c7a60af9ea7470 629
+  s_291078cde7ba1a::t_c90b6bff0a41e4 501
+  s_291078cde7ba1a::t_02b2b817585121 443-448
+  s_291078cde7ba1a::t_07aaa6a2904779 544
+web/components/dashboard/__tests__/ReelStatsLine.test.tsx
+  s_291078cde7ba1a::t_c72194afaaab90 1-23
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_1c2d41ef21bf40 1591
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d44e92b3f78bd59d15b300831e556881c64b2f8d",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
