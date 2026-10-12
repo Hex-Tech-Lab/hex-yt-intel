@@ -1,0 +1,27 @@
+web/lib/utils/__tests__/linkify-timestamps.test.tsx
+  s_291078cde7ba1a::t_55fa40a27a8874 27-36
+web/lib/utils/__tests__/markdown-table-width.test.ts
+  s_291078cde7ba1a::t_3bab4d6beecaca 2,48-57
+web/lib/utils/format.tsx
+  s_291078cde7ba1a::t_3fce02a8d1ba55 2,22,219,232-235
+web/lib/utils/markdown-table-width.ts
+  s_291078cde7ba1a::t_4b5bbd79f18efa 52-64
+web/lib/utils/section-headings.ts
+  s_291078cde7ba1a::t_a775e4d465dc21 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f06e93f50f139aa8517b8dc68f9297e375ccb3a9",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
