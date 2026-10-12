@@ -66,7 +66,7 @@ function matchSubHeader(line: string, dimNumber: number): { subNumber: string; t
   if (!trimmed) return null;
   // Only this dimension's own sub-numbers (e.g. 4.x inside dimension 4) count as
   // headers, so prose such as "1.5 - ..." inside dimension 4 stays body text.
-  const ownSub = (n: string | undefined) => n !== undefined && n.split('.')[0] === String(dimNumber);
+  const ownSub = (subNumber: string) => subNumber.split('.')[0] === String(dimNumber);
 
   // Pattern 1: Markdown headings: #{1,6} [Dimension] X.Y [-:–—.] Title
   // e.g. "#### 2.1 Header Intelligence", "### Dimension 2.1: Title"
