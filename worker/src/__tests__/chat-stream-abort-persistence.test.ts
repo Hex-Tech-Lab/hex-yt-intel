@@ -118,8 +118,8 @@ describe('chat-stream client_abort handler-level persistence', () => {
     const exp = Date.now() + 60_000;
     const sig = await hmac(chatTokenMessage(base.conversationId, base.userId, exp, base.models, await chatPayloadDigest(base)));
 
-    const c = createContext({ ...base, exp, sig }, clientController.signal, waitUntilPromises);
-    const res = await handleChatStream(c);
+    const context = createContext({ ...base, exp, sig }, clientController.signal, waitUntilPromises);
+    const res = await handleChatStream(context);
     expect(res.status).toBe(200);
 
     const sseOutput = await drainResponse(res);
@@ -166,8 +166,8 @@ describe('chat-stream client_abort handler-level persistence', () => {
     const exp = Date.now() + 60_000;
     const sig = await hmac(chatTokenMessage(base.conversationId, base.userId, exp, base.models, await chatPayloadDigest(base)));
 
-    const c = createContext({ ...base, exp, sig }, clientController.signal, waitUntilPromises);
-    const res = await handleChatStream(c);
+    const context = createContext({ ...base, exp, sig }, clientController.signal, waitUntilPromises);
+    const res = await handleChatStream(context);
     expect(res.status).toBe(200);
 
     // Stream reader reads until the first delta, then aborts client
