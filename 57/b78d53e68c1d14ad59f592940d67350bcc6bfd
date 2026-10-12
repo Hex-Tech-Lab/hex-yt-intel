@@ -1,0 +1,38 @@
+web/lib/prompts/ucis-v5.4.ts
+  s_291078cde7ba1a::t_c9358f45bdf248 277
+web/lib/utils/insufficient-data.ts
+  s_70a77114f061d5::t_ac85c05d3a0080 5-9
+web/lib/__tests__/insufficient-data.test.ts
+  s_70a77114f061d5::t_7caa3ada9de946 21-26,29
+  s_291078cde7ba1a::t_734af09ad01375 27-28,30-38
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_4751adc6620f51 1583
+docs/agent-prompts/2026-10-12-oc-stream-b-dim7-highlights.md
+  s_291078cde7ba1a::t_c6a3ce3ced1a5b 1-232
+web/lib/prompts/ucis-v5.4.test.ts
+  s_291078cde7ba1a::t_7a49313830a05c 105-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57b78d53e68c1d14ad59f592940d67350bcc6bfd",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_70a77114f061d5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ecf287289ffeWWekaG2R1yeMAs",
+        "model": "anthropic/claude-haiku-5.5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
