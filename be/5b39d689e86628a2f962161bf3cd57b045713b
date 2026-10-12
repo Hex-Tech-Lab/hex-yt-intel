@@ -1,0 +1,24 @@
+web/components/templates/console/__tests__/chat-ui-t8.test.tsx
+  s_291078cde7ba1a::t_f0c621f8bfc82d 31-32
+  s_291078cde7ba1a::t_d361da69345a54 2,5-6,33-44,47-57,60-63
+  s_291078cde7ba1a::t_b095027047c168 7,10-11,16,29,64
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_a93d6fe92a26eb 1593
+  s_291078cde7ba1a::t_54961ebc1813d3 1599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be5b39d689e86628a2f962161bf3cd57b045713b",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
