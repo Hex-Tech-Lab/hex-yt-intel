@@ -76,4 +76,113 @@ describe("CombinerPass.reduceDimensions", () => {
     ]);
     expect(out[0].content).toContain("Short but different");
   });
+
+  it("deduplicates multi-section Dimensions (e.g. 2.1 to 2.4) across multiple chunks", () => {
+    const chunk1 = [
+      "#### 2.1 Header Intelligence",
+      "| Field | Value |",
+      "| Title | Advanced Personal Language Models |",
+      "",
+      "#### 2.2 Engagement & Virality Metrics",
+      "| Views | 15000 |",
+      "",
+      "#### 2.3 Channel Authority Assessment",
+      "High credibility established in 2.1.",
+      "",
+      "#### 2.4 Audience Sentiment Prediction",
+      "Highly positive reception.",
+    ].join("\n");
+
+    const chunk2 = [
+      "#### 2.1 Header Intelligence",
+      "| Field | Value |",
+      "| Title | Advanced Personal Language Models |",
+      "",
+      "#### 2.2 Engagement & Virality Metrics",
+      "| Views | 15000 |",
+      "",
+      "#### 2.3 Channel Authority Assessment",
+      "High credibility established in 2.1.",
+      "",
+      "#### 2.4 Audience Sentiment Prediction",
+      "Highly positive reception.",
+    ].join("\n");
+
+    const out = CombinerPass.reduceDimensions([mk(2, chunk1), mk(2, chunk2)]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content.match(/#### 2\.1 Header Intelligence/g)).toHaveLength(1);
+    expect(out[0].content.match(/#### 2\.2 Engagement & Virality Metrics/g)).toHaveLength(1);
+    expect(out[0].content.match(/#### 2\.3 Channel Authority Assessment/g)).toHaveLength(1);
+    expect(out[0].content.match(/#### 2\.4 Audience Sentiment Prediction/g)).toHaveLength(1);
+    expect(out[0].content.match(/Advanced Personal Language Models/g)).toHaveLength(1);
+  });
+
+  it("deduplicates internal section repetition within a single chunk", () => {
+    const singleChunkWithDupes = [
+      "#### 3.1 Executive Overview",
+      "Core thesis narrative.",
+      "",
+      "#### 3.2 First Principles Deconstruction",
+      "- Foundational axiom.",
+      "",
+      "#### 3.1 Executive Overview",
+      "Core thesis narrative.",
+      "",
+      "#### 3.2 First Principles Deconstruction",
+      "- Foundational axiom.",
+    ].join("\n");
+
+    const out = CombinerPass.reduceDimensions([mk(3, singleChunkWithDupes)]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content.match(/#### 3\.1 Executive Overview/g)).toHaveLength(1);
+    expect(out[0].content.match(/#### 3\.2 First Principles Deconstruction/g)).toHaveLength(1);
+    expect(out[0].content.match(/Core thesis narrative/g)).toHaveLength(1);
+  });
+
+  it("deduplicates Dimension 5 insights when one has 'timestamp not provided' and the other has '[00:00] (approximate)'", () => {
+    const chunkA = [
+      "#### 5.1 Priority Insights Matrix",
+      "**Tier 1 – Breakthrough Insights**:",
+      "1. **Writing as a repeatable personal language model** [timestamp not provided in transcript]",
+      "   - Detailed explanation with context.",
+      "2. **Originally comes from crystallized thinker** [timestamp not provided in transcript]",
+      "   - Thinking precedes writing.",
+    ].join("\n");
+
+    const chunkB = [
+      "#### 5.1 Priority Insights Matrix",
+      "**Tier 1 – Breakthrough Insights**:",
+      "1. **Writing as a repeatable personal language model** [00:00] (approximate; transcript carries no explicit timestamps)",
+      "   - Detailed explanation with context.",
+      "2. **Originally comes from crystallized thinker** [00:00] (approximate)",
+      "   - Thinking precedes writing.",
+    ].join("\n");
+
+    const out = CombinerPass.reduceDimensions([mk(5, chunkA), mk(5, chunkB)]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content.match(/Writing as a repeatable personal language model/g)).toHaveLength(1);
+    expect(out[0].content.match(/Originally comes from crystallized thinker/g)).toHaveLength(1);
+  });
+
+  it("upgrades placeholder timestamps to real non-zero timestamps without duplicating the items", () => {
+    const chunkUnanchored = [
+      "#### 5.1 Priority Insights Matrix",
+      "**Tier 1 – Breakthrough Insights**:",
+      "1. **Writing as a repeatable personal language model** [timestamp not provided in transcript]",
+      "   - Detailed explanation with context.",
+    ].join("\n");
+
+    const chunkAnchored = [
+      "#### 5.1 Priority Insights Matrix",
+      "**Tier 1 – Breakthrough Insights**:",
+      "1. **Writing as a repeatable personal language model** [04:15]",
+      "   - Detailed explanation with context.",
+    ].join("\n");
+
+    const out = CombinerPass.reduceDimensions([mk(5, chunkUnanchored), mk(5, chunkAnchored)]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content.match(/Writing as a repeatable personal language model/g)).toHaveLength(1);
+    expect(out[0].content).toContain("[04:15]");
+    expect(out[0].content).not.toContain("timestamp not provided");
+  });
 });

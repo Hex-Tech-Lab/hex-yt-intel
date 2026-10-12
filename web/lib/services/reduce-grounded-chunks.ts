@@ -21,6 +21,8 @@
  * same cell SET regardless of input order — cells are always processed in
  * ascending jevChunkIndex order, never input order.
  */
+import { CombinerPass } from "@/lib/services/CombinerPass";
+
 import type { UCISDimension } from "@/lib/types/dimension";
 
 export interface GroundedCell {
@@ -192,11 +194,18 @@ export function reduceGroundedChunks(
     // chunk's cell is missing or present without this dimension.
     if (contributions.length < expectedCount) partial.push(dimensionNumber);
 
-    // Prose: join per-chunk content sections in order with one blank line.
-    const content = contributions
-      .map((contribution) => contribution.dimension.content)
-      .filter((section) => typeof section === "string" && section.length > 0)
-      .join("\n\n");
+    // Prose: combine and deduplicate per-chunk content sections through CombinerPass.
+    const validSections = contributions
+      .map((contribution) => ({
+        number: dimensionNumber,
+        name: contribution.dimension.name,
+        content: contribution.dimension.content,
+      }))
+      .filter((section) => typeof section.content === "string" && section.content.length > 0);
+
+    const content = validSections.length > 0
+      ? CombinerPass.combineDimensionChunks(dimensionNumber, validSections).content
+      : "";
 
     // Arrays: concatenate in order, dedupe by normalized key, keep first.
     // The field is emitted whenever ANY source chunk carried it — including

@@ -31,6 +31,180 @@ export interface DimensionChunk {
 }
 
 /**
+ * Normalizes text for comparison by stripping timestamps, approximate notes,
+ * and collapsing non-alphanumeric characters and whitespace.
+ */
+function normalizeForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?|timestamp not provided[^\]]*)\s*\]/giu, '')
+    .replace(/\(\s*approximate[^)]*\)/giu, '')
+    .replace(/[^\w\s]/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Checks if text contains real, non-zero timestamps (e.g. `[01:23]`, `[00:45]`),
+ * excluding placeholder zero timestamps like `[00:00]` or `[0:00]`.
+ */
+function hasRealTimestamps(text: string): boolean {
+  const matches = text.match(/\[\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*\]/gu);
+  if (!matches) return false;
+  return matches.some((m) => !m.includes('00:00') && !m.includes('0:00'));
+}
+
+/**
+ * Matches subsection header line in various markdown and plain text formats.
+ */
+function matchSubHeader(line: string): { subNumber: string; title: string } | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Pattern 1: Markdown headings: #{1,6} [Dimension] X.Y [-:–—.] Title
+  // e.g. "#### 2.1 Header Intelligence", "### Dimension 2.1: Title"
+  const mdMatch = trimmed.match(/^#{1,6}\s*(?:Dimension\s+)?(\d+\.\d+)\s*[-:–—.]?\s*(.*)$/u);
+  if (mdMatch?.[1]) {
+    const rawTitle = (mdMatch[2] || '').trim();
+    const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
+    return { subNumber: mdMatch[1], title: cleanTitle };
+  }
+
+  // Pattern 2: Bold headings: **[Dimension ]X.Y Title** or **X.Y: Title** or **X.Y** Title
+  const boldMatch = trimmed.match(/^\*{1,2}(?:Dimension\s+)?(\d+\.\d+)(?:\*{1,2})?\s*[-:–—.]?\s*(.*?)(?:\*{1,2})?:?$/u);
+  if (boldMatch?.[1]) {
+    const rawTitle = (boldMatch[2] || '').trim();
+    const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
+    return { subNumber: boldMatch[1], title: cleanTitle };
+  }
+
+  // Pattern 3: Plain text with delimiter: "X.Y: Title" or "X.Y - Title" or "Dimension X.Y: Title"
+  const plainMatch = trimmed.match(/^(?:Dimension\s+)?(\d+\.\d+)\s*[-:–—.]\s*(.*)$/u);
+  if (plainMatch?.[1]) {
+    const rawTitle = (plainMatch[2] || '').trim();
+    const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').trim();
+    return { subNumber: plainMatch[1], title: cleanTitle };
+  }
+
+  return null;
+}
+
+/**
+ * Splits a markdown body into logical item blocks (numbered items, tier headings, paragraphs).
+ */
+function splitIntoBlocks(body: string): string[] {
+  const lines = body.split(/\r?\n/);
+  const blocks: string[] = [];
+  let currentBlock: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isNewItem = /^(\d+\.\s+|\*\*[^*]+\*\*:?$)/u.test(trimmed);
+    if (isNewItem && currentBlock.length > 0) {
+      blocks.push(currentBlock.join('\n').trim());
+      currentBlock = [];
+    }
+    currentBlock.push(line);
+  }
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join('\n').trim());
+  }
+
+  if (blocks.length <= 1) {
+    return body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  }
+  return blocks.filter(Boolean);
+}
+
+/**
+ * Merges two subsection bodies, deduplicating identical or near-identical items/blocks,
+ * upgrading placeholder timestamps when real timestamps are available, and appending
+ * genuinely distinct new items.
+ */
+function mergeSubSectionBodies(existingBody: string, incomingBody: string): string {
+  const trimmedExisting = existingBody.trim();
+  const trimmedIncoming = incomingBody.trim();
+
+  if (!trimmedExisting) return trimmedIncoming;
+  if (!trimmedIncoming) return trimmedExisting;
+
+  // 1. Full comparison after whitespace normalization
+  const norm = (textVal: string) => textVal.trim().replace(/\s+/gu, ' ');
+  if (norm(trimmedExisting) === norm(trimmedIncoming)) {
+    return trimmedExisting;
+  }
+
+  // 2. Semantic comparison stripping timestamps & boilerplate
+  const compExisting = normalizeForComparison(trimmedExisting);
+  const compIncoming = normalizeForComparison(trimmedIncoming);
+
+  if (compExisting === compIncoming) {
+    // Exact semantic match: if incoming has real timestamps and existing does not, prefer incoming
+    if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
+      return trimmedIncoming;
+    }
+    return trimmedExisting;
+  }
+
+  // 3. One is completely contained in the other with high length overlap (> 75%)
+  if (compExisting.includes(compIncoming) || compIncoming.includes(compExisting)) {
+    const minLen = Math.min(compExisting.length, compIncoming.length);
+    const maxLen = Math.max(compExisting.length, compIncoming.length);
+    if (minLen / maxLen > 0.75) {
+      if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
+        return trimmedIncoming;
+      }
+      return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
+    }
+  }
+
+  // 4. Block-level merge: split both into blocks and deduplicate each incoming block
+  const existingBlocks = splitIntoBlocks(trimmedExisting);
+  const incomingBlocks = splitIntoBlocks(trimmedIncoming);
+
+  const mergedBlocks = [...existingBlocks];
+
+  for (const inBlock of incomingBlocks) {
+    const normIn = normalizeForComparison(inBlock);
+    if (!normIn) continue;
+
+    let isDuplicate = false;
+    let matchIdx = -1;
+
+    for (let i = 0; i < mergedBlocks.length; i++) {
+      const exBlock = mergedBlocks[i];
+      if (!exBlock) continue;
+      const normEx = normalizeForComparison(exBlock);
+      if (normEx === normIn) {
+        isDuplicate = true;
+        matchIdx = i;
+        break;
+      }
+      if (normEx.includes(normIn) || normIn.includes(normEx)) {
+        const minL = Math.min(normEx.length, normIn.length);
+        const maxL = Math.max(normEx.length, normIn.length);
+        if (minL / maxL > 0.75) {
+          isDuplicate = true;
+          matchIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (isDuplicate && matchIdx >= 0) {
+      const exBlock = mergedBlocks[matchIdx]!;
+      if (hasRealTimestamps(inBlock) && !hasRealTimestamps(exBlock)) {
+        mergedBlocks[matchIdx] = inBlock;
+      }
+    } else if (!isDuplicate) {
+      mergedBlocks.push(inBlock);
+    }
+  }
+
+  return mergedBlocks.join('\n\n').trim();
+}
+
+/**
  * CombinerPass — merges per-chunk dimension markdown into one AST per
  * dimension number (dedupes intros, merges subsection bodies), then
  * re-serializes to markdown; Dimension 7 additionally gets system-block
@@ -55,24 +229,35 @@ export class CombinerPass {
     let currentSubLines: string[] = [];
     const introLines: string[] = [];
 
-    const subHeaderRegex = /^#{2,4}\s+(\d+\.\d+)\s*[-:–—]?\s*(.*)$/u;
+    const saveSubSection = (numStr: string, title: string, bodyLines: string[]) => {
+      const body = bodyLines.join('\n').trim();
+      const existing = ast.subsections.get(numStr);
+      if (!existing) {
+        ast.subsections.set(numStr, {
+          numberStr: numStr,
+          title,
+          body,
+        });
+      } else {
+        existing.body = mergeSubSectionBodies(existing.body, body);
+        if (!existing.title && title) {
+          existing.title = title;
+        }
+      }
+    };
 
     for (const line of lines) {
-      const match = line.match(subHeaderRegex);
-      if (match?.[1]) {
+      const headerMatch = matchSubHeader(line);
+      if (headerMatch) {
         if (currentSubNumber) {
-          ast.subsections.set(currentSubNumber, {
-            numberStr: currentSubNumber,
-            title: currentSubTitle,
-            body: currentSubLines.join('\n').trim(),
-          });
+          saveSubSection(currentSubNumber, currentSubTitle, currentSubLines);
           currentSubLines = [];
         } else if (introLines.length > 0) {
           ast.intro = introLines.join('\n').trim();
         }
 
-        currentSubNumber = match[1];
-        currentSubTitle = (match[2] || '').trim();
+        currentSubNumber = headerMatch.subNumber;
+        currentSubTitle = headerMatch.title;
       } else {
         if (currentSubNumber) {
           currentSubLines.push(line);
@@ -83,11 +268,7 @@ export class CombinerPass {
     }
 
     if (currentSubNumber) {
-      ast.subsections.set(currentSubNumber, {
-        numberStr: currentSubNumber,
-        title: currentSubTitle,
-        body: currentSubLines.join('\n').trim(),
-      });
+      saveSubSection(currentSubNumber, currentSubTitle, currentSubLines);
     } else if (introLines.length > 0) {
       ast.intro = introLines.join('\n').trim();
     }
@@ -151,19 +332,53 @@ export class CombinerPass {
       return { number: dimNumber, content: '' } as T;
     }
     const base: T = chunks[0] ?? ({ number: dimNumber, content: '' } as T);
+    const name = chunks.find((c) => c.name)?.name || base.name || `Dimension ${dimNumber}`;
+
     if (chunks.length === 1) {
-      let content = base.content;
+      const single = chunks[0];
+      if (!single) return { number: dimNumber, content: '' } as T;
+      // Deduplicate any repeated subsections within the single chunk's own content
+      const parsed = this.parseDimensionMarkdown(dimNumber, name, single.content);
+      if (parsed.subsections.size > 0) {
+        const outputLines: string[] = [];
+        if (parsed.intro) {
+          outputLines.push(parsed.intro);
+          outputLines.push('');
+        }
+        const sortedSubKeys = Array.from(parsed.subsections.keys()).sort((a, b) => {
+          const aParts = a.split('.').map(Number);
+          const bParts = b.split('.').map(Number);
+          return (aParts[1] ?? 0) - (bParts[1] ?? 0);
+        });
+        for (const subKey of sortedSubKeys) {
+          const sub = parsed.subsections.get(subKey);
+          if (!sub) continue;
+          outputLines.push(`#### ${sub.numberStr} ${sub.title}`);
+          outputLines.push('');
+          outputLines.push(sub.body);
+          outputLines.push('');
+        }
+        let finalContent = outputLines.join('\n').trim();
+        if (dimNumber === 7) {
+          finalContent = this.normalizeDimension7(finalContent);
+        }
+        return {
+          ...single,
+          number: dimNumber,
+          content: finalContent,
+        };
+      }
+      let content = single.content;
       if (dimNumber === 7) {
         content = this.normalizeDimension7(content);
       }
       return {
-        ...base,
+        ...single,
         number: dimNumber,
         content,
       };
     }
 
-    const name = chunks.find((c) => c.name)?.name || base.name || `Dimension ${dimNumber}`;
     const combinedAst: ParsedDimensionAST = {
       number: dimNumber,
       name,
@@ -174,12 +389,15 @@ export class CombinerPass {
 
     for (const chunk of chunks) {
       const parsed = this.parseDimensionMarkdown(dimNumber, name, chunk.content);
-      if (parsed.intro && !introSet.has(parsed.intro)) {
-        introSet.add(parsed.intro);
-        if (!combinedAst.intro) {
-          combinedAst.intro = parsed.intro;
-        } else {
-          combinedAst.intro += `\n\n${parsed.intro}`;
+      if (parsed.intro) {
+        const compIntro = normalizeForComparison(parsed.intro);
+        if (!introSet.has(compIntro)) {
+          introSet.add(compIntro);
+          if (!combinedAst.intro) {
+            combinedAst.intro = parsed.intro;
+          } else {
+            combinedAst.intro += `\n\n${parsed.intro}`;
+          }
         }
       }
 
@@ -188,13 +406,9 @@ export class CombinerPass {
         if (!existing) {
           combinedAst.subsections.set(subKey, { ...subSec });
         } else {
-          // Compare normalized (trim + collapse whitespace) bodies and skip
-          // only full equality: a one-directional includes() both discards a
-          // distinct shorter body nested inside a longer one and appends the
-          // existing text again when the incoming body merely contains it.
-          const norm = (s: string) => s.trim().replace(/\s+/gu, ' ');
-          if (norm(existing.body) !== norm(subSec.body)) {
-            existing.body += `\n\n${subSec.body}`;
+          existing.body = mergeSubSectionBodies(existing.body, subSec.body);
+          if (!existing.title && subSec.title) {
+            existing.title = subSec.title;
           }
         }
       }
