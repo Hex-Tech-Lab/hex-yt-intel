@@ -71,6 +71,17 @@ describe('PaddleBillingAdapter & UseCase Negative Controls', () => {
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 
+  it('Test 1b: Rejected signature emits a [ProcessPaddleWebhookUseCase] console.warn (telemetry for the fail-closed branch)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const rawBody = JSON.stringify({ event_id: 'evt_warn', event_type: 'subscription.created', data: {} });
+    const result = await useCase.execute(rawBody, 'ts=123;h1=invalid_hash', secret);
+
+    expect(result.status).toBe(401);
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[ProcessPaddleWebhookUseCase] Rejecting webhook: signature verification failed',
+    );
+  });
+
   it('Test 2: Replayed webhook event with existing transaction ID executes idempotently', async () => {
     // We simulate idempotent behavior by returning no error from the upsert.
     mockUpsert.mockResolvedValueOnce({ error: null });

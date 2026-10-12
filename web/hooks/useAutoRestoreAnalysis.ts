@@ -95,7 +95,10 @@ export function useAutoRestoreAnalysis(url: string) {
           undefined,
           async (response: Response) => {
             addBreadcrumb('Auto-restore: check request settled', { videoId, ok: response.ok }, 'auto-restore');
-            if (!response.ok) return { ok: false, status: response.status } as const;
+            if (!response.ok) {
+              console.warn(`[useAutoRestoreAnalysis] check request failed: HTTP ${response.status}`);
+              return { ok: false, status: response.status } as const;
+            }
             const data = await response.json();
             return { ok: true, status: 200, data } as const;
           }
@@ -193,7 +196,10 @@ export function useAutoRestoreAnalysis(url: string) {
             undefined,
             async (response: Response) => {
               addBreadcrumb('Auto-restore: full-record fetch settled', { analysisId: data.analysisId, ok: response.ok }, 'auto-restore');
-              if (!response.ok) return { ok: false, status: response.status } as const;
+              if (!response.ok) {
+                console.warn(`[useAutoRestoreAnalysis] full-record request failed: HTTP ${response.status}`);
+                return { ok: false, status: response.status } as const;
+              }
               const body = await response.json();
               return { ok: true, status: 200, body } as const;
             }
