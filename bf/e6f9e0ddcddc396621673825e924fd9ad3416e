@@ -1,0 +1,35 @@
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_833e2ffda47115 1051-1078
+web/app/api/webhooks/highlights/route.ts
+  s_291078cde7ba1a::t_fd7f8a0c99fa3e 55
+web/lib/adapters/OpenRouterCompletionAdapter.test.ts
+  s_291078cde7ba1a::t_103decb60cfc41 43-54
+web/lib/adapters/OpenRouterCompletionAdapter.ts
+  s_291078cde7ba1a::t_236bff3dbf3918 20,32,64-66,95
+worker/src/__tests__/jev-comment-classifier.test.ts
+  s_291078cde7ba1a::t_e925d49aa4fb45 63
+worker/src/services/JevCommentClassifier.ts
+  s_291078cde7ba1a::t_a02add407c6e1d 27
+worker/src/services/LLMCascade.ts
+  s_291078cde7ba1a::t_fd0c328e4b0570 683
+worker/src/services/sensor-fusion/heuristics/jev-text-parser.ts
+  s_291078cde7ba1a::t_cafdaf0d0104e1 16
+worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.ts
+  s_291078cde7ba1a::t_b4ff9726dd892f 156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bfe6f9e0ddcddc396621673825e924fd9ad3416e",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
