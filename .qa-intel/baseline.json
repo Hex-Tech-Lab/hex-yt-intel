@@ -79,62 +79,6 @@
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
-    "title": "Code Quality: Unclear variable name '_'",
-    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name '_'",
-    "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/AnalysisHistory.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/DimensionDrawer.tsx",
-    "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
@@ -166,48 +110,6 @@
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'a'",
-    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'b'",
-    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/MindMap.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
@@ -215,20 +117,6 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (758 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
-  },
-  {
-    "file": "web/components/templates/console/WordCloud.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'a'",
-    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/WordCloud.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'b'",
-    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
@@ -259,13 +147,6 @@
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
-    "file": "web/components/templates/console/WordCloud.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
     "file": "web/lib/adapters/SettingsModelAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
@@ -287,46 +168,11 @@
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
-    "severity": "medium",
-    "title": "Workflow: Missing finally block for I/O",
-    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
-    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
-  },
-  {
-    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
-    "severity": "medium",
-    "title": "Workflow: Missing finally block for I/O",
-    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
-    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
-  },
-  {
     "file": "web/lib/services/CombinerPass.ts",
     "severity": "low",
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'a'",
-    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/lib/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'b'",
-    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/CombinerPass.ts",
@@ -348,41 +194,6 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (633 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
-  },
-  {
-    "file": "web/lib/services/stitch-analysis-chunks.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/stitch-analysis-chunks.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/stitch-analysis-chunks.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/stitch-analysis-chunks.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/stitch-analysis-chunks.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
@@ -428,38 +239,10 @@
   },
   {
     "file": "web/lib/services/worker-llm.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/lib/services/worker-llm.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
-  },
-  {
-    "file": "web/lib/types/contracts.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/lib/types/contracts.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/lib/types/contracts.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
   },
   {
     "file": "web/lib/types/contracts.ts",
@@ -488,13 +271,6 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (2009 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
-  },
-  {
-    "file": "worker/src/routes/analysis.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
   },
   {
     "file": "worker/src/routes/analysis.ts",
@@ -534,13 +310,6 @@
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/routes/analysis.ts",
-    "severity": "low",
     "title": "Code Quality: Unclear variable name 'p'",
     "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
@@ -551,27 +320,6 @@
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
     "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/routes/analysis.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'p'",
-    "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/routes/analysis.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'n'",
-    "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/routes/analysis.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'p'",
-    "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
@@ -593,27 +341,6 @@
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'a'",
-    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "worker/src/services/CombinerPass.ts",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'b'",
-    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/services/CombinerPass.ts",
@@ -642,41 +369,6 @@
     "title": "Observability: Catch block without error logging",
     "why": "Error is caught but not logged, making debugging difficult.",
     "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "worker/src/services/LLMCascade.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/LLMCascade.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/LLMCascade.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/LLMCascade.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "worker/src/services/LLMCascade.ts",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
   },
   {
     "file": "worker/src/services/LLMCascade.ts",
@@ -875,13 +567,6 @@
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
-    "file": "web/lib/services/aux-remediation.ts",
-    "severity": "medium",
-    "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
-    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
-  },
-  {
     "file": "web/lib/intelligence/relations-engine.ts",
     "severity": "medium",
     "title": "Stream reader not released in a finally block",
@@ -910,20 +595,6 @@
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
-    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
-    "severity": "medium",
-    "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
-    "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
-  },
-  {
-    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
-    "severity": "high",
-    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
-    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
-  },
-  {
     "file": "web/lib/adapters/UpstashVectorAdapter.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
@@ -943,13 +614,6 @@
     "title": "ARTAS V20: response body not cancelled on early-exit path",
     "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
-  },
-  {
-    "file": "web/hooks/useSSEStream.ts",
-    "severity": "high",
-    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
-    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
@@ -1212,13 +876,6 @@
   },
   {
     "file": "worker/src/queue-consumers/comments-tier3.ts",
-    "severity": "high",
-    "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
-    "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
-  },
-  {
-    "file": "worker/src/queue-consumers/comments-tier3.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
     "why": "res.status===404 branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
@@ -1246,11 +903,11 @@
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
-    "file": "web/lib/utils/format.tsx",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (504 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
   },
   {
     "file": "web/lib/utils/format.tsx",

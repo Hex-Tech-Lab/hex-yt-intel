@@ -62,25 +62,6 @@ export class SupabaseAuxRemediationAdapter {
   }
 
   /**
-   * True when the analysis's persisted payload already carries at least
-   * `minCount` comments (registry comments.system.minUsableComments, default
-   * 10 — deliberately stricter than aux-status-from-report.ts's hasComments,
-   * which only needs a non-empty array). Backs enqueueSystemCommentSampleRun's
-   * skip gate: below minCount the system-funded run is still enqueued.
-   */
-  static async analysisHasUsableComments(analysisId: string, minCount: number): Promise<boolean> {
-    const service = getSupabaseServiceClient();
-    const { data, error } = await service
-      .from('analyses')
-      .select('analysis_payload')
-      .eq('id', analysisId)
-      .maybeSingle();
-    if (error) throw error;
-    const priorComments = (data?.analysis_payload as { comments?: unknown } | null)?.comments;
-    return Array.isArray(priorComments) && priorComments.length >= minCount;
-  }
-
-  /**
    * Insert a new pending comment_sample_runs row for a system-triggered
    * Tier 3 backfill. Idempotent under concurrency via the partial unique
    * index uq_comment_sample_runs_system_per_analysis (one mode='cochran'

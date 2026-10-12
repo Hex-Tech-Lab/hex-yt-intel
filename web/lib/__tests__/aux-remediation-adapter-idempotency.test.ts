@@ -3,7 +3,7 @@
  * (#416 follow-up). The service-level behavior (skip checks, race handling)
  * is covered in aux-remediation-enqueue-orphan.test.ts; this file pins the
  * adapter's DB-shaped contracts: 23505 → alreadyQueued, hasSystemSampleRun,
- * analysisHasUsableComments (absent/null/[] and fewer than minCount are NOT usable).
+ * failStaleSystemSampleRuns.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -121,19 +121,6 @@ describe('hasSystemSampleRun', () => {
   it('propagates probe errors (caller decides skip-vs-fail, never silently proceeds)', async () => {
     probeResult.error = { message: 'db down' };
     await expect(SupabaseAuxRemediationAdapter.hasSystemSampleRun('an-1')).rejects.toThrow('db down');
-  });
-});
-
-describe('analysisHasUsableComments', () => {
-  it.each([
-    ['absent', undefined, false],
-    ['null', null, false],
-    ['empty array', [], false],
-    ['9 comments (below the threshold)', Array.from({ length: 9 }, (_unused, index) => ({ id: `c${index}` })), false],
-    ['exactly 10 comments', Array.from({ length: 10 }, (_unused, index) => ({ id: `c${index}` })), true],
-  ])('payload with %s comments → %j', async (_label, comments, expected) => {
-    payloadResult.data = { analysis_payload: { comments } };
-    expect(await SupabaseAuxRemediationAdapter.analysisHasUsableComments('an-1', 10)).toBe(expected);
   });
 });
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Tooltip } from '@astryxdesign/core';
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 import { YouTubePlayerAdapter } from '@/lib/adapters/YouTubePlayerAdapter';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getSpeakingSeconds, HIGHLIGHTS_REGISTRY_FALLBACK } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
@@ -134,10 +134,7 @@ export function PublicHighlightsReel({
 
   const activeHighlight = playingIdx !== null ? highlights[playingIdx] : null;
   const nextHighlight = playingIdx !== null ? highlights[playingIdx + 1] : null;
-  const activeDuration = activeHighlight
-    ? getHighlightPlaybackDuration(activeHighlight, segmentDurationSeconds, minDur, maxDur) + contextLeadSeconds
-    : segmentDurationSeconds + contextLeadSeconds;
-  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeDuration, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond, activeHighlight ? Math.min(contextLeadSeconds, activeHighlight.start) : 0);
+  const { revealedText, usingVerbatim } = useHighlightTicker(playingIdx, activeHighlight?.label ?? null, activeHighlight ? getSpeakingSeconds(activeHighlight, minDur, maxDur) : 0, elapsedInSegmentSeconds, activeHighlight?.verbatimExcerpt ?? null, tickerWordsPerSecond, activeHighlight ? Math.min(contextLeadSeconds, activeHighlight.start) : 0);
 
   if (highlights.length === 0) return null;
 
