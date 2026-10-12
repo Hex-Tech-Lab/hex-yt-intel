@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_931c5967b1adf1 1595
+web/app/globals.css
+  s_291078cde7ba1a::t_08976ee2538f51 464-478,865-869,871,879
+web/components/templates/console/ChatDock.tsx
+  s_291078cde7ba1a::t_0d6d48a84c7bc4 129,688,719,802
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "158319f5e113e8fd3a96c98bc8eefebfb871af0d",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
