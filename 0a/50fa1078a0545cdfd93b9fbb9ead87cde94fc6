@@ -1,0 +1,21 @@
+web/lib/utils/__tests__/separate-segments.test.ts
+  s_291078cde7ba1a::t_9002e13f251b3a 26-33
+web/lib/utils/highlights-settings.ts
+  s_291078cde7ba1a::t_62b979b9a72916 304-306,316-320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a50fa1078a0545cdfd93b9fbb9ead87cde94fc6",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
