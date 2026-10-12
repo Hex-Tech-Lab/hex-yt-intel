@@ -79,7 +79,29 @@ export function useHighlightTicker(
   // counts from the lead-in, but the highlight's words only begin after it,
   // so the reveal clock starts at leadInSeconds, not 0.
   leadInSeconds = 0,
+  // Real segment timings for the highlight (T6, speech-timed karaoke). When
+  // present and non-empty, each word is revealed at its own start time, held
+  // through silences. When absent, the pace fallback below is used unchanged.
+  timedSegments?: ReadonlyArray<TimedSegment> | null,
 ): { revealedText: string; totalWords: number; usingVerbatim: boolean } {
+  if (timedSegments && timedSegments.length > 0 && playingIdx !== null && elapsedSeconds !== null) {
+    const timed = timedWordStarts(timedSegments, speakingSeconds);
+    if (timed.words.length > 0) {
+      // Media-time clock: elapsed counts from the lead-in, the words count from
+      // the highlight's start, so subtract the lead-in the same way as below.
+      const speechSeconds = elapsedSeconds - leadInSeconds;
+      // At least the first word, as the pace path does, so an empty reveal never
+      // makes a consumer fall back to showing the full label.
+      let revealed = 1;
+      while (revealed < timed.starts.length && (timed.starts[revealed] ?? Infinity) <= speechSeconds) revealed += 1;
+      const shown = timed.words.slice(0, revealed).join(' ');
+      return {
+        revealedText: shown + (revealed < timed.words.length ? '...' : ''),
+        totalWords: timed.words.length,
+        usingVerbatim: true,
+      };
+    }
+  }
   // Trim before checking truthiness: a whitespace-only verbatimExcerpt (a
   // real DB row shape a corrupt/poorly-normalized transcript can produce)
   // is truthy under a bare `Boolean()` check but yields zero real words,
@@ -130,6 +152,40 @@ export function useHighlightTicker(
   const revealedText =
     words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');
   return { revealedText, totalWords, usingVerbatim };
+}
+
+/** A caption/transcript segment with its real start, in seconds from the
+ *  highlight's own start (the same clock as `elapsedSeconds - leadInSeconds`). */
+export interface TimedSegment {
+  start: number;
+  text: string;
+}
+
+/**
+ * Word-level start times derived from real segment timings. Each segment's
+ * words are spread evenly across that segment's own span (its start to the
+ * next segment's start, or to `speakingSeconds` for the last one). Words are
+ * interpolated only INSIDE a real segment, never across a gap, so a silence
+ * between segments yields no words to reveal and the reveal holds.
+ */
+export function timedWordStarts(
+  segments: ReadonlyArray<TimedSegment>,
+  speakingSeconds: number,
+): { words: string[]; starts: number[] } {
+  const words: string[] = [];
+  const starts: number[] = [];
+  segments.forEach((segment, i) => {
+    const segWords = segment.text.split(/\s+/).filter(Boolean);
+    if (segWords.length === 0) return;
+    const segStart = segment.start;
+    const nextStart = segments[i + 1]?.start ?? speakingSeconds;
+    const span = Math.max(0, nextStart - segStart);
+    segWords.forEach((word, wordIndex) => {
+      words.push(word);
+      starts.push(segStart + (wordIndex * span) / segWords.length);
+    });
+  });
+  return { words, starts };
 }
 
 /** Static "up next" preview -- first 5-10 words of the upcoming segment's
