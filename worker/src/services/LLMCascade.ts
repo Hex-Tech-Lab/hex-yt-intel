@@ -680,7 +680,7 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
-          'X-Title': 'vIntel - Synthesis Stream',
+          'X-Title': 'vIntel - Synthesis (Non-Stream)',
         },
         body: JSON.stringify({
           model: requestModel,

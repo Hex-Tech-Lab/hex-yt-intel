@@ -13,7 +13,7 @@ import * as Sentry from '@sentry/cloudflare';
 const JEV_URL = 'https://openrouter.ai/api/alpha/decisions';
 const JEV_MODEL = '~typesafe/jev-latest';
 const HTTP_REFERER = 'https://getvintel.com';
-const X_TITLE = 'hex-yt-intel/jev-text-heuristics';
+const X_TITLE = 'vIntel - Jev Text Heuristics';
 /** Transcript block size sent per Decisions call. */
 export const JEV_TEXT_CHUNK_CHARS = 8000;
 const SCORE_LABELS = ['None', 'Low', 'Moderate', 'High'] as const;

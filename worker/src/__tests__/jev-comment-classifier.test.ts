@@ -60,7 +60,7 @@ describe('JevCommentClassifier', () => {
     expect(url).toBe('https://openrouter.ai/api/alpha/decisions');
     const headers = init.headers as Record<string, string>;
     expect(headers['HTTP-Referer']).toBe('https://getvintel.com');
-    expect(headers['X-Title']).toBe('hex-yt-intel/jev-comments');
+    expect(headers['X-Title']).toBe('vIntel - Jev Comment Classifier');
     const body = JSON.parse(init.body as string);
     expect(body.model).toBe('~typesafe/jev-latest');
     expect(body.state.comment).toBe('great video!');

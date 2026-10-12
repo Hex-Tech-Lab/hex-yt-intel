@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const useCase = new ExtractHighlightsUseCase(
       new SupabasePersistenceAdapter(),
-      new OpenRouterCompletionAdapter(),
+      new OpenRouterCompletionAdapter('vIntel - Highlights Extraction'),
       new SupabaseTemporalGraphAdapter()
     );
 

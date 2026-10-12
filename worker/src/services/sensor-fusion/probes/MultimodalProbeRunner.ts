@@ -153,7 +153,7 @@ export class MultimodalProbeRunner implements MultimodalProbePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://hex-yt-intel.app',
-          'X-Title': 'hex-yt-intel-probe-runner',
+          'X-Title': 'vIntel - Multimodal Probe Runner',
         },
         body: JSON.stringify({
           model: this.model,
