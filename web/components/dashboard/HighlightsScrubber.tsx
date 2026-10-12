@@ -14,6 +14,44 @@ import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
 const COLLAPSED_KEY = 'hex:highlights:v1:collapsed';
 
+/**
+ * Header summary line. Dynamic numerals (count, duration, percentage) are
+ * rendered in <strong> so the key figures read first; the unit travels with
+ * its numeral inside the same <strong>.
+ */
+export function ReelStatsLine({
+  count,
+  totalSeconds,
+  videoDurationSeconds,
+  compressionPct,
+}: {
+  count: number;
+  totalSeconds: number;
+  videoDurationSeconds: number | null;
+  compressionPct: number | null;
+}) {
+  return (
+    <>
+      <strong className="font-semibold text-[var(--ink)]">{count} key points</strong>
+      {' · '}
+      <strong className="font-semibold text-[var(--ink)]">{fmtHighlightsDuration(totalSeconds)}</strong>
+      {videoDurationSeconds ? (
+        <>
+          {' of '}
+          <strong className="font-semibold text-[var(--ink)]">{fmtHighlightsDuration(videoDurationSeconds)}</strong>
+        </>
+      ) : null}
+      {compressionPct !== null ? (
+        <>
+          {' ('}
+          <strong className="font-semibold text-[var(--ink)]">{compressionPct}%</strong>
+          {')'}
+        </>
+      ) : null}
+    </>
+  );
+}
+
 interface Highlight {
   idx: number;
   start: number;
@@ -402,9 +440,12 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           Highlights Reel
         </button>
         <span className="flex items-center gap-2 text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
-          {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
-          {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
-          {compressionPct !== null ? ` (${compressionPct}%)` : ''}
+          <ReelStatsLine
+            count={data.highlights.length}
+            totalSeconds={totalHighlightsSeconds}
+            videoDurationSeconds={videoDurationSeconds}
+            compressionPct={compressionPct}
+          />
           {collapsed ? playButton : null}
         </span>
       </div>
@@ -457,7 +498,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
         const activeSegment = playingIdx !== null ? segments[playingIdx] : null;
         return (
           <div
-            className="mt-2.5 px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800/80 h-14 flex items-center justify-between gap-2 overflow-hidden transition-all duration-200"
+            className="px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800/80 h-14 flex items-center justify-between gap-2 overflow-hidden transition-all duration-200 motion-reduce:transition-none"
             data-testid="highlight-summary-container"
           >
             {activeSegment ? (
@@ -500,7 +541,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           prefers-reduced-motion by construction (no animation at all). */}
       {/* Mobile: ticker takes a full-width row, speed + nav sit on the row below.
           From sm up the three share one row (ticker flexes, controls keep their width). */}
-      <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
         <div
           className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
@@ -567,7 +608,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           onClick={() => setCaptionLang((lang) => (lang === 'orig' ? 'trans' : 'orig'))}
           aria-pressed={captionLang === 'trans'}
           aria-label="Toggle caption language: original or translation"
-          className="h-8 shrink-0 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-2 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+          className="h-8 shrink-0 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-2 border border-[var(--line)] hover:border-[var(--accent-a70)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
         >
           {captionLang === 'trans' ? 'TRANS.' : 'ORIG.'}
         </button>
@@ -585,7 +626,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
             onClick={cycleSpeed}
             title="Cycle playback speed"
             aria-label={`Playback speed: ${speed}x. Click to change.`}
-            className="h-5 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+            className="h-8 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-1.5 border border-[var(--line)] hover:border-[var(--accent-a70)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             {speed}x
           </button>
