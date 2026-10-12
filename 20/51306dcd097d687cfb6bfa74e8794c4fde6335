@@ -1,0 +1,21 @@
+web/lib/__tests__/chat-writing-route.test.ts
+  s_291078cde7ba1a::t_bdd597f123ba01 9-12,46
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_291078cde7ba1a::t_f769d9ee16312b 526
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2051306dcd097d687cfb6bfa74e8794c4fde6335",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
