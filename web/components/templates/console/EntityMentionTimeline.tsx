@@ -46,7 +46,7 @@ export function EntityMentionTimeline({
 
   const issueSeek = useCallback((seconds: number) => {
     setPendingSeekSeconds(seconds);
-    useVideoStore.getState().setSeekTo(seconds);
+    useVideoStore.getState().seekAndReveal(seconds);
   }, []);
 
   // Clear the pending-seek guard once playback has genuinely caught up to
