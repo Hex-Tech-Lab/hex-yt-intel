@@ -1,0 +1,21 @@
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_65f73f1cfdf1d4 1023-1106
+worker/src/__tests__/chat-payload-signature.test.ts
+  s_291078cde7ba1a::t_a2d4f4a935b4e1 31,33,39-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c8dcf4dec85bf2e8479fc225e9c4f302250e3d3c",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
