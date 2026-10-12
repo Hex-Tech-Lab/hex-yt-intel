@@ -16,7 +16,7 @@ import {
   PartialAnalysisWarning,
   type PartialAnalysisInfo,
 } from "@/components/dashboard/PartialAnalysisWarning";
-import { CommentInsightsCard } from "@/components/templates/console/CommentInsightsCard";
+import { CommentInsightsCard, CommentInsightsUnavailable } from "@/components/templates/console/CommentInsightsCard";
 import { useHighlightsStatus } from "@/lib/hooks/useHighlightsStatus";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { Dimension } from "@/components/templates/console/DimensionAccordion";
@@ -196,6 +196,9 @@ export function ProDashboardView({
               )}
               {commentInsights.state === 'ready' && commentInsights.insights && (
                 <CommentInsightsCard insights={commentInsights.insights} />
+              )}
+              {status === 'complete' && commentInsights.state !== 'ready' && (
+                <CommentInsightsUnavailable state={commentInsights.state} />
               )}
               <DimensionAccordion
                 dimensions={dimensions}
