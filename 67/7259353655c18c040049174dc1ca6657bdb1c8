@@ -1,0 +1,31 @@
+docs/ops/hmac-rotation.md
+  s_cff089ddf3f2c0::t_9b25523647d337 1-40
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_63112ed19c1444 1590-1593
+docs/agent-prompts/2026-10-12-oc-hmac.md
+  s_291078cde7ba1a::t_4ee5f941574d20 1-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "677259353655c18c040049174dc1ca6657bdb1c8",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_cff089ddf3f2c0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eceee7434ffeNLSytetCGDqg4M",
+        "model": "anthropic/claude-haiku-5.5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
