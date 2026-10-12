@@ -67,7 +67,7 @@ describe('streamChatCascade fallback visibility', () => {
     expect(result.partial).toBe(true);
   });
 
-  it('does not label a non-deadline AbortError as a timeout', async () => {
+  it('labels a non-deadline AbortError as cancelled, never as a timeout', async () => {
     const enc = new TextEncoder();
     let pulls = 0;
     const broken = new ReadableStream<Uint8Array>({
@@ -80,7 +80,8 @@ describe('streamChatCascade fallback visibility', () => {
     await streamChatCascade('k', 'g', [], () => {}, undefined, [
       { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
     ]);
-    expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ tags: { reason: 'error' } });
+    expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ tags: { reason: 'cancelled' } });
+    expect(captureMessage.mock.calls[0]?.[1]?.tags?.reason).not.toBe('timeout');
   });
 
   it('labels a TimeoutError with custom timeoutMs in log/sentry', async () => {
