@@ -4,9 +4,9 @@ import { stepFence, type OpenFence } from './markdown-table-width';
 // e.g. "8.1 Primary Knowledge Graph Nodes: 15 nodes are..." (optionally bolded).
 // The title must start with a capital letter and stay short, so prose such as
 // "3.5 million users: ..." is not mistaken for a section.
-// A bolded "**System: RTK Installation**" label on its own line (Dim 7 lists
+// A bolded "**System: RTK Installation**" (or "**System 4: ...**") label on its own line (Dim 7 lists
 // several systems in a row and they ran together as one block, owner report).
-const SYSTEM_LINE = /^\*\*System:\s*(.+?)\*\*:?$/u;
+const SYSTEM_LINE = /^\*\*System(?:\s+\d+)?\s*:\s*(.+?)\*\*:?$/u;
 
 // A whole-line bold label without a colon: "**7.1 Implementation Systems**".
 const BOLD_SECTION_LINE = /^\*\*(\d{1,2}\.\d{1,2})\s+([A-Z][^*\n]{1,79}?)\*\*$/u;
@@ -19,7 +19,9 @@ const SECTION_LINE = /^(?:\*\*)?(\d{1,2}\.\d{1,2})\s+([A-Z][^:\n*]{1,79}?)(?:\*\
  * plain paragraph text with no visual hierarchy (owner report T13). Each
  * such line becomes "#### 3.1 Executive Overview" followed by the body as
  * its own paragraph. A "**System: Name**" line becomes a numbered
- * "#### System N: Name" heading, counted from 1 within each section.
+ * "##### System N: Name" heading (its own level, styled apart from the
+ * N.N section headings), renumbered from 1 within each section even when
+ * the model numbered them itself.
  * Fenced code blocks (``` or ~~~) and table rows are left
  * untouched.
  */
@@ -38,7 +40,7 @@ export function promoteSectionHeadings(markdown: string): string {
       const system = trimmed.match(SYSTEM_LINE);
       if (system) {
         systemCount += 1;
-        return `#### System ${systemCount}: ${(system[1] ?? '').trim()}`;
+        return `##### System ${systemCount}: ${(system[1] ?? '').trim()}`;
       }
       const bold = trimmed.match(BOLD_SECTION_LINE);
       if (bold) {

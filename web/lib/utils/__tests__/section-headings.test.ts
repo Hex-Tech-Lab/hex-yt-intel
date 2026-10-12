@@ -51,11 +51,11 @@ describe('promoteSectionHeadings – numbered systems (Dim 7)', () => {
     ].join('\n');
     expect(promoteSectionHeadings(input)).toBe([
       '#### 7.1 Implementation Systems',
-      '#### System 1: RTK Installation & Activation',
+      '##### System 1: RTK Installation & Activation',
       '- step',
-      '#### System 2: Headroom Proxy Wrapping',
+      '##### System 2: Headroom Proxy Wrapping',
       '#### 7.2 Execution Sequencing\n\norder',
-      '#### System 1: Later',
+      '##### System 1: Later',
     ].join('\n'));
   });
 });
@@ -64,5 +64,13 @@ describe('promoteSectionHeadings – indented code', () => {
   it('leaves a four-space-indented line alone', () => {
     const input = '    **System: npm install**';
     expect(promoteSectionHeadings(input)).toBe(input);
+  });
+});
+
+describe('promoteSectionHeadings – model-numbered systems', () => {
+  it('renumbers "**System 4: Name**" lines in order', () => {
+    expect(promoteSectionHeadings('**System 4: Google Workspace CLI setup**\n**System 2: Other**')).toBe(
+      '##### System 1: Google Workspace CLI setup\n##### System 2: Other',
+    );
   });
 });
