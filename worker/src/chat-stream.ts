@@ -100,7 +100,7 @@ export async function streamChatCascade(
   models?: string[],
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
   userId?: string,
-): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[] }> {
+): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[]; partial: boolean }> {
   const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
@@ -217,7 +217,7 @@ export async function streamChatCascade(
       if (full) {
         // skipcq: JS-0827
         console.log(`[chat-cascade] Model ${translatedModel} succeeded via provider=${servedByProvider || 'unknown'} with ${full.length} chars`);
-        return { content: full, servedByModel: translatedModel, servedByProvider, attempts };
+        return { content: full, servedByModel: translatedModel, servedByProvider, attempts, partial: false };
       }
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} produced empty response`);
@@ -225,17 +225,26 @@ export async function streamChatCascade(
     } catch (e) {
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
-      const isTimeout = e instanceof DOMException && e.name === 'AbortError';
+      // AbortSignal.timeout() rejects with TimeoutError, not AbortError.
+      const isTimeout = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
       // Previously console-only -- tangent hunt after LLMCascade.ts's
       // abort/timeout-suppression incident (see its timeoutMs doc comment).
       // captureMessage matches LLMCascade's own fallback-capture convention.
-      reportFallback(isTimeout ? 'timeout' : 'error', { msg, midStream: full.length > 0 });
+      const reason = isTimeout ? 'timeout' : 'error';
       // The user already saw part of this answer; starting the next tier would
       // append a second answer to it while only the second is persisted. Keep
-      // the partial text instead.
-      if (full) return { content: full, servedByModel: translatedModel, servedByProvider, attempts };
+      // the partial text instead and report it as a cut-off reply.
+      if (full) {
+        Sentry.captureMessage(`chat-cascade answer cut off: ${translatedModel}`, {
+          level: 'error',
+          tags: { operation: 'chat-cascade-partial', model: translatedModel, reason },
+          extra: { msg, attempts, chars: full.length },
+        });
+        return { content: full, servedByModel: translatedModel, servedByProvider, attempts, partial: true };
+      }
+      reportFallback(reason, { msg });
     }
   }
   // skipcq: JS-0827
@@ -248,7 +257,7 @@ export async function streamChatCascade(
     tags: { operation: 'chat-cascade-exhausted' },
     extra: { attempts, userId },
   });
-  return { content: "", servedByModel: null, servedByProvider: null, attempts };
+  return { content: "", servedByModel: null, servedByProvider: null, attempts, partial: false };
 }
 
 export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
@@ -404,6 +413,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       let servedByModel: string | null = null;
       let servedByProvider: string | null = null;
       let cascadeAttempts: string[] = [];
+      let partial = false;
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
@@ -412,6 +422,12 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
         cascadeAttempts = result.attempts;
+        partial = result.partial;
+        if (partial) {
+          const notice = "\n\n_The response was cut off. Please try again._";
+          full += notice;
+          send({ type: "delta", content: notice, requestId: req.requestId });
+        }
         if (!full) {
           full = "Sorry, I couldn't generate a response. All fallback models failed to respond. Please check your internet connection and try again.";
           send({ type: "delta", content: full, requestId: req.requestId });
@@ -433,6 +449,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         servedByModel,
         servedByProvider,
         attempts: cascadeAttempts,
+        partial,
       });
 
       // STAGE 3: Persist chat content server-to-server

@@ -20,6 +20,7 @@ describe('streamChatCascade fallback visibility', () => {
       { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
     ]);
     expect(result.content).toBe('hi');
+    expect(result.partial).toBe(false);
     expect(captureMessage).toHaveBeenCalledTimes(1);
     expect(captureMessage.mock.calls[0]?.[1]?.tags).toMatchObject({ reason: 'http_429', provider: 'cerebras' });
   });
@@ -46,6 +47,7 @@ describe('streamChatCascade fallback visibility', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(deltas.join('')).toBe('part');
     expect(result.content).toBe('part');
-    expect(captureMessage.mock.calls[0]?.[1]?.extra).toMatchObject({ midStream: true });
+    expect(result.partial).toBe(true);
+    expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ level: 'error', tags: { operation: 'chat-cascade-partial', reason: 'error' } });
   });
 });
