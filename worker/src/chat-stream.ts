@@ -125,6 +125,16 @@ export async function streamChatCascade(
     let servedByProvider: string | null = null;
     const translatedModel = translateModelId(model);
     attempts.push(translatedModel);
+    // T22: every path that falls through to the next tier is reported, not just
+    // thrown errors -- a 429/empty reply used to retry the same input on the next
+    // provider (seen as Cerebras+Groq pairs in OpenRouter) with no Sentry trace.
+    const reportFallback = (reason: string, extra: Record<string, unknown> = {}) => {
+      Sentry.captureMessage(`chat-cascade model failed: ${translatedModel}`, {
+        level: 'warning',
+        tags: { operation: 'chat-cascade-fallback', model: translatedModel, provider: providerOrder?.join(',') ?? 'default', reason, isTimeout: String(reason === 'timeout') },
+        extra: { ...extra, attempts },
+      });
+    };
     try {
       // skipcq: JS-0827
       console.log(`[chat-cascade] Attempting model=${translatedModel} with providers=${providerOrder?.join(',') || 'default'}`);
@@ -155,11 +165,13 @@ export async function streamChatCascade(
       if (!res.ok) {
         // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned ${res.status} ${res.statusText}`);
+        reportFallback(`http_${res.status}`);
         continue; // try next model
       }
       if (!res.body) {
         // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned empty body`);
+        reportFallback('empty_body');
         continue;
       }
       const reader = res.body.getReader();
@@ -203,6 +215,7 @@ export async function streamChatCascade(
       }
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} produced empty response`);
+      reportFallback('empty_response');
     } catch (e) {
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
@@ -212,11 +225,7 @@ export async function streamChatCascade(
       // Previously console-only -- tangent hunt after LLMCascade.ts's
       // abort/timeout-suppression incident (see its timeoutMs doc comment).
       // captureMessage matches LLMCascade's own fallback-capture convention.
-      Sentry.captureMessage(`chat-cascade model failed: ${translatedModel}`, {
-        level: 'warning',
-        tags: { operation: 'chat-cascade-fallback', model: translatedModel, isTimeout: String(isTimeout) },
-        extra: { msg, attempts },
-      });
+      reportFallback(isTimeout ? 'timeout' : 'error', { msg });
     }
   }
   // skipcq: JS-0827
