@@ -1,0 +1,19 @@
+worker/src/__tests__/chat-stream-abort-persistence.test.ts
+  s_291078cde7ba1a::t_d22ee30d8f6b7b 121-122,169-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "447cbd97c64ec51f6c43a219a14e0f5f4391c279",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
