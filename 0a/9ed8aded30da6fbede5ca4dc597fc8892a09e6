@@ -1,0 +1,21 @@
+worker/src/__tests__/chat-cascade-fallback-capture.test.ts
+  s_291078cde7ba1a::t_1c755335c27be4 23,50-51
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_6fed449f8cb142 103,220,228-229,235,238-247,260,416,425-430,452
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a9ed8aded30da6fbede5ca4dc597fc8892a09e6",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
