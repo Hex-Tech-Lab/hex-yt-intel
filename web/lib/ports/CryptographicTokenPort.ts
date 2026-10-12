@@ -12,7 +12,7 @@ export interface CryptographicTokenPort {
     userId: string;
     models: string[];
     /** chatPayloadDigest of the relayed payload; binds grounding/history/tier/cascade into the signature. */
-    payloadDigest?: string;
+    payloadDigest: string;
   }): Promise<StreamToken>;
 
   signCommentsTier3Token(params: {
