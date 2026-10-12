@@ -23,4 +23,12 @@ describe('separateSegments (T8: clips must not overlap or repeat)', () => {
     expect(out[0]).toEqual({ start: 5, end: 9 });
     expect(out[1]!.end).toBeGreaterThanOrEqual(out[1]!.start);
   });
+  });
+
+  it('gives a wholly contained segment a token length instead of a zero (fallback) end', () => {
+    const out = separateSegments([{ start: 10, end: 30 }, { start: 12, end: 20 }]);
+    expect(out[1]!.start).toBe(30);
+    expect(out[1]!.end).toBeGreaterThan(30);
+    expect(out[1]!.end).toBeLessThan(31);
+  });
 });
