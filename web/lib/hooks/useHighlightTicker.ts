@@ -118,7 +118,10 @@ export function useHighlightTicker(
   // stays the fallback for paraphrased labels (the source of the original
   // "too fast" bug-2 report) and for a degenerate speaking window.
   const pace = revealPace(usingVerbatim, totalWords, speakingSeconds, wordsPerSecond);
-  const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
+  // leadInSeconds may be negative: a legacy overlapping clip is shifted to
+  // open at the previous clip's end, AFTER its own words began (T8), so the
+  // reveal starts that far into the excerpt instead of at word one.
+  const speechSeconds = Math.max(0, elapsedSeconds - leadInSeconds);
   const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * pace));
   const baseCount = Math.floor(revealedFloat);
   const fraction = revealedFloat - baseCount;
