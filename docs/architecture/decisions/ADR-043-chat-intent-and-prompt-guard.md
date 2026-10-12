@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-10-13
-**Context:** Two chat-path gaps surfaced in the 2026-10-13 UAT wave (brief T3, `docs/agent-prompts/2026-10-13-wave-uat2-briefs.md`):
+**Context:** Two chat-path gaps surfaced in the 2026-10-13 UAT wave (item T3):
 
 1. **Misrouted chat turns.** Follow-ups such as "make it more elaborate" fell from Haiku 5.5 to OpenRouter OSS-120B (about 2.5x cost on the same turn). Blog-style requests showed the "Expand to full comments" chip. Blog output contained timestamps the user did not ask for. The cascade chooses a model and a response shape without a dedicated intent signal, so the same chat surface serves writing, comment lookup, citation lookup, and metadata questions through one path.
 2. **No prompt-security screen before the chat model.** Chat input (user text, and transcript text folded into context) reaches the generation model unscreened. Prompt-injection and jailbreak attempts from pasted transcript content or user messages are not classified before generation.
@@ -54,6 +54,14 @@ Implications:
 - Adds one Jev call per chat turn (about $0.00001) and one or more Prompt Guard calls per turn. Latency added on the critical path must be measured before default-on.
 - The intent label set becomes a contract shared by the cascade, the chip logic, and the response contract. Changes to the set need a registry and test update in the same PR.
 - The Groq rate limits above are base Developer-plan values. Real headroom must be confirmed on the account Limits page before `block` mode.
+- Both Prompt Guard models (22M and 86M) are marked "Preview" on Groq, with no SLA. Availability and model behaviour can change without notice, which is one reason rollout starts in `flag` mode and why fail-open is required.
+
+### Rollout gates (all required before `block` mode)
+
+1. **Latency:** screening adds no more than 10% to baseline p95 time-to-first-token, measured on production-like chat traffic with and without screening.
+2. **False positives:** review a sample of 1,000 benign chat turns. The false-positive rate must be at most 0.1% before `block` is enabled.
+3. **Attack-score threshold:** a maximum attack-score threshold is defined and stored in the Settings Registry (`chat.promptGuard.maxAttackScore`). Value: `<TO FILL: owner>`.
+4. **Risk acceptance:** the Security Owner and the Chat Product Owner sign off, acknowledging that transcript context stays unscreened under this ADR. Security Owner: `<TO FILL: owner>`. Chat Product Owner: `<TO FILL: owner>`. Date: `<TO FILL: owner>`.
 
 ### Open questions
 
