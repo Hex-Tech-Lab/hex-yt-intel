@@ -44,6 +44,15 @@ export interface SegmentPlaybackPrimitives {
 export interface Segment {
   start: number;
   end: number;
+  /** Earliest second the lead-in may reach back to (the previous segment's
+   *  end), so a clip never replays the tail of the one before it (T8). */
+  leadFloor?: number;
+}
+
+/** Where playback opens for a segment: `contextLeadSeconds` before its start,
+ *  never before 0 or its `leadFloor`. */
+export function leadInFor(segment: { start: number; leadFloor?: number }, contextLeadSeconds: number): number {
+  return Math.max(0, segment.leadFloor ?? 0, segment.start - contextLeadSeconds);
 }
 
 export interface UseSegmentPlaybackOptions {
@@ -135,11 +144,11 @@ export interface UseSegmentPlaybackResult {
 }
 
 function segmentWindow(
-  segment: { start: number; end: number },
+  segment: { start: number; end: number; leadFloor?: number },
   contextLeadSeconds: number,
   segmentDurationSeconds: number,
 ): { leadIn: number; end: number } {
-  const leadIn = Math.max(0, segment.start - contextLeadSeconds);
+  const leadIn = leadInFor(segment, contextLeadSeconds);
   const end = Number.isFinite(segment.end) && segment.end > segment.start ? segment.end : leadIn + segmentDurationSeconds;
   return { leadIn, end };
 }
@@ -160,7 +169,7 @@ export type TimedOutSeekRecovery =
 export function resolveTimedOutSeek(input: {
   currentTime: number;
   selectedIndex: number;
-  segments: ReadonlyArray<{ start: number; end: number }>;
+  segments: ReadonlyArray<{ start: number; end: number; leadFloor?: number }>;
   contextLeadSeconds: number;
   segmentDurationSeconds: number;
   retriesSoFar: number;
@@ -275,7 +284,7 @@ export function useSegmentPlayback({
     pausedRef.current = false;
     setIsPaused(false);
     const segment = currentSegments[index]!;
-    const leadIn = Math.max(0, segment.start - contextLeadRef.current);
+    const leadIn = leadInFor(segment, contextLeadRef.current);
     pendingSeekTargetRef.current = leadIn;
     pendingSeekIssuedAtRef.current = Date.now();
     seekRetryCountRef.current = 0;
@@ -328,7 +337,7 @@ export function useSegmentPlayback({
       if (idx === null || currentTime === null) return;
       const segment = segmentsRef.current[idx];
       if (!segment) return;
-      const leadIn = Math.max(0, segment.start - contextLeadRef.current);
+      const leadIn = leadInFor(segment, contextLeadRef.current);
 
       const pendingTarget = pendingSeekTargetRef.current;
       if (pendingTarget !== null) {

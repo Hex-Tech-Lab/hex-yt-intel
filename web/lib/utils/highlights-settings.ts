@@ -283,3 +283,23 @@ export function calculateEffectiveHighlightBudget(
 }
 
 export const calculateHighlightBudgetSeconds = calculateAttentionBoundedBudget;
+
+/**
+ * Makes consecutive playback segments disjoint (owner report T8: clips repeated
+ * the previous clip's last words). A segment starting before the previous one
+ * ended is moved to start there, and every segment's lead-in is floored at the
+ * previous segment's end, so no clip replays another's audio.
+ */
+export function separateSegments<T extends { start: number; end: number }>(segments: readonly T[]): Array<T & { leadFloor?: number }> {
+  const out: Array<T & { leadFloor?: number }> = [];
+  for (const segment of segments) {
+    const previous = out[out.length - 1];
+    if (!previous) {
+      out.push({ ...segment });
+      continue;
+    }
+    const start = Math.max(segment.start, previous.end);
+    out.push({ ...segment, start, end: Math.max(segment.end, start), leadFloor: previous.end });
+  }
+  return out;
+}

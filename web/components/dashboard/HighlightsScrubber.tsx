@@ -4,12 +4,12 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Tooltip } from '@astryxdesign/core';
 import { GlowBorder, Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, separateSegments, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
-import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
+import { leadInFor, useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
 interface Highlight {
@@ -104,11 +104,11 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
   // (could be 120s+), which would produce multi-minute playback segments without this.
   const segments = useMemo(
-    () => (data?.highlights ?? []).map((highlight, idx) => {
+    () => separateSegments((data?.highlights ?? []).map((highlight, idx) => {
       const highlights = data!.highlights;
       const nextStart = idx < highlights.length - 1 ? highlights[idx + 1]?.start : undefined;
       return { ...highlight, end: getClampedSegmentEnd(highlight, segDurFallback, minDur, maxDur, nextStart) };
-    }),
+    })),
     [data, segDurFallback, minDur, maxDur],
   );
 
@@ -305,7 +305,8 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     activeHighlight?.verbatimExcerpt ?? null,
     data?.tickerWordsPerSecond,
     // Playback opens at max(0, start - contextLead), so the real lead-in is clamped near 0s.
-    activeHighlight ? Math.min(data?.contextLeadSeconds ?? 0, activeHighlight.start) : 0
+    // ...and never before the previous clip's end (leadFloor, T8).
+    playingIdx !== null && segments[playingIdx] ? segments[playingIdx].start - leadInFor(segments[playingIdx], data?.contextLeadSeconds ?? 0) : 0
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
