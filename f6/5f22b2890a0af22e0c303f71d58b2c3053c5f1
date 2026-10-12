@@ -1,0 +1,23 @@
+web/lib/__tests__/snap-highlight-ends.test.ts
+  s_291078cde7ba1a::t_3422d03cdf15c6 40-52
+web/lib/prompts/highlights-extraction.ts
+  s_291078cde7ba1a::t_2764771e105baf 214-219,233-237,243,246-247
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_291078cde7ba1a::t_74bf969b264b3e 259-260
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f65f22b2890a0af22e0c303f71d58b2c3053c5f1",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
