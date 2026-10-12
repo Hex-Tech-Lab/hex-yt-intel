@@ -93,8 +93,18 @@ async function readSampleRunStatus(
   }
 }
 
+/** Redelivery guard: a run that is no longer pending is acked with zero paid work. */
+function logSkippedRun(priorStatus: SampleRunStatus, sampleRunId: string, videoId: string): void {
+  // skipcq: JS-0827
+  console.info(`[comments-tier3-consumer] redelivery guard: run already ${priorStatus}; skipping paid work`, { sampleRunId, videoId });
+  if (priorStatus === "failed") {
+    Sentry.addBreadcrumb({ category: "comments-tier3", level: "warning", message: "message for a run already marked failed; acked without work", data: { sampleRunId, videoId } });
+  }
+}
+
 /** Cancel a response body nobody read, so the connection is released on every exit path (ARTAS V20). */
 async function releaseUnreadBody(res: Response | undefined): Promise<void> {
+  // skipcq: JS-0827
   if (res && !res.bodyUsed) await res.body?.cancel().catch((err: unknown) => console.debug('[comments-tier3-consumer] body cancel failed', { err: String(err) }));
 }
 
@@ -388,12 +398,8 @@ export async function handleCommentsTier3Message(
   // 'failed' too: Vercel marks a run failed when its enqueue fetch errors,
   // but a timeout can land after the queue accepted the message. That run's
   // finalize-retry inserts a fresh row, so processing this one would double-spend.
-  if (priorStatus === "sampling" || priorStatus === "completed" || priorStatus === "failed") {
-    // skipcq: JS-0827
-    console.info(`[comments-tier3-consumer] redelivery guard: run already ${priorStatus}; skipping paid work`, { sampleRunId, videoId });
-    if (priorStatus === "failed") {
-      Sentry.addBreadcrumb({ category: "comments-tier3", level: "warning", message: "message for a run already marked failed; acked without work", data: { sampleRunId, videoId } });
-    }
+  if (priorStatus !== "pending") {
+    logSkippedRun(priorStatus, sampleRunId, videoId);
     return;
   }
 
