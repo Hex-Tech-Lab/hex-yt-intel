@@ -1,0 +1,21 @@
+web/lib/__tests__/pr442-group4-fixes.test.ts
+  s_291078cde7ba1a::t_dbaf827c46cd76 80-97
+web/lib/services/CombinerPass.ts
+  s_291078cde7ba1a::t_951320ab3f784e 42-43,198-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd92ed92396e445483645fa599ce4ed987b86188",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
