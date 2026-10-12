@@ -35,6 +35,10 @@ export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: numbe
  * so the panels always sum to 100. Single source for both the mount-time
  * defaultLayout and the Reset Layout setLayout call.
  */
+/** Per-shape default sizes (percent). Code fallback; the Settings Registry
+ *  (`ui.dashboard.panelWidths.*`) overrides these via resolveDashboardPanelDefaults. */
+export type PanelDefaults = Record<LayoutShape, { sidebar: number; right: number }>;
+
 export function toGroupLayout(
   shape: LayoutShape,
   sidebar: number,
@@ -143,7 +147,10 @@ export interface UseDashboardPanelsResult {
 
 type SavedLayouts = Record<LayoutShape, { sidebar: number; right: number } | null>;
 
-export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult {
+export function useDashboardPanels(
+  shape: LayoutShape,
+  defaults: PanelDefaults = DEFAULT_LAYOUT
+): UseDashboardPanelsResult {
   const isDesktop = useIsDesktop();
   // Both shapes are read once, before the Group mounts, so a 2col<->3col
   // switch already has its saved sizes in memory and never falls back to
@@ -187,13 +194,13 @@ export function useDashboardPanels(shape: LayoutShape): UseDashboardPanelsResult
     };
   }, []);
 
-  /** Group layout for a shape: saved sizes when present, else DEFAULT_LAYOUT. */
+  /** Group layout for a shape: saved sizes when present, else the defaults. */
   const layoutFor = (target: LayoutShape): Record<string, number> => {
     const current = saved?.[target] ?? null;
     return toGroupLayout(
       target,
-      current?.sidebar ?? DEFAULT_LAYOUT[target].sidebar,
-      current?.right ?? DEFAULT_LAYOUT[target].right
+      current?.sidebar ?? defaults[target].sidebar,
+      current?.right ?? defaults[target].right
     );
   };
   const layouts = { '2col': layoutFor('2col'), '3col': layoutFor('3col') };

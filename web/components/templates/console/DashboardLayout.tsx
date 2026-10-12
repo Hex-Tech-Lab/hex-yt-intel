@@ -10,6 +10,7 @@ import {
   toGroupLayout,
   useDashboardPanels,
   type LayoutShape,
+  type PanelDefaults,
 } from '@/lib/hooks/useDashboardLayout';
 
 // See /docs/ui/dashboard-layout.md
@@ -20,6 +21,8 @@ export interface DashboardLayoutProps {
   children: ReactNode;
   rightPanel?: ReactNode;
   dock?: ReactNode;
+  /** Registry-resolved default panel widths (server-side); falls back to DEFAULT_LAYOUT. */
+  panelDefaults?: PanelDefaults;
 }
 
 // WheelEvent deltas aren't always CSS pixels -- deltaMode distinguishes
@@ -37,7 +40,14 @@ function normalizeWheelDelta(delta: number, deltaMode: number, viewportSize: num
   return delta; // DOM_DELTA_PIXEL
 }
 
-export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
+export function DashboardLayout({
+  sidebar,
+  topbar,
+  children,
+  rightPanel,
+  dock,
+  panelDefaults = DEFAULT_LAYOUT,
+}: DashboardLayoutProps) {
   const isAnyOverlayOpen = useUIStore((s) => s.isAnyOverlayOpen);
   const mobileNavOpen = useUIStore((s) => s.mobileNavOpen);
   const mobileRightOpen = useUIStore((s) => s.mobileRightOpen);
@@ -112,7 +122,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // and mixing percentages across different panel counts would collide).
   const shape: LayoutShape = rightPanel ? '3col' : '2col';
   const { isDesktop, hydrated, groupLayout, layouts, handleLayoutChanged } =
-    useDashboardPanels(shape);
+    useDashboardPanels(shape, panelDefaults);
 
   // groupLayout is PERCENTAGES: react-resizable-panels v4 reads a bare number
   // as pixels, and a Group reads defaultLayout only at mount. It is the mount
@@ -133,20 +143,20 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   }, [shape, isDesktop, hydrated, groupRef]);
 
   // Register the imperative reset bridge: Reset Layout snaps the live
-  // Group back to DEFAULT_LAYOUT percentages via setLayout without a reload.
+  // Group back to the registry/code default percentages via setLayout without a reload.
   // Registered only while the desktop panel group is actually mounted.
   useEffect(() => {
     if (!isDesktop) return;
     registerResetSink(() => {
       // setLayout requires a complete layout (all panel ids) and validates
       // percentages sum to ~100: center absorbs the remainder, derived from
-      // DEFAULT_LAYOUT so the reset target and the hydrated defaults share
+      // panelDefaults so the reset target and the hydrated defaults share
       // one source of truth.
-      const { sidebar, right } = DEFAULT_LAYOUT[shape];
+      const { sidebar, right } = panelDefaults[shape];
       groupRef.current?.setLayout(toGroupLayout(shape, sidebar, right));
     });
     return () => registerResetSink(null);
-  }, [isDesktop, shape, groupRef]);
+  }, [isDesktop, shape, groupRef, panelDefaults]);
 
   const onGroupLayoutChanged = handleLayoutChanged;
 

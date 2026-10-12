@@ -92,6 +92,7 @@ import {
 import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
 import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
 import { useRelations } from "@/hooks/useRelations";
+import type { PanelDefaults } from "@/lib/hooks/useDashboardLayout";
 import type { ConsoleProfile } from "@/lib/services/console-profile";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { KnowledgeGraphV2 } from "@/lib/types/synthesis-nucleus";
@@ -114,6 +115,7 @@ import { Avatar } from "@astryxdesign/core";
 
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
+  panelDefaults?: PanelDefaults;
 }
 
 // Reference-stable empty fallback for displayGraph -- an inline `{nodes:[],
@@ -175,7 +177,7 @@ function cleanDimensionContent(raw: string): string {
 }
 
 // skipcq: JS-0067, JS-R1005
-export function DashboardContainer({ profile }: DashboardContainerProps) {
+export function DashboardContainer({ profile, panelDefaults }: DashboardContainerProps) {
   // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
   // this store now also carries currentPlaybackSeconds, updated 4x/sec
   // while playing (post-review finding, 2026-08-06); DashboardContainer is
@@ -999,6 +1001,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   return (
     <div className="relative w-full min-h-[100dvh] xl:h-screen overflow-x-hidden xl:overflow-hidden">
       <DashboardLayout
+        panelDefaults={panelDefaults}
         sidebar={
           <Sidebar
             items={sidebarItems}
