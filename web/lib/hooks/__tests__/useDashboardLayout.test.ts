@@ -87,9 +87,9 @@ describe('toGroupLayout', () => {
     expect(layout).not.toHaveProperty('right');
   });
 
-  it('default 3col and 2col layouts are 18/52/30 and 18/82', () => {
+  it('default 3col and 2col layouts are 18/54/28 and 18/82', () => {
     expect(toGroupLayout('3col', DEFAULT_LAYOUT['3col'].sidebar, DEFAULT_LAYOUT['3col'].right))
-      .toEqual({ sidebar: 18, center: 52, right: 30 });
+      .toEqual({ sidebar: 18, center: 54, right: 28 });
     expect(toGroupLayout('2col', DEFAULT_LAYOUT['2col'].sidebar, DEFAULT_LAYOUT['2col'].right))
       .toEqual({ sidebar: 18, center: 82 });
   });

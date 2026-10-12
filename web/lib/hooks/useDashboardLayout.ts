@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
  * written by the 3-column desktop and vice versa -- percentages would
  * silently collide across different panel counts.
  *
- * Defaults are percentages: 3-column 18% / 52% / 30%, 2-column 18% / 82%.
+ * Defaults are percentages: 3-column 18% / 54% / 28%, 2-column 18% / 82%.
  * react-resizable-panels v4 reads a bare number as PIXELS, so every size
  * handed to a Group must be a percentage (see toGroupLayout).
  *
@@ -27,7 +27,7 @@ export type LayoutShape = '2col' | '3col';
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
   '2col': { sidebar: 18, right: 0 },
-  '3col': { sidebar: 18, right: 30 },
+  '3col': { sidebar: 18, right: 28 },
 };
 
 /**
