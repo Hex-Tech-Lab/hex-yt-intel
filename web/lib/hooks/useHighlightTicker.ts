@@ -61,10 +61,9 @@ const MAX_WORDS_PER_SECOND = 6;
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
-  // Played length of the segment INCLUDING the lead-in (callers add it).
-  // With a verbatim excerpt, words / (duration - leadIn) is the speaker's
-  // own pace for this segment (T10, 2026-10-12).
-  segmentDurationSeconds: number,
+  // The highlight's own speaking length (end - start): unclamped and without
+  // the lead-in, so words / speakingSeconds is the speaker's pace (T10).
+  speakingSeconds: number,
   elapsedSeconds: number | null,
   verbatimExcerpt?: string | null,
   wordsPerSecond = 2.5,
@@ -108,15 +107,13 @@ export function useHighlightTicker(
   // the fixed pace lags real speech -- stored verbatim excerpts run a median
   // 3.37 words/s (p10 2.6, p90 4.4, 565 rows) against the 2.5 default. A
   // verbatim excerpt IS the segment's speech, so its words over the
-  // segment's speaking time is the speaker's actual pace. The registry pace
+  // highlight's raw end - start is the speaker's actual pace. The registry pace
   // stays the fallback for paraphrased labels (the source of the original
   // "too fast" bug-2 report) and for a degenerate speaking window.
-  const lead = Math.max(0, leadInSeconds);
-  const speechWindow = segmentDurationSeconds - lead;
-  const pace = usingVerbatim && speechWindow > 0
-    ? Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speechWindow))
+  const pace = usingVerbatim && speakingSeconds > 0
+    ? Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speakingSeconds))
     : wordsPerSecond;
-  const speechSeconds = Math.max(0, elapsedSeconds - lead);
+  const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
   const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * pace));
   const baseCount = Math.floor(revealedFloat);
   const fraction = revealedFloat - baseCount;

@@ -14,6 +14,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { getSpeakingSeconds } from '@/lib/utils/highlights-settings';
 import { useHighlightTicker, previewWords } from './useHighlightTicker';
 
 describe('useHighlightTicker', () => {
@@ -196,8 +197,8 @@ describe('useHighlightTicker – verbatim pace follows the speaker (T10)', () =>
   const thirtyWords = Array.from({ length: 30 }, (unused, position) => `w${position}`).join(' ');
 
   it('paces a verbatim excerpt by its own words over the speaking window, not the 2.5 default', () => {
-    // 30 words over a 10s window (12s played - 2s lead-in) = 3 words/s.
-    const { result } = renderHook(() => useHighlightTicker(0, 'label', 12, 6, thirtyWords, 2.5, 2));
+    // 30 words over a 10s speaking span = 3 words/s; 4s past the 2s lead-in -> 12 words.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 10, 6, thirtyWords, 2.5, 2));
     expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(12); // 4s of speech x 3 words/s
   });
 
@@ -207,8 +208,20 @@ describe('useHighlightTicker – verbatim pace follows the speaker (T10)', () =>
   });
 
   it('clamps an implausible derived pace', () => {
-    // 30 words in a 1s window would be 30 words/s; clamped to 6.
-    const { result } = renderHook(() => useHighlightTicker(0, 'label', 3, 3, thirtyWords, 2.5, 2));
+    // 30 words in a 1s span would be 30 words/s; clamped to 6.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 1, 3, thirtyWords, 2.5, 2));
     expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(6);
+  });
+});
+
+describe('getSpeakingSeconds', () => {
+  it('returns the raw span inside [minDur, maxDur]', () => {
+    expect(getSpeakingSeconds({ start: 10, end: 18 }, 3, 20)).toBe(8);
+  });
+  it('returns 0 for a legacy span reaching the next highlight', () => {
+    expect(getSpeakingSeconds({ start: 10, end: 140 }, 3, 20)).toBe(0);
+  });
+  it('returns 0 without an end', () => {
+    expect(getSpeakingSeconds({ start: 10, end: null }, 3, 20)).toBe(0);
   });
 });
