@@ -1592,3 +1592,4 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
 - [2026-10-13T00:16:00+03:00] [AGY (Flash 3.8)] [IN_PROGRESS] T8 Chat UI polish (ChatDock):
   - Intent: Fix 5 UI defects: (1) timestamp color alignment with flyout, (2) markdown table width full message container, (3) composer divider removal, (4) user-bubble selection highlight WCAG AA, (5) user-bubble dblclick 214ms INP fix.
   - Target files: web/components/templates/console/ChatDock.tsx (and related chat components/styles/tests), .memory/AGENT_LEDGER.md.
+- [2026-10-13T00:36:29+03:00] [OC (haiku-5.5)] [IN_PROGRESS] T8 Chat UI polish re-dispatch: 5 ChatDock defects. Targets: web/components/templates/console/ChatDock.tsx, web/app/globals.css, related __tests__. Found pre-existing uncommitted diffs in ChatDock.tsx + globals.css from prior run; inspecting before editing. Worktree fix/chat-ui-t8 only.

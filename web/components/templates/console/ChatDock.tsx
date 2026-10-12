@@ -126,7 +126,7 @@ const chatMarkdownComponents: MarkdownComponents = {
   link: ({ href, children }) => {
     if (href?.startsWith('#t=')) {
       const timestamp = href.replace('#t=', '');
-      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+      return <TimestampLink timestamp={timestamp} asButton>{children}</TimestampLink>;
     }
     return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
   },
@@ -685,7 +685,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               <ChatMessageBubble
                 variant="filled"
                 className={isUser
-                  ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
+                  ? 'user-chat-bubble !rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
                   // max-w bumped 92% -> 98% (2026-08-02, live user report): the
                   // assistant bubble was leaving a wide unused margin on desktop
                   // for markdown-table responses ("how many comments?",
@@ -716,7 +716,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 {isUser ? (
                   body
                 ) : (
-                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact">
+                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact" contentWidth="100%">
                     {truncateCitationPoints(preprocessMarkdown(body))}
                   </Markdown>
                 )}
@@ -799,7 +799,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           history recall (see its handleKeyDown), so onKeyDown here only
           needs to catch Escape (bubbles up, no stopPropagation in the
           library's keydown handler). */}
-      <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
+      <div className="px-3 lg:px-4 py-2">
         <ChatComposer
           value={localInput}
           onChange={setLocalInput}

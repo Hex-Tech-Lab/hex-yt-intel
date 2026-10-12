@@ -461,6 +461,21 @@ div[data-chat-dock="true"] div[class*="content"] {
   border-radius: 8px !important;
 }
 
+/* User message bubble selection highlight (WCAG 2.1 AA compliant).
+   The user bubble uses bg-[var(--accent)] (#06B6D4) with text-[var(--void)] (#0B0E14).
+   Default browser selection is invisible on accent background.
+   Using background: #0B0E14 (var(--void)) with color: #67E8F9 (var(--accent-ink)) provides
+   a 7.96:1 contrast ratio against the surrounding bubble background and 13.3:1 text contrast. */
+[data-chat-dock="true"] .astryx-chat-message-bubble.user::selection,
+[data-chat-dock="true"] .astryx-chat-message-bubble.user *::selection,
+[data-chat-dock="true"] .astryx-chat-message-bubble[data-sender="user"]::selection,
+[data-chat-dock="true"] .astryx-chat-message-bubble[data-sender="user"] *::selection,
+[data-chat-dock="true"] .user-chat-bubble::selection,
+[data-chat-dock="true"] .user-chat-bubble *::selection {
+  background-color: var(--void) !important;
+  color: var(--accent-ink) !important;
+}
+
 /* Chat composer (input box) styling override.
    Real root cause (2026-08-20, same class of bug as the toast fix above):
    only the OUTER `.astryx-chat-composer` wrapper was ever targeted. The
@@ -847,9 +862,13 @@ ol.astryx-list > .astryx-list-item > span:first-child {
  * never wrap it; give the second (content) column the rest of the row so it
  * wraps comfortably across ~2 lines instead of one cramped column.
  */
-.chat-answer-table table {
+.chat-answer-table table,
+.chat-answer-table .astryx-table,
+.chat-answer-table .astryx-base-table,
+.chat-answer-table .astryx-table-scroll-wrapper,
+.chat-answer-table [role="group"][aria-label="Table"] {
   table-layout: auto;
-  width: 100%;
+  width: 100% !important;
   /* min-width prevents the browser's auto-layout from collapsing a
      multi-column table (e.g. "transcript overview" Speaker/Time/Content,
      not just the 2-col Timestamp/Point citation shape the rules below were
@@ -857,7 +876,7 @@ ol.astryx-list > .astryx-list-item > span:first-child {
      itself has room to spare -- width:100% alone only stretches, it never
      forces a floor, so a table with all-short cells could still render
      narrower than the 98%-wide bubble around it. */
-  min-width: 100%;
+  min-width: 100% !important;
 }
 .chat-answer-table th:first-child,
 .chat-answer-table td:first-child,
