@@ -55,3 +55,14 @@ describe('stripRateFormula', () => {
     expect(stripRateFormula(input)).toBe(input);
   });
 });
+
+describe('table pre-pass edge cases', () => {
+  it('does not merge a trailing empty padding cell', () => {
+    const input = '| A | B |\n|---|---|\n| a | b | |';
+    expect(normalizeTableRowWidth(input)).toBe(input);
+  });
+  it('leaves an Engagement Rate row inside a fenced block untouched', () => {
+    const input = '```\n| Engagement Rate | (1 + 1) / 100 x 100 = 2% |\n```';
+    expect(stripRateFormula(input)).toBe(input);
+  });
+});

@@ -2,7 +2,7 @@
 // e.g. "8.1 Primary Knowledge Graph Nodes: 15 nodes are..." (optionally bolded).
 // The title must start with a capital letter and stay short, so prose such as
 // "3.5 million users: ..." is not mistaken for a section.
-const SECTION_LINE = /^(?:\*\*)?(\d{1,2}\.\d{1,2})\s+([A-Z][^:\n*]{1,79}?)(?:\*\*)?:(?:\*\*)?\s+(\S.*)$/;
+const SECTION_LINE = /^(?:\*\*)?(\d{1,2}\.\d{1,2})\s+([A-Z][^:\n*]{1,79}?)(?:\*\*)?:(?:\*\*)?(?:\s+(\S.*))?$/;
 
 /**
  * Turns inline dimension subsection labels into real headings: the model
@@ -26,7 +26,8 @@ export function promoteSectionHeadings(markdown: string): string {
       const match = trimmed.match(SECTION_LINE);
       if (!match) return line;
       const [, number, title, body] = match;
-      return `#### ${number} ${title!.trim()}\n\n${body}`;
+      const heading = `#### ${number} ${title!.trim()}`;
+      return body ? `${heading}\n\n${body}` : heading;
     })
     .join('\n');
 }

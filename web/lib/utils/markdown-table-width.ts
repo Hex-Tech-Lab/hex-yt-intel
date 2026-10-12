@@ -4,7 +4,10 @@
  */
 function splitRowCells(row: string): string[] {
   const inner = row.trim().replace(/^\|/, '').replace(/(?<!\\)\|$/, '');
-  return inner.split(/(?<!\\)\|/).map(cell => cell.trim());
+  const cells = inner.split(/(?<!\\)\|/).map(cell => cell.trim());
+  // A trailing empty cell ("| a | b | |") is padding, not content to merge.
+  while (cells.length > 1 && cells[cells.length - 1] === '') cells.pop();
+  return cells;
 }
 
 const isTableRow = (row: string) => row.startsWith('|') && row.endsWith('|');
@@ -57,8 +60,13 @@ const RATE_ROW = /^(\s*\|\s*\**\s*engagement rate\s*\**\s*\|)([^|]*=\s*)([^|=]+?
 /** Keeps only the computed value in an Engagement Rate table cell. */
 export function stripRateFormula(markdown: string): string {
   if (!markdown) return '';
+  let inFence = false;
   return markdown
     .split(/\r?\n/)
-    .map((line) => line.replace(RATE_ROW, (_row, label: string, _formula: string, value: string) => `${label} ${value.trim()} |`))
+    .map((line) => {
+      if (line.trim().startsWith('```')) inFence = !inFence;
+      if (inFence) return line;
+      return line.replace(RATE_ROW, (_row, label: string, _formula: string, value: string) => `${label} ${value.trim()} |`);
+    })
     .join('\n');
 }

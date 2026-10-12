@@ -25,3 +25,9 @@ describe('promoteSectionHeadings', () => {
     expect(promoteSectionHeadings(input)).toBe(input);
   });
 });
+
+describe('promoteSectionHeadings – label on its own line', () => {
+  it('promotes "3.1 Title:" with the body on the next line', () => {
+    expect(promoteSectionHeadings('3.1 Executive Overview:\nBody text.')).toBe('#### 3.1 Executive Overview\nBody text.');
+  });
+});

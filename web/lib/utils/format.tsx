@@ -216,7 +216,7 @@ export function linkifyTimestamps(markdown: string): string {
 
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
   const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
-  const durationRowPattern = /^\s*\|\s*\**\s*(?:video\s+)?(?:duration|length|runtime)\b/i;
+  const durationRowPattern = /^\s*\|\s*\**\s*(?:(?:total|video)\s+)?(?:duration|length|runtime)\s*\**\s*\|/i;
   const loneTimestampCodeRegex = /`(\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?(?:\s*[–—-]\s*\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?)?)`/g;
 
   for (let line of lines) {

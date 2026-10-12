@@ -34,3 +34,13 @@ describe('linkifyTimestamps – duration rows (T12)', () => {
     expect(linkifyTimestamps('| Hook | 00:01:05 |')).toContain('#t=');
   });
 });
+
+describe('linkifyTimestamps – duration label matching', () => {
+  it('skips "Total Duration"', () => {
+    const row = '| Total Duration | 00:17:41 |';
+    expect(linkifyTimestamps(row)).toBe(row);
+  });
+  it('still links a row whose label only starts with Duration', () => {
+    expect(linkifyTimestamps('| Duration of hook | 00:00:30 |')).toContain('#t=');
+  });
+});
