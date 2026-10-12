@@ -1,0 +1,30 @@
+.gitignore
+  h_50fba0cdd9e5c4 81-85
+.qa-intel/baseline.json
+  h_50fba0cdd9e5c4 20,42,49,56,77,84,91,98,105,112,126,133,140,147,153,161,182,189,210,217,224,231,286,294,301,308,315,322,350,357,384,392,419,434,454,475,482,489,496,517,524,531,538,552,559,566,580,587,594,601,608,615,622,629,643,650,657,664,671,678,685,692,699,706,713,720,727,734,741-742,748,762,776,783,797,811,818,825,832,839,846,853,860,867,874,881,888,895,944,959,966,973,980,987,994,1008,1015,1028,1043,1050,1056,1063,1100-1211
+supabase/migrations/20261012170000_chat_stream_timeout_settings.sql
+  h_50fba0cdd9e5c4 1-27
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  h_50fba0cdd9e5c4 40-44,79-80,552-566,570-576,617
+web/lib/utils/chat-payload-digest.ts
+  h_50fba0cdd9e5c4 10,16,20-21
+web/store/useChatStore.ts
+  h_50fba0cdd9e5c4 284-287,298
+worker/src/__tests__/chat-cascade-fallback-capture.test.ts
+  h_50fba0cdd9e5c4 85-104
+worker/src/__tests__/chat-payload-signature.test.ts
+  h_50fba0cdd9e5c4 72-89
+worker/src/chat-stream.ts
+  h_50fba0cdd9e5c4 67-68,105,107,168,245,315,317-323,440
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4b07a41cb58260e3798f00a4d3f5c8b2d2ac459",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
