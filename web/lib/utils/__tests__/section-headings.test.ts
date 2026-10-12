@@ -59,3 +59,10 @@ describe('promoteSectionHeadings – numbered systems (Dim 7)', () => {
     ].join('\n'));
   });
 });
+
+describe('promoteSectionHeadings – indented code', () => {
+  it('leaves a four-space-indented line alone', () => {
+    const input = '    **System: npm install**';
+    expect(promoteSectionHeadings(input)).toBe(input);
+  });
+});

@@ -44,3 +44,10 @@ describe('linkifyTimestamps – duration label matching', () => {
     expect(linkifyTimestamps('| Duration of hook | 00:00:30 |')).toContain('#t=');
   });
 });
+
+describe('linkifyTimestamps – tilde fences', () => {
+  it('does not link timestamps inside a ~~~ block', () => {
+    const input = '~~~\nat 01:05 we\n~~~';
+    expect(linkifyTimestamps(input)).toBe(input);
+  });
+});

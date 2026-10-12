@@ -33,7 +33,8 @@ export function promoteSectionHeadings(markdown: string): string {
       const trimmed = line.trim();
       const step = stepFence(trimmed, fence);
       fence = step.open;
-      if (step.isDelimiter || fence || trimmed.startsWith('|')) return line;
+      // Indented code (4 spaces or a tab) is code, not a label.
+      if (step.isDelimiter || fence || trimmed.startsWith('|') || /^(?: {4}|\t)/u.test(line)) return line;
       const system = trimmed.match(SYSTEM_LINE);
       if (system) {
         systemCount += 1;

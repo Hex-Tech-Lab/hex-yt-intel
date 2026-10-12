@@ -1,5 +1,5 @@
 import React from 'react';
-import { normalizeTableRowWidth, stripRateFormula, UNESCAPED_PIPE } from './markdown-table-width';
+import { normalizeTableRowWidth, stepFence, stripRateFormula, UNESCAPED_PIPE, type OpenFence } from './markdown-table-width';
 import { promoteSectionHeadings } from './section-headings';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
@@ -215,7 +215,7 @@ function isInsideSpan(offset: number, length: number, spans: [number, number][])
 export function linkifyTimestamps(markdown: string): string {
   if (!markdown) return '';
   const lines = markdown.split(/\r?\n/);
-  let inFence = false;
+  let fence: OpenFence | null = null;
   const out: string[] = [];
 
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
@@ -224,12 +224,9 @@ export function linkifyTimestamps(markdown: string): string {
   const loneTimestampCodeRegex = /`(\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?(?:\s*[–—-]\s*\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?)?)`/g;
 
   for (let line of lines) {
-    if (line.trim().startsWith('```')) {
-      inFence = !inFence;
-      out.push(line);
-      continue;
-    }
-    if (inFence) {
+    const step = stepFence(line.trim(), fence);
+    fence = step.open;
+    if (step.isDelimiter || fence) {
       out.push(line);
       continue;
     }
