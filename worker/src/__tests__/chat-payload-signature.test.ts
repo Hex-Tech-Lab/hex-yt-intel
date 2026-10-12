@@ -28,16 +28,16 @@ const base = {
 
 function ctx(body: Record<string, unknown>) {
   return {
-    req: { json: async () => body, raw: new Request('https://w.test/chat-stream', { method: 'POST' }) },
+    req: { json: () => Promise.resolve(body), raw: new Request('https://w.test/chat-stream', { method: 'POST' }) },
     env: { STREAM_HMAC_SECRET: SECRET, OPENROUTER_API_KEY: 'k', ENVIRONMENT: 'production' },
-    json: (b: unknown, status: number) => new Response(JSON.stringify(b), { status }),
+    json: (responseBody: unknown, status: number) => new Response(JSON.stringify(responseBody), { status }),
     executionCtx: { waitUntil: () => {} },
   } as unknown as Parameters<typeof handleChatStream>[0];
 }
 
 function stubOpenRouter() {
-  const fetchSpy = vi.fn(async () =>
-    new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`, { status: 200 }));
+  const fetchSpy = vi.fn(() =>
+    Promise.resolve(new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`, { status: 200 })));
   vi.stubGlobal('fetch', fetchSpy);
   return fetchSpy;
 }
