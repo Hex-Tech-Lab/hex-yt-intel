@@ -7,7 +7,7 @@ name: Deploy Worker
 
 on:
   push:
-    branches: [main]
+    branches: [main, uat]
     paths:
       - 'worker/**'
       - 'web/lib/prompts/**'        # bundled into the worker (UCIS prompt IP)
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-worker
+  group: deploy-worker-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -30,6 +30,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set deployment environment
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "WENV=production" >> $GITHUB_ENV
+            echo "WORKER_URL=https://yt-intel.hex-tech-lab.workers.dev" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" = "uat" ]; then
+            echo "WENV=uat" >> $GITHUB_ENV
+            echo "WORKER_URL=https://youtube-intelligence-worker-uat.hex-tech-lab.workers.dev" >> $GITHUB_ENV
+          else
+            echo "::error::Unsupported branch for deploy: ${{ github.ref_name }}"
+            exit 1
+          fi
 
       - name: Setup pnpm
         # No version input: v4 reads the `packageManager` field in package.json
@@ -57,11 +70,11 @@ jobs:
       # (`... not configured`) — chain still answers via fallbacks, but the
       # deploy must flag the drift loudly and stop.
       # Bootstrap case: on the very first deploy the production worker does
-      # not exist yet, so `wrangler secret list --env production` fails with
+      # not exist yet, so `wrangler secret list --env $WENV` fails with
       # "worker not found" (wrangler exits 1 with a 404 from the CF API
       # `GET /accounts/{account_id}/workers/scripts/{script_name}` — the
       # secret list management call targets the script itself). We detect
-      # that explicitly via `wrangler deployments list --env production`
+      # that explicitly via `wrangler deployments list --env $WENV`
       # (same not-found failure shape) and skip the gate with a warning
       # telling the operator to bind secrets right after the first deploy;
       # the post-deploy non-empty probe below still catches an unbound/empty
@@ -76,17 +89,17 @@ jobs:
         run: |
           # Only CF error 10007 ("This Worker does not exist on your account")
           # means first deploy; any other failure (auth 9106, network) fails.
-          if ! probe=$(pnpm --filter youtube-intelligence-worker exec wrangler deployments list --env production 2>&1); then
+          if ! probe=$(pnpm --filter youtube-intelligence-worker exec wrangler deployments list --env $WENV 2>&1); then
             if echo "$probe" | grep -q 'code: 10007'; then
-              echo "::warning::first deploy — secret gate skipped; bind TRANSCRIPTAPI_API_KEY with wrangler secret put --env production immediately after"
+              echo "::warning::first deploy — secret gate skipped; bind TRANSCRIPTAPI_API_KEY with wrangler secret put --env $WENV immediately after"
               exit 0
             fi
-            echo "::error::wrangler deployments list --env production failed (not a first deploy) — cannot verify secret bindings"
+            echo "::error::wrangler deployments list --env $WENV failed (not a first deploy) — cannot verify secret bindings"
             echo "$probe" | tail -5
             exit 1
           fi
-          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list --env production 2>&1) \
-            || { echo "::error::wrangler secret list --env production failed (auth/network?) — cannot verify secret bindings"; exit 1; }
+          secrets=$(pnpm --filter youtube-intelligence-worker exec wrangler secret list --env $WENV 2>&1) \
+            || { echo "::error::wrangler secret list --env $WENV failed (auth/network?) — cannot verify secret bindings"; exit 1; }
           echo "$secrets" | grep -q '"TRANSCRIPTAPI_API_KEY"' \
             || { echo "::error::TRANSCRIPTAPI_API_KEY is NOT bound to the worker — deploy blocked"; exit 1; }
           echo "$secrets" | grep -q '"SUPADATA_API_KEY"' \
@@ -96,7 +109,7 @@ jobs:
       # `wrangler deploy` runs the esbuild build (wrangler.toml [build]) which bundles
       # the web/lib imports, then uploads. Secrets already on the worker persist.
       - name: Deploy worker
-        run: pnpm --filter youtube-intelligence-worker run deploy
+        run: pnpm --filter youtube-intelligence-worker exec wrangler deploy --env $WENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -104,7 +117,7 @@ jobs:
       - name: Verify health
         run: |
           sleep 5
-          code=$(curl -s -o /dev/null -w "%{http_code}" https://yt-intel.hex-tech-lab.workers.dev/)
+          code=$(curl -s -o /dev/null -w "%{http_code}" $WORKER_URL/)
           echo "worker GET / → $code"
           test "$code" = "200"
 
@@ -118,7 +131,7 @@ jobs:
       # never silently "green".
       - name: Verify transcript-provider secrets are non-empty
         run: |
-          body=$(curl -s --fail-with-body https://yt-intel.hex-tech-lab.workers.dev/health/providers)
+          body=$(curl -s --fail-with-body $WORKER_URL/health/providers)
           echo "providers: $body"
           echo "$body" | grep -q '"transcriptapi":true' \
             || { echo "::error::TRANSCRIPTAPI_API_KEY is bound but EMPTY on the worker"; exit 1; }
