@@ -1,0 +1,29 @@
+web/lib/__tests__/extract-highlights-usecase.test.ts
+  s_291078cde7ba1a::t_7201dde2e02629 139
+web/lib/__tests__/highlights-coverage.test.ts
+  s_291078cde7ba1a::t_b82e6b96322406 52-53
+web/lib/__tests__/snap-highlight-ends.test.ts
+  s_291078cde7ba1a::t_8520aeb495e209 1-39
+web/lib/prompts/highlights-extraction.ts
+  s_291078cde7ba1a::t_60798eb75d3cca 57,62,67-76,213-244
+web/lib/usecases/ExtractHighlightsUseCase.ts
+  s_291078cde7ba1a::t_c105188495a217 8,16,20-21,263-264,266-269,273,323
+web/lib/utils/highlights-settings.ts
+  s_291078cde7ba1a::t_c15a87dc738ec9 162-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc6a4385c366d12dd7dbfcbbe38b4c0781cf11e2",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
