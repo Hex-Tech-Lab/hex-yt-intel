@@ -3,7 +3,8 @@
  * Locks the extraction of the three `#### 0.x` tiers from a digest completion,
  * including fence tolerance, bullet normalisation, and the absent-digest case.
  */
-import { parseExecutiveDigest, buildExecutiveDigestUserMessage } from '@/lib/prompts/executive-digest';
+import { parseExecutiveDigest, buildExecutiveDigestUserMessage, EXECUTIVE_DIGEST_SYSTEM_FALLBACK } from '@/lib/prompts/executive-digest';
+import { CHAT_GROUNDING_INSTRUCTIONS_FALLBACK } from '@/lib/prompts/chat-grounding';
 
 const SAMPLE = [
   '#### 0.1 Snapshot',
@@ -70,3 +71,27 @@ describe('buildExecutiveDigestUserMessage', () => {
     expect(message.startsWith('Here is the completed')).toBe(true);
   });
 });
+
+describe('T4 key takeaways cap (prompt wording)', () => {
+  it('digest 0.3 states the 3-12 bullet cap and aim 5-9', () => {
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('#### 0.3 Key Takeaways');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('3–12 bullets');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('aim for 5–9');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('never exceed 12');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).not.toContain('Up to 10 bullets');
+  });
+
+  it('chat grounding fallback carries the KEY TAKEAWAYS TABLE rule', () => {
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('KEY TAKEAWAYS TABLE');
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('mirroring the digest');
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('| Timestamp | Takeaway |');
+  });
+
+  it('parser keeps a 12-bullet digest as-is (no silent truncation below the cap)', () => {
+    const bullets = Array.from({ length: 12 }, (_, i) => `- Point ${i + 1}`).join('\n');
+    const md = `#### 0.1 Snapshot\nS\n\n#### 0.2 Overview\nO\n\n#### 0.3 Key Takeaways\n${bullets}\n\n#### 0.4 Detailed Summary\nD`;
+    const digest = parseExecutiveDigest(md);
+    expect(digest.takeaways).toHaveLength(12);
+  });
+});
+
