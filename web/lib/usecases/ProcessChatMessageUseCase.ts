@@ -523,7 +523,7 @@ export class ProcessChatMessageUseCase {
     // signed model list is taken from that same cascade so the two agree.
     const writingCascade = !isReasoning && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
     const chatModels = writingCascade
-      ? writingCascade.map((item) => item.model)
+      ? [...new Set(writingCascade.map((item) => item.model))]
       : isReasoning
       ? await this.modelResolution.resolveModels(tier, 'reasoning')
       : await this.modelResolution.resolveModels(tier, 'chat');

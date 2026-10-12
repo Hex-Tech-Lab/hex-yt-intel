@@ -6,7 +6,10 @@ vi.mock('@/lib/config/cascade', async (importOriginal) => {
   return {
     ...actual,
     resolveChatCascade: vi.fn().mockResolvedValue([{ model: 'openai/gpt-oss-120b', name: 'chat', providerOrder: ['cerebras'] }]),
-    resolveChatWritingCascade: vi.fn().mockResolvedValue([{ model: 'anthropic/claude-haiku-5.5', name: 'Haiku 5.5 (Vertex)', providerOrder: ['google-vertex'] }]),
+    resolveChatWritingCascade: vi.fn().mockResolvedValue([
+      { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Vertex)', providerOrder: ['google-vertex'] },
+      { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Anthropic Direct)', providerOrder: ['anthropic'] },
+    ]),
   };
 });
 
@@ -40,7 +43,7 @@ async function run(content: string) {
 describe('chat writing route (T21)', () => {
   it('a writing request uses the writing cascade for both the signed models and the forwarded cascade', async () => {
     const { payload, signedModels } = await run('Write a LinkedIn post about the main takeaway');
-    expect(payload?.cascade.map((c) => c.model)).toEqual(['anthropic/claude-haiku-5.5']);
+    expect(payload?.cascade.map((c) => c.model)).toEqual(['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5']);
     expect(signedModels).toEqual(['anthropic/claude-haiku-5.5']);
   });
 
