@@ -41,6 +41,15 @@ const CHAT_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'google/gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Vertex)', cost: 0.00025, providerOrder: ['google-vertex'] },
 ];
 
+// T21 (owner 2026-10-12): creative-writing chat requests (blog, LinkedIn,
+// script, post...) go to Haiku 5.5 on Vertex with no reasoning effort; Groq
+// gpt-oss keeps a writing request from failing outright if Anthropic is down.
+const CHAT_WRITING_CASCADE_FALLBACK: readonly CascadeItem[] = [
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
+  { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
+];
+
 // Dedicated from cascade.chat (2026-08-18, supabase/migrations/20260818000000_cascade_digest.sql)
 // per the "each helper function gets its own cascade" standing directive --
 // Groq-primary/Cerebras-fallback rather than chat's Cerebras-primary, since
@@ -105,6 +114,7 @@ const REASONING_CASCADE_PRO_FALLBACK: readonly CascadeItem[] = [
  * without a redeploy. */
 export const CASCADE_FALLBACKS = {
   chat: CHAT_CASCADE_FALLBACK,
+  chatWriting: CHAT_WRITING_CASCADE_FALLBACK,
   digest: DIGEST_CASCADE_FALLBACK,
   analysis: ANALYSIS_CASCADE_FALLBACK,
   stance: STANCE_CASCADE_FALLBACK,
@@ -116,6 +126,7 @@ export const CASCADE_FALLBACKS = {
 /** The full dotted registry keys every resolveCascade call site may use (ADR 041: strict keys, never a loose `string`). */
 export type CascadeRegistryKey =
   | 'cascade.chat'
+  | 'cascade.chatWriting'
   | 'cascade.digest'
   | 'cascade.analysis'
   | 'cascade.stance'
@@ -324,6 +335,7 @@ export const resolveDiarizationCascade = async (): Promise<DiarizationCascadeIte
 };
 
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);
+export const resolveChatWritingCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chatWriting', CHAT_WRITING_CASCADE_FALLBACK);
 export const resolveDigestCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.digest', DIGEST_CASCADE_FALLBACK);
 export const resolveAnalysisCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.analysis', ANALYSIS_CASCADE_FALLBACK);
 export const resolveStanceCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.stance', STANCE_CASCADE_FALLBACK);

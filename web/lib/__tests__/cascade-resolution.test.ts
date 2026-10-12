@@ -9,7 +9,7 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
   resolveAnalysisCascade,
-  resolveChatCascade,
+  resolveChatCascade, resolveChatWritingCascade,
   CASCADE_FALLBACKS,
   CASCADE_MODEL_ALLOWLIST,
   type CascadeItem,
@@ -99,6 +99,12 @@ describe('resolveCascade capability stamping (ADR 041)', () => {
       return Promise.resolve(out as typeof fallback);
     });
     await expect(resolveAnalysisCascade()).rejects.toThrow(/empty or missing display name/);
+  });
+
+  it('chat writing cascade (T21) falls back to Haiku 5.5 on Vertex first', async () => {
+    const items = await resolveChatWritingCascade();
+    expect(items[0]).toMatchObject({ model: 'anthropic/claude-haiku-5.5', providerOrder: ['google-vertex'] });
+    expect(items.at(-1)?.model).toBe('openai/gpt-oss-120b');
   });
 
   it('chat cascade resolves through the same stamped path', async () => {
