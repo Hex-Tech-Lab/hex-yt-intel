@@ -1,0 +1,23 @@
+web/components/templates/console/__tests__/DashboardLayout.defaultLayout.test.tsx
+  s_291078cde7ba1a::t_8ed46a85573882 94,98,122,127,130,137
+web/lib/hooks/__tests__/useDashboardLayout.test.ts
+  s_291078cde7ba1a::t_3ed383579504c4 90,92
+web/lib/hooks/useDashboardLayout.ts
+  s_291078cde7ba1a::t_a0e5e83aa82f22 13,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a263d1f3c21e80086bafc716a403693ff84f7554",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
