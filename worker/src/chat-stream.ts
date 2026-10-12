@@ -505,7 +505,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       let servedByProvider: string | null = null;
       let cascadeAttempts: string[] = [];
       let partial = false;
-      let outcome: ChatCascadeOutcome | 'threw' = 'exhausted';
+      let outcome: ChatCascadeOutcome | 'threw';
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
