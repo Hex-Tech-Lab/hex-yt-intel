@@ -1,0 +1,29 @@
+web/store/__tests__/useVideoStore-reveal.test.ts
+  s_291078cde7ba1a::t_c545a4e033288e 1-19
+web/components/TimestampLink.tsx
+  s_291078cde7ba1a::t_7795dc5b36b57f 68-69,77,79,86,89
+web/components/containers/DashboardContainer.tsx
+  s_291078cde7ba1a::t_09eff0227aa65d 396,453,485
+web/components/templates/console/EntityMentionTimeline.tsx
+  s_291078cde7ba1a::t_acb20eca5ff58e 49
+web/components/templates/console/VideoPlayerCard.tsx
+  s_291078cde7ba1a::t_97cf595edf4559 41,53-61,140,220-228,296-297,309-315,342
+web/store/useVideoStore.ts
+  s_291078cde7ba1a::t_8c94fa920cc135 22-27,58-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "825e92dccb2eb28cc190b7e8acc532cc699417d2",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
