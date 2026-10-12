@@ -1,0 +1,43 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_3ad64e769d1279 1582
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_32cabfbc5ffb17 906-910
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_291078cde7ba1a::t_5b951bb5bccc85 6,137
+web/components/dashboard/HighlightsScrubber.tsx
+  s_291078cde7ba1a::t_94a95b74dce562 7,300
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_291078cde7ba1a::t_cd8eabd99f3d0a 474-475,479,484,488
+web/lib/__tests__/aux-remediation-adapter-idempotency.test.ts
+  s_291078cde7ba1a::t_66b80638805f04 6
+web/lib/__tests__/aux-remediation-enqueue-orphan.test.ts
+  s_291078cde7ba1a::t_2fc02fbb639547 22,47-55,74-77,111,114
+web/lib/hooks/useHighlightTicker.test.ts
+  s_291078cde7ba1a::t_41b48552c83dbb 17,195-227
+web/lib/hooks/useHighlightTicker.ts
+  s_291078cde7ba1a::t_511b62851262f6 3-15,71-73,112-120,122
+web/lib/services/aux-remediation.ts
+  s_291078cde7ba1a::t_e0afb4ea58e468 218,220,236-237,266,271-275,277-279,388,390,413-414,418-422
+web/lib/utils/highlights-settings.ts
+  s_291078cde7ba1a::t_a5dee634690708 286-296
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  s_291078cde7ba1a::t_472ee6dfba1204 5-6,24,133,144,147
+worker/src/queue-consumers/comments-tier3.ts
+  s_291078cde7ba1a::t_6e2cf7e84dd7b4 81-92,94-108,175-186,398-402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14aa318c09aa63623e8e7b807e6873b78820b210",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
