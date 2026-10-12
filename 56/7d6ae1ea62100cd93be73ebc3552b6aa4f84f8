@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_b7e9091a9a3e79 1584
+docs/agent-prompts/2026-10-12-cct-stream-a-cascade-deadline.md
+  s_291078cde7ba1a::t_4a8835d1035757 1-228
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_0cdb535bb51239 508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "567d6ae1ea62100cd93be73ebc3552b6aa4f84f8",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
