@@ -1,0 +1,27 @@
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_291078cde7ba1a::t_ca58e48c7a1f58 6,137
+web/components/dashboard/HighlightsScrubber.tsx
+  s_291078cde7ba1a::t_9e6b3a3948a318 7,300
+web/lib/hooks/useHighlightTicker.test.ts
+  s_291078cde7ba1a::t_f9505d392feb33 17,200-201,211-212,216-227
+web/lib/hooks/useHighlightTicker.ts
+  s_291078cde7ba1a::t_599e89688ef283 64-66,110,113-114,116
+web/lib/utils/highlights-settings.ts
+  s_291078cde7ba1a::t_6651eb6dbc959f 286-296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "05b6544c4bdb05f9bb674609f0eaa930de590796",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
