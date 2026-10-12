@@ -91,11 +91,11 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('3col with no saved layout mounts with 18/52/30 on the first Group render', () => {
+  it('3col with no saved layout mounts with 18/54/28 on the first Group render', () => {
     renderThreeCol();
 
     expect(groupCalls.length).toBeGreaterThan(0);
-    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 52, right: 30 });
+    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 54, right: 28 });
   });
 
   it('3col restores a saved layout before the Group mounts (first render, not after)', () => {
@@ -119,22 +119,22 @@ describe('DashboardLayout defaultLayout (percent, mount-time)', () => {
     expect(groupCalls[0].defaultLayout).not.toHaveProperty('right');
   });
 
-  it('a corrupt saved layout falls back to the 18/52/30 default', () => {
+  it('a corrupt saved layout falls back to the 18/54/28 default', () => {
     window.localStorage.setItem(KEY_3COL, 'not-json{{{');
 
     renderThreeCol();
 
-    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 52, right: 30 });
+    expect(groupCalls[0].defaultLayout).toEqual({ sidebar: 18, center: 54, right: 28 });
   });
 
-  it('Reset Layout snaps the live Group to 18/52/30 via setLayout', () => {
+  it('Reset Layout snaps the live Group to 18/54/28 via setLayout', () => {
     renderThreeCol();
 
     act(() => {
       requestDashboardLayoutReset();
     });
 
-    expect(setLayout).toHaveBeenCalledWith({ sidebar: 18, center: 52, right: 30 });
+    expect(setLayout).toHaveBeenCalledWith({ sidebar: 18, center: 54, right: 28 });
   });
 
   it('2col -> 3col keeps the Group mounted and applies the saved 3col sizes via setLayout', () => {
