@@ -1,0 +1,25 @@
+web/components/dashboard/SelectedDimensionReadout.tsx
+  s_291078cde7ba1a::t_c65446d0857b7d 15-17
+web/lib/prompts/ucis-v5.4.ts
+  s_291078cde7ba1a::t_67569fdf7b78a4 269
+web/lib/utils/__tests__/section-headings.test.ts
+  s_291078cde7ba1a::t_f40e025572fcf1 54,56,58,69-76
+web/lib/utils/section-headings.ts
+  s_291078cde7ba1a::t_74427263845c63 7,9,22-24,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb9de55e4bdf4917f40261f211c92a2c19351d7b",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
