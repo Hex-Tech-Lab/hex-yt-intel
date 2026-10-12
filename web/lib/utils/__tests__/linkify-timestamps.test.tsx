@@ -24,3 +24,13 @@ describe('linkifyTimestamps – backticked timestamps', () => {
     expect(linkifyTimestamps(input)).toBe(input);
   });
 });
+
+describe('linkifyTimestamps – duration rows (T12)', () => {
+  it('does not turn a Duration table cell into a seek link', () => {
+    const row = '| Duration | 00:17:41 |';
+    expect(linkifyTimestamps(row)).toBe(row);
+  });
+  it('still links timestamps in other table rows', () => {
+    expect(linkifyTimestamps('| Hook | 00:01:05 |')).toContain('#t=');
+  });
+});

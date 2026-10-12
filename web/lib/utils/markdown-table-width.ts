@@ -49,3 +49,16 @@ export function normalizeTableRowWidth(markdown: string): string {
   }
   return lines.join('\n');
 }
+
+// "| Engagement Rate | (3,524 + 324) / 237,282 x 100 = 1.62% |": the model
+// shows its working; readers only need the result (owner report T14).
+const RATE_ROW = /^(\s*\|\s*\**\s*engagement rate\s*\**\s*\|)([^|]*=\s*)([^|=]+?)\s*\|\s*$/i;
+
+/** Keeps only the computed value in an Engagement Rate table cell. */
+export function stripRateFormula(markdown: string): string {
+  if (!markdown) return '';
+  return markdown
+    .split(/\r?\n/)
+    .map((line) => line.replace(RATE_ROW, (_row, label: string, _formula: string, value: string) => `${label} ${value.trim()} |`))
+    .join('\n');
+}

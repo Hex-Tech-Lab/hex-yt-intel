@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTableRowWidth } from '../markdown-table-width';
+import { normalizeTableRowWidth, stripRateFormula } from '../markdown-table-width';
 import { preprocessMarkdown } from '../format';
 
 describe('normalizeTableRowWidth', () => {
@@ -43,5 +43,15 @@ describe('preprocessMarkdown with a literal pipe in a table cell', () => {
     expect(rows[0]).toBe('| Field | Value |');
     expect(rows[1]).toBe('|---|---|');
     expect(rows[2]).toBe('| Channel | Nate Herk \\| AI Automation (no URL in input) |');
+  });
+});
+
+describe('stripRateFormula', () => {
+  it('keeps only the computed engagement rate', () => {
+    expect(stripRateFormula('| Engagement Rate | (3,524 + 324) / 237,282 x 100 = 1.62% |')).toBe('| Engagement Rate | 1.62% |');
+  });
+  it('leaves a plain value and other rows alone', () => {
+    const input = '| Engagement Rate | 1.62% |\n| Views | 237,282 |';
+    expect(stripRateFormula(input)).toBe(input);
   });
 });

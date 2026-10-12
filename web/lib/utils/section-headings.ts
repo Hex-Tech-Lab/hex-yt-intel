@@ -23,7 +23,7 @@ export function promoteSectionHeadings(markdown: string): string {
         return line;
       }
       if (inFence || trimmed.startsWith('|')) return line;
-      const match = SECTION_LINE.exec(trimmed);
+      const match = trimmed.match(SECTION_LINE);
       if (!match) return line;
       const [, number, title, body] = match;
       return `#### ${number} ${title!.trim()}\n\n${body}`;

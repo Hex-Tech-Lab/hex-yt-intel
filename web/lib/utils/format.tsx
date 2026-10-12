@@ -1,5 +1,5 @@
 import React from 'react';
-import { normalizeTableRowWidth } from './markdown-table-width';
+import { normalizeTableRowWidth, stripRateFormula } from './markdown-table-width';
 import { promoteSectionHeadings } from './section-headings';
 
 // Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
@@ -19,7 +19,7 @@ export function preprocessMarkdown(content: string): string {
 
   // Merge over-wide body rows (a literal pipe inside a cell) before the
   // column-count pass below, so that pass sees matching widths.
-  let processed = promoteSectionHeadings(normalizeTableRowWidth(content));
+  let processed = promoteSectionHeadings(stripRateFormula(normalizeTableRowWidth(content)));
 
   // Normalize table column count across header/delimiter/data rows.
   //
@@ -216,6 +216,7 @@ export function linkifyTimestamps(markdown: string): string {
 
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
   const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
+  const durationRowPattern = /^\s*\|\s*\**\s*(?:video\s+)?(?:duration|length|runtime)\b/i;
   const loneTimestampCodeRegex = /`(\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?(?:\s*[–—-]\s*\[?(?:\d{1,2}:)?\d{1,2}:\d{2}\]?)?)`/g;
 
   for (let line of lines) {
@@ -228,8 +229,10 @@ export function linkifyTimestamps(markdown: string): string {
       out.push(line);
       continue;
     }
-    // skip if line contains ISO datetime pattern (e.g. 2024-01-15T16:30:00)
-    if (isoDatePattern.test(line)) {
+    // skip if line contains ISO datetime pattern (e.g. 2024-01-15T16:30:00),
+    // or is a length row ("| Duration | 00:17:41 |"): a video's total length
+    // is not a moment in it, so it must not render as a seek control (T12).
+    if (isoDatePattern.test(line) || durationRowPattern.test(line)) {
       out.push(line);
       continue;
     }
