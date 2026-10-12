@@ -271,8 +271,8 @@ export async function POST(request: NextRequest) {
   // 'pending' (Dispatch A §1.4) — it must NOT stamp completed_at or clobber
   // a final status if a retry races a completed report.
   if (status === 'sampling') {
-    await SupabaseAuxRemediationAdapter.markSampleRunSampling(sampleRunId, runMode);
-    return NextResponse.json({ ok: true, refundedCredits: 0 });
+    const { claimed } = await SupabaseAuxRemediationAdapter.markSampleRunSampling(sampleRunId, runMode);
+    return NextResponse.json({ ok: true, claimed, refundedCredits: 0 });
   }
 
   await SupabaseAuxRemediationAdapter.finalizeSampleRun(sampleRunId, {

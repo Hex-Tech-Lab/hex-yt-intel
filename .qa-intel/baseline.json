@@ -17,7 +17,7 @@
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import 'next/dynamic' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import 'next/dynamic' (framework) comes after thirdparty. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -39,21 +39,21 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'q'",
     "why": "Single-letter variable 'q' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'q' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/containers/DashboardContainer.tsx",
@@ -74,42 +74,42 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name '_'",
     "why": "Single-letter variable '_' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., '_' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/DimensionDrawer.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/MindMap.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/MindMap.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/MindMap.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
@@ -123,34 +123,34 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'p'",
     "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/WordCloud.tsx",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/SettingsModelAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/lib/config/cascade' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/lib/config/cascade' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -158,7 +158,7 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'v'",
     "why": "Single-letter variable 'v' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'v' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'v' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
@@ -179,14 +179,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/CombinerPass.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
@@ -207,28 +207,28 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/stitch-analysis-chunks.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/services/worker-llm.ts",
@@ -283,7 +283,7 @@
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/cloudflare' (framework) comes after thirdparty. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@sentry/cloudflare' (framework) comes after thirdparty. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -291,35 +291,35 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'p'",
     "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'n'",
     "why": "Single-letter variable 'n' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'n' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/routes/analysis.ts",
@@ -347,14 +347,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/services/CombinerPass.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/services/LLMCascade.ts",
@@ -381,7 +381,7 @@
     "file": "worker/src/services/PromptBuilder.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '../../../web/lib/config/synthesis' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '../../../web/lib/config/synthesis' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -389,7 +389,7 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'd'",
     "why": "Single-letter variable 'd' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'd' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
@@ -416,7 +416,7 @@
     "file": "web/hooks/useSSEStream.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/store/useJevRunStore' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/store/useJevRunStore' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -431,7 +431,7 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
@@ -451,7 +451,7 @@
     "file": "web/lib/usecases/CreateAnalysisUseCase.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/lib/youtube' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/lib/youtube' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -472,28 +472,28 @@
     "file": "web/store/useChatStore.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/scripts/contract-auditor.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/scripts/contract-auditor.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/embeddings.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
@@ -514,28 +514,28 @@
     "file": "web/lib/services/sentry-telemetry.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/lib/services/sentry-telemetry.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/services/openrouter.ts",
     "severity": "high",
     "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
-    "why": "A recursive retry function (callOpenRouter) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key — a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "why": "A recursive retry function (callOpenRouter) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
   },
   {
     "file": "web/lib/services/openrouter.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
@@ -549,21 +549,21 @@
     "file": "web/lib/services/dimension-remediation.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/services/aux-remediation.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/services/aux-remediation.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!validation.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!validation.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
@@ -577,56 +577,56 @@
     "file": "web/lib/hooks/useEntitlements.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/admin-logs/fetchers.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/lib/adapters/UpstashVectorAdapter.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/lib/adapters/OpenRouterCompletionAdapter.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useUsageSummary.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/hooks/useSSEStream.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
@@ -640,112 +640,112 @@
     "file": "web/hooks/useRelations.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useGlobalGraph.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useExecutiveDigest.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/hooks/useEagerVideoMetadata.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useCommentInsights.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/hooks/useChapters.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/hooks/useAuxElementStatus.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/components/templates/console/AnalysisHistory.tsx",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/components/dashboard/ShareButton.tsx",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/app/waitlist/page.tsx",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/app/atlas/AtlasClient.tsx",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/app/atlas/AtlasClient.tsx",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/app/api/webhooks/transcript-purge/route.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "web/app/api/chat/conversations/[id]/messages/route.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "web/app/api/admin/settings/[key]/route.ts",
     "severity": "high",
     "title": "ARTAS V05: query filter value can be undefined/null (fail-open)",
-    "why": ".eq('supabase\n      .from('setting_definitions')\n      .select('data_type, validation')', key) receives a value typed as possibly undefined/null with no preceding null guard — when the value is missing the filter degenerates instead of matching nothing (ARTAS_REGISTRY V05; get_temporal_subgraph auth.uid() IS NULL fail-open IDOR).",
-    "fix": "Guard the value before the query (throw/return when undefined/null), or fail closed by constructing a never-matching predicate — never pass a possibly-nullish value into a filter."
+    "why": ".eq('supabase\n      .from('setting_definitions')\n      .select('data_type, validation')', key) receives a value typed as possibly undefined/null with no preceding null guard \u2014 when the value is missing the filter degenerates instead of matching nothing (ARTAS_REGISTRY V05; get_temporal_subgraph auth.uid() IS NULL fail-open IDOR).",
+    "fix": "Guard the value before the query (throw/return when undefined/null), or fail closed by constructing a never-matching predicate \u2014 never pass a possibly-nullish value into a filter."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
@@ -759,7 +759,7 @@
     "file": "worker/src/services/TranscriptExtractor.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
@@ -773,14 +773,14 @@
     "file": "worker/src/services/MetadataScraper.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/services/MetadataScraper.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
@@ -794,7 +794,7 @@
     "file": "worker/src/services/JevCommentClassifier.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
@@ -808,91 +808,91 @@
     "file": "worker/src/services/CommentClassifier.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/services/sensor-fusion/heuristics/jev-text-parser.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/services/providers/TranscriptApiProvider.ts",
     "severity": "high",
     "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
-    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key — a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/services/providers/TranscriptApiProvider.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/services/providers/DecodoTranscriptProvider.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/services/providers/ApifyTranscriptProvider.ts",
     "severity": "high",
     "title": "ARTAS V19: recursive fetch retry without a GET/HEAD method gate",
-    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key — a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
+    "why": "A recursive retry function (fetch) calls fetch and re-invokes itself with no method gate ('GET'/'HEAD') or idempotency key \u2014 a transport failure after the server received a mutating request replays it (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/services/providers/ApifyTranscriptProvider.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!response.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!response.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/routes/analysis.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/queue-consumers/comments-tier3.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
     "file": "worker/src/queue-consumers/comments-tier3.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "res.status===404 branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "res.status===404 branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/queue-consumers/comments-tier3.ts",
     "severity": "medium",
     "title": "ARTAS V20: response body not cancelled on early-exit path",
-    "why": "!res.ok branch returns/throws without cancelling or consuming the response body — the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
+    "why": "!res.ok branch returns/throws without cancelling or consuming the response body \u2014 the underlying connection/socket leaks (ARTAS_REGISTRY V20; hex-expan fetch wrappers leaked connections on every non-OK response).",
     "fix": "Call `res.body?.cancel()` (or drain via .text()/.json()) before returning/throwing on the error path."
   },
   {
     "file": "worker/src/adapters/AssemblyAIAdapter.ts",
     "severity": "high",
     "title": "ARTAS V19: fetch inside a retry loop without a GET/HEAD method gate",
-    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function — a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
+    "why": "A retry/backoff loop calls fetch with no method gate ('GET'/'HEAD') or idempotency key anywhere in the enclosing function \u2014 a transport failure after the server received a POST/PUT/PATCH/DELETE replays the mutation (ARTAS_REGISTRY V19; hex-expan skew-retry-fetch replayed mutations, ADR-0059).",
     "fix": "Gate the retry on method === 'GET' || method === 'HEAD' (or send an Idempotency-Key and make the endpoint dedupe); never blind-retry mutating requests."
   },
   {
@@ -941,7 +941,7 @@
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/cloudflare' (framework) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@sentry/cloudflare' (framework) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -956,42 +956,42 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'm'",
     "why": "Single-letter variable 'm' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'c'",
     "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'p'",
     "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "worker/src/chat-stream.ts",
@@ -1005,14 +1005,14 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'a'",
     "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/stream-token.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'b'",
     "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
@@ -1025,7 +1025,7 @@
     "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@/lib/env' (internal) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@/lib/env' (internal) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -1040,27 +1040,27 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 't'",
     "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/lib/usecases/ProcessChatMessageUseCase.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'l'",
     "why": "Single-letter variable 'l' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'l' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'l' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/app/api/webhooks/highlights/route.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import 'next/server' (framework) comes after internal. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import 'next/server' (framework) comes after internal. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
     "file": "web/lib/adapters/OpenRouterCompletionAdapter.ts",
     "severity": "low",
     "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/nextjs' (framework) comes after types. Should follow order: framework → thirdparty → internal → types.",
+    "why": "Import '@sentry/nextjs' (framework) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
     "fix": "Reorganize imports to follow the correct order groups."
   },
   {
@@ -1159,55 +1159,181 @@
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Code Quality: Unclear variable name 'e'",
     "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' → 'question', 'error', etc.)."
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/app/api/comments/persist-sample-run/route.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/nextjs' (framework) comes after internal. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/app/api/comments/persist-sample-run/route.ts",
+    "severity": "medium",
+    "title": "Validation: Manual range check duplicates Zod schema",
+    "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
+    "fix": "Remove manual range validation after schema.safeParse() \u2014 Zod handles it. Keep only post-parse semantic checks."
+  },
+  {
+    "file": "web/app/api/comments/persist-sample-run/route.ts",
+    "severity": "high",
+    "title": "Security: authorization-relevant change with no sibling test in this scan",
+    "why": "File contains an authorization/entitlement marker ('bypass') but no test file matching this file's name was found in its directory (or its __tests__ subdirectory) in the current scan. A removed or changed authorization check with no regression test can be silently reintroduced later.",
+    "fix": "Add or update a test file for route.ts (e.g. __tests__/route.test.ts) asserting the specific authorization branch this change touches, in the same PR."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (827 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Cross-Platform: LF-only string splitting",
+    "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
+    "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import 'zod' (thirdparty) comes after internal. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Reliability: server-side fetch without timeout/AbortSignal",
+    "why": "A server-side call (fetch(`${url}/info`, { headers: { Authorization: `Bearer ${token}` } })) has no 'signal' option. A hung upstream connection blocks this server context indefinitely \u2014 outside fetchWithTimeout there is no deadline (dual-timeout Law #2).",
+    "fix": "Pass an AbortController signal with a bounded timeout (or use the project's fetchWithTimeout helper), and clearTimeout in a finally block."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Reliability: silent empty-default on fetched response shape ('res')",
+    "why": "'res?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || []' defaults an optionally-chained read of a fetched response (res resolves to a fetch/.json() boundary) to an empty array. An upstream shape change, auth drift or error envelope silently becomes an empty success instead of surfacing.",
+    "fix": "Validate the response shape explicitly (Zod schema, or explicit checks that throw/log a warning with the raw shape) before defaulting; never turn an unknown shape into an empty success."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Data Integrity: untrusted value interpolated into newline-delimited log text",
+    "why": "logLines.push() interpolates un-sanitized values (row.updated_at, level, statusTag, ...) into a log line that is later join('\\n')-ed. A value containing a newline forges extra log lines in the rendered log view (log-line forgery; PR #321).",
+    "fix": "Sanitize every interpolated value before rendering it as a log line, e.g. wrap with a helper: String(value).replace(/[\\r\\n]+/g, ' '), or JSON.stringify(value) for opaque fields."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 't'",
+    "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/admin-logs/fetchers.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (998 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Observability: Catch block without error logging",
+    "why": "Error is caught but not logged, making debugging difficult.",
+    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "web/lib/services/dimension-remediation.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   }
 ]

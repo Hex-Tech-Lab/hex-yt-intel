@@ -155,7 +155,7 @@ async function postSampleRunResult(
   userId: string,
   mode: "uncapped" | "cochran",
   result: SampleRunResult,
-): Promise<{ ok: true } | { ok: false; httpStatus: number }> {
+): Promise<{ ok: true; claimed?: boolean } | { ok: false; httpStatus: number }> {
   const exp = Date.now() + PERSIST_SIG_TTL_MS;
   // #378 review P1: the signature covers the ENTIRE write body (canonical
   // JSON, keys sorted), so classifications/insights/comments/mode cannot be
@@ -180,7 +180,9 @@ async function postSampleRunResult(
       body: JSON.stringify({ ...writeBody, sig, exp }),
       signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
     });
-    return res.ok ? { ok: true } : { ok: false, httpStatus: res.status };
+    if (!res.ok) return { ok: false, httpStatus: res.status };
+    const json = (await res.json().catch(() => ({}))) as { claimed?: boolean };
+    return { ok: true, claimed: json.claimed };
   } finally {
     await releaseUnreadBody(res);
   }
@@ -193,7 +195,7 @@ async function reportSampleRunResult(
   userId: string,
   mode: "uncapped" | "cochran",
   result: SampleRunResult,
-): Promise<void> {
+): Promise<{ ok: boolean; claimed?: boolean }> {
   let lastError: unknown = null;
   let lastHttpStatus: number | null = null;
   for (let attempt = 0; attempt < PERSIST_MAX_ATTEMPTS; attempt++) {
@@ -203,7 +205,7 @@ async function reportSampleRunResult(
     }
     try {
       const outcome = await postSampleRunResult(env, appUrl, sampleRunId, userId, mode, result);
-      if (outcome.ok) return;
+      if (outcome.ok) return { ok: true, claimed: outcome.claimed };
       lastHttpStatus = outcome.httpStatus;
       // skipcq: JS-0827
       console.error(`[comments-tier3-consumer] persist-sample-run non-ok (attempt ${attempt + 1}/${PERSIST_MAX_ATTEMPTS}): ${outcome.httpStatus}`);
@@ -245,6 +247,7 @@ async function reportSampleRunResult(
       });
     }
   }
+  return { ok: false };
 }
 
 /** Pages one ordered pool up to `maxPages` pages, stopping when YouTube reports exhaustion. */
@@ -403,13 +406,18 @@ export async function handleCommentsTier3Message(
     return;
   }
 
+  // Atomic claim (Task 1 / Dispatch D): transition pending -> sampling conditionally.
+  // If another concurrent delivery already claimed this run, claimed is false: log and ack without paid work.
+  const claimOutcome = await reportSampleRunResult(env, appUrl, sampleRunId, userId, mode, {
+    sampledCount: 0,
+    status: "sampling",
+  });
+  if (claimOutcome.ok && claimOutcome.claimed === false) {
+    logSkippedRun("sampling", sampleRunId, videoId);
+    return;
+  }
+
   if (message.mode === "cochran") {
-    // Contract (Dispatch A §1.4): pending -> sampling -> completed|failed.
-    // Fire-and-forget: a failed sampling report must not abort the run.
-    await reportSampleRunResult(env, appUrl, sampleRunId, userId, mode, {
-      sampledCount: 0,
-      status: "sampling",
-    });
     const scraper = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL);
     try {
       const cochran = await runCochranMode(message, env, scraper);

@@ -169,7 +169,7 @@ beforeEach(() => {
   verifyContentSig.mockResolvedValue(true);
   vi.spyOn(SupabaseAuxRemediationAdapter, 'upsertCommentClassifications').mockResolvedValue(5);
   vi.spyOn(SupabaseAuxRemediationAdapter, 'writeCommentsPayload').mockResolvedValue(undefined);
-  vi.spyOn(SupabaseAuxRemediationAdapter, 'markSampleRunSampling').mockResolvedValue(undefined);
+  vi.spyOn(SupabaseAuxRemediationAdapter, 'markSampleRunSampling').mockResolvedValue({ claimed: true });
   vi.spyOn(SupabaseAuxRemediationAdapter, 'finalizeSampleRun').mockResolvedValue(undefined);
 });
 

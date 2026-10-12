@@ -244,4 +244,45 @@ describe('handleCommentsTier3Message — persist-sample-run failure hardening (F
       expect.objectContaining({ tags: { operation: 'comments_tier3_persist_sample_run' } }),
     );
   });
+
+  it('two concurrent deliveries of same message: atomic claim ensures paid classification runs exactly once', async () => {
+    // Both deliveries start by reading 'pending'.
+    let claimCount = 0;
+    let postCall = 0;
+    globalFetch.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+      if ((init as { method?: string } | undefined)?.method === 'GET') {
+        // Both see 'pending' on initial probe if they read
+        return Promise.resolve(new Response(JSON.stringify({ status: 'pending' }), { status: 200 }));
+      }
+      postCall += 1;
+      const parsedBody = JSON.parse((init as { body: string }).body);
+      if (parsedBody.status === 'sampling') {
+        claimCount += 1;
+        if (claimCount === 1) {
+          // First delivery wins claim: status updated pending -> sampling (affected count 1)
+          return Promise.resolve(new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 }));
+        }
+        // Second delivery loses claim: row is already sampling (affected count 0)
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, claimed: false }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    });
+
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+    scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12'])[0]);
+
+    const msg1 = makeMessage();
+    const msg2 = makeMessage();
+
+    // Fire two concurrent deliveries
+    await Promise.all([
+      handleCommentsTier3Message(msg1, ENV),
+      handleCommentsTier3Message(msg2, ENV),
+    ]);
+
+    // Paid classification MUST run exactly once across both deliveries
+    expect(classifierMock).toHaveBeenCalledTimes(1);
+  });
 });
+
