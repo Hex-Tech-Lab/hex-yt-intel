@@ -1,4 +1,3 @@
-import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
 import { computeSimHash64 } from '@/lib/utils/simhash';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
@@ -6,17 +5,20 @@ import {
   buildHighlightsWindowedUserMessage,
   parseHighlightsExtraction,
   resolveHighlightOverlaps,
+  snapHighlightEnds,
   MAX_PROMPT_TAKEAWAYS,
 } from '@/lib/prompts/highlights-extraction';
-import type { ExtractedHighlight } from '@/lib/prompts/highlights-extraction';
 import { buildVerbatimExcerpt } from '@/lib/prompts/highlights-reconciliation';
 import {
   HIGHLIGHTS_REGISTRY_FALLBACK,
   clampHighlightsSetting,
   HIGHLIGHTS_COVERAGE_WINDOW_SECONDS,
+  HIGHLIGHTS_WINDOW_READAHEAD_SECONDS,
   HIGHLIGHTS_MAX_CONCURRENT_WINDOWS,
 } from '@/lib/utils/highlights-settings';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
+import type { TemporalKnowledgePort } from '@/lib/ports/TemporalKnowledgePort';
+import type { ExtractedHighlight } from '@/lib/prompts/highlights-extraction';
 
 /**
  * The persistence slice highlights extraction needs. A structural subset of
@@ -254,16 +256,22 @@ export class ExtractHighlightsUseCase {
     // Cost: ~ceil(duration / window) cheap-cascade calls instead of 1
     // (measured ~$0.011 vs ~$0.007 for the reported 32-min video).
     const lastSegmentStart = segments[segments.length - 1]?.start ?? 0;
+    // Each line's end is the next line's start; built once for every window and retry.
+    const withEnds = segments.map((segment, i) => ({ ...segment, end: segments[i + 1]?.start }));
     const harvest = computeHarvestWindows(lastSegmentStart, HIGHLIGHTS_COVERAGE_WINDOW_SECONDS, maxCount);
 
     const harvestWindow = async (harvestWindowIndex: number): Promise<WindowOutcome> => {
       const window = harvest.windows[harvestWindowIndex]!;
-      const windowSegments = segments.filter((segment) => segment.start >= window.start && segment.start < window.end);
+      const windowSegments = withEnds.filter((segment) => segment.start >= window.start && segment.start < window.end);
       if (windowSegments.length === 0) return { status: 'empty', highlights: [] };
+      // Read-ahead (T25): a moment starting near the window's end may finish
+      // in the next window's text, so the model sees that text as context.
+      // Starts are still validated against this window's own lines only.
+      const contextSegments = withEnds.filter((segment) => segment.start >= window.end && segment.start < window.end + HIGHLIGHTS_WINDOW_READAHEAD_SECONDS);
       try {
         const windowCompletion = await this.completion.complete({
           system: buildHighlightsWindowedSystemPrompt(window.quota, maxSegmentDuration),
-          user: buildHighlightsWindowedUserMessage(windowSegments, window.quota, promptTakeaways),
+          user: buildHighlightsWindowedUserMessage(windowSegments, window.quota, promptTakeaways, contextSegments),
           models,
           maxTokens: maxOutputTokens,
           analysisId,
@@ -313,7 +321,7 @@ export class ExtractHighlightsUseCase {
     }
     const failedWindowCount = windowOutcomes.filter((outcome) => outcome.status === 'failed').length;
     const result: ExtractedHighlight[] = merged;
-    const finalHighlights = resolveHighlightOverlaps(result, minSegmentDuration, maxSegmentDuration).slice(0, maxCount);
+    const finalHighlights = resolveHighlightOverlaps(snapHighlightEnds(result, segments, maxSegmentDuration), minSegmentDuration, maxSegmentDuration).slice(0, maxCount);
 
     // Never persist an empty result. A fully-empty harvest (every window
     // thin or every window call failed) means "nothing noteworthy this

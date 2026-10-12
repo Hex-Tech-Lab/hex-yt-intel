@@ -136,7 +136,7 @@ describe('ExtractHighlightsUseCase', () => {
     expect(persistence.saveHighlights).toHaveBeenCalledWith({
       analysisId: 'an-1',
       highlights: [
-        { idx: 0, start: 10, end: 25, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim Reveal' },
+        { idx: 0, start: 10, end: 30, label: 'First claim moment', takeawayIdx: null, verbatimExcerpt: 'First claim Reveal' }, // end snapped to the next line boundary (T25)
         { idx: 1, start: 30, end: 45, label: 'The reveal', takeawayIdx: null, verbatimExcerpt: 'Outro' },
       ],
     });

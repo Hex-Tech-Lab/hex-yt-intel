@@ -159,6 +159,10 @@ export const HIGHLIGHTS_SPEED_MAX = 3;
  *  registry has no partition-level key to hang it on. */
 export const HIGHLIGHTS_COVERAGE_WINDOW_SECONDS = 300;
 
+/** Seconds of the next window's transcript each highlights window may read
+ *  (not start in), so a moment near a window edge can finish (T25). */
+export const HIGHLIGHTS_WINDOW_READAHEAD_SECONDS = 30;
+
 /**
  * Concurrency ceiling for windowed highlights extraction (Wave 3).
  * Sized at 3 to prevent slamming upstream LLM provider rate limits
