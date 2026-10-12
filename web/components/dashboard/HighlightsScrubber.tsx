@@ -12,6 +12,8 @@ import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
 import { leadInFor, useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
 
+const COLLAPSED_KEY = 'hex:highlights:v1:collapsed';
+
 interface Highlight {
   idx: number;
   start: number;
@@ -62,6 +64,18 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   // Caption language for the ticker. No translated transcript is in the segment
   // payload yet, so TRANS. shows a stub; see the translation-stub branch below.
   const [captionLang, setCaptionLang] = useState<'orig' | 'trans'>('orig');
+  // T16: collapsing frees vertical space for the timeline below. Read after
+  // mount (not in the initializer) so SSR and first client render agree.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === '1'); } catch (err) { console.warn('[highlights] collapse state unreadable; staying expanded', err); }
+  }, []);
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((was) => {
+      try { window.localStorage.setItem(COLLAPSED_KEY, was ? '0' : '1'); } catch (err) { console.warn('[highlights] collapse state not saved; session-only', err); }
+      return !was;
+    });
+  }, []);
   // Tracks which analysisId `data` actually belongs to -- CodeRabbit finding
   // on PR #298: `data` alone isn't enough to guard the fetch effect below,
   // since switching to a NEW analysisId while the OLD analysisId's `data`
@@ -359,6 +373,16 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   }
 
   const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(segments, segDurFallback, videoDurationSeconds);
+  // Shared by the track row and the collapsed header, so the reel stays playable collapsed.
+  const playButton = (
+    <IconButton
+      label={playingIdx === null ? 'Play highlights' : isPaused ? 'Resume highlights' : 'Pause highlights'}
+      icon={<Icon icon={playingIdx === null || isPaused ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+      variant="primary"
+      size="sm"
+      onClick={playingIdx === null ? start : isPaused ? resume : pause}
+    />
+  );
 
   return (
     <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
@@ -366,13 +390,27 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           moment stepper moved to the footer row (below) per the 2nd
           layout revision, replacing the old text-label Play button slot. */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[var(--ink)]">Highlights Reel</span>
-        <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-controls="highlights-reel-body"
+          data-testid="highlights-collapse-toggle"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]"
+        >
+          <Icon icon={collapsed ? 'solar:alt-arrow-right-linear' : 'solar:alt-arrow-down-linear'} size={12} />
+          Highlights Reel
+        </button>
+        <span className="flex items-center gap-2 text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
+          {collapsed ? playButton : null}
         </span>
       </div>
+
+      {collapsed ? null : (
+      <div id="highlights-reel-body" className="flex flex-col gap-2">
 
       {/* Timeline row: the track stays one continuous element (real
           highlight-timestamp positions preserved -- unlike a visually
@@ -410,13 +448,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
               start (nothing playing) / pause (playing, not paused) /
               resume (playing, paused) -- playingIdx and player position
               are preserved across pause/resume. */}
-          <IconButton
-            label={playingIdx === null ? 'Play highlights' : isPaused ? 'Resume highlights' : 'Pause highlights'}
-            icon={<Icon icon={playingIdx === null || isPaused ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
-            variant="primary"
-            size="sm"
-            onClick={playingIdx === null ? start : isPaused ? resume : pause}
-          />
+          {playButton}
         </div>
       </div>
 
@@ -560,6 +592,8 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
         </div>
       </div>
+      </div>
+      )}
     </Card>
   );
 },
