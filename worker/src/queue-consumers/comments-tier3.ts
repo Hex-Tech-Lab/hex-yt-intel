@@ -370,7 +370,10 @@ export async function handleCommentsTier3Message(
     });
     return;
   }
-  if (priorStatus === "sampling" || priorStatus === "completed") {
+  // 'failed' too: Vercel marks a run failed when its enqueue fetch errors,
+  // but a timeout can land after the queue accepted the message. That run's
+  // finalize-retry inserts a fresh row, so processing this one would double-spend.
+  if (priorStatus === "sampling" || priorStatus === "completed" || priorStatus === "failed") {
     // skipcq: JS-0827
     console.info(`[comments-tier3-consumer] redelivery guard: run already ${priorStatus}; skipping paid work`, { sampleRunId, videoId });
     return;

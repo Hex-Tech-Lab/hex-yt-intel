@@ -2,8 +2,8 @@
  * CONTRACT (dispatch brief 2026-10-05 T1, findings A+B): Cloudflare Queues is
  * at-least-once, so the Tier 3 consumer (1) probes the run row's status via a
  * SIGNED GET before ANY paid fetch/classify work and acks with zero work when
- * the run already progressed (sampling/completed), (2) proceeds on
- * pending/failed, (3) fails CLOSED when the status cannot be determined
+ * the run already progressed (sampling/completed/failed), (2) proceeds on
+ * pending, (3) fails CLOSED when the status cannot be determined
  * (rethrow -> worker.ts queue handler -> message.retry()), and (4) retries
  * the persist-sample-run write (2 retries, ~1s/~2s backoff) and, on total
  * failure of the terminal success report, reports the run failed best-effort
@@ -130,7 +130,7 @@ beforeEach(() => {
 });
 
 describe('handleCommentsTier3Message — redelivery pre-check (Finding A)', () => {
-  it.each(['sampling', 'completed'] as const)('run already %s -> ack with ZERO work (no scraper, no classifier, no write)', async (priorStatus) => {
+  it.each(['sampling', 'completed', 'failed'] as const)('run already %s -> ack with ZERO work (no scraper, no classifier, no write)', async (priorStatus) => {
     stubFetch({ status: priorStatus });
 
     await handleCommentsTier3Message(makeMessage(), ENV);
@@ -143,7 +143,7 @@ describe('handleCommentsTier3Message — redelivery pre-check (Finding A)', () =
     expect(classifierMock).not.toHaveBeenCalled(); // no LLM spend
   });
 
-  it.each(['pending', 'failed'] as const)('run status %s -> proceeds with the full pipeline', async (priorStatus) => {
+  it.each(['pending'] as const)('run status %s -> proceeds with the full pipeline', async (priorStatus) => {
     stubFetch({ status: priorStatus });
     const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
     nextScraperStub = scraperStub;
