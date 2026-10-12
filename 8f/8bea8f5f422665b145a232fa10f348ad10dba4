@@ -1,0 +1,23 @@
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_291078cde7ba1a::t_cb201a87ec925c 474-475,479,484,488
+web/lib/hooks/useHighlightTicker.test.ts
+  s_291078cde7ba1a::t_c4f8f7ffd52a5c 194-214
+web/lib/hooks/useHighlightTicker.ts
+  s_291078cde7ba1a::t_9311b3554e6513 55-60,64-67,106-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f8bea8f5f422665b145a232fa10f348ad10dba4",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
