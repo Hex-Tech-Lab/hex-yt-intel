@@ -1,0 +1,23 @@
+docs/architecture/decisions/ADR-043-chat-intent-and-prompt-guard.md
+  s_291078cde7ba1a::t_9dc2585325e30d 53
+  s_291078cde7ba1a::t_b203181a508803 42
+  s_291078cde7ba1a::t_d2fb0f143cd0b6 29-30
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_bc4b71ef773c4a 1591
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90deff3a8926f3d0d7095d4e996f715d18ea917b",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
