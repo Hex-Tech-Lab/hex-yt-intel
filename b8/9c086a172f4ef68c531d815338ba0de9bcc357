@@ -1,0 +1,16 @@
+worker/src/__tests__/chat-cascade-fallback-capture.test.ts
+  h_50fba0cdd9e5c4 30,34,53-84,86
+worker/src/chat-stream.ts
+  h_50fba0cdd9e5c4 186,211-218,225,239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b89c086a172f4ef68c531d815338ba0de9bcc357",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
