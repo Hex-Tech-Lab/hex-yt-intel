@@ -102,3 +102,11 @@ describe('R1e: 8.4 Discovery Pathways hybrid text', () => {
   });
 });
 
+
+describe('UCIS_V5_4_SYSTEM — Dim 7 empty-field grouping', () => {
+  it('lists a system’s empty fields on one "Not stated in the video:" line', () => {
+    expect(UCIS_V5_4_SYSTEM).toContain('**Empty fields**');
+    expect(UCIS_V5_4_SYSTEM).toContain('Write exactly ONE line');
+    expect(UCIS_V5_4_SYSTEM).toContain('**Not stated in the video: field one, field two, field three**');
+  });
+});

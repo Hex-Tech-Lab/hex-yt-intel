@@ -18,6 +18,24 @@ describe('shortenInsufficientData (T24)', () => {
     expect(shortenInsufficientData('[00:01:23] and [Insufficient sleep] stay')).toBe('[00:01:23] and [Insufficient sleep] stay');
   });
 
+  it.each([
+    ['[Insufficient data quality in the sample, n=3]'],
+    ['[Insufficient data quality in the sample]'],
+    ['[Insufficient data in source transcript to fulfill this dimension, see note]'],
+    ['[insufficient data]'],
+    ['[insufficient data...]'],
+    ['[INSUFFICIENT DATA...]'],
+  ])('leaves prefix collisions and lowercase/other-case forms untouched: %s', (note) => {
+    expect(shortenInsufficientData(note)).toBe(note);
+  });
+
+  it.each([
+    ['[Insufficient data in source transcript to fulfill this dimension]'],
+    ['[Insufficient data...]'],
+  ])('rewrites the exact prompt-emitted form %s', (form) => {
+    expect(shortenInsufficientData(form)).toBe(INSUFFICIENT_DATA_LABEL);
+  });
+
   it('runs inside preprocessMarkdown', () => {
     expect(preprocessMarkdown(`**Field**: ${FULL}`)).toContain(INSUFFICIENT_DATA_LABEL);
   });
