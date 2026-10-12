@@ -1,0 +1,14 @@
+web/store/useChatStore.ts
+  h_50fba0cdd9e5c4 115-119,127,133,142,381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4eebf79fbc10120eabf20175f0d5b5168d85a4e5",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
