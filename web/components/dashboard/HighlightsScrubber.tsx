@@ -126,20 +126,42 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
     [data, segDurFallback, minDur, maxDur],
   );
 
+  // T5 (a): the playing index and elapsed time live in the store, not local
+  // state, because Simple and Pro each mount their own scrubber -- a mode
+  // switch remounts it and would otherwise reset the reel to "no highlight".
+  const reelPlayingIdx = useVideoStore((state) => state.reelPlayingIdx);
+  const reelElapsedSeconds = useVideoStore((state) => state.reelElapsedSeconds);
+  const setReelPlayingIdx = useVideoStore((state) => state.setReelPlayingIdx);
+  const setReelElapsedSeconds = useVideoStore((state) => state.setReelElapsedSeconds);
+  const controlledPlayback = useMemo(
+    () => ({
+      playingIdx: reelPlayingIdx,
+      elapsedInSegmentSeconds: reelElapsedSeconds,
+      setPlayingIdx: setReelPlayingIdx,
+      setElapsedInSegmentSeconds: setReelElapsedSeconds,
+    }),
+    [reelPlayingIdx, reelElapsedSeconds, setReelPlayingIdx, setReelElapsedSeconds]
+  );
+
   const { playingIdx, elapsedInSegmentSeconds, speed, isPaused, start, stop, pause, resume, jumpTo, setSpeed } = useSegmentPlayback({
     segments,
     contextLeadSeconds: data?.contextLeadSeconds ?? 0,
     segmentDurationSeconds: segDurFallback,
     primitives,
     seekSettlementTimeoutMs: data?.seekSettlementTimeoutMs,
+    controlled: controlledPlayback,
   });
 
   useEffect(() => {
-    // Stop any in-progress playback from the previous analysisId -- otherwise
-    // switching videos mid-playback keeps auto-seeking a now-different
-    // player against stale timestamps from the old video's highlights. Kept
-    // in its own effect (analysisId-only) so it does NOT re-fire on every
-    // digestLoading flip below.
+    // Stop any in-progress playback when the analysis actually changes --
+    // otherwise switching videos mid-playback keeps auto-seeking a
+    // now-different player against stale timestamps from the old video's
+    // highlights. The store tags the position with its analysisId, so a
+    // plain remount of the SAME analysis (mode switch) keeps the position
+    // (T5 a). Analysis-only key: does NOT re-fire on digestLoading flips.
+    const { reelAnalysisId, setReelAnalysisId } = useVideoStore.getState();
+    if (reelAnalysisId === analysisId) return;
+    setReelAnalysisId(analysisId);
     stop();
   }, [analysisId, stop]);
 
