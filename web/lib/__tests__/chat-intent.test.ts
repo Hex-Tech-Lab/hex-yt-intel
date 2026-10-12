@@ -6,6 +6,8 @@ describe('isWritingRequest (T21)', () => {
     'Write a LinkedIn post about the main takeaway',
     'draft a blog article from this video',
     'Turn this into a tweet thread',
+    'Turn this video into a LinkedIn post',
+    'turn the transcript into a newsletter',
     'make me a 60-second script for TikTok',
     'Compose a newsletter intro',
   ])('routes "%s" to writing', (msg) => expect(isWritingRequest(msg)).toBe(true));

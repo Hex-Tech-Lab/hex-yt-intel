@@ -524,7 +524,10 @@ export class ProcessChatMessageUseCase {
     // Free tier keeps the normal chat cascade for writing too (owner: free cost
     // first; gpt-oss is ~3x cheaper than Haiku 5.5 per OpenRouter, 2026-10-12).
     const isPaidTier = tier === 'light' || tier === 'pro' || tier === 'max' || tier === 'enterprise';
-    const writingCascade = !isReasoning && isPaidTier && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
+    // Writing intent beats the keyword-based reasoning check ("a LinkedIn post
+    // about why...") but not an explicit /reason or /think command.
+    const isReasoningCommand = trimmedRaw.startsWith('/reason') || trimmedRaw.startsWith('/think');
+    const writingCascade = !isReasoningCommand && isPaidTier && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
     const chatModels = writingCascade
       ? [...new Set(writingCascade.map((item) => item.model))]
       : isReasoning

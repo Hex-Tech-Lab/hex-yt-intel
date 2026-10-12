@@ -9,6 +9,7 @@ vi.mock('@/lib/config/cascade', async (importOriginal) => {
     resolveChatWritingCascade: vi.fn().mockResolvedValue([
       { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Vertex)', providerOrder: ['google-vertex'] },
       { model: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5 (Anthropic Direct)', providerOrder: ['anthropic'] },
+      { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', providerOrder: ['groq'] },
     ]),
   };
 });
@@ -43,8 +44,18 @@ async function run(content: string, tier = 'pro') {
 describe('chat writing route (T21)', () => {
   it('a writing request uses the writing cascade for both the signed models and the forwarded cascade', async () => {
     const { payload, signedModels } = await run('Write a LinkedIn post about the main takeaway');
-    expect(payload?.cascade.map((c) => c.model)).toEqual(['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5']);
-    expect(signedModels).toEqual(['anthropic/claude-haiku-5.5']);
+    expect(payload?.cascade.map((c) => c.model)).toEqual(['anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5', 'openai/gpt-oss-120b']);
+    expect(signedModels).toEqual(['anthropic/claude-haiku-5.5', 'openai/gpt-oss-120b']);
+  });
+
+  it('writing intent wins over a reasoning keyword in the topic ("why")', async () => {
+    const { payload } = await run('Write a LinkedIn post about why this video matters');
+    expect(payload?.cascade[0]?.model).toBe('anthropic/claude-haiku-5.5');
+  });
+
+  it('an explicit /reason command still uses reasoning, not writing', async () => {
+    const { payload } = await run('/reason write a LinkedIn post about this');
+    expect(payload?.cascade.map((c) => c.model)).not.toContain('anthropic/claude-haiku-5.5');
   });
 
   it('free tier keeps the chat cascade even for writing (cost)', async () => {
