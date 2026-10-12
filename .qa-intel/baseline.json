@@ -929,5 +929,96 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (704 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (503 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Import ordering violated",
+    "why": "Import '@sentry/cloudflare' (framework) comes after types. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
+    "fix": "Reorganize imports to follow the correct order groups."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'a'",
+    "why": "Single-letter variable 'a' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'a' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'b'",
+    "why": "Single-letter variable 'b' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'b' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'm'",
+    "why": "Single-letter variable 'm' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'm' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'c'",
+    "why": "Single-letter variable 'c' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'c' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'e'",
+    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "low",
+    "title": "Code Quality: Unclear variable name 'p'",
+    "why": "Single-letter variable 'p' outside of loop context is unclear. Makes code harder to understand.",
+    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'p' \u2192 'question', 'error', etc.)."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   }
 ]
