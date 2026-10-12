@@ -1,0 +1,39 @@
+worker/src/__tests__/chat-cascade-fallback-capture.test.ts
+  s_291078cde7ba1a::t_fbac723c800344 70
+  s_291078cde7ba1a::t_a7a7bd1034a1c7 83-84
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_d54a65513c17ce 1583
+  s_291078cde7ba1a::t_7c569965499084 1584
+worker/wrangler.toml
+  s_291078cde7ba1a::t_7e9713fff8dc02 4
+docs/agent-prompts/2026-10-12-cct-stream-a-cascade-deadline.md
+  s_291078cde7ba1a::t_ce6da6744c0429 1-42
+worker/src/__tests__/chat-cascade-deadline.test.ts
+  s_291078cde7ba1a::t_4a8ea5b64946e0 1-110
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_6208f230c3105a 134-142,145
+  s_291078cde7ba1a::t_b13de8c9139407 240
+  s_291078cde7ba1a::t_0bbc2fe0185dd5 249-250
+  s_291078cde7ba1a::t_8054471aed6a5a 253-254,256,269-280,282-283,285
+  s_291078cde7ba1a::t_7a1082d49a8a19 183-187
+  s_291078cde7ba1a::t_90e58412ca9ae1 289,301-302,305-316
+  s_291078cde7ba1a::t_33a47f7c9eabc0 106,109-112
+  s_291078cde7ba1a::t_48e00333b41bfa 494
+  s_291078cde7ba1a::t_97a42ee798b36d 251-252,255,317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "baccfa41bbe5ecc435a53d58e7ebcf603c512cda",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
