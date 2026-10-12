@@ -26,13 +26,13 @@ export class ProcessPaddleWebhookUseCase {
   async execute(rawBody: string, signatureHeader: string | null, secret: string | undefined): Promise<{ success: boolean; status: number; message: string }> {
     if (!signatureHeader || !secret) {
       console.warn('[ProcessPaddleWebhookUseCase] Rejecting webhook: missing signature header or webhook secret');
-      Sentry.captureMessage('[ProcessPaddleWebhookUseCase] Rejecting webhook: missing signature header or webhook secret', { level: 'warning' });
+      // A missing secret is our misconfiguration; a missing header is anyone on the internet (log only, no Sentry flood).
+      if (!secret) Sentry.captureMessage('[ProcessPaddleWebhookUseCase] Paddle webhook secret is not configured', { level: 'error' });
       return { success: false, status: 401, message: 'Missing signature or secret' };
     }
 
     if (!this.billingAdapter.verifySignature(rawBody, signatureHeader, secret)) {
       console.warn('[ProcessPaddleWebhookUseCase] Rejecting webhook: signature verification failed');
-      Sentry.captureMessage('[ProcessPaddleWebhookUseCase] Rejecting webhook: signature verification failed', { level: 'warning' });
       return { success: false, status: 401, message: 'Invalid signature' };
     }
 
@@ -80,8 +80,8 @@ export class ProcessPaddleWebhookUseCase {
           await releaseRedisLock(lockKey, lockToken);
         }
         const reason = result.error || 'Failed to process';
+        // The adapter already reports this failure to Sentry (captureException); log only here.
         console.warn(`[ProcessPaddleWebhookUseCase] Webhook processing failed: ${reason}`);
-        Sentry.captureMessage(`[ProcessPaddleWebhookUseCase] Webhook processing failed: ${reason}`, { level: 'warning' });
         return { success: false, status: 500, message: reason };
       }
       // Entitlement change committed: record the completion marker, then

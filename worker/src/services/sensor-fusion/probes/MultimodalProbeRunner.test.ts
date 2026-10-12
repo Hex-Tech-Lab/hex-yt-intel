@@ -13,8 +13,8 @@ describe('MultimodalProbeRunner endpoint contract', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
-      json: async () => ({}),
-      text: async () => '',
+      json: () => Promise.resolve({}),
+      text: () => Promise.resolve(''),
     });
     vi.stubGlobal('fetch', fetchMock);
 

@@ -13,7 +13,7 @@ describe('JevTextParser endpoint contract', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
-      json: async () => ({}),
+      json: () => Promise.resolve({}),
     });
     vi.stubGlobal('fetch', fetchMock);
 
