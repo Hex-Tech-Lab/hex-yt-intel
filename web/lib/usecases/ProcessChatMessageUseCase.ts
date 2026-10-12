@@ -17,6 +17,7 @@ import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
 import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
+import { chatPayloadDigest } from '@/lib/utils/chat-payload-digest';
 
 // Fallback used only if the settings registry is unreachable (see
 // getRegistrySettings call below) -- matches the values these keys replaced
@@ -529,6 +530,10 @@ export class ProcessChatMessageUseCase {
       : await resolveChatCascade();
 
     // 10. Generate cryptographic stream token
+    // The browser relays these to the worker; signing their digest stops a
+    // signed-in user from editing what the LLM sees or which models run.
+    const relayedHistory = history.map((m) => ({ role: m.role, content: m.content }));
+    const payloadDigest = await chatPayloadDigest({ tier, grounding, history: relayedHistory, cascade: chatCascade });
     let sig: string;
     let exp: number;
     try {
@@ -536,6 +541,7 @@ export class ProcessChatMessageUseCase {
         conversationId,
         userId,
         models: chatModels,
+        payloadDigest,
       });
       sig = token.sig;
       exp = token.exp;
@@ -565,7 +571,7 @@ export class ProcessChatMessageUseCase {
           userId,
           tier,
           grounding,
-          history: history.map((m) => ({ role: m.role, content: m.content })),
+          history: relayedHistory,
           models: chatModels,
           cascade: chatCascade,
           // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
