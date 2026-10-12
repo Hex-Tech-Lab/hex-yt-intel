@@ -1,0 +1,21 @@
+worker/src/__tests__/chat-payload-signature.test.ts
+  s_291078cde7ba1a::t_0a78df516299b7 2,72,75-76
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_80bf9725b9e0b5 283-284,314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "053f07a3df8d4b959ed6159a1966dac0029c3f41",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
