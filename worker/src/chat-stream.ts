@@ -183,6 +183,7 @@ export async function streamChatCascade(
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let streamError: Error | null = null;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -207,12 +208,21 @@ export async function streamChatCascade(
               full += delta;
               onDelta(delta);
             }
+            // OpenRouter reports mid-stream failures as an SSE chunk inside the
+            // HTTP 200; surface it so the cut-off path (partial/next model) runs.
+            if (json.error || json.choices?.[0]?.finish_reason === 'error') {
+              streamError = new Error(
+                typeof json.error?.message === 'string' ? json.error.message : 'upstream stream error'
+              );
+              break;
+            }
           } catch (e) {
             /* keep-alive / partial frame */
             // skipcq: JS-0827
             console.warn("[chat-stream] JSON parse delta skipped", e instanceof Error ? e.message : String(e));
           }
         }
+        if (streamError) throw streamError;
       }
       if (full) {
         // skipcq: JS-0827
@@ -226,7 +236,7 @@ export async function streamChatCascade(
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
       // AbortSignal.timeout() rejects with TimeoutError, not AbortError.
-      const isTimeout = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+      const isTimeout = e instanceof DOMException && e.name === 'TimeoutError';
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
       // Previously console-only -- tangent hunt after LLMCascade.ts's

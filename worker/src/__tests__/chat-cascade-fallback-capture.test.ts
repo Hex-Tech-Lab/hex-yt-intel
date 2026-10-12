@@ -27,11 +27,11 @@ describe('streamChatCascade fallback visibility', () => {
 
   it('keeps a partial answer instead of appending a second model after a mid-stream failure', async () => {
     const enc = new TextEncoder();
+    let pulls = 0;
     const broken = new ReadableStream<Uint8Array>({
       // First read delivers a delta, the second fails (erroring in start() would drop the queued chunk).
-      pulls: 0,
       pull(controller) {
-        if (this.pulls++ === 0) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'part' } }] })}\n\n`));
+        if (pulls++ === 0) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'part' } }] })}\n\n`));
         else controller.error(new Error('connection reset'));
       },
     });
@@ -50,4 +50,37 @@ describe('streamChatCascade fallback visibility', () => {
     expect(result.partial).toBe(true);
     expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ level: 'error', tags: { operation: 'chat-cascade-partial', reason: 'error' } });
   });
+
+  it('treats an in-stream OpenRouter error chunk as a partial failure', async () => {
+    const body = `data: ${JSON.stringify({ choices: [{ delta: { content: 'part' } }] })}\n\n`
+      + `data: ${JSON.stringify({ error: { message: 'upstream died' }, choices: [{ finish_reason: 'error', delta: { content: '' } }] })}\n\n`;
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce(new Response(body, { status: 200 }))
+      .mockResolvedValueOnce(sse('second answer'));
+    vi.stubGlobal('fetch', fetchSpy);
+    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, [
+      { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
+      { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(result.content).toBe('part');
+    expect(result.partial).toBe(true);
+  });
+
+  it('does not label a non-deadline AbortError as a timeout', async () => {
+    const enc = new TextEncoder();
+    let pulls = 0;
+    const broken = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulls++ === 0) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'part' } }] })}\n\n`));
+        else controller.error(new DOMException('cancelled', 'AbortError'));
+      },
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(broken, { status: 200 })));
+    await streamChatCascade('k', 'g', [], () => {}, undefined, [
+      { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
+    ]);
+    expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ tags: { reason: 'error' } });
+  });
 });
+
