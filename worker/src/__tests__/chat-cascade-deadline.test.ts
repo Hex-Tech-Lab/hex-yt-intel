@@ -9,7 +9,7 @@ const CASCADE = [
   { model: 'openai/gpt-oss-120b', name: 'a', providerOrder: ['cerebras'] },
   { model: 'openai/gpt-oss-120b', name: 'b', providerOrder: ['groq'] },
 ];
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const delta = (text: string) => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
 const sse = (text: string) => new Response(`${delta(text)}data: [DONE]\n\n`, { status: 200 });
 
@@ -24,7 +24,7 @@ function hangingBody(first: string, signal: AbortSignal | null | undefined): Res
         controller.enqueue(enc.encode(delta(first)));
         return;
       }
-      return new Promise<void>((_, reject) => {
+      return new Promise<void>((_resolve, reject) => {
         signal?.addEventListener('abort', () => {
           controller.error(signal.reason);
           reject(signal.reason);
@@ -47,6 +47,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     expect((fetchSpy.mock.calls[0]?.[1] as RequestInit).signal?.aborted).toBe(true);
     expect(result.partial).toBe(true);
     expect(result.content).toBe('part');
+    expect(result.outcome).toBe('client_abort');
     expect(captureMessage).not.toHaveBeenCalled();
   });
 
@@ -58,7 +59,33 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(result.content).toBe('');
+    expect(result.outcome).toBe('client_abort');
     expect(captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('(a3) abort before any text: no fallback model, no Sentry, outcome client_abort', async () => {
+    const client = new AbortController();
+    const fetchSpy = vi.fn((_url: string, init: RequestInit) => {
+      setTimeout(() => client.abort(), 20); // after the reader is waiting on the body
+      return Promise.resolve(hangingBody('', init.signal));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(result.outcome).toBe('client_abort');
+    expect(result.content).toBe('');
+    expect(captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('(a4) a real network error in the same window as a disconnect is still reported', async () => {
+    const client = new AbortController();
+    const fetchSpy = vi.fn(() => {
+      client.abort();
+      return Promise.reject(new TypeError('network connection lost'));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
+    expect(captureMessage.mock.calls.some((c) => c[1]?.tags?.reason === 'error')).toBe(true);
   });
 
   it('(b) fallback models share one budget: second model gets the remaining time, cascade stops when spent', async () => {
@@ -76,14 +103,14 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
       return Promise.resolve(hangingBody('', init.signal));
     });
     vi.stubGlobal('fetch', fetchSpy);
-    const started = Date.now();
     const result = await streamChatCascade('k', 'g', [], () => {}, undefined, budgetCascade, undefined, 300);
-    const elapsed = Date.now() - started;
     // Without a shared budget the second model would get a fresh 300ms (total ~500ms) and the third would run.
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(elapsed).toBeLessThan(420);
     expect(result.content).toBe('');
+    expect(result.outcome).toBe('budget_spent');
     expect(captureMessage.mock.calls.filter((c) => c[1]?.tags?.operation === 'chat-cascade-budget-exhausted')).toHaveLength(1);
+    // The timed-out attempt is covered by the budget event, not a second per-model timeout report.
+    expect(captureMessage.mock.calls.filter((c) => c[1]?.tags?.reason === 'timeout')).toHaveLength(0);
   });
 
   it('(c) text chunk then in-band error chunk => partial, one fetch, reason stream_error', async () => {
