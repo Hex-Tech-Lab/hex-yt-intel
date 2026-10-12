@@ -1,5 +1,18 @@
 'use client';
 
+// Bounds on a per-segment derived pace: real speech sits well inside these
+// (stored excerpts p10 2.6 / p90 4.4 words/s); outside them the excerpt or
+// the timing is suspect, so the pace is clamped rather than trusted.
+const MIN_WORDS_PER_SECOND = 1.5;
+const MAX_WORDS_PER_SECOND = 6;
+
+/** Words per second for the reveal: the speaker's own pace from a verbatim
+ *  excerpt over its speaking span (clamped), else the registry fallback. */
+function revealPace(usingVerbatim: boolean, totalWords: number, speakingSeconds: number, fallback: number): number {
+  if (!usingVerbatim || speakingSeconds <= 0) return fallback;
+  return Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speakingSeconds));
+}
+
 /**
  * Drives the highlights-reel "ticker" text reveal (2026-08-20 redesign --
  * no existing precedent for this piece, per the dispatch prompt). While a
@@ -52,12 +65,6 @@
  * the legacy ratio path's test compatibility and is no longer used by
  * the pace mapping.
  */
-// Bounds on a per-segment derived pace: real speech sits well inside these
-// (stored excerpts p10 2.6 / p90 4.4 words/s); outside them the excerpt or
-// the timing is suspect, so the pace is clamped rather than trusted.
-const MIN_WORDS_PER_SECOND = 1.5;
-const MAX_WORDS_PER_SECOND = 6;
-
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
@@ -110,9 +117,7 @@ export function useHighlightTicker(
   // highlight's raw end - start is the speaker's actual pace. The registry pace
   // stays the fallback for paraphrased labels (the source of the original
   // "too fast" bug-2 report) and for a degenerate speaking window.
-  const pace = usingVerbatim && speakingSeconds > 0
-    ? Math.min(MAX_WORDS_PER_SECOND, Math.max(MIN_WORDS_PER_SECOND, totalWords / speakingSeconds))
-    : wordsPerSecond;
+  const pace = revealPace(usingVerbatim, totalWords, speakingSeconds, wordsPerSecond);
   const speechSeconds = Math.max(0, elapsedSeconds - Math.max(0, leadInSeconds));
   const revealedFloat = Math.min(totalWords, Math.max(1, speechSeconds * pace));
   const baseCount = Math.floor(revealedFloat);
