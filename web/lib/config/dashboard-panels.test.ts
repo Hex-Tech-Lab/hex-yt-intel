@@ -10,10 +10,12 @@ import { parsePanelWidths, resolveDashboardPanelDefaults } from './dashboard-pan
 
 /** Mimics the real adapter: registry value when present, otherwise the caller's fallback. */
 function registryWith(values: Record<string, unknown>) {
-  getRegistrySettings.mockImplementation(async (_keys: string[], fallback: Record<string, unknown>) => ({
-    ...fallback,
-    ...values,
-  }));
+  getRegistrySettings.mockImplementation((_keys: string[], fallback: Record<string, unknown>) =>
+    Promise.resolve({
+      ...fallback,
+      ...values,
+    })
+  );
 }
 
 describe('resolveDashboardPanelDefaults', () => {

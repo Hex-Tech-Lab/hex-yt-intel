@@ -30,9 +30,9 @@ export function parsePanelWidths(
 ): { sidebar: number; right: number } | null {
   const expectedLength = shape === '3col' ? 3 : 2;
   if (!Array.isArray(raw) || raw.length !== expectedLength) return null;
-  if (!raw.every((v) => typeof v === 'number' && Number.isFinite(v))) return null;
+  if (!raw.every((width) => typeof width === 'number' && Number.isFinite(width))) return null;
   const widths = raw as number[];
-  const total = widths.reduce((sum, v) => sum + v, 0);
+  const total = widths.reduce((sum, width) => sum + width, 0);
   if (Math.abs(total - 100) > SUM_TOLERANCE) return null;
   const [sidebar = NaN, , right = 0] = widths;
   if (sidebar < SIDEBAR_MIN || sidebar > SIDEBAR_MAX) return null;
