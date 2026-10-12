@@ -1,0 +1,31 @@
+web/lib/adapters/StreamTokenAdapter.ts
+  s_291078cde7ba1a::t_5462aa952dcd92 31,33
+web/lib/ports/CryptographicTokenPort.ts
+  s_291078cde7ba1a::t_37a168727880b0 14-15
+web/lib/stream-token.ts
+  s_291078cde7ba1a::t_981e2604d5ca91 4,93,95,125,127
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_291078cde7ba1a::t_38bf895e68183e 20,533-536,544,574
+web/lib/utils/chat-payload-digest.ts
+  s_291078cde7ba1a::t_8cc6b661f82beb 1-27
+worker/src/__tests__/chat-payload-signature.test.ts
+  s_291078cde7ba1a::t_328e5634bcf847 1-86
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_6fed4125b8b84e 7,283-289,292-298,301,324-333,378,421
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72c9d65d60ec7fa2992231618450854b032ccca0",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
