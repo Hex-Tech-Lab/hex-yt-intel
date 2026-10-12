@@ -28,12 +28,12 @@ describe("T8 user bubble selection highlight", () => {
 
   it("the user bubble className applies USER_BUBBLE_SELECTION_CLASS", () => {
     const src = read("../ChatDock.tsx");
-    expect(src).toMatch(/\$\{USER_BUBBLE_SELECTION_CLASS\} !rounded-lg/);
+    expect(src).toContain("[USER_BUBBLE_SELECTION_CLASS, '!rounded-lg");
   });
 
   it("globals.css keys a visible ::selection rule on that class", () => {
     const css = read("../../../../app/globals.css");
     expect(USER_BUBBLE_SELECTION_CLASS).toBe("user-chat-bubble");
-    expect(css).toMatch(new RegExp(`\\.${USER_BUBBLE_SELECTION_CLASS}::selection[\\s\\S]*?\\{[\\s\\S]*?background-color`));
+    expect(css).toMatch(/\.user-chat-bubble::selection[^{]*\{[^}]*background-color/);
   });
 });
