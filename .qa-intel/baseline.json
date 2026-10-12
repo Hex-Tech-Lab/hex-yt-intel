@@ -1244,5 +1244,12 @@
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (1210 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/services/aux-remediation.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (504 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
   }
 ]
