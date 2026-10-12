@@ -1,0 +1,31 @@
+supabase/migrations/20261012180000_dashboard_panel_width_settings.sql
+  s_291078cde7ba1a::t_aeabb73d3c61cd 1-28
+web/app/dashboard/page.tsx
+  s_291078cde7ba1a::t_cdbb8e4ded8d89 4,17-18
+web/components/containers/DashboardContainer.tsx
+  s_291078cde7ba1a::t_ee035bc64af8e3 95,118,180,1004
+web/components/templates/console/DashboardLayout.tsx
+  s_291078cde7ba1a::t_6fb8b556222324 13,24-25,43-50,125,146,153,155,159
+web/lib/config/dashboard-panels.test.ts
+  s_291078cde7ba1a::t_02eb9a7248b78a 1-58
+web/lib/config/dashboard-panels.ts
+  s_291078cde7ba1a::t_cad24c4ea7eaba 1-64
+web/lib/hooks/useDashboardLayout.ts
+  s_291078cde7ba1a::t_7499299e712fa9 38-41,150-153,197,202-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a0ca73e3fe2eba569ad1e87db9015a252a305a1",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
