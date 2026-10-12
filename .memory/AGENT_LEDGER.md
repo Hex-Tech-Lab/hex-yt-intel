@@ -11,6 +11,10 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Phase C Live Wire Calibration Results
+- [2026-10-12T19:05:00+03:00] [AGY (Flash 3.8)] [IN_PROGRESS] Stream C DB Security Advisors & Cross-Boundary Token Sign Test:
+  - Intent: Resolve DB security advisor findings (analysis_simhash_anchors RLS, merge_analysis_payload_key, admin_list_users_activity, get_temporal_subgraph SECURITY DEFINER & grants) via migration; add cross-boundary chat token test in worker; verify all gates.
+  - Target files: supabase/migrations/, worker/src/__tests__/chat-payload-signature.test.ts, worker/src/__tests__/, .memory/AGENT_LEDGER.md.
+
 - [2026-10-07T10:31:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] 10X Mission: UAT Ingestion Hang & Vercel Log Forensics:
   - Task 1: Forensic analysis identified that UAT Worker `youtube-intelligence-worker-uat` was missing the `YOUTUBE_API_KEY` secret, causing `/fetch-metadata` to return HTTP 500 "Server misconfigured" and `api/metadata` to fail with HTTP 502 SERVICE_ERROR, leaving the UI stuck on skeleton loading.
   - Task 2: Supabase Settings Registry audit confirmed all 7 cascade keys (`cascade.analysis`, `cascade.chat`, `cascade.digest`, `cascade.stance`, etc.) and all output token cap contracts resolve with zero errors.
