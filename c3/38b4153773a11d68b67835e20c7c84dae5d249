@@ -1,0 +1,35 @@
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_378bba7888a7cb 20,42,49,56,77,84,91,98,105,112,126,133,140,147,153,161,182,189,210,217,224,231,286,294,301,308,315,322,350,357,384,392,419,434,454,475,482,489,496,517,524,531,538,552,559,566,580,587,594,601,608,615,622,629,643,650,657,664,671,678,685,692,699,706,713,720,727,734,741-742,748,762,776,783,797,811,818,825,832,839,846,853,860,867,874,881,888,895,944,959,966,973,980,987,994,1008,1015,1028,1043,1050,1056,1063,1162,1169,1176,1183,1190,1197,1204,1211-1337,1339
+docs/agent-prompts/2026-10-12-agy-stream-d-claim-xtitle.md
+  s_291078cde7ba1a::t_0f4faa8247abb9 1-230
+web/app/api/comments/persist-sample-run/route.ts
+  s_291078cde7ba1a::t_10ed99e253e030 274-275
+web/lib/__tests__/persist-sample-run-cochran.test.ts
+  s_291078cde7ba1a::t_66586ae72f7f9a 172
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_291078cde7ba1a::t_0989a79fa47420 226,228,230,232-233,235
+web/lib/admin-logs/fetchers.ts
+  s_291078cde7ba1a::t_65ce9fefb7bb9e 739-742
+web/lib/services/dimension-remediation.ts
+  s_291078cde7ba1a::t_338b55ac4adfd4 150-153
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  s_291078cde7ba1a::t_e9e2e7d06c0665 247-286,288
+worker/src/queue-consumers/comments-tier3.ts
+  s_291078cde7ba1a::t_2c61d77cec66c8 158,183-185,198,208,250,409-419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c338b4153773a11d68b67835e20c7c84dae5d249",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
