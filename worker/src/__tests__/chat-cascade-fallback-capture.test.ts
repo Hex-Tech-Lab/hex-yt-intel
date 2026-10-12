@@ -15,10 +15,10 @@ describe('streamChatCascade fallback visibility', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(new Response('rate limited', { status: 429, statusText: 'Too Many Requests' }))
       .mockResolvedValueOnce(sse('hi')));
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, [
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: [
       { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
       { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
-    ]);
+    ] });
     expect(result.content).toBe('hi');
     expect(result.partial).toBe(false);
     expect(captureMessage).toHaveBeenCalledTimes(1);
@@ -40,10 +40,10 @@ describe('streamChatCascade fallback visibility', () => {
       .mockResolvedValueOnce(sse('second answer'));
     vi.stubGlobal('fetch', fetchSpy);
     const deltas: string[] = [];
-    const result = await streamChatCascade('k', 'g', [], (d) => deltas.push(d), undefined, [
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: (chunk) => deltas.push(chunk), cascade: [
       { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
       { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
-    ]);
+    ] });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(deltas.join('')).toBe('part');
     expect(result.content).toBe('part');
@@ -58,10 +58,10 @@ describe('streamChatCascade fallback visibility', () => {
       .mockResolvedValueOnce(new Response(body, { status: 200 }))
       .mockResolvedValueOnce(sse('second answer'));
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, [
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: [
       { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
       { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
-    ]);
+    ] });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result.content).toBe('part');
     expect(result.partial).toBe(true);
@@ -77,9 +77,9 @@ describe('streamChatCascade fallback visibility', () => {
       },
     });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(broken, { status: 200 })));
-    await streamChatCascade('k', 'g', [], () => {}, undefined, [
+    await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: [
       { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
-    ]);
+    ] });
     expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ tags: { reason: 'cancelled' } });
     expect(captureMessage.mock.calls[0]?.[1]?.tags?.reason).not.toBe('timeout');
   });
@@ -94,9 +94,9 @@ describe('streamChatCascade fallback visibility', () => {
       },
     });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(broken, { status: 200 })));
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, [
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: [
       { model: 'anthropic/claude-haiku-5.5', name: 'h' },
-    ], 'user-1', 90000);
+    ], userId: 'user-1', timeoutMs: 90000 });
     expect(result.partial).toBe(true);
     expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({
       level: 'error',
@@ -104,4 +104,3 @@ describe('streamChatCascade fallback visibility', () => {
     });
   });
 });
-

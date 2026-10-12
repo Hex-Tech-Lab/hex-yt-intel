@@ -42,7 +42,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     const client = new AbortController();
     const fetchSpy = vi.fn((_url: string, init: RequestInit) => Promise.resolve(hangingBody('part', init.signal)));
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => { client.abort(); }, undefined, CASCADE, undefined, 5000, client.signal);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => { client.abort(); }, cascade: CASCADE, timeoutMs: 5000, clientSignal: client.signal });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect((fetchSpy.mock.calls[0]?.[1] as RequestInit).signal?.aborted).toBe(true);
     expect(result.partial).toBe(true);
@@ -56,7 +56,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     client.abort();
     const fetchSpy = vi.fn(() => Promise.resolve(sse('should not run')));
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: CASCADE, timeoutMs: 5000, clientSignal: client.signal });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(result.content).toBe('');
     expect(result.outcome).toBe('client_abort');
@@ -70,7 +70,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
       return Promise.resolve(hangingBody('', init.signal));
     });
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: CASCADE, timeoutMs: 5000, clientSignal: client.signal });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result.outcome).toBe('client_abort');
     expect(result.content).toBe('');
@@ -84,7 +84,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
       return Promise.reject(new TypeError('network connection lost'));
     });
     vi.stubGlobal('fetch', fetchSpy);
-    await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE, undefined, 5000, client.signal);
+    await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: CASCADE, timeoutMs: 5000, clientSignal: client.signal });
     expect(captureMessage.mock.calls.some((c) => c[1]?.tags?.reason === 'error')).toBe(true);
   });
 
@@ -103,7 +103,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
       return Promise.resolve(hangingBody('', init.signal));
     });
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, budgetCascade, undefined, 300);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: budgetCascade, timeoutMs: 300 });
     // Without a shared budget the second model would get a fresh 300ms (total ~500ms) and the third would run.
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(result.content).toBe('');
@@ -117,7 +117,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     const body = `${delta('part')}data: ${JSON.stringify({ error: { message: 'upstream died' }, choices: [{ finish_reason: 'error', delta: { content: '' } }] })}\n\n`;
     const fetchSpy = vi.fn().mockResolvedValueOnce(new Response(body, { status: 200 })).mockResolvedValueOnce(sse('second'));
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: CASCADE });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result.partial).toBe(true);
     expect(result.content).toBe('part');
@@ -128,7 +128,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     const errorOnly = `data: ${JSON.stringify({ error: { message: 'overloaded' }, choices: [{ finish_reason: 'error', delta: {} }] })}\n\n`;
     const fetchSpy = vi.fn().mockResolvedValueOnce(new Response(errorOnly, { status: 200 })).mockResolvedValueOnce(sse('recovered'));
     vi.stubGlobal('fetch', fetchSpy);
-    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, CASCADE);
+    const result = await streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: CASCADE });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(result.content).toBe('recovered');
     expect(result.partial).toBe(false);

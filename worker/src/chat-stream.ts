@@ -104,19 +104,34 @@ export interface ChatCascadeResult {
   outcome: ChatCascadeOutcome;
 }
 
-/** Run the chat cascade, committing to the first model that produces tokens. The model
- *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
-export async function streamChatCascade(
-  apiKey: string,
-  grounding: string,
-  history: Array<{ role: string; content: string }>,
-  onDelta: (chunk: string) => void,
-  models?: string[],
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  userId?: string,
-  timeoutMs?: number,
-  clientSignal?: AbortSignal,
-): Promise<ChatCascadeResult> {
+/** Options for {@link streamChatCascade}. `models` / `cascade` come from the bouncer
+ *  (per-tier app_settings); `cascade` is preferred, `models` is the legacy fallback. */
+export interface StreamChatCascadeOptions {
+  apiKey: string;
+  grounding: string;
+  history: Array<{ role: string; content: string }>;
+  onDelta: (chunk: string) => void;
+  models?: string[];
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  userId?: string;
+  timeoutMs?: number;
+  clientSignal?: AbortSignal;
+}
+
+/** Run the chat cascade, committing to the first model that produces tokens. Falls back
+ *  to CHAT_MODELS when neither `cascade` nor `models` is supplied. */
+export async function streamChatCascade(opts: StreamChatCascadeOptions): Promise<ChatCascadeResult> {
+  const {
+    apiKey,
+    grounding,
+    history,
+    onDelta,
+    models,
+    cascade,
+    userId,
+    timeoutMs,
+    clientSignal,
+  } = opts;
   const effectiveTimeoutMs = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 50000;
   // One cumulative budget for the whole cascade: every fallback model gets only the time left.
   const deadline = Date.now() + effectiveTimeoutMs;
@@ -507,9 +522,19 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       let partial = false;
       let outcome: ChatCascadeOutcome | 'threw';
       try {
-        const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
-          send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, req.cascade, req.userId, req.timeoutMs, clientSignal);
+        const result = await streamChatCascade({
+          apiKey,
+          grounding,
+          history,
+          onDelta: (chunk) => {
+            send({ type: "delta", content: chunk, requestId: req.requestId });
+          },
+          models: req.models,
+          cascade: req.cascade,
+          userId: req.userId,
+          timeoutMs: req.timeoutMs,
+          clientSignal,
+        });
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
