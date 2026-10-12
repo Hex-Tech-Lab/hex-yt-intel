@@ -1,0 +1,23 @@
+web/lib/__tests__/pr442-group4-fixes.test.ts
+  s_291078cde7ba1a::t_73b003c8e49e7a 79-187
+web/lib/services/CombinerPass.ts
+  s_291078cde7ba1a::t_b7a692cb8a72b5 33-206,232-247,250-251,253,259-260,271,335-336,338-371,376,392-400,409-411
+web/lib/services/reduce-grounded-chunks.ts
+  s_291078cde7ba1a::t_0726528288f84b 24-25,197-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0bb086c935e1089eb3acdb091d43d6903596c4b5",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
