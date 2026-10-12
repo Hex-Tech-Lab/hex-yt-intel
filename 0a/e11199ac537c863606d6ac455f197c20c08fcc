@@ -1,0 +1,43 @@
+worker/src/chat-stream.test.ts
+  s_ec1c0aad820d4e::t_d7745e619d2f06 36-42
+  s_ec1c0aad820d4e::t_f28b855ea575da 64-70
+worker/src/__tests__/chat-cascade-fallback-capture.test.ts
+  s_ec1c0aad820d4e::t_38ad875f1532dc 18,21,43,46,61,64,80,82,97,99
+worker/src/chat-stream.ts
+  s_ec1c0aad820d4e::t_b478878e68858d 525-537
+  s_ec1c0aad820d4e::t_356deda8ea7da9 107-134
+worker/src/__tests__/chat-cascade-deadline.test.ts
+  s_ec1c0aad820d4e::t_9d39a33c8e3a6b 120
+  s_ec1c0aad820d4e::t_b1edc26ad9dd45 45
+  s_ec1c0aad820d4e::t_bd22236bfdd388 59
+  s_ec1c0aad820d4e::t_f06ec0c52d28ac 131
+  s_ec1c0aad820d4e::t_8c11a2399d4f70 73
+  s_ec1c0aad820d4e::t_a87677cd5a5ed9 87
+  s_ec1c0aad820d4e::t_bbbb781c6eaa64 106
+docs/agent-prompts/2026-10-12-oc-opts.md
+  s_291078cde7ba1a::t_d46b6a9cd0b002 1-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ae11199ac537c863606d6ac455f197c20c08fcc",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_ec1c0aad820d4e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_eceeb7b90ffeVQxwsNzLYlOWJ3",
+        "model": "anthropic/claude-haiku-5.5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
