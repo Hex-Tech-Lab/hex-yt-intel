@@ -280,25 +280,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
 
-  // Preferred: the signature also covers grounding/history/tier/cascade
-  // (chatPayloadDigest). Legacy models-only tokens are accepted only for the
-  // rollout window (Vercel and the worker deploy independently); for those the
-  // client-relayed cascade is ignored below. Remove the legacy branch once
-  // every live token carries the digest.
+  // The signature covers grounding/history/tier/cascade (chatPayloadDigest),
+  // so the browser can't edit what the LLM sees or which models run.
   const payloadDigest = await chatPayloadDigest({ tier: req.tier, grounding: req.grounding, history: req.history, cascade: req.cascade });
-  let legacySignature = false;
   for (const s of secretsToTry) {
     if (!s) continue;
     const models = req.models ?? [];
     if (timingSafeEqualHex(await hmacHex(s, chatTokenMessage(req.conversationId, req.userId, req.exp, models, payloadDigest)), req.sig)) {
       signingKey = s;
       isTokenValid = true;
-      break;
-    }
-    if (timingSafeEqualHex(await hmacHex(s, chatTokenMessage(req.conversationId, req.userId, req.exp, models)), req.sig)) {
-      signingKey = s;
-      isTokenValid = true;
-      legacySignature = true;
       break;
     }
   }
@@ -321,15 +311,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     return c.json({ error: "Invalid token", reason: "invalid_signature" }, 401);
   }
 
-  // An unsigned cascade could name any model on our key; legacy tokens fall back to the signed model list.
-  const trustedCascade = legacySignature ? undefined : req.cascade;
-  if (legacySignature) {
-    Sentry.captureMessage("chat-stream: legacy models-only signature accepted", {
-      level: "warning",
-      tags: { operation: "chat-sig-legacy" },
-      extra: { conversationId: req.conversationId },
-    });
-  }
+  const trustedCascade = req.cascade;
 
   const encoder = new TextEncoder();
   const grounding = typeof req.grounding === "string" ? req.grounding : "";
