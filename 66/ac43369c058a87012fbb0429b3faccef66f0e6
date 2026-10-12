@@ -1,0 +1,25 @@
+web/components/containers/ProDashboardView.tsx
+  s_291078cde7ba1a::t_49fa6766c6faf7 115
+web/components/containers/SimpleDashboardView.tsx
+  s_291078cde7ba1a::t_731c86d617bc76 55
+web/components/templates/console/BentoMetadata.tsx
+  s_291078cde7ba1a::t_7a16d71a253381 72-83,89-90,106,152-162,168,175,210-222
+web/components/templates/console/__tests__/BentoMetadata-stats.test.tsx
+  s_291078cde7ba1a::t_21f5c4b71ba39d 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66ac43369c058a87012fbb0429b3faccef66f0e6",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
