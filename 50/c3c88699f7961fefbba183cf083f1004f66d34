@@ -1,0 +1,21 @@
+.github/workflows/deploy-worker.yml
+  s_291078cde7ba1a::t_8219de5bfafcc5 10,23,34-46,73,77,92,94,97,101-102,112,120,134
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_6a3fcdff4a4857 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50c3c88699f7961fefbba183cf083f1004f66d34",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
