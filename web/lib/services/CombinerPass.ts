@@ -21,6 +21,8 @@ export interface ParsedDimensionAST {
   intro?: string;
   subsections: Map<string, ParsedSubSection>;
   rawTail?: string;
+  /** True when the same sub-number appeared more than once and was merged. */
+  hadDuplicateSubsections?: boolean;
 }
 
 export interface DimensionChunk {
@@ -59,14 +61,17 @@ function hasRealTimestamps(text: string): boolean {
 /**
  * Matches subsection header line in various markdown and plain text formats.
  */
-function matchSubHeader(line: string): { subNumber: string; title: string } | null {
+function matchSubHeader(line: string, dimNumber: number): { subNumber: string; title: string } | null {
   const trimmed = line.trim();
   if (!trimmed) return null;
+  // Only this dimension's own sub-numbers (e.g. 4.x inside dimension 4) count as
+  // headers, so prose such as "1.5 - ..." inside dimension 4 stays body text.
+  const ownSub = (n: string | undefined) => n !== undefined && n.split('.')[0] === String(dimNumber);
 
   // Pattern 1: Markdown headings: #{1,6} [Dimension] X.Y [-:–—.] Title
   // e.g. "#### 2.1 Header Intelligence", "### Dimension 2.1: Title"
   const mdMatch = trimmed.match(/^#{1,6}\s*(?:Dimension\s+)?(\d+\.\d+)\s*[-:–—.]?\s*(.*)$/u);
-  if (mdMatch?.[1]) {
+  if (mdMatch?.[1] && ownSub(mdMatch[1])) {
     const rawTitle = (mdMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
     return { subNumber: mdMatch[1], title: cleanTitle };
@@ -74,7 +79,7 @@ function matchSubHeader(line: string): { subNumber: string; title: string } | nu
 
   // Pattern 2: Bold headings: **[Dimension ]X.Y Title** or **X.Y: Title** or **X.Y** Title
   const boldMatch = trimmed.match(/^\*{1,2}(?:Dimension\s+)?(\d+\.\d+)(?:\*{1,2})?\s*[-:–—.]?\s*(.*?)(?:\*{1,2})?:?$/u);
-  if (boldMatch?.[1]) {
+  if (boldMatch?.[1] && ownSub(boldMatch[1])) {
     const rawTitle = (boldMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
     return { subNumber: boldMatch[1], title: cleanTitle };
@@ -82,7 +87,7 @@ function matchSubHeader(line: string): { subNumber: string; title: string } | nu
 
   // Pattern 3: Plain text with delimiter: "X.Y: Title" or "X.Y - Title" or "Dimension X.Y: Title"
   const plainMatch = trimmed.match(/^(?:Dimension\s+)?(\d+\.\d+)\s*[-:–—.]\s*(.*)$/u);
-  if (plainMatch?.[1]) {
+  if (plainMatch?.[1] && ownSub(plainMatch[1])) {
     const rawTitle = (plainMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').trim();
     return { subNumber: plainMatch[1], title: cleanTitle };
@@ -234,6 +239,7 @@ export class CombinerPass {
     let currentSubLines: string[] = [];
     const introLines: string[] = [];
 
+    let headerCount = 0;
     const saveSubSection = (numStr: string, title: string, bodyLines: string[]) => {
       const body = bodyLines.join('\n').trim();
       const existing = ast.subsections.get(numStr);
@@ -252,7 +258,8 @@ export class CombinerPass {
     };
 
     for (const line of lines) {
-      const headerMatch = matchSubHeader(line);
+      const headerMatch = matchSubHeader(line, dimNumber);
+      if (headerMatch) headerCount += 1;
       if (headerMatch) {
         if (currentSubNumber) {
           saveSubSection(currentSubNumber, currentSubTitle, currentSubLines);
@@ -278,6 +285,7 @@ export class CombinerPass {
       ast.intro = introLines.join('\n').trim();
     }
 
+    ast.hadDuplicateSubsections = headerCount > ast.subsections.size;
     return ast;
   }
 
@@ -344,7 +352,9 @@ export class CombinerPass {
       if (!single) return { number: dimNumber, content: '' } as T;
       // Deduplicate any repeated subsections within the single chunk's own content
       const parsed = this.parseDimensionMarkdown(dimNumber, name, single.content);
-      if (parsed.subsections.size > 0) {
+      // Re-render only when a repeated sub-section was actually merged; otherwise
+      // keep the single chunk's markdown byte-for-byte.
+      if (parsed.hadDuplicateSubsections) {
         const outputLines: string[] = [];
         if (parsed.intro) {
           outputLines.push(parsed.intro);

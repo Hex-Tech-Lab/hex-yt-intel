@@ -204,3 +204,18 @@ describe("CombinerPass.reduceDimensions", () => {
     expect(out[0].content).not.toContain("timestamp not provided");
   });
 });
+
+describe('CombinerPass header scope and single-chunk passthrough (T1 review)', () => {
+  it('treats another dimension\'s X.Y line as body text, not a header', () => {
+    const md = '#### 4.1 Claims\n\n1.5 - growth stated by host\n\n#### 4.2 Evidence\n\nBody';
+    const ast = CombinerPass.parseDimensionMarkdown(4, 'D4', md);
+    expect([...ast.subsections.keys()]).toEqual(['4.1', '4.2']);
+    expect(ast.subsections.get('4.1')?.body).toContain('1.5 - growth stated by host');
+  });
+
+  it('keeps a single chunk byte-for-byte when no sub-section repeats', () => {
+    const content = '### 4.2 Evidence\n\nB\n\n### 4.1 Claims\n\nA';
+    const out = CombinerPass.combineDimensionChunks(4, [{ number: 4, name: 'D4', content }]);
+    expect(out.content).toBe(content);
+  });
+});
