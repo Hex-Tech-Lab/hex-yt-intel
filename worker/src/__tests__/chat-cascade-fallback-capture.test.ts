@@ -23,4 +23,29 @@ describe('streamChatCascade fallback visibility', () => {
     expect(captureMessage).toHaveBeenCalledTimes(1);
     expect(captureMessage.mock.calls[0]?.[1]?.tags).toMatchObject({ reason: 'http_429', provider: 'cerebras' });
   });
+
+  it('keeps a partial answer instead of appending a second model after a mid-stream failure', async () => {
+    const enc = new TextEncoder();
+    const broken = new ReadableStream<Uint8Array>({
+      // First read delivers a delta, the second fails (erroring in start() would drop the queued chunk).
+      pulls: 0,
+      pull(controller) {
+        if (this.pulls++ === 0) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'part' } }] })}\n\n`));
+        else controller.error(new Error('connection reset'));
+      },
+    });
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce(new Response(broken, { status: 200 }))
+      .mockResolvedValueOnce(sse('second answer'));
+    vi.stubGlobal('fetch', fetchSpy);
+    const deltas: string[] = [];
+    const result = await streamChatCascade('k', 'g', [], (d) => deltas.push(d), undefined, [
+      { model: 'openai/gpt-oss-120b', name: 'c', providerOrder: ['cerebras'] },
+      { model: 'openai/gpt-oss-120b', name: 'g', providerOrder: ['groq'] },
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(deltas.join('')).toBe('part');
+    expect(result.content).toBe('part');
+    expect(captureMessage.mock.calls[0]?.[1]?.extra).toMatchObject({ midStream: true });
+  });
 });

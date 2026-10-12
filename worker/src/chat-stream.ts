@@ -167,6 +167,11 @@ export async function streamChatCascade(
         // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned ${res.status} ${res.statusText}`);
         reportFallback(`http_${res.status}`);
+        // Release the unread body before the next tier.
+        await res.body?.cancel().catch((e: unknown) => {
+          // skipcq: JS-0827
+          console.warn('[chat-cascade] body cancel failed', e instanceof Error ? e.message : String(e));
+        });
         continue; // try next model
       }
       if (!res.body) {
@@ -226,7 +231,11 @@ export async function streamChatCascade(
       // Previously console-only -- tangent hunt after LLMCascade.ts's
       // abort/timeout-suppression incident (see its timeoutMs doc comment).
       // captureMessage matches LLMCascade's own fallback-capture convention.
-      reportFallback(isTimeout ? 'timeout' : 'error', { msg });
+      reportFallback(isTimeout ? 'timeout' : 'error', { msg, midStream: full.length > 0 });
+      // The user already saw part of this answer; starting the next tier would
+      // append a second answer to it while only the second is persisted. Keep
+      // the partial text instead.
+      if (full) return { content: full, servedByModel: translatedModel, servedByProvider, attempts };
     }
   }
   // skipcq: JS-0827
