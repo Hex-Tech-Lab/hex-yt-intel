@@ -281,6 +281,10 @@ export const useChatStore = create<ChatState>((set, get) => {
         console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
       }
 
+      const clientTimeoutMs = (typeof job.payload?.timeoutMs === 'number' && job.payload.timeoutMs > 0)
+        ? job.payload.timeoutMs
+        : 50000;
+
       const streamRes = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,7 +295,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
           requestId: clientMsgId,
         }),
-        signal: AbortSignal.timeout(50000),
+        signal: AbortSignal.timeout(clientTimeoutMs),
       });
 
       if (isDebugEnabled()) {

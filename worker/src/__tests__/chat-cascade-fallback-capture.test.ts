@@ -82,5 +82,25 @@ describe('streamChatCascade fallback visibility', () => {
     ]);
     expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({ tags: { reason: 'error' } });
   });
+
+  it('labels a TimeoutError with custom timeoutMs in log/sentry', async () => {
+    const enc = new TextEncoder();
+    let pulls = 0;
+    const broken = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulls++ === 0) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'writing piece' } }] })}\n\n`));
+        else controller.error(new DOMException('deadline passed', 'TimeoutError'));
+      },
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(broken, { status: 200 })));
+    const result = await streamChatCascade('k', 'g', [], () => {}, undefined, [
+      { model: 'anthropic/claude-haiku-5.5', name: 'h' },
+    ], 'user-1', 90000);
+    expect(result.partial).toBe(true);
+    expect(captureMessage.mock.calls[0]?.[1]).toMatchObject({
+      level: 'error',
+      tags: { operation: 'chat-cascade-partial', reason: 'timeout' },
+    });
+  });
 });
 

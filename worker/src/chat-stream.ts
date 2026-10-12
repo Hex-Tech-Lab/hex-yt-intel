@@ -64,6 +64,8 @@ interface ChatStreamRequest {
   requestId?: string;
   // Optional user knowledge context for adaptive OPTIONS generation
   knowledgeContext?: UserKnowledgeContext;
+  // Registry-resolved streaming timeout per model tier (T20).
+  timeoutMs?: number;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -100,7 +102,9 @@ export async function streamChatCascade(
   models?: string[],
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
   userId?: string,
+  timeoutMs?: number,
 ): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[]; partial: boolean }> {
+  const effectiveTimeoutMs = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 50000;
   const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
@@ -161,7 +165,7 @@ export async function streamChatCascade(
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
-        signal: AbortSignal.timeout(50000),
+        signal: AbortSignal.timeout(effectiveTimeoutMs),
       });
       if (!res.ok) {
         // skipcq: JS-0827
@@ -238,7 +242,7 @@ export async function streamChatCascade(
       // AbortSignal.timeout() rejects with TimeoutError, not AbortError.
       const isTimeout = e instanceof DOMException && e.name === 'TimeoutError';
       // skipcq: JS-0827
-      console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
+      console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? `timeout (${effectiveTimeoutMs}ms)` : msg}`);
       // Previously console-only -- tangent hunt after LLMCascade.ts's
       // abort/timeout-suppression incident (see its timeoutMs doc comment).
       // captureMessage matches LLMCascade's own fallback-capture convention.
@@ -308,9 +312,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
 
-  // The signature covers grounding/history/tier/cascade (chatPayloadDigest),
+  // The signature covers grounding/history/tier/cascade/timeoutMs (chatPayloadDigest),
   // so the browser can't edit what the LLM sees or which models run.
-  const payloadDigest = await chatPayloadDigest({ tier: req.tier, grounding: req.grounding, history: req.history, cascade: req.cascade });
+  const payloadDigest = await chatPayloadDigest({
+    tier: req.tier,
+    grounding: req.grounding,
+    history: req.history,
+    cascade: req.cascade,
+    timeoutMs: req.timeoutMs,
+  });
   for (const s of secretsToTry) {
     if (!s) continue;
     const models = req.models ?? [];
@@ -427,7 +437,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, req.cascade, req.userId);
+        }, req.models, req.cascade, req.userId, req.timeoutMs);
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;

@@ -78,3 +78,8 @@ docs/research/
 /landing.html
 /mockup.png
 docs/private
+
+# Python compiled bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
