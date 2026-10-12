@@ -66,3 +66,38 @@ describe('table pre-pass edge cases', () => {
     expect(stripRateFormula(input)).toBe(input);
   });
 });
+
+describe('fence handling (``` and ~~~)', () => {
+  it('leaves a ~~~ fenced block containing a section line and a table row untouched', () => {
+    const input = '~~~\n3.1 Title: x\n| A | B |\n|---|---|\n| a | b | c |\n~~~';
+    expect(normalizeTableRowWidth(input)).toBe(input);
+    expect(stripRateFormula(input)).toBe(input);
+  });
+
+  it('does not close a 4-backtick fence on a 3-backtick line', () => {
+    const input = '````\n```\n| A | B |\n|---|---|\n| a | b | c |\n````\n| A | B |\n|---|---|\n| a | b | c |';
+    expect(normalizeTableRowWidth(input)).toBe([
+      '````',
+      '```',
+      '| A | B |',
+      '|---|---|',
+      '| a | b | c |',
+      '````',
+      '| A | B |',
+      '|---|---|',
+      '| a | b \\| c |',
+    ].join('\n'));
+  });
+});
+
+describe('escaped pipes', () => {
+  it('treats \\\\| (escaped backslash, then a separator) as a column break', () => {
+    const input = '| A | B |\n|---|---|\n| x \\\\| y | z |';
+    expect(normalizeTableRowWidth(input)).toBe('| A | B |\n|---|---|\n| x \\\\ | y \\| z |');
+  });
+
+  it('keeps \\| (escaped pipe) inside a cell', () => {
+    const input = '| A | B |\n|---|---|\n| x \\| y | z |';
+    expect(normalizeTableRowWidth(input)).toBe(input);
+  });
+});

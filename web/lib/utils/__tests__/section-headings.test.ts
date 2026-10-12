@@ -31,3 +31,31 @@ describe('promoteSectionHeadings – label on its own line', () => {
     expect(promoteSectionHeadings('3.1 Executive Overview:\nBody text.')).toBe('#### 3.1 Executive Overview\nBody text.');
   });
 });
+
+describe('promoteSectionHeadings – tilde fences', () => {
+  it('leaves a ~~~ fenced block containing a section line and a table row untouched', () => {
+    const input = '~~~\n3.1 Title: x\n| a | b |\n~~~\n3.2 Real Section: body';
+    expect(promoteSectionHeadings(input)).toBe('~~~\n3.1 Title: x\n| a | b |\n~~~\n#### 3.2 Real Section\n\nbody');
+  });
+});
+
+describe('promoteSectionHeadings – numbered systems (Dim 7)', () => {
+  it('numbers each "**System: Name**" as a heading, restarting per section', () => {
+    const input = [
+      '**7.1 Implementation Systems**',
+      '**System: RTK Installation & Activation**',
+      '- step',
+      '**System: Headroom Proxy Wrapping**',
+      '7.2 Execution Sequencing: order',
+      '**System: Later**',
+    ].join('\n');
+    expect(promoteSectionHeadings(input)).toBe([
+      '#### 7.1 Implementation Systems',
+      '#### System 1: RTK Installation & Activation',
+      '- step',
+      '#### System 2: Headroom Proxy Wrapping',
+      '#### 7.2 Execution Sequencing\n\norder',
+      '#### System 1: Later',
+    ].join('\n'));
+  });
+});
