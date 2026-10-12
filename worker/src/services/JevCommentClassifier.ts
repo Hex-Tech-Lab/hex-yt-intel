@@ -24,7 +24,7 @@ import type { VideoComment } from '../ports/CommentIngestionPort';
 const JEV_URL = 'https://openrouter.ai/api/alpha/decisions';
 const JEV_MODEL = '~typesafe/jev-latest'; // resolves typesafe/jev-1.13-20260917
 const HTTP_REFERER = 'https://getvintel.com';
-const X_TITLE = 'hex-yt-intel/jev-comments';
+const X_TITLE = 'vIntel - Jev Comment Classifier';
 const MAX_COMMENT_CHARS = 2000;
 
 const VALID_SENTIMENTS: readonly CommentSentiment[] = ['positive', 'negative', 'neutral', 'mixed'];

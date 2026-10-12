@@ -17,6 +17,7 @@ type ChatMessage = { role: string; content: string };
  * so there is no dangling abort left unsettled).
  */
 async function requestCompletion(
+  title: string,
   entry: CompletionModel,
   messages: readonly ChatMessage[],
   maxTokens: number,
@@ -28,7 +29,7 @@ async function requestCompletion(
       Authorization: `Bearer ${env.openrouterApiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': HTTP_REFERER,
-      'X-Title': 'vIntel - Executive Digest',
+      'X-Title': title,
     },
     body: JSON.stringify({
       model: entry.model,
@@ -60,6 +61,9 @@ async function requestCompletion(
  * first that returns non-empty text wins.
  */
 export class OpenRouterCompletionAdapter implements TextCompletionPort {
+  /** @param title OpenRouter X-Title ('vIntel - <feature>') so each caller is traceable in OpenRouter logs. */
+  constructor(private readonly title: string = 'vIntel - Executive Digest') {}
+
   async complete(params: {
     system: string;
     user: string;
@@ -88,7 +92,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
       const attemptStartTime = Date.now();
 
       try {
-        const text = await requestCompletion(entry, messages, maxTokens, requestingUserId);
+        const text = await requestCompletion(this.title, entry, messages, maxTokens, requestingUserId);
         if (text.length > 0) {
           const durationMs = Date.now() - attemptStartTime;
           console.log(`[digest] Dimension 0 completed with model=${entry.model} durationMs=${durationMs} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827

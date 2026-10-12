@@ -40,6 +40,18 @@ describe('OpenRouterCompletionAdapter.complete', () => {
     expect(result).toEqual({ text: 'hello world', model: 'test/model-a' });
   });
 
+  it('sends the caller-specific X-Title, defaulting to Executive Digest', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => ({ choices: [{ message: { content: 'x' } }] }) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const call = { system: 's', user: 'u', models: [{ model: 'test/model-a' }] };
+
+    await new OpenRouterCompletionAdapter().complete(call);
+    await new OpenRouterCompletionAdapter('vIntel - Highlights Extraction').complete(call);
+
+    const titles = fetchMock.mock.calls.map(([, init]) => (init as RequestInit & { headers: Record<string, string> }).headers['X-Title']);
+    expect(titles).toEqual(['vIntel - Executive Digest', 'vIntel - Highlights Extraction']);
+  });
+
   it('falls through to the next cascade model when the first returns an empty completion', async () => {
     const fetchMock = vi
       .fn()
