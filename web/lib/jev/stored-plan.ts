@@ -100,10 +100,17 @@ export function checkPersistCell(
       : { ok: false, reason: 'legacy_total_mismatch' };
   }
   const plan = parseStoredPlan(rawPlan);
-  if (!plan || plan.K <= 1) return { ok: false, reason: 'no_k_gt_1_plan' };
-  if (request.chunkIndex === undefined) return { ok: false, reason: 'cell_not_expected' };
+  if (!plan || plan.K <= 1) {
+    console.warn(`[stored-plan] persist cell rejected: no_k_gt_1_plan (jevChunkIndex=${request.jevChunkIndex})`);
+    return { ok: false, reason: 'no_k_gt_1_plan' };
+  }
+  if (request.chunkIndex === undefined) {
+    console.warn(`[stored-plan] persist cell rejected: cell_not_expected (missing chunkIndex, jevChunkIndex=${request.jevChunkIndex})`);
+    return { ok: false, reason: 'cell_not_expected' };
+  }
   const key = cellKey({ jevChunkIndex: request.jevChunkIndex, chunkIndex: request.chunkIndex });
   if (!expectedCells(plan, totalStreams).some((cell) => cellKey(cell) === key)) {
+    console.warn(`[stored-plan] persist cell rejected: cell_not_expected (cell=${key})`);
     return { ok: false, reason: 'cell_not_expected' };
   }
   return request.totalChunks === plan.streamCount ? { ok: true } : { ok: false, reason: 'total_mismatch' };

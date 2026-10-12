@@ -25,10 +25,14 @@ export class ProcessPaddleWebhookUseCase {
 
   async execute(rawBody: string, signatureHeader: string | null, secret: string | undefined): Promise<{ success: boolean; status: number; message: string }> {
     if (!signatureHeader || !secret) {
+      console.warn('[ProcessPaddleWebhookUseCase] Rejecting webhook: missing signature header or webhook secret');
+      // A missing secret is our misconfiguration; a missing header is anyone on the internet (log only, no Sentry flood).
+      if (!secret) Sentry.captureMessage('[ProcessPaddleWebhookUseCase] Paddle webhook secret is not configured', { level: 'error' });
       return { success: false, status: 401, message: 'Missing signature or secret' };
     }
 
     if (!this.billingAdapter.verifySignature(rawBody, signatureHeader, secret)) {
+      console.warn('[ProcessPaddleWebhookUseCase] Rejecting webhook: signature verification failed');
       return { success: false, status: 401, message: 'Invalid signature' };
     }
 
@@ -75,7 +79,10 @@ export class ProcessPaddleWebhookUseCase {
         if (lockKey && lockToken) {
           await releaseRedisLock(lockKey, lockToken);
         }
-        return { success: false, status: 500, message: result.error || 'Failed to process' };
+        const reason = result.error || 'Failed to process';
+        // The adapter already reports this failure to Sentry (captureException); log only here.
+        console.warn(`[ProcessPaddleWebhookUseCase] Webhook processing failed: ${reason}`);
+        return { success: false, status: 500, message: reason };
       }
       // Entitlement change committed: record the completion marker, then
       // release the in-flight lock. Redis failures here never fail the

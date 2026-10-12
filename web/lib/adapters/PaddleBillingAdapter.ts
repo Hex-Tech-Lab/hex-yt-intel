@@ -267,6 +267,8 @@ export class PaddleBillingAdapter implements BillingPort {
       const supabase = getSupabaseServiceClient();
       const { data } = payload;
       if (!data.id || !data.customer_id || !data.items || data.items.length === 0) {
+        console.warn('[PaddleBillingAdapter] Malformed transaction payload: missing id, customer_id, or items');
+        Sentry.captureMessage('[PaddleBillingAdapter] Malformed transaction payload: missing id, customer_id, or items', { level: 'warning' });
         return { success: false, error: 'Malformed transaction payload: missing id, customer_id, or items' };
       }
       const userId = data.custom_data?.userId;

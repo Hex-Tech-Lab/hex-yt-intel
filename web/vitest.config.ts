@@ -124,6 +124,9 @@ export default defineConfig({
       '../worker/src/middleware/__tests__/**/*.test.ts',
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
+      '../worker/src/services/JevCommentClassifier.test.ts',
+      '../worker/src/services/sensor-fusion/heuristics/jev-text-parser.test.ts',
+      '../worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.test.ts',
       '../worker/src/services/CommentClassifier.test.ts',
       // qa-intel's own rule tests -- named explicitly (not a bare
       // 'scripts/**') to avoid picking up unrelated future scripts.
