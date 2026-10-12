@@ -1,0 +1,23 @@
+docs/agent-prompts/2026-10-12-agy-g-abort-persistence.md
+  s_291078cde7ba1a::t_385e454ea2ebd2 1-229
+worker/src/__tests__/chat-stream-abort-persistence.test.ts
+  s_291078cde7ba1a::t_e6d2732cd74d37 1-213
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_c502e8174e9e93 1585
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4aacc522583a659c677c91561d8e10e0f54dac6",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
