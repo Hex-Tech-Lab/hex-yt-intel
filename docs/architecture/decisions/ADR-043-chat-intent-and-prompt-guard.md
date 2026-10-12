@@ -26,8 +26,8 @@ The rate-limit page states these are the Developer-plan base limits; the exact l
 
 Implications:
 - A 512-token context window means each chat input must be segmented (or truncated with an explicit policy) before screening. The model card recommends segmenting longer inputs and scanning segments in parallel.
-- At the base TPM of 15K, a 46-65k-token chat turn screened in full would need about 4 minutes of minute-quota per turn if every segment were scanned. Screening must therefore target user-authored text and the newest turn, not the full retrieved transcript context. This is a design constraint, not a blocker.
-- Price is negligible at these rates. The constraint is rate limit and latency, not cost.
+- At the base TPM of 15K, a 46-65k-token chat turn screened in full would take roughly 3-4 minutes of minute-quota per turn. At the base TPD of 500K, full-context screening would exhaust the daily token budget after roughly 8-10 turns. Screening must therefore target user-authored text and the newest turn, not the full retrieved transcript context. This is a design constraint, not a blocker.
+- Price is negligible at these rates. The constraints are TPM/TPD quota and latency, not cost.
 
 ### Decisions (proposed)
 
@@ -39,7 +39,7 @@ Implications:
 5. Thresholds and the intent-to-model mapping live in the Settings Registry (`chat.intent.*`), not in code.
 
 **B. Prompt Guard as a pre-generation screen.**
-1. Screen only text the user authored in the current turn and any user-pasted content. Retrieved analysis context is not screened per turn, because it is produced by our own pipeline (out of scope for this ADR).
+1. Screen only text the user authored in the current turn, including any user-pasted content. Retrieved analysis context is not screened per turn, because it is produced by our own pipeline. Transcript text folded into context is a known untrusted vector and is explicitly out of scope for this first rollout; it needs its own decision before `block` mode.
 2. Use the 86M model by default because transcripts and users are multilingual (the 86M card lists 8 languages; the 22M card is optimised for English). The 22M model is a registry-selectable fallback for latency or quota pressure.
 3. Segment inputs to 512 tokens with overlap, scan segments in parallel, and take the maximum attack score.
 4. Action on a flag is a registry-controlled policy: `block` (refuse with a fixed message, log to Sentry), `flag` (proceed, tag the turn), or `off`. Initial rollout is `flag` only, to measure false-positive rate on real traffic before enabling `block`.
@@ -50,7 +50,7 @@ Implications:
 
 ### Consequences
 
-- A new external dependency (Groq) enters the chat path. It is off the critical path in `flag` mode because failures fail open.
+- A new external dependency (Groq) enters the chat path. Prompt Guard is synchronous and sits on the pre-generation critical path, adding its segment-scan latency to every turn. Failures fail open, so an outage degrades to unscreened chat rather than blocking it.
 - Adds one Jev call per chat turn (about $0.00001) and one or more Prompt Guard calls per turn. Latency added on the critical path must be measured before default-on.
 - The intent label set becomes a contract shared by the cascade, the chip logic, and the response contract. Changes to the set need a registry and test update in the same PR.
 - The Groq rate limits above are base Developer-plan values. Real headroom must be confirmed on the account Limits page before `block` mode.
