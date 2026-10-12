@@ -221,3 +221,13 @@ Source: `docs/agent-prompts/UNIVERSAL_EXECUTOR_DNA.md` (keep both identical).
 ## 6. Report Format — [ALWAYS INCLUDE — DO NOT PARAPHRASE OR SUMMARIZE]
 
 > RCA → Contract → Fix → E2E proof (with actual test output) → Tangents found → Deviations flagged → Skills Run + Findings → Gates → Files changed.
+
+---
+
+## Supervisor correction (re-dispatch 1)
+
+Run 1 on OC stopped at the start: code-review-graph MCP tools were not visible in the executor session. The supervisor ran the graph lookups and the verified targets are below. Use these targets with Read and Edit. Do not run grep, rg, find, or any text search. If you need another lookup, post `[BLOCKED]` in the ledger and stop.
+
+- Primary file: `web/components/templates/console/ChatDock.tsx`. Graph nodes: `ChatDockImpl`, `ChatDockProps`, `ExpandableCitationPoint`, `handleCopyMessage`, `submit`, `handleNew`.
+- The bubble selector `astryx-chat-message-bubble` returned zero graph nodes. It is probably a JSX or className value inside ChatDock.tsx. Read ChatDock.tsx and locate it there.
+- Ledger: your `[IN_PROGRESS]` line must be the first action. The ledger is committed clean on this branch now.
