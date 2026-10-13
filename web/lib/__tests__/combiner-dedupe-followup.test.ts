@@ -61,6 +61,15 @@ describe('Combiner dedupe follow-up negative controls (Tasks 1-6)', () => {
     expect(plainFoldAst.subsections.get('1.1')?.body).toContain('1.5-fold increase');
   });
 
+  it('Task 3b: bold/plain subheaders whose titles merely start with x/fold/percent stay headers', () => {
+    const ast = CombinerPass.parseDimensionMarkdown(
+      2,
+      'D2',
+      '**2.1 Xbox adoption** grew\n\n**2.2 Folder sync rollout**\n\n2.3: Percentile ranking',
+    );
+    expect(Array.from(ast.subsections.keys())).toEqual(['2.1', '2.2', '2.3']);
+  });
+
   // Task 4: CombinerPass.ts:234 — identical-key intros differing only by symbols/timestamps must not drop the second
   it('Task 4: identical-key intros differing by symbols or timestamps do not drop the second intro', () => {
     const outSymbols = CombinerPass.reduceDimensions([

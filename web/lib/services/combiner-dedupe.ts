@@ -93,7 +93,9 @@ export function matchSubHeader(line: string, dimNumber: number): { subNumber: st
     if (!firstWordMatch) return false;
     const firstWord = firstWordMatch[0];
     // Reject units, multipliers, and suffixes like "x", "fold", "-fold", "%", "percent"
-    if (/^[-:–—.]?(?:x|fold|percent|%)[\w-]*$/iu.test(firstWord)) return false;
+    // Only exact unit tokens: "x", "-fold", "percent", "%". Words that merely start
+    // with those letters (Xbox, Folder, Percentile) are real titles.
+    if (/^[-:–—.]?(?:x|fold|percent|%)[.,;:!?)]*$/iu.test(firstWord)) return false;
     return true;
   };
 
