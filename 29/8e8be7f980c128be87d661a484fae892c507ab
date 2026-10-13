@@ -1,0 +1,53 @@
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_291078cde7ba1a::t_ed5147341d9c30 14-23
+  s_291078cde7ba1a::t_62961d9d5aa129 273-310,312-313,315,318,322,324-325,329,332,346-356,358,362-366
+  s_291078cde7ba1a::t_40bf8e914004f4 236-248,252-255,260-272,311,314,316-317,319-321,323,326-328,330-331,333-345,357,359-361,367-368
+worker/src/worker.ts
+  s_291078cde7ba1a::t_b74dc46fc44218 78-80
+web/lib/services/aux-remediation.ts
+  s_291078cde7ba1a::t_47b02c9ee699cf 322-323
+web/lib/services/sample-run-sweep.ts
+  s_291078cde7ba1a::t_807173fc2808cf 1-113
+web/app/api/comments/persist-sample-run/route.ts
+  s_291078cde7ba1a::t_fa8803c1979c97 171
+  s_291078cde7ba1a::t_dfc4fa3f1a9c2f 276
+  s_291078cde7ba1a::t_1d3ef728852092 76-77
+web/lib/__tests__/sample-run-claim-token.test.ts
+  s_291078cde7ba1a::t_209b355d8bba92 1-23,31-32,35,37-113,120-125
+  s_291078cde7ba1a::t_a1e40011da733d 33-34,36
+  s_291078cde7ba1a::t_e743d10d872bb7 24-30
+  s_291078cde7ba1a::t_d49e6fa85e6dab 114-119
+supabase/migrations/20261013120000_sample_run_sweep_and_claim_token.sql
+  s_291078cde7ba1a::t_b58f0c9dd65b2e 1-34
+web/app/api/webhooks/reaper/route.ts
+  s_291078cde7ba1a::t_e76e9ae3616930 14
+  s_291078cde7ba1a::t_45d61ef3a162fb 11
+  s_291078cde7ba1a::t_0b57b19e0a6a8f 34-37
+web/lib/__tests__/persist-sample-run-cochran.test.ts
+  s_291078cde7ba1a::t_4016782b6dd835 209-210
+worker/src/queue-consumers/comments-tier3.ts
+  s_291078cde7ba1a::t_2fce93eb5bdc34 202,212
+  s_291078cde7ba1a::t_2330bc89b1b921 374
+  s_291078cde7ba1a::t_57abb16c0848d2 410-415,425
+  s_291078cde7ba1a::t_2c7b159a877f89 158,165-166,175
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_bd457f57215f2c 1592-1593
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  s_291078cde7ba1a::t_e909ab2d580e69 305-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "298e8be7f980c128be87d661a484fae892c507ab",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
