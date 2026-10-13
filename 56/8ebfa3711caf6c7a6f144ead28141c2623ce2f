@@ -1,0 +1,19 @@
+web/components/templates/console/__tests__/chat-ui-t8.test.tsx
+  s_291078cde7ba1a::t_98a8854c2bf2bd 5-7,9,17-28,49,73,75-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "568ebfa3711caf6c7a6f144ead28141c2623ce2f",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
