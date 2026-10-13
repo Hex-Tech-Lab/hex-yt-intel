@@ -54,6 +54,21 @@ export function extractRealTimestamps(text: string): string[] {
 }
 
 /**
+ * Replaces placeholder timestamp(s) in a block with real timestamps from another block.
+ * Never overwrites an existing real timestamp.
+ */
+export function replacePlaceholderTimestamps(targetText: string, sourceWithRealTimestamps: string): string {
+  const realTimestamps = extractRealTimestamps(sourceWithRealTimestamps);
+  if (realTimestamps.length === 0) return targetText;
+  let idx = 0;
+  return targetText.replace(/\[\s*timestamp not provided[^\]]*\]/giu, () => {
+    const replacement = realTimestamps[idx] ?? realTimestamps[0]!;
+    idx++;
+    return replacement;
+  });
+}
+
+/**
  * Normalizes text for comparison by stripping placeholder timestamps,
  * preserving distinct decimal separators, keeping signed numbers, and collapsing whitespace.
  *
@@ -217,7 +232,9 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
           const maxLen = Math.max(compExisting.length, compIncoming.length);
           if (minLen / maxLen > 0.75) {
             if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
-              return compExisting.length > compIncoming.length ? trimmedExisting : trimmedIncoming;
+              return compExisting.length > compIncoming.length
+                ? replacePlaceholderTimestamps(trimmedExisting, trimmedIncoming)
+                : trimmedIncoming;
             }
             return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
           }
@@ -307,7 +324,9 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
 
       if (inHasReal && !exHasReal) {
         if (!incomingIsSuperset && normalizeForComparison(exBlock).length > normalizeForComparison(inBlock).length) {
-          keptBlock = exBlock;
+          const upgradedExBlock = replacePlaceholderTimestamps(exBlock, inBlock);
+          mergedBlocks[matchIdx] = upgradedExBlock;
+          keptBlock = upgradedExBlock;
           droppedBlock = inBlock;
           reason = 'superset_detail_retained';
         } else {

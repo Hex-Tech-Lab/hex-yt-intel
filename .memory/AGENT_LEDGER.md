@@ -10,6 +10,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-13T23:15:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Task A (combiner-dedupe superset_detail_retained timestamp upgrade) & Task B (technical debt roster documentation):
+  - Task A: Fixed superset_detail_retained in web/lib/services/combiner-dedupe.ts so longer block text is kept AND incoming real timestamp replaces placeholder timestamp on it ('[timestamp not provided]'). Preserves existing real timestamps and keeps both mentions if real timestamps differ. Negative-control TDD test written and passed.
+  - Task B: Recorded three accepted limitations (Items 23, 24, 25) in docs/TECH_DEBT_LEDGER.md with designated REVIEW TYPE for Jev engine Phase B.
+  - Zero grep usage. All verification gates passed clean: vitest combiner-dedupe-followup (11/11 pass), vitest lib/services (20/20 pass), tsc --noEmit with 6GB heap (clean), qa-intel:ci (0 new issues).
+  - Target files: web/lib/services/combiner-dedupe.ts, web/lib/__tests__/combiner-dedupe-followup.test.ts, docs/TECH_DEBT_LEDGER.md, .memory/AGENT_LEDGER.md.
+
 - [2026-10-13T21:56:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Combiner dedupe follow-up (post-merge audit of #501):
   - Completed all 6 audited tasks:
     1. Real timestamps preserved at distinct occurrences (ADR 022 per-mention seek) without merging conflicting timestamps; placeholder upgrade only.

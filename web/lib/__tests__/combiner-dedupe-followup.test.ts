@@ -131,4 +131,37 @@ describe('Combiner dedupe follow-up negative controls (Tasks 1-6)', () => {
     expect(out[0].content).toContain('Revenue grew 20% (approximate).');
     expect(out[0].content).toContain('Revenue grew 20%.');
   });
+
+  // Owner decision 3: superset_detail_retained keeps longer block's text AND incoming real timestamp replaces placeholder timestamp
+  it('Owner decision 3: superset_detail_retained keeps longer block and replaces placeholder timestamp with incoming real timestamp', () => {
+    const outBlocks = CombinerPass.reduceDimensions([
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March 2026 across early enterprise partners [timestamp not provided]\n\n2. Beta program expanded to twelve customers.',
+      ),
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March 2026 across early enterprise [04:15]\n\n2. Beta program expanded to twelve customers.',
+      ),
+    ]);
+    expect(outBlocks).toHaveLength(1);
+    expect(outBlocks[0].content).toContain('across early enterprise partners');
+    expect(outBlocks[0].content).toContain('[04:15]');
+    expect(outBlocks[0].content).not.toContain('timestamp not provided');
+
+    // Never overwrite an existing real timestamp
+    const outRealTimestamps = CombinerPass.reduceDimensions([
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March with strong adoption across all enterprise segments [02:10]\n\n2. Beta program expanded to twelve customers.',
+      ),
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March [04:15]\n\n2. Beta program expanded to twelve customers.',
+      ),
+    ]);
+    // Since both blocks have real timestamps that differ ([02:10] vs [04:15]), they must not overwrite; both mentions are kept
+    expect(outRealTimestamps[0].content).toContain('[02:10]');
+    expect(outRealTimestamps[0].content).toContain('[04:15]');
+  });
 });
