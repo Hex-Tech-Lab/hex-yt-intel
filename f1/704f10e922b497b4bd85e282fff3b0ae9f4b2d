@@ -1,0 +1,19 @@
+web/components/dashboard/__tests__/HighlightsScrubber-remount.test.tsx
+  s_291078cde7ba1a::t_444d95ba9756c9 92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1704f10e922b497b4bd85e282fff3b0ae9f4b2d",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
