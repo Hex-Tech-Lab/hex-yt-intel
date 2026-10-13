@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// T10: "show more" on the video description toggles aria-expanded and applies the capped-height class.
+// "show more" on the video description toggles aria-expanded and applies the capped-height class.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
@@ -34,6 +34,18 @@ describe('BentoMetadata description show more', () => {
 
     expect(screen.getByRole('button', { name: /show more/i }).getAttribute('aria-expanded')).toBe('false');
     expect(screen.getByTestId('bento-description').className).not.toContain(CAPPED_CLASS);
+  });
+
+  it('honours reduced motion and slides the stat tiles with the toggle', () => {
+    render(
+      <BentoMetadata title="T" channelTitle="C" viewCount="2000" likeCount="80" duration={90} publishedAt="2026-01-02T00:00:00Z" description={LONG_DESCRIPTION} />,
+    );
+    const tile = screen.getByText('Views').parentElement as HTMLElement;
+    expect(screen.getByTestId('bento-description').className).toContain('motion-reduce:transition-none');
+    expect(tile.className).toContain('motion-reduce:transition-none');
+    expect(tile.className).toContain('xl:translate-x-0');
+    fireEvent.click(screen.getByRole('button', { name: /show more/i }));
+    expect(tile.className).toContain('xl:-translate-x-3');
   });
 
   it('does not render a toggle for a short description', () => {

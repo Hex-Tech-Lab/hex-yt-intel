@@ -184,6 +184,8 @@ export function BentoMetadata({
           </p>
           {description && (
             <div className="mt-2">
+              {/* max-height needs a numeric start to animate (line-clamp is max-height:none);
+                  the expanded region scrolls, so it must be keyboard-focusable. */}
               <div
                 id={descriptionId}
                 data-testid="bento-description"
@@ -216,6 +218,7 @@ export function BentoMetadata({
       </MotionCard>
 
       {stats.map((stat) => (
+        // stat tiles slide left while the description is open, mirroring its expansion
         <MotionCard
           key={stat.label}
           variants={item}
