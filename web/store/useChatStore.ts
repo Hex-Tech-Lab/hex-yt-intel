@@ -146,7 +146,7 @@ async function readSSE(
       const { done, value } = await reader.read();
       if (done) {
         if (isDebugEnabled()) console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
-        if (parseFailures > 0) console.warn('[ChatStore] SSE frames skipped (unparseable JSON)', { parseFailures, frameCount, eventCount });
+        if (parseFailures > 0) console.warn('[ChatStore] SSE frames skipped (unparseable JSON or event-handler error)', { parseFailures, frameCount, eventCount });
         if (timedOut) {
           throw new DOMException(`Stream timed out after ${timeoutMs}ms`, 'AbortError');
         }
@@ -178,7 +178,7 @@ async function readSSE(
           // lines per stream). Count the skipped frames and report ONE warning
           // per stream (reported when the stream completes), so a malformed stream is still visible.
           parseFailures++;
-          if (isDebugEnabled()) console.debug('[ChatStore] Skipped unparseable SSE frame', { frameCount });
+          if (isDebugEnabled()) console.debug('[ChatStore] Skipped SSE frame (parse or handler error)', { frameCount });
         }
       }
     }
