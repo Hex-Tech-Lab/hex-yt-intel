@@ -1,8 +1,7 @@
 # The Complete Cubic Vector Ledger
 
-> **Date Range Covered in this Ledger:** 2026-10-04 to 2026-10-13 (Batches 1–2: PRs #506 down to #437).  
+> **Date Range Covered in this Ledger:** 2026-10-02 to 2026-10-13 (Batches 1–3: PRs #506 down to #404).  
 > **Remaining Ranges to Process:**
-> - Batch 3: PRs #436 down to #404 (2026-10-02 to 2026-10-04)
 > - Batch 4: PRs #403 down to #374 (2026-09-30 to 2026-10-02)
 > - Batch 5: PRs #373 down to #343 (2026-09-24 to 2026-09-30)
 > - Batch 6: PRs #342 down to #313 (2026-09-15 to 2026-09-24)
@@ -263,3 +262,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 | **V07 (Configuration or registry key gaps)** | Cubic (`c6pP5Za`) / PR #442 / 2026-10-08 | Configured `speechModel` accepted by constructor but ignored during submission body construction | Does the network adapter serialize every configured property into the outgoing provider payload? | `UnregisteredSettingsKeyRule` (`scripts/quality-engine/rules/lessons-20261009.ts`) |
 | **V18 (Prompt drift & LLM contract mismatches)** | Cubic (`c6pP5Xl`) / PR #442 / 2026-10-08 | Prompt example included invalid JSON `[start_seconds, end_seconds]` while claiming to be valid raw JSON | Are all example JSON strings in prompts validated via `JSON.parse` to ensure syntax validity? | `none yet (prompt evaluator benchmark)` |
 | **V16 (Database concurrency & JSONB clobber)** | DeepSource & CodeRabbit / PR #446 / 2026-10-08 | Epistemic pipeline shadow mode state grant read-modify-write race under concurrent requests | Does concurrent state persistence execute atomic jsonb_set or Postgres RPCs rather than full-object spread updates? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
+
+
+---
+
+## 8. Batch 3 Harvested Entries (PRs #404–#436: 2026-10-02 to 2026-10-04)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V20 (Launch path & deployment isolation)** | Cubic / PR #424 / 2026-10-03 | Deploy workflow targeted `production` but preflight verify checks called default environment URL, risking false deploy passes | Does every deployment workflow step bind the exact environment-specific target and secret keys consistently? | `LaunchPathIsolationLiteralRule` (`scripts/quality-engine/rules/security-lessons-20261010.ts`) |
+| **V01 (Documentation and ledger drift)** | Cubic / PR #433 / 2026-10-03 | Hostile audit template citation referenced wrong section number in `TEMPLATE.md` and hard-coded Phase 2.6 payloads | Does every documentation cross-reference and template snippet cite verifiable, accurate section titles and files? | `none yet (review checklist enforced)` |
+| **V04 (Unvalidated model output & schema contract)** | Cubic / PR #419 / 2026-10-03 | Streaming pipeline dropped entire analysis fragments when encountering minor knowledge-graph or classification drift | Does the stream parser accept tolerable drift or repair partial attributes rather than dropping valid generated chunks? | `SchemaContractRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V06 (Shared-state UI & layout regressions)** | CodeRabbit / PR #421 / 2026-10-03 | ETA timer re-estimated continuously on every render second instead of decrementing second-by-second and re-estimating only on settlement | Does the progress estimator decouple internal countdown clock state from heavy remote re-estimation triggers? | `InpAlertBlockerRule` (`scripts/quality-engine/rules/ui.ts`) |
+| **V14 (Privilege escalation & authorization gates)** | CodeRabbit / PR #415 / 2026-10-02 | K>1 execution planning route left un-gated to general callers before admin entitlement check was enforced | Is every high-resource experimental execution pipeline guarded by an explicit admin role or entitlement check? | `AuthSecurityRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V17 (Stream lifecycle & token minting boundary)** | Cubic / PR #413 / 2026-10-02 | Cell tokens could be minted for analyses that were already settled, completed, or failed | Does token minting fail closed if the parent job or analysis record is not in active processing status? | `StreamSettleRule` (`scripts/quality-engine/rules/streaming.ts`) |
+| **V02 (Pattern matcher & signature integrity)** | Cubic / PR #412 / 2026-10-02 | V2 request dimensions were unbound from the cryptographic HMAC bundle, allowing payload dimension substitution | Does the signed HMAC signature bind all client-requested attributes including partition, slice, and dimension keys? | `HmacMessageFormatRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V16 (Database concurrency & JSONB clobber)** | Cubic / PR #416 / 2026-10-02 | Post-crucible cleanup overwrote parent row `validation_report` JSONB, clobbering concurrent partial analysis states | Are partial validation findings atomically merged via jsonb_set rather than clobbering root JSONB columns? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
+| **V11 (Zero, NaN and boundary inputs)** | Cubic / PR #414 / 2026-10-02 | Reducer word count allowed unbounded K-value planning (>16 cells) leading to worker memory exhaustion | Does every planning engine enforce strict upper-bound caps on concurrency, partitions, and cell counts? | `ComplexityRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V12 (Retry, redelivery, and idempotency)** | CodeRabbit / PR #424 / 2026-10-03 | System-funded sample runs could be re-triggered multiple times per analysis without checking prior execution | Is system-funded sample execution strictly gated to once per analysis record with an atomic database flag? | `NonIdempotentRetryRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
