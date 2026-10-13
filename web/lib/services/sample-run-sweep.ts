@@ -12,7 +12,9 @@
  *  - 'pending' older than comments.sweep.pendingStaleMinutes and never
  *    re-enqueued: re-enqueue once (conditional reenqueued_at stamp = the winner).
  *  - 'pending' whose re-enqueue is itself older than the threshold: mark failed.
- *  - 'sampling' whose last transition is older than comments.sweep.samplingStaleMinutes: mark failed.
+ *  - 'sampling' whose claim (claimed_at; legacy rows with no claimed_at use reenqueued_at, then created_at)
+ *    is older than comments.sweep.samplingStaleMinutes: mark failed. A CF Queues consumer is capped at
+ *    15 min wall time, so the 30 min default cannot fail a genuinely live run.
  *
  * Every transition is a conditional UPDATE (WHERE status = ...) so the sweep
  * cannot race a live consumer: a consumer claim (pending -> sampling) or a
@@ -52,35 +54,37 @@ export async function sweepStaleSampleRuns(): Promise<SampleRunSweepResult> {
   const samplingCutoff = new Date(now - samplingMinutes * 60_000).toISOString();
   const result: SampleRunSweepResult = { requeued: 0, failedPending: 0, failedSampling: 0, errors: 0 };
 
-  // 1. Never-re-enqueued stale pending: re-enqueue once.
-  for (const row of await SupabaseAuxRemediationAdapter.findPendingRunsForRequeue(pendingCutoff, SWEEP_BATCH_LIMIT)) {
+  // Per-row containment: one failing row is counted and reported, the rest still run.
+  const attempt = async (phase: string, sampleRunId: string, work: () => Promise<void>): Promise<void> => {
     try {
-      if (!(await SupabaseAuxRemediationAdapter.markSampleRunReenqueued(row.id, new Date(now).toISOString()))) continue;
-      if (await reenqueueRun(row)) result.requeued++;
+      await work();
     } catch (err) {
       result.errors++;
-      reportSweepError(err, 'requeue', row.id);
+      console.error('[sample-run-sweep] transition failed', { phase, sampleRunId, err: err instanceof Error ? err.message : String(err) });
+      Sentry.captureException(err, { tags: { service: 'sample-run-sweep', phase }, extra: { sampleRunId } });
     }
+  };
+
+  // 1. Never-re-enqueued stale pending: re-enqueue once.
+  for (const row of await SupabaseAuxRemediationAdapter.findPendingRunsForRequeue(pendingCutoff, SWEEP_BATCH_LIMIT)) {
+    await attempt('requeue', row.id, async () => {
+      if (!(await SupabaseAuxRemediationAdapter.markSampleRunReenqueued(row.id, new Date(now).toISOString()))) return;
+      if (await reenqueueRun(row)) result.requeued++;
+    });
   }
 
   // 2. Re-enqueued but still pending past the threshold: fail it.
   for (const row of await SupabaseAuxRemediationAdapter.findPendingRunsForFailure(pendingCutoff, SWEEP_BATCH_LIMIT)) {
-    try {
+    await attempt('fail_pending', row.id, async () => {
       if (await SupabaseAuxRemediationAdapter.failStaleSampleRun(row.id, 'pending', pendingCutoff)) result.failedPending++;
-    } catch (err) {
-      result.errors++;
-      reportSweepError(err, 'fail_pending', row.id);
-    }
+    });
   }
 
   // 3. Sampling past the threshold (no owner will finish it): fail it.
   for (const row of await SupabaseAuxRemediationAdapter.findSamplingRunsForFailure(samplingCutoff, SWEEP_BATCH_LIMIT)) {
-    try {
+    await attempt('fail_sampling', row.id, async () => {
       if (await SupabaseAuxRemediationAdapter.failStaleSampleRun(row.id, 'sampling', samplingCutoff)) result.failedSampling++;
-    } catch (err) {
-      result.errors++;
-      reportSweepError(err, 'fail_sampling', row.id);
-    }
+    });
   }
 
   return result;
@@ -99,15 +103,17 @@ async function reenqueueRun(row: SweepRunRow): Promise<boolean> {
     .eq('id', row.analysis_id)
     .maybeSingle();
   if (error) throw error;
-  if (!analysis?.video_id) return false;
+  if (!analysis?.video_id) {
+    // Not a transient failure: the parent analysis is gone or has no video id. Surface it,
+    // then leave the run pending so pass 2 fails it after the threshold.
+    const message = 'analysis missing or has no video_id; cannot re-enqueue';
+    console.error('[sample-run-sweep] ' + message, { sampleRunId: row.id, analysisId: row.analysis_id });
+    Sentry.captureMessage(message, { level: 'warning', tags: { service: 'sample-run-sweep', phase: 'requeue_no_video' }, extra: { sampleRunId: row.id } });
+    return false;
+  }
   return enqueueInsertedSystemSampleRun(
     { analysisId: row.analysis_id, userId: row.user_id, videoId: analysis.video_id as string },
     row.id,
     row.total_comment_count
   );
-}
-
-function reportSweepError(err: unknown, phase: string, sampleRunId: string): void {
-  console.error('[sample-run-sweep] transition failed', { phase, sampleRunId, err: err instanceof Error ? err.message : String(err) });
-  Sentry.captureException(err, { tags: { service: 'sample-run-sweep', phase }, extra: { sampleRunId } });
 }

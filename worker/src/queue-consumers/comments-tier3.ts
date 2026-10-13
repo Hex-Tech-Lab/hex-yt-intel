@@ -407,10 +407,10 @@ export async function handleCommentsTier3Message(
   // 'failed' too: Vercel marks a run failed when its enqueue fetch errors,
   // but a timeout can land after the queue accepted the message. That run's
   // finalize-retry inserts a fresh row, so processing this one would double-spend.
-  // A 'sampling' run is only re-entered by the delivery that claimed it: the
-  // claim POST below is idempotent per token (server returns claimed:true when
-  // claimed_by matches), so a retry of a claim that timed out after the server
-  // recorded it proceeds exactly once. Any other token gets claimed:false.
+  // A 'sampling' run may be re-entered only by a delivery that carries a token; the
+  // authority is the claim POST below (server returns claimed:true only when
+  // claimed_by equals this token), so a retry of a claim that timed out after the
+  // server recorded it proceeds exactly once. Any other token gets claimed:false.
   const ownRedelivery = priorStatus === "sampling" && deliveryToken !== undefined;
   if (priorStatus !== "pending" && !ownRedelivery) {
     logSkippedRun(priorStatus, sampleRunId, videoId);

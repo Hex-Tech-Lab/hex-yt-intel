@@ -17,8 +17,9 @@ const enqueue = vi.hoisted(() => vi.fn());
 const maybeSingle = vi.hoisted(() => vi.fn());
 const getRegistrySettings = vi.hoisted(() => vi.fn());
 const captureException = vi.hoisted(() => vi.fn());
+const captureMessage = vi.hoisted(() => vi.fn());
 
-vi.mock('@sentry/nextjs', () => ({ captureException }));
+vi.mock('@sentry/nextjs', () => ({ captureException, captureMessage }));
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
@@ -81,6 +82,7 @@ describe('sweepStaleSampleRuns', () => {
     const res = await sweepStaleSampleRuns();
     expect(enqueue).not.toHaveBeenCalled();
     expect(res.requeued).toBe(0);
+    expect(captureMessage).toHaveBeenCalledTimes(1);
   });
 
   it('transition 2: re-enqueued but still pending is failed with expected=pending', async () => {

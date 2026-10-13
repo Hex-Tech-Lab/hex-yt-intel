@@ -6,47 +6,53 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type Row = { id: string; status: string; claimed_by: string | null; claimed_at: string | null; reenqueued_at: string | null; created_at: string };
+type Row = { id: string; mode?: string; status: string; claimed_by: string | null; claimed_at: string | null; reenqueued_at: string | null; created_at: string };
 const store = vi.hoisted(() => ({ rows: [] as Array<Row> }));
 
 // Evaluate the subset of PostgREST filters the adapter uses against the store.
-function matches(row: Row, filters: Array<(r: Row) => boolean>): boolean {
-  return filters.every((f) => f(row));
+type Filter = (row: Row) => boolean;
+const matches = (row: Row, filters: Filter[]): boolean => filters.every((filter) => filter(row));
+
+function termHolds(candidate: Row, termExpr: string): boolean {
+  const [col, op, ...rest] = termExpr.split('.');
+  const value = candidate[col as keyof Row];
+  return op === 'is' ? value === null : value !== null && (value as string) < rest.join('.');
 }
 
 function makeBuilder() {
-  const filters: Array<(r: Row) => boolean> = [];
+  const filters: Filter[] = [];
   let patch: Partial<Row> | null = null;
-  const b: Record<string, unknown> = {};
-  const chain = (fn: (r: Row) => boolean) => { filters.push(fn); return b; };
-  b.eq = (col: keyof Row, val: unknown) => chain((r) => r[col] === val);
-  b.is = (col: keyof Row, val: unknown) => chain((r) => r[col] === val);
-  b.not = (col: keyof Row, _op: string, val: unknown) => chain((r) => (val === null ? r[col] !== null : r[col] !== val));
-  b.lt = (col: keyof Row, val: string) => chain((r) => r[col] !== null && (r[col] as string) < val);
+  const builder: Record<string, unknown> = {};
+  const chain = (filter: Filter) => { filters.push(filter); return builder; };
+  builder.eq = (col: keyof Row, val: unknown) => chain((row) => row[col] === val);
+  builder.is = (col: keyof Row, val: unknown) => chain((row) => row[col] === val);
+  builder.not = (col: keyof Row, _op: string, val: unknown) => chain((row) => (val === null ? row[col] !== null : row[col] !== val));
+  builder.lt = (col: keyof Row, val: string) => chain((row) => row[col] !== null && (row[col] as string) < val);
   // Evaluates the real PostgREST or() expression: top-level alternatives, each
   // either "col.lt.X" or "and(col.is.null,col.lt.X,...)", so a wrong filter fails tests.
-  b.or = (expr: string) => {
+  builder.or = (expr: string) => {
     const alts = expr.match(/and\([^)]*\)|[a-z_]+\.[a-z]+\.[^,()]+/g) ?? [];
-    const term = (r: Row, t: string): boolean => {
-      const [col, op, ...rest] = t.split('.');
-      const v = r[col as keyof Row];
-      return op === 'is' ? v === null : v !== null && (v as string) < rest.join('.');
-    };
-    return chain((r) => alts.some((alt) => (alt.startsWith('and(') ? alt.slice(4, -1).split(/,(?=[a-z_]+\.)/) : [alt]).every((t) => term(r, t))));
+    return chain((row) =>
+      alts.some((alt) =>
+        (alt.startsWith('and(') ? alt.slice(4, -1).split(/,(?=[a-z_]+\.)/) : [alt]).every((termExpr) => termHolds(row, termExpr))
+      )
+    );
   };
-  b.update = (p: Partial<Row>) => { patch = p; return b; };
-  b.select = () => {
+  builder.update = (changes: Partial<Row>) => { patch = changes; return builder; };
+  builder.select = () => {
     // After update(): the write resolves here. Otherwise it is a read and stays chainable.
-    if (!patch) return b;
-    const hit = store.rows.filter((r) => matches(r, filters));
-    hit.forEach((r) => Object.assign(r, patch));
-    return Promise.resolve({ data: hit.map((r) => ({ id: r.id })), count: hit.length, error: null });
+    if (!patch) return builder;
+    const hit = store.rows.filter((row) => matches(row, filters));
+    hit.forEach((hitRow) => Object.assign(hitRow, patch));
+    return Promise.resolve({ data: hit.map((hitRow) => ({ id: hitRow.id })), count: hit.length, error: null });
   };
-  b.maybeSingle = () => {
-    const hit = store.rows.filter((r) => matches(r, filters));
+  builder.order = () => builder;
+  builder.limit = () => Promise.resolve({ data: store.rows.filter((row) => matches(row, filters)).map((row) => ({ ...row })), error: null });
+  builder.maybeSingle = () => {
+    const hit = store.rows.filter((row) => matches(row, filters));
     return Promise.resolve({ data: hit[0] ? { id: hit[0].id } : null, error: null });
   };
-  return b;
+  return builder;
 }
 
 vi.mock('@/lib/supabase', () => ({
@@ -137,5 +143,49 @@ describe('global sweep transitions are conditional', () => {
     seed('sampling', 'delivery-A');
     expect(await SupabaseAuxRemediationAdapter.failStaleSampleRun(RUN, 'pending', '2026-10-13T00:30:00Z')).toBe(false);
     expect(row().status).toBe('sampling');
+  });
+});
+
+describe('sweep finders select exactly the right rows (cochran only)', () => {
+  const CUT = '2026-10-13T00:30:00.000Z';
+  type Seed = Partial<Row> & { id: string; mode?: string };
+  const put = (rows: Seed[]) => {
+    store.rows = rows.map((seed) => ({ mode: 'cochran', status: 'pending', claimed_by: null, claimed_at: null, reenqueued_at: null, created_at: '2026-10-13T00:00:00Z', ...seed })) as Row[];
+  };
+
+  it('requeue finder: stale pending, never re-enqueued; skips fresh, already re-enqueued and sampling', async () => {
+    put([
+      { id: 'stale' },
+      { id: 'fresh', created_at: '2026-10-13T01:00:00Z' },
+      { id: 'already', reenqueued_at: '2026-10-13T00:10:00Z' },
+      { id: 'sampling', status: 'sampling' },
+    ]);
+    const rows = await SupabaseAuxRemediationAdapter.findPendingRunsForRequeue(CUT, 10);
+    expect(rows.map((found) => found.id)).toEqual(['stale']);
+  });
+
+  it('failure finder (pending): only re-enqueued runs whose re-enqueue is older than the cutoff', async () => {
+    put([
+      { id: 'a', reenqueued_at: '2026-10-13T00:10:00Z' },
+      { id: 'b', reenqueued_at: '2026-10-13T01:00:00Z' },
+      { id: 'c' },
+    ]);
+    const rows = await SupabaseAuxRemediationAdapter.findPendingRunsForFailure(CUT, 10);
+    expect(rows.map((found) => found.id)).toEqual(['a']);
+  });
+
+  it('failure finder (sampling): by claimed_at; freshly claimed old run excluded', async () => {
+    put([
+      { id: 'old', status: 'sampling', claimed_at: '2026-10-13T00:05:00Z' },
+      { id: 'justClaimed', status: 'sampling', claimed_at: '2026-10-13T01:00:00Z' },
+      { id: 'legacy', status: 'sampling' },
+    ]);
+    const rows = await SupabaseAuxRemediationAdapter.findSamplingRunsForFailure(CUT, 10);
+    expect(rows.map((found) => found.id).sort()).toEqual(['legacy', 'old']);
+  });
+
+  it('uncapped runs are never swept (mode filter pinned)', async () => {
+    put([{ id: 'u', mode: 'uncapped' }, { id: 'c', mode: 'cochran' }]);
+    expect((await SupabaseAuxRemediationAdapter.findPendingRunsForRequeue(CUT, 10)).map((found) => found.id)).toEqual(['c']);
   });
 });

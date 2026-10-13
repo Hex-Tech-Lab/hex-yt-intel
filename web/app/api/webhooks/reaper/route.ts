@@ -32,7 +32,14 @@ export async function POST(request: NextRequest) {
 
     const result = await sweepStuckAnalyses();
     // T12c: same QStash tick also releases stuck comment_sample_runs (pending/sampling).
-    const sampleRuns = await sweepStaleSampleRuns();
+    // A failure here is captured but must not discard the analysis sweep that already ran.
+    let sampleRuns: Awaited<ReturnType<typeof sweepStaleSampleRuns>> | null = null;
+    try {
+      sampleRuns = await sweepStaleSampleRuns();
+    } catch (sweepError) {
+      Sentry.captureException(sweepError, { tags: { service: 'sample-run-sweep', phase: 'sweep' } });
+      console.error('[reaper-webhook] sample-run sweep failed:', sweepError instanceof Error ? sweepError.message : String(sweepError));
+    }
     console.log('[reaper-webhook] sweep complete', { ...result, sampleRuns });
     return NextResponse.json({ ok: true, ...result, sampleRuns });
   } catch (error) {

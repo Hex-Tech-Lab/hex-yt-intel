@@ -22,9 +22,9 @@ export interface SweepRunRow {
 const SWEEP_RUN_COLUMNS = 'id, analysis_id, user_id, total_comment_count, reenqueued_at';
 
 /**
- * 'sampling' staleness: measured from the claim (claimed_at). Rows claimed before
- * the claimed_at column existed (null) fall back to their last pre-claim
- * transition (the re-enqueue, else creation), the old behaviour.
+ * 'sampling' staleness: measured from the claim (claimed_at). Rows with a null
+ * claimed_at (claimed before the column existed) fall back to reenqueued_at, then
+ * created_at. Note failStaleSystemSampleRuns (finalize path) still uses created_at only.
  */
 const staleSamplingFilter = (cutoffIso: string): string =>
   `claimed_at.lt.${cutoffIso},and(claimed_at.is.null,reenqueued_at.lt.${cutoffIso}),and(claimed_at.is.null,reenqueued_at.is.null,created_at.lt.${cutoffIso})`;
@@ -210,11 +210,6 @@ export class SupabaseAuxRemediationAdapter {
     if (updateError) throw updateError;
   }
 
-  /**
-   * 'sampling' heartbeat (Dispatch A §1.4): pending -> sampling. Flips the
-   * row out of 'pending' only — completed_at and any already-final status
-   * are never touched (a retry racing a completed report can't regress it).
-   */
   /** A pending run whose worker enqueue never happened: mark it failed so it is never left orphaned (a later backfill retries it). */
   /**
    * Marks this analysis's system-funded runs that are still pending/sampling
@@ -247,7 +242,9 @@ export class SupabaseAuxRemediationAdapter {
    * the run is already 'sampling' and claimed_by equals this token (a retry of
    * a claim whose response timed out on the client after the server recorded
    * it), returns claimed:true. Any other token, or no token, on a 'sampling'
-   * row returns claimed:false.
+   * row returns claimed:false. Stamps claimed_at (the sweep's staleness basis).
+   * Flips the row out of 'pending' only (Dispatch A §1.4): completed_at and any
+   * final status are never touched, so a retry racing a completed report can't regress it.
    */
   static async markSampleRunSampling(
     sampleRunId: string,
