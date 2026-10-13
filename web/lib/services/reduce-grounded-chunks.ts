@@ -139,7 +139,8 @@ function validateCells(cells: readonly GroundedCell[], expectedJevChunkCount: nu
  * - cells ordered by jevChunkIndex ascending, never by input order;
  * - arrays: concatenated in order, deduped by normalized key (first kept) —
  *   case/whitespace-insensitive by design (display keywords);
- * - prose `content`: per-chunk sections joined with one blank line, no rewriting;
+ * - prose `content`: merged via CombinerPass.combineDimensionChunks (deduplicating
+ *   subsections across chunks while preserving single chunks unless deduplicated);
  * - numeric scores (confidence): wordCount-weighted mean over chunks that
  *   have the dimension and a finite confidence; when the total weight is 0,
  *   the plain mean over the finite confidences; when there are none, the

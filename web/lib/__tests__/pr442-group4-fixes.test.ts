@@ -247,3 +247,113 @@ describe('CombinerPass header scope and single-chunk passthrough (T1 review)', (
     expect(out.content).toBe(content);
   });
 });
+
+describe('CombinerPass bounded logic & dedupe fixes (Tasks 1, 2, 3, 5)', () => {
+  const mk = (number: number, content: string) => ({ number, content });
+
+  it('does not drop $5 as a duplicate of $50 (strict token/word boundaries)', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 Finance\nBudget $5'),
+      mk(1, '#### 1.1 Finance\nBudget $50'),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toMatch(/Budget \$5(?!\d)/);
+    expect(out[0].content).toMatch(/Budget \$50(?!\d)/);
+  });
+
+  it('does not drop 15000 as a duplicate of 150000 (strict token/word boundaries)', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 Metrics\nActive subscribers 15000'),
+      mk(1, '#### 1.1 Metrics\nActive subscribers 150000'),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toMatch(/subscribers 15000(?!\d)/);
+    expect(out[0].content).toMatch(/subscribers 150000(?!\d)/);
+  });
+
+  it('keeps symbol-only strings like ☆☆☆☆☆ and ★★★★★ distinct', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 Rating\n☆☆☆☆☆\n\nContent A'),
+      mk(1, '#### 1.1 Rating\n★★★★★\n\nContent B'),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toContain('☆☆☆☆☆');
+    expect(out[0].content).toContain('★★★★★');
+  });
+
+  it('deduplicates identical symbol-only blocks', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 Rating\n☆☆☆☆☆\n\nDetails'),
+      mk(1, '#### 1.1 Rating\n☆☆☆☆☆\n\nMore details'),
+    ]);
+    expect(out).toHaveLength(1);
+    const starMatches = out[0].content.match(/☆☆☆☆☆/g);
+    expect(starMatches).toHaveLength(1);
+  });
+
+  it('keeps decimal separators distinct between comma and period (3,14 vs 3.14)', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 Math\nCalculated coefficient was 3.14 exactly.'),
+      mk(1, '#### 1.1 Math\nCalculated coefficient was 3,14 exactly.'),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toContain('3.14');
+    expect(out[0].content).toContain('3,14');
+  });
+
+  it('upgrades placeholder timestamps to real timestamps and never downgrades real to placeholder', () => {
+    // 1. Upgrade placeholder -> real
+    const upgraded = CombinerPass.reduceDimensions([
+      mk(5, '#### 5.1 Insights\nBreakthrough model [timestamp not provided in transcript]'),
+      mk(5, '#### 5.1 Insights\nBreakthrough model [04:15]'),
+    ]);
+    expect(upgraded[0].content).toContain('[04:15]');
+    expect(upgraded[0].content).not.toContain('timestamp not provided');
+
+    // 2. Real timestamp is never overwritten by longer placeholder
+    const preserved = CombinerPass.reduceDimensions([
+      mk(5, '#### 5.1 Insights\nBreakthrough model [04:15]'),
+      mk(5, '#### 5.1 Insights\nBreakthrough model [0:00 approximate transcript carries no explicit timestamps]'),
+    ]);
+    expect(preserved[0].content).toContain('[04:15]');
+    expect(preserved[0].content).not.toContain('carries no explicit timestamps');
+  });
+
+  it('keeps distinct subsections sorted in ascending numerical order across chunks', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(2, '#### 2.3 Section Three\nBody 3\n\n#### 2.1 Section One\nBody 1'),
+      mk(2, '#### 2.4 Section Four\nBody 4\n\n#### 2.2 Section Two\nBody 2'),
+    ]);
+    expect(out).toHaveLength(1);
+    const content = out[0].content;
+    const idx1 = content.indexOf('2.1 Section One');
+    const idx2 = content.indexOf('2.2 Section Two');
+    const idx3 = content.indexOf('2.3 Section Three');
+    const idx4 = content.indexOf('2.4 Section Four');
+
+    expect(idx1).toBeGreaterThan(-1);
+    expect(idx2).toBeGreaterThan(idx1);
+    expect(idx3).toBeGreaterThan(idx2);
+    expect(idx4).toBeGreaterThan(idx3);
+  });
+
+  it('recognizes both bold and plain headers as valid subheaders', () => {
+    const boldAst = CombinerPass.parseDimensionMarkdown(4, 'D4', '**4.1 Bold Header**\nBody text');
+    expect(boldAst.subsections.has('4.1')).toBe(true);
+    expect(boldAst.subsections.get('4.1')?.title).toBe('Bold Header');
+
+    const plainAst = CombinerPass.parseDimensionMarkdown(4, 'D4', '4.1 - Plain Header\nBody text');
+    expect(plainAst.subsections.has('4.1')).toBe(true);
+    expect(plainAst.subsections.get('4.1')?.title).toBe('Plain Header');
+  });
+
+  it('normalizes Dimension 7 system blocks across chunks', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(7, 'Intro text\n\n**System: Primary Architecture**\nBody for system 1'),
+      mk(7, '#### 7.2 Secondary Systems\nBody for system 2'),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toContain('**System 1: Primary Architecture**');
+  });
+});
+

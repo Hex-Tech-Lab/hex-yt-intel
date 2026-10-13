@@ -33,16 +33,48 @@ export interface DimensionChunk {
 }
 
 /**
+ * Checks if a string contains no letters or numbers (symbol-only, glyphs, or separators).
+ */
+function isSymbolOnly(text: string): boolean {
+  return !/[\p{L}\p{N}]/u.test(text);
+}
+
+/**
+ * Checks whether `shorter` appears as a contiguous subsequence of whole tokens in `longer`.
+ * Uses strict word/token boundaries so "$5" does not match "$50", and "15000" does not match "150000".
+ */
+function isTokenSubsequence(shorter: string, longer: string): boolean {
+  const shortTokens = shorter.split(/\s+/).filter(Boolean);
+  const longTokens = longer.split(/\s+/).filter(Boolean);
+  if (shortTokens.length === 0 || shortTokens.length > longTokens.length) return false;
+
+  for (let i = 0; i <= longTokens.length - shortTokens.length; i++) {
+    let match = true;
+    for (let j = 0; j < shortTokens.length; j++) {
+      if (longTokens[i + j] !== shortTokens[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return true;
+  }
+  return false;
+}
+
+/**
  * Normalizes text for comparison by stripping timestamps, approximate notes,
- * and collapsing non-alphanumeric characters and whitespace.
+ * preserving distinct decimal separators, and collapsing whitespace.
  */
 function normalizeForComparison(text: string): string {
   return text
     .toLowerCase()
-    .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?|timestamp not provided[^\]]*)\s*\]/giu, '')
-    .replace(/\(\s*approximate[^)]*\)/giu, '')
+    .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?[^\]]*|timestamp not provided[^\]]*)\s*\]/giu, '')
+    .replace(/[[(]\s*approximate[^\])]*[\])]/giu, '')
     // Keep a leading minus sign (e.g. "-5%") so opposite-signed facts do not collapse.
     .replace(/(^|\s)-(?=\d)/gu, '$1minus')
+    // Keep decimal separators between digits distinct (e.g. "3.14" vs "3,14")
+    .replace(/(?<=\d)\.(?=\d)/gu, 'point')
+    .replace(/(?<=\d),(?=\d)/gu, 'comma')
     .replace(/[^\p{L}\p{M}\p{N}\p{Sc}\s]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim();
@@ -142,26 +174,37 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
   }
 
   // 2. Semantic comparison stripping timestamps & boilerplate
-  const compExisting = normalizeForComparison(trimmedExisting);
-  const compIncoming = normalizeForComparison(trimmedIncoming);
+  // Skip whole-body semantic comparisons if either body is symbol-only (e.g. rating glyphs
+  // "☆☆☆☆☆" vs "★★★★★"), so distinct symbol sequences are not falsely collapsed.
+  if (!isSymbolOnly(trimmedExisting) && !isSymbolOnly(trimmedIncoming)) {
+    const compExisting = normalizeForComparison(trimmedExisting);
+    const compIncoming = normalizeForComparison(trimmedIncoming);
 
-  if (compExisting === compIncoming) {
-    // Exact semantic match: if incoming has real timestamps and existing does not, prefer incoming
-    if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
-      return trimmedIncoming;
-    }
-    return trimmedExisting;
-  }
-
-  // 3. One is completely contained in the other with high length overlap (> 75%)
-  if (compExisting.includes(compIncoming) || compIncoming.includes(compExisting)) {
-    const minLen = Math.min(compExisting.length, compIncoming.length);
-    const maxLen = Math.max(compExisting.length, compIncoming.length);
-    if (minLen / maxLen > 0.75) {
-      if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
-        return trimmedIncoming;
+    if (compExisting && compIncoming) {
+      if (compExisting === compIncoming) {
+        // Exact semantic match: if incoming has real timestamps and existing does not, prefer incoming
+        if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
+          return trimmedIncoming;
+        }
+        return trimmedExisting;
       }
-      return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
+
+      // 3. One is completely contained in the other with high length overlap (> 75%)
+      const isContained =
+        compExisting.length <= compIncoming.length
+          ? isTokenSubsequence(compExisting, compIncoming)
+          : isTokenSubsequence(compIncoming, compExisting);
+
+      if (isContained) {
+        const minLen = Math.min(compExisting.length, compIncoming.length);
+        const maxLen = Math.max(compExisting.length, compIncoming.length);
+        if (minLen / maxLen > 0.75) {
+          if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
+            return trimmedIncoming;
+          }
+          return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
+        }
+      }
     }
   }
 
@@ -172,9 +215,22 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
   const mergedBlocks = [...existingBlocks];
 
   for (const inBlock of incomingBlocks) {
+    if (isSymbolOnly(inBlock)) {
+      // Symbol-only block (e.g. rating glyphs): nothing to compare semantically,
+      // keep unless an exact identical block already exists.
+      const alreadyPresent = mergedBlocks.some((b) => b.trim() === inBlock.trim());
+      if (!alreadyPresent) {
+        mergedBlocks.push(inBlock);
+      } else {
+        console.info('[CombinerPass] Dropped duplicate symbol-only block', {
+          dropped: inBlock.trim(),
+        });
+      }
+      continue;
+    }
+
     const normIn = normalizeForComparison(inBlock);
     if (!normIn) {
-      // Symbol-only block (e.g. rating glyphs): nothing to compare, keep unless identical.
       if (!mergedBlocks.includes(inBlock)) mergedBlocks.push(inBlock);
       continue;
     }
@@ -184,14 +240,22 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
 
     for (let i = 0; i < mergedBlocks.length; i++) {
       const exBlock = mergedBlocks[i];
-      if (!exBlock) continue;
+      if (!exBlock || isSymbolOnly(exBlock)) continue;
       const normEx = normalizeForComparison(exBlock);
+      if (!normEx) continue;
+
       if (normEx === normIn) {
         isDuplicate = true;
         matchIdx = i;
         break;
       }
-      if (normEx.includes(normIn) || normIn.includes(normEx)) {
+
+      const isContained =
+        normEx.length <= normIn.length
+          ? isTokenSubsequence(normEx, normIn)
+          : isTokenSubsequence(normIn, normEx);
+
+      if (isContained) {
         const minL = Math.min(normEx.length, normIn.length);
         const maxL = Math.max(normEx.length, normIn.length);
         if (minL / maxL > 0.75) {
@@ -204,12 +268,40 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
 
     if (isDuplicate && matchIdx >= 0) {
       const exBlock = mergedBlocks[matchIdx]!;
-      // A longer incoming block that contains the existing one carries extra detail: keep it.
       const incomingIsSuperset =
         normalizeForComparison(inBlock).length > normalizeForComparison(exBlock).length;
-      if (incomingIsSuperset || (hasRealTimestamps(inBlock) && !hasRealTimestamps(exBlock))) {
+      const inHasReal = hasRealTimestamps(inBlock);
+      const exHasReal = hasRealTimestamps(exBlock);
+
+      let keptBlock: string;
+      let droppedBlock: string;
+      let reason: string;
+
+      if (inHasReal && !exHasReal) {
         mergedBlocks[matchIdx] = inBlock;
+        keptBlock = inBlock;
+        droppedBlock = exBlock;
+        reason = 'timestamp_upgrade';
+      } else if (!inHasReal && exHasReal) {
+        keptBlock = exBlock;
+        droppedBlock = inBlock;
+        reason = 'real_timestamp_retained';
+      } else if (incomingIsSuperset) {
+        mergedBlocks[matchIdx] = inBlock;
+        keptBlock = inBlock;
+        droppedBlock = exBlock;
+        reason = 'superset_detail';
+      } else {
+        keptBlock = exBlock;
+        droppedBlock = inBlock;
+        reason = 'duplicate_dropped';
       }
+
+      console.info('[CombinerPass] Dropped duplicate block in sub-section', {
+        reason,
+        dropped: droppedBlock.slice(0, 100),
+        kept: keptBlock.slice(0, 100),
+      });
     } else if (!isDuplicate) {
       mergedBlocks.push(inBlock);
     }
