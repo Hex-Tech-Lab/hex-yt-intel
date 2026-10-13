@@ -61,11 +61,8 @@ export function replacePlaceholderTimestamps(targetText: string, sourceWithRealT
   const realTimestamps = extractRealTimestamps(sourceWithRealTimestamps);
   if (realTimestamps.length === 0) return targetText;
   let idx = 0;
-  return targetText.replace(/\[\s*timestamp not provided[^\]]*\]/giu, () => {
-    const replacement = realTimestamps[idx] ?? realTimestamps[0]!;
-    idx++;
-    return replacement;
-  });
+  // Extra placeholders beyond the available real timestamps are left as-is rather than guessed.
+  return targetText.replace(/\[\s*timestamp not provided[^\]]*\]/giu, (match) => realTimestamps[idx++] ?? match);
 }
 
 /**
@@ -323,8 +320,13 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
       let reason: string;
 
       if (inHasReal && !exHasReal) {
-        if (!incomingIsSuperset && normalizeForComparison(exBlock).length > normalizeForComparison(inBlock).length) {
-          const upgradedExBlock = replacePlaceholderTimestamps(exBlock, inBlock);
+        const upgradedExBlock = replacePlaceholderTimestamps(exBlock, inBlock);
+        // Only keep the longer block when the upgrade actually carried a real timestamp over.
+        if (
+          !incomingIsSuperset &&
+          upgradedExBlock !== exBlock &&
+          normalizeForComparison(exBlock).length > normalizeForComparison(inBlock).length
+        ) {
           mergedBlocks[matchIdx] = upgradedExBlock;
           keptBlock = upgradedExBlock;
           droppedBlock = inBlock;

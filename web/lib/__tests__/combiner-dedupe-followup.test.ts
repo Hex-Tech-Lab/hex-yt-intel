@@ -164,4 +164,20 @@ describe('Combiner dedupe follow-up negative controls (Tasks 1-6)', () => {
     expect(outRealTimestamps[0].content).toContain('[02:10]');
     expect(outRealTimestamps[0].content).toContain('[04:15]');
   });
+
+  it('does not fabricate timestamps when placeholders outnumber real ones', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March 2026 across early enterprise partners [timestamp not provided] and pilots [timestamp not provided]\n\n2. Beta program expanded to twelve customers.',
+      ),
+      mk(
+        1,
+        '#### 1.1 Overview\n1. Alpha launch happened in March 2026 across early enterprise [04:15]\n\n2. Beta program expanded to twelve customers.',
+      ),
+    ]);
+    expect(out[0].content).toContain('[04:15]');
+    expect(out[0].content.match(/04:15/g)).toHaveLength(1);
+    expect(out[0].content).toContain('[timestamp not provided]');
+  });
 });
