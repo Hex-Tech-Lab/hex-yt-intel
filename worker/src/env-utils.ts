@@ -21,16 +21,3 @@ export function isProductionEnv(
   if (!label) return true; // unknown/unset → fail closed to production
   return label === 'production';
 }
-
-/**
- * Generates the headers needed to bypass Vercel Deployment Protection
- * during S2S callbacks to preview / UAT deployments.
- */
-export function getVercelBypassHeaders(
-  env?: { VERCEL_PROTECTION_BYPASS?: string; VERCEL_AUTOMATION_BYPASS_SECRET?: string } | null,
-  overrideSecret?: string | null
-): Record<string, string> {
-  const secret = overrideSecret || env?.VERCEL_PROTECTION_BYPASS || env?.VERCEL_AUTOMATION_BYPASS_SECRET || 'lqzE0rsJ29UO2XZHNJErMu5Ce7x0ca5i';
-  return secret ? { 'x-vercel-protection-bypass': secret } : {};
-}
-

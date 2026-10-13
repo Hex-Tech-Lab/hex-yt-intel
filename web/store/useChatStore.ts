@@ -21,7 +21,6 @@ import * as Sentry from '@sentry/nextjs';
 
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
-import { getVercelProtectionBypassHeaders } from '@/lib/utils/vercel-protection-bypass';
 
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 
@@ -77,14 +76,7 @@ interface ChatState {
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getVercelProtectionBypassHeaders(),
-        ...(init?.headers || {}),
-      },
-    });
+    const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
     if (!res.ok) {
       const body = await res.text().catch((readError: unknown) => {
         console.error('[ChatStore] could not read error body', { status: res.status, url, error: readError });
@@ -248,10 +240,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       //    a generous-but-finite ceiling is safe.
       const res = await fetch(`/api/chat/conversations/${convId}/messages`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getVercelProtectionBypassHeaders(),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, clientMsgId }),
         signal: AbortSignal.timeout(15000),
       });
@@ -324,7 +313,6 @@ export const useChatStore = create<ChatState>((set, get) => {
           exp: job.stream.exp,
           appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
           requestId: clientMsgId,
-          vercelProtectionBypass: getVercelProtectionBypassHeaders()['x-vercel-protection-bypass'],
         }),
         signal: AbortSignal.timeout(clientTimeoutMs),
       });

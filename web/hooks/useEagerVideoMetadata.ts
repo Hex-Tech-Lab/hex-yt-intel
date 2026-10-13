@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useInputStore } from '@/store/useInputStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { extractVideoId } from '@/lib/youtube';
-import { getVercelProtectionBypassHeaders } from '@/lib/utils/vercel-protection-bypass';
 
 /**
  * Eagerly fetches video metadata when a valid YouTube URL is entered.
@@ -32,9 +31,6 @@ export function useEagerVideoMetadata() {
 
         const res = await fetch(`/api/metadata?videoId=${videoId}`, {
           signal: controller.signal,
-          headers: {
-            ...getVercelProtectionBypassHeaders(),
-          },
         });
         if (!res.ok) return;
         const data = await res.json();

@@ -39,8 +39,6 @@ type Env = {
   TRANSCRIPT_PROVIDER_ORDER?: string;
   TRANSCRIPT_CHAIN_BUDGET_MS?: string;
   COMMENTS_TIER3_QUEUE: Queue<CommentsTier3QueueMessage>;
-  VERCEL_PROTECTION_BYPASS?: string;
-  VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();

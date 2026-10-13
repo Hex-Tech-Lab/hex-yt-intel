@@ -200,37 +200,25 @@ const publicPostRoutes = [
 // middleware module; DeepSource's "wrap in an IIFE" advice is a false
 // positive here (same class as the other module-level fns in this file).
 function handleDevBypass(request: NextRequest): NextResponse | null {
-  // Development/UAT test validation bypass — allows E2E test suites and service callers with verified bypass secrets to pass
-  const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+  // Development-only test validation bypass — allows E2E test suites to bypass auth
+  // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
+  const isProduction = process.env.NODE_ENV === 'production';
   const devBypassToken = process.env.DEV_BYPASS_TOKEN;
   const testSecret = request.headers.get('X-Hex-Test-Secret');
 
-  if (!isProduction && devBypassToken && testSecret) {
-    try {
-      if (timingSafeStringEqual(testSecret, devBypassToken)) {
-        console.info('[middleware] Development bypass credential accepted; skipping auth.');
-        return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
-      }
-    } catch {
-      // Token comparison failed — treat as unauthorized bypass attempt
-      console.warn('[middleware] Invalid bypass credential format');
-    }
+  if (isProduction || !devBypassToken || !testSecret) {
+    return null;
   }
 
-  // Vercel deployment protection bypass for automated service requests
-  const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || 'lqzE0rsJ29UO2XZHNJErMu5Ce7x0ca5i';
-  const providedVercelBypass = request.headers.get('x-vercel-protection-bypass') || request.cookies.get('__vercel_protection_bypass')?.value || request.cookies.get('x-vercel-protection-bypass')?.value;
-  if (!isProduction && vercelBypassSecret && providedVercelBypass) {
-    try {
-      if (timingSafeStringEqual(providedVercelBypass, vercelBypassSecret)) {
-        console.info('[middleware] Vercel protection bypass accepted for service request.');
-        return NextResponse.next();
-      }
-    } catch {
-      console.warn('[middleware] Invalid Vercel protection bypass format');
+  try {
+    if (timingSafeStringEqual(testSecret, devBypassToken)) {
+      console.info('[middleware] Development bypass credential accepted; skipping auth.');
+      return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
     }
+  } catch {
+    // Token comparison failed — treat as unauthorized bypass attempt
+    console.warn('[middleware] Invalid bypass credential format');
   }
-
   return null;
 }
 

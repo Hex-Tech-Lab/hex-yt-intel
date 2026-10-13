@@ -85,27 +85,4 @@ describe('middleware public-route allowlist', () => {
     const res = await middleware(new NextRequest(`https://getvintel.com${path}`, { method }));
     expect(res.status).toBe(401);
   });
-
-  it('exempts service requests carrying valid x-vercel-protection-bypass header in non-production', async () => {
-    const req = new NextRequest('https://getvintel.com/api/admin/logs', {
-      method: 'GET',
-      headers: {
-        'x-vercel-protection-bypass': 'lqzE0rsJ29UO2XZHNJErMu5Ce7x0ca5i',
-      },
-    });
-    const res = await middleware(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('x-middleware-next')).toBe('1');
-  });
-
-  it('rejects invalid x-vercel-protection-bypass header', async () => {
-    const req = new NextRequest('https://getvintel.com/api/admin/logs', {
-      method: 'GET',
-      headers: {
-        'x-vercel-protection-bypass': 'wrong-bypass-secret',
-      },
-    });
-    const res = await middleware(req);
-    expect(res.status).toBe(401);
-  });
 });

@@ -3,7 +3,6 @@ import { canonicalJson } from "../../../web/lib/utils/canonical-json";
 import { validateCochranSamplingConfig } from "../../../web/lib/config/comments-sampling-config";
 import { MetadataScraper } from "../services/MetadataScraper";
 import { signBoundContent } from "../crypto";
-import { getVercelBypassHeaders } from "../env-utils";
 import { JevCommentClassifier, type JevClassifierConfig } from "../services/JevCommentClassifier";
 import {
   dedupePool,
@@ -37,8 +36,6 @@ type QueueConsumerEnv = {
   RESIDENTIAL_PROXY_URL?: string;
   STREAM_HMAC_SECRET: string;
   APP_URL?: string;
-  VERCEL_PROTECTION_BYPASS?: string;
-  VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 };
 
 const PAGE_SIZE = 100; // YouTube Data API v3's documented maxResults ceiling for commentThreads.list.
@@ -83,13 +80,7 @@ async function readSampleRunStatus(
   const url = `${appUrl}/api/comments/persist-sample-run?sampleRunId=${encodeURIComponent(sampleRunId)}&userId=${encodeURIComponent(userId)}&exp=${exp}&sig=${encodeURIComponent(sig)}`;
   let res: Response | undefined;
   try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: {
-        ...getVercelBypassHeaders(env),
-      },
-      signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
-    });
+    res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS) });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`sample-run status probe non-ok: ${res.status}`);
     const body = (await res.json()) as { status?: unknown };
@@ -185,10 +176,7 @@ async function postSampleRunResult(
   try {
     res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getVercelBypassHeaders(env),
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...writeBody, sig, exp }),
       signal: AbortSignal.timeout(PERSIST_TIMEOUT_MS),
     });

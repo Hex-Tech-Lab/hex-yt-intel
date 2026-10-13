@@ -18,7 +18,6 @@ import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { STREAM_BUNDLES, isProjectiveBundle } from '@/lib/config/synthesis';
 import { extractVideoId } from '@/lib/youtube';
 import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
-import { getVercelProtectionBypassHeaders } from '@/lib/utils/vercel-protection-bypass';
 
 /**
  * Handles a single SSE/JSON line from the worker stream: `data:`-prefixed
@@ -270,20 +269,6 @@ export function useSSEStream() {
     abortControllerRef.current = myController;
     const currentSignal = myController.signal;
 
-    // Fast-path visual feedback: immediately transition loading states so the UI (button spinner) updates on first frame
-    setIsLoading(true);
-    setStatus('downloading');
-    setError(null);
-
-    // Yield to the browser frame so the button's loading state paints immediately (INP < 16ms)
-    await new Promise<void>((resolve) => {
-      if (typeof requestAnimationFrame !== 'undefined') {
-        requestAnimationFrame(() => resolve());
-      } else {
-        setTimeout(resolve, 0);
-      }
-    });
-
     // Clear analysis but preserve video metadata & chat thread when re-analyzing same video
     clearAnalysis();
     setVideoMetadata(preservedMetadata);
@@ -300,6 +285,9 @@ export function useSSEStream() {
     if (!isSameVideo || forceRefresh) {
       useChaptersStore.getState().reset(videoId);
     }
+    setIsLoading(true);
+    setStatus('downloading');
+    setError(null);
 
     // Offload secondary analytics tracking and stream configuration to a non-blocking execution frame
     setTimeout(async () => {
@@ -321,10 +309,7 @@ export function useSSEStream() {
                 async () => fetch('/api/analyses', {
                   method: 'POST',
                   credentials: 'include',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...getVercelProtectionBypassHeaders(),
-                  },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ url, timezone, forceRefresh }),
                   signal: currentSignal,
                 })
@@ -517,10 +502,7 @@ export function useSSEStream() {
                   if (failedAnalysisId) {
                     fetch(`/api/analyses/${failedAnalysisId}/fail`, {
                       method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        ...getVercelProtectionBypassHeaders(),
-                      },
+                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ reason: msg.slice(0, 500) }),
                       keepalive: true,
                     }).catch((e) => console.debug('[useSSEStream] Fail write-back failed (best-effort):', e));
@@ -557,7 +539,6 @@ export function useSSEStream() {
                   channelMetaConfig: job.channelMetaConfig,
                   commentsSamplePlan: job.commentsSamplePlan,
                   commentsSyncPoolConfig: job.commentsSyncPoolConfig,
-                  vercelProtectionBypass: getVercelProtectionBypassHeaders()['x-vercel-protection-bypass'],
                   // R2b: only Vercel-signed, server-loaded grounded context
                   // (never the browser's own copy, never an unsigned stored
                   // job.prior_payload fallback).
@@ -871,15 +852,7 @@ export function useSSEStream() {
                   const startedAt = Date.now();
                   let maxWaitMs = 20000;
                   while (!currentSignal.aborted) {
-                    const res = await fetch(`/api/analyses/${analysisId}/projective-context`, {
-                      method: 'POST',
-                      credentials: 'include',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        ...getVercelProtectionBypassHeaders(),
-                      },
-                      signal: currentSignal,
-                    });
+                    const res = await fetch(`/api/analyses/${analysisId}/projective-context`, { method: 'POST', credentials: 'include', signal: currentSignal });
                     if (res.ok) return (await res.json()) as ProjectiveContext;
                     const body = (await res.json().catch(() => ({}))) as { error?: string; retryAfterMs?: number; maxWaitMs?: number };
                     if (res.status !== 409 || body.error !== 'grounded_not_persisted') return undefined;
@@ -922,10 +895,7 @@ export function useSSEStream() {
                       const res = await fetch(`/api/analyses/${analysisId}/stream-tokens`, {
                         method: 'POST',
                         credentials: 'include',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...getVercelProtectionBypassHeaders(),
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ cells: cells.map(({ jevChunkIndex, chunkIndex }) => ({ jevChunkIndex, chunkIndex })) }),
                         signal: currentSignal,
                       });
@@ -1046,13 +1016,7 @@ export function useSSEStream() {
                   let record: ReducedRecord | null = null;
                   const pollDeadline = Date.now() + 60000;
                   while (!currentSignal.aborted) {
-                    const res = await fetch(`/api/analyses/${analysisId}`, {
-                      credentials: 'include',
-                      headers: {
-                        ...getVercelProtectionBypassHeaders(),
-                      },
-                      signal: currentSignal,
-                    }).catch(() => null);
+                    const res = await fetch(`/api/analyses/${analysisId}`, { credentials: 'include', signal: currentSignal }).catch(() => null);
                     if (res?.ok) {
                       record = (await res.json().catch(() => null)) as ReducedRecord | null;
                       if (record?.analysisStatus === 'complete' || record?.analysisStatus === 'error') break;
@@ -1181,14 +1145,7 @@ export function useSSEStream() {
       // immediately after; without this, some browsers cancel an in-flight
       // fetch on unmount/navigation before the POST reaches the server,
       // silently defeating the exact scenario this signal exists for.
-      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getVercelProtectionBypassHeaders(),
-        },
-        keepalive: true,
-      }).catch((err) => {
+      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, { method: 'POST', keepalive: true }).catch((err) => {
         console.debug('[useSSEStream] Cancel signal failed to send (best-effort):', err);
       });
     }
