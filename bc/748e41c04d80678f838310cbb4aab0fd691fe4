@@ -1,0 +1,20 @@
+evidence/pr506/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-182
+web/app/api/comments/persist-sample-run/route.ts
+  h_50fba0cdd9e5c4 275
+worker/src/__tests__/comments-tier3-redelivery.test.ts
+  h_50fba0cdd9e5c4 92,224-237,242,261
+worker/src/queue-consumers/comments-tier3.ts
+  h_50fba0cdd9e5c4 422-427
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc748e41c04d80678f838310cbb4aab0fd691fe4",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
