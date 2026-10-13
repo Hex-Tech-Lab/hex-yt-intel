@@ -212,6 +212,25 @@ describe("CombinerPass.reduceDimensions", () => {
     expect(out[0].content).toContain("النمو");
     expect(out[0].content).toContain("انخفضت");
   });
+
+  it("treats round-minute timestamps like [10:00] as real, not placeholders", () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(5, "#### 5.1 M\n1. **Key point about growth** [timestamp not provided in transcript]"),
+      mk(5, "#### 5.1 M\n1. **Key point about growth** [10:00]"),
+    ]);
+    expect(out[0].content).toContain("[10:00]");
+    expect(out[0].content).not.toContain("timestamp not provided");
+  });
+
+  it("does not merge amounts that differ only by currency symbol, and keeps symbol-only blocks", () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, "#### 1.1 T\nRaised \u20ac5 million in funding\n\n\u2605\u2605\u2605"),
+      mk(1, "#### 1.1 T\nRaised $5 million in funding"),
+    ]);
+    expect(out[0].content).toContain("\u20ac5 million");
+    expect(out[0].content).toContain("$5 million");
+    expect(out[0].content).toContain("\u2605\u2605\u2605");
+  });
 });
 
 describe('CombinerPass header scope and single-chunk passthrough (T1 review)', () => {

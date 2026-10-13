@@ -43,7 +43,7 @@ function normalizeForComparison(text: string): string {
     .replace(/\(\s*approximate[^)]*\)/giu, '')
     // Keep a leading minus sign (e.g. "-5%") so opposite-signed facts do not collapse.
     .replace(/(^|\s)-(?=\d)/gu, '$1minus')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\p{Sc}\s]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim();
 }
@@ -55,7 +55,7 @@ function normalizeForComparison(text: string): string {
 function hasRealTimestamps(text: string): boolean {
   const matches = text.match(/\[\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*\]/gu);
   if (!matches) return false;
-  return matches.some((m) => !m.includes('00:00') && !m.includes('0:00'));
+  return matches.some((m) => /[1-9]/u.test(m));
 }
 
 /**
@@ -173,7 +173,11 @@ function mergeSubSectionBodies(existingBody: string, incomingBody: string): stri
 
   for (const inBlock of incomingBlocks) {
     const normIn = normalizeForComparison(inBlock);
-    if (!normIn) continue;
+    if (!normIn) {
+      // Symbol-only block (e.g. rating glyphs): nothing to compare, keep unless identical.
+      if (!mergedBlocks.includes(inBlock)) mergedBlocks.push(inBlock);
+      continue;
+    }
 
     let isDuplicate = false;
     let matchIdx = -1;
@@ -353,7 +357,7 @@ export class CombinerPass {
       // Deduplicate any repeated subsections within the single chunk's own content
       const parsed = this.parseDimensionMarkdown(dimNumber, name, single.content);
       // Re-render only when a repeated sub-section was actually merged; otherwise
-      // keep the single chunk's markdown byte-for-byte.
+      // keep the single chunk's markdown unchanged (Dimension 7 still gets its normalization).
       if (parsed.hadDuplicateSubsections) {
         const outputLines: string[] = [];
         if (parsed.intro) {
