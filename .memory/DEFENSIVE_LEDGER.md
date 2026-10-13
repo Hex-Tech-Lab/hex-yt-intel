@@ -88,6 +88,7 @@ This ledger formalizes every defensive node into a traceable dependency graph.
 | `DAT-005` | `web/lib/adapters/PostgresBillingAdapter.ts` | L27, L73 | Missing `billing.quota.processingGraceWindowMs` | `REGISTRY_FALLBACK = 300000` (5 minutes) | Quota reservation expiry window |
 | `DAT-006` | `web/lib/config/pricing-settings.ts` | L11-20 | Missing `billing.pricing.*` registry entries | `PRICING_REGISTRY_FALLBACK` (free: $0, light: $5, pro: $9) | Checkout flow, pricing cards |
 | `DAT-007` | `web/lib/config/prior-payload.ts` | L16, L37 | Invalid or missing prior payload size limit | `PRIOR_PAYLOAD_MAX_BYTES_FALLBACK = 65536` (64 KB) | Projective synthesis context window payload |
+| `DAT-008` | `web/lib/services/combiner-dedupe.ts` (used by `CombinerPass.ts`) | mergeSubSectionBodies | Duplicate sub-sections or placeholder timestamps across chunks | Strict token-boundary dedupe, timestamp upgrade to real non-zero, symbol-only isolation | Grounded dimension reducer, UCIS markdown reconstruction |
 
 ---
 
