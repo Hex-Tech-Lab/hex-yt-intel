@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 1592-1598
+supabase/migrations/20261013190000_chat_intent_and_prompt_guard_settings.sql
+  h_50fba0cdd9e5c4 1-89
+web/lib/__tests__/chat-intent-router.test.ts
+  h_50fba0cdd9e5c4 1-156
+web/lib/config/chat-intent-settings.ts
+  h_50fba0cdd9e5c4 1-49
+web/lib/types/chat-intent.ts
+  h_50fba0cdd9e5c4 1-68
+web/lib/validators/chat-intent.ts
+  h_50fba0cdd9e5c4 1-96
+worker/src/__tests__/chat-intent-router.test.ts
+  h_50fba0cdd9e5c4 1-141
+worker/src/__tests__/prompt-guard.test.ts
+  h_50fba0cdd9e5c4 1-158
+worker/src/ports/ChatIntentRouterPort.ts
+  h_50fba0cdd9e5c4 1-43
+worker/src/ports/PromptGuardPort.ts
+  h_50fba0cdd9e5c4 1-41
+worker/src/services/ChatIntentRouter.ts
+  h_50fba0cdd9e5c4 1-50
+worker/src/services/GroqPromptGuardClient.ts
+  h_50fba0cdd9e5c4 1-93
+worker/src/services/PromptGuard.ts
+  h_50fba0cdd9e5c4 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44a5d433445a5dadcc4ecafefc4d09cd87fae8e4",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
