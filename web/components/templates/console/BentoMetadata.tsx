@@ -184,12 +184,22 @@ export function BentoMetadata({
           </p>
           {description && (
             <div className="mt-2">
-              <p
+              {/* max-height needs a numeric start to animate (line-clamp is max-height:none);
+                  the expanded region scrolls, so it must be keyboard-focusable. */}
+              <div
                 id={descriptionId}
-                className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${canExpandDescription && !descriptionExpanded ? 'line-clamp-2' : ''}`}
+                data-testid="bento-description"
+                tabIndex={descriptionExpanded ? 0 : undefined}
+                className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line transition-[max-height] duration-[var(--motion-duration-description)] ease-out motion-reduce:transition-none ${
+                  !canExpandDescription
+                    ? ''
+                    : descriptionExpanded
+                      ? 'max-h-[var(--description-max-height)] overflow-y-auto pr-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2'
+                      : 'max-h-[var(--description-collapsed-height)] overflow-hidden'
+                }`}
               >
                 {linkifyDescription(description)}
-              </p>
+              </div>
               {canExpandDescription && (
                 <button
                   type="button"
@@ -208,12 +218,15 @@ export function BentoMetadata({
       </MotionCard>
 
       {stats.map((stat) => (
+        // stat tiles slide left while the description is open, mirroring its expansion
         <MotionCard
           key={stat.label}
           variants={item}
           variant="default"
           padding={0}
-          className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-2.5"
+          className={`col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-2.5 transition-transform duration-[var(--motion-duration-description)] ease-out motion-reduce:transition-none ${
+            descriptionExpanded ? 'xl:-translate-x-3' : 'xl:translate-x-0'
+          }`}
         >
           <Icon icon={stat.icon} size={16} className="mb-0.5 text-[var(--ink-muted)]" />
           <span className="text-[15px] font-bold text-[var(--ink)]">{stat.value}</span>
