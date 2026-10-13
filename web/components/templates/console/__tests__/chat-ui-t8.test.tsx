@@ -1,10 +1,10 @@
 /** @vitest-environment jsdom */
+import * as Sentry from "@sentry/nextjs";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import postcss from "postcss";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
-import * as Sentry from "@sentry/nextjs";
 import { useChatStore } from "@/store/useChatStore";
 import { useAnalysisStore } from "@/store/useAnalysisStore";
 import { chatMarkdownComponents, ChatDock, USER_BUBBLE_SELECTION_CLASS } from "../ChatDock";
@@ -86,24 +86,24 @@ describe("T8 user bubble selection highlight", () => {
         }
       }
     });
-    const resolve = (value: string | undefined) => {
+    const resolveToken = (value: string | undefined) => {
       const ref = value?.match(/^var\((--[\w-]+)\)$/)?.[1];
       return ref ? tokens.get(ref) : value;
     };
     const luminance = (hex: string) => {
-      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+      const [red, green, blue] = (hex.match(/[0-9a-f]{2}/gi) ?? []).map((channel) => parseInt(channel, 16) / 255)
+        .map((value) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
     };
-    const contrast = (a: string, b: string) => {
-      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    const contrast = (first: string, second: string) => {
+      const [hi, lo] = [luminance(first), luminance(second)].sort((x, y) => y - x);
       return (hi! + 0.05) / (lo! + 0.05);
     };
     const bubbleSel = '[data-chat-dock="true"] .user-chat-bubble::selection';
     const descendantSel = '[data-chat-dock="true"] .user-chat-bubble *::selection';
     for (const sel of [bubbleSel, descendantSel]) {
-      const bg = resolve(selectionDecls.get(`${sel}|background-color`));
-      const fg = resolve(selectionDecls.get(`${sel}|color`));
+      const bg = resolveToken(selectionDecls.get(`${sel}|background-color`));
+      const fg = resolveToken(selectionDecls.get(`${sel}|color`));
       expect(bg, `${sel} background`).toMatch(/^#[0-9a-f]{6}$/i);
       expect(fg, `${sel} color`).toMatch(/^#[0-9a-f]{6}$/i);
       // Text on the highlight must be AAA-legible, and the highlight must stand out from the bubble fill (--accent).

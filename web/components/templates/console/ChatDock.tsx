@@ -428,7 +428,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ totalCommentCount: defaultCommentCount }),
       });
-      const estimate = await estRes.json().catch(() => ({ estimatedCredits: 15 }));
+      const estimate = await estRes.json().catch((parseError) => {
+        console.warn('[ChatDock] Cost estimate response was not JSON, using the 15-credit default:', parseError);
+        return { estimatedCredits: 15 };
+      });
       const credits = estimate.estimatedCredits ?? 15;
 
       expandConfirm.show({
@@ -444,7 +447,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               body: JSON.stringify({ videoId, totalCommentCount: defaultCommentCount }),
             });
             if (!startRes.ok) {
-              const errData = await startRes.json().catch(() => ({ error: 'Failed' }));
+              const errData = await startRes.json().catch((parseError) => {
+                console.warn('[ChatDock] Expansion start error body was not JSON, status', startRes.status, parseError);
+                return { error: 'Failed' };
+              });
               throw new Error(errData.error || 'Failed to start expansion');
             }
             showToast('Comment expansion started! Full sentiment processing in background.');
