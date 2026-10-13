@@ -22,6 +22,12 @@ const TIER_RANK: Record<PlanTier, number> = {
   free: 1,
 };
 
+let hasWarnedFounderAllowlistUnset = false;
+
+export function resetFounderAllowlistWarnedForTesting(): void {
+  hasWarnedFounderAllowlistUnset = false;
+}
+
 export class GetUserEntitlementsUseCase {
   async execute(userId: string, email?: string | null): Promise<EntitlementState> {
     const defaultFree: EntitlementState = {
@@ -58,14 +64,27 @@ export class GetUserEntitlementsUseCase {
       return founderEntitlement;
     }
 
+    const founderEmails = (process.env.ADMIN_FOUNDER_EMAILS ?? '')
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+
     if (email) {
-      const founderEmails = (process.env.ADMIN_FOUNDER_EMAILS ?? '')
-        .split(',')
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(Boolean);
       if (founderEmails.includes(email.toLowerCase())) {
         return founderEntitlement;
       }
+    }
+
+    const isNonProduction = process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV !== 'production';
+    if (isNonProduction && founderUserIds.length === 0 && founderEmails.length === 0 && !hasWarnedFounderAllowlistUnset) {
+      hasWarnedFounderAllowlistUnset = true;
+      Sentry.captureMessage(
+        'ADMIN_FOUNDER_EMAILS and FOUNDER_USER_IDS are empty; founder allowlist is unset in this environment.',
+        {
+          level: 'warning',
+          tags: { usecase: 'GetUserEntitlementsUseCase' },
+        },
+      );
     }
 
     try {
