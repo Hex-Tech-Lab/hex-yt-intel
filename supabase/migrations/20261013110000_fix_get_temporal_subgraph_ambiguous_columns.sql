@@ -45,7 +45,7 @@ BEGIN
 
         UNION ALL
 
-        -- Recursive Step (Mocked temporal/entity relations bounded traversal)
+        -- Recursive Step: expand to anchors whose window_start lies within 30 units after the current node's window_end (window-proximity heuristic, not a real relation graph)
         SELECT
             a.id,
             a.window_start,

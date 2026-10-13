@@ -136,7 +136,7 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
   });
 });
 
-describe('streamChatCascade default deadline', () => {
+describe('streamChatCascade code-level fallback deadline (timeoutMs not supplied)', () => {
   it.each([
     ['omitted', {}],
     ['explicit undefined', { timeoutMs: undefined }],
