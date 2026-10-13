@@ -434,3 +434,18 @@ describe('wordCount safety bounds (R3b 2.5 audit)', () => {
     expect(JSON.stringify(out)).not.toContain('null');
   });
 });
+
+describe("reduceGroundedChunks — prose goes through CombinerPass (PR 501)", () => {
+  it("emits a repeated sub-section once across chunks", () => {
+    const body = "#### 2.1 Header\nSame body text across chunks.";
+    const cells: GroundedCell[] = [0, 1].map((jevChunkIndex) => ({
+      jevChunkIndex,
+      wordCount: 10,
+      dimensions: [makeDimension({ number: 2, content: body })],
+    }));
+    const out = reduce2(cells, 2);
+    const content = out.dimensions.find((d) => d.number === 2)!.content;
+    expect(content.match(/#### 2\.1 Header/g)).toHaveLength(1);
+    expect(content.match(/Same body text/g)).toHaveLength(1);
+  });
+});
