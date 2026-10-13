@@ -1,0 +1,37 @@
+supabase/migrations/20261013120000_sample_run_sweep_and_claim_token.sql
+  s_291078cde7ba1a::t_3a68b745d26343 2,9-10,12
+web/app/api/webhooks/reaper/route.ts
+  s_291078cde7ba1a::t_a85f269f215be9 35-42
+web/lib/__tests__/reaper-webhook-sample-runs.test.ts
+  s_291078cde7ba1a::t_c09d2cae7f3c04 1-58
+web/lib/__tests__/sample-run-claim-token.test.ts
+  s_291078cde7ba1a::t_5acc6491a36e59 9,13-19,23,25-30,33,35-39,41-42,44-47,49-52,55,148-191
+web/lib/__tests__/sample-run-sweep.test.ts
+  s_291078cde7ba1a::t_6a3e85d189eb4b 20,22,85
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_291078cde7ba1a::t_ca9f7ff311dfb4 25-27,245-247
+web/lib/services/sample-run-sweep.ts
+  s_291078cde7ba1a::t_6bf8d073155f59 15-17,57-58,60,63-64,66-73,78,80,85,87,106-113
+worker/src/__tests__/queue-claim-token.test.ts
+  s_291078cde7ba1a::t_866d270fd491de 1-38
+worker/src/queue-consumers/comments-tier3.ts
+  s_291078cde7ba1a::t_a146d7431d6263 410-413
+worker/src/worker.ts
+  s_291078cde7ba1a::t_eba415b5ad4b25 78-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebd00633dc0fd8cc0900f07f5c7c2b557aad06c1",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
