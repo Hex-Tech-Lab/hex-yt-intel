@@ -1,0 +1,31 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_53e2ec095fcdd1 1594
+web/app/api/webhooks/reaper/route.ts
+  s_2babab2284cc48::t_bfb3ffe45e5fc5 11
+worker/src/__tests__/queue-claim-token.test.ts
+  s_2babab2284cc48::t_1e30bff0124c35 24-28,33-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "196f5674bd6428b2c811510fa958268298cee5d8",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_2babab2284cc48": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a853b3de56d90e1dc",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
