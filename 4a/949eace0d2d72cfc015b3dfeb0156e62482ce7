@@ -1,0 +1,23 @@
+web/lib/config/dashboard-panels.purity.test.ts
+  s_291078cde7ba1a::t_003bc1b53ee000 1-3,21,184-198
+web/lib/config/dashboard-panels.test.ts
+  s_291078cde7ba1a::t_848b79675379d8 8,126-141
+web/lib/hooks/__tests__/useDashboardLayout.test.ts
+  s_291078cde7ba1a::t_78288170527072 14,114-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a949eace0d2d72cfc015b3dfeb0156e62482ce7",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
