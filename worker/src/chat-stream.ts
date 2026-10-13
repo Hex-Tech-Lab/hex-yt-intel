@@ -14,7 +14,7 @@ const CHAT_CASCADE = CASCADE_FALLBACKS.chat;
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
-import { isProductionEnv } from "./env-utils";
+import { isProductionEnv, getVercelBypassHeaders } from "./env-utils";
 import { isValidAppUrl } from "./middleware/cors";
 import { buildAdaptiveOptions, getStaticOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
 
@@ -43,6 +43,8 @@ type ChatEnv = {
   NODE_ENV?: string;
   ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
+  VERCEL_PROTECTION_BYPASS?: string;
+  VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 };
 
 interface ChatStreamRequest {
@@ -66,6 +68,7 @@ interface ChatStreamRequest {
   knowledgeContext?: UserKnowledgeContext;
   // Registry-resolved streaming timeout per model tier (T20).
   timeoutMs?: number;
+  vercelProtectionBypass?: string;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -593,7 +596,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           try {
             const res = await fetch(`${appUrl}/api/chat/persist`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...getVercelBypassHeaders(c.env, req.vercelProtectionBypass),
+              },
               body: JSON.stringify({
                 conversationId: req.conversationId,
                 userId: req.userId,

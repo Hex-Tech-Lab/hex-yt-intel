@@ -27,7 +27,7 @@ const sha256Hex = async (input: string): Promise<string> => {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 };
-import { isProductionEnv } from "../env-utils";
+import { isProductionEnv, getVercelBypassHeaders } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
 import { verifyProjectiveContextSig } from "../../../web/lib/config/projective-context";
@@ -69,6 +69,8 @@ export type AnalysisEnv = {
   TRANSCRIPTAPI_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   SUPADATA_MAX_AI_MINUTES?: string;
+  VERCEL_PROTECTION_BYPASS?: string;
+  VERCEL_AUTOMATION_BYPASS_SECRET?: string;
 };
 
 if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
@@ -225,6 +227,7 @@ interface StreamRequest {
     maxPages: number;
     timeoutMs: number;
   };
+  vercelProtectionBypass?: string;
 }
 
 interface TokenVerificationResult {
@@ -1000,6 +1003,8 @@ async function fetchJevPlan(params: {
   videoId: string;
   transcript: string;
   signingKey: string;
+  env?: { VERCEL_PROTECTION_BYPASS?: string; VERCEL_AUTOMATION_BYPASS_SECRET?: string } | null;
+  vercelProtectionBypass?: string | null;
 }): Promise<JevPlanShape | null> {
   const exp = Date.now() + 600_000;
   const body = { videoId: params.videoId, transcript: params.transcript };
@@ -1011,6 +1016,7 @@ async function fetchJevPlan(params: {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'hex-worker-plan/1.0',
+        ...getVercelBypassHeaders(params.env, params.vercelProtectionBypass),
       },
       body: JSON.stringify({ ...body, sig, exp }),
       signal: AbortSignal.timeout(10000),
@@ -1195,7 +1201,7 @@ function buildStreamResponse(
   httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS" | "VERCEL_PROTECTION_BYPASS" | "VERCEL_AUTOMATION_BYPASS_SECRET">,
   cache?: UpstashCacheAdapter,
   priorPayload?: Record<string, unknown>,
   onTranscriptResolved?: (transcript: string) => void,
@@ -1345,6 +1351,7 @@ function buildStreamResponse(
         // whatever the array's LATEST unrelated state happens to be by the
         // time the async persist HTTP call actually serializes it.
         capturedDimensions: [...capturedDimensions],
+        vercelProtectionBypass: req.vercelProtectionBypass,
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -1519,6 +1526,8 @@ function buildStreamResponse(
             videoId: req.videoId,
             transcript: resolvedTranscriptText ?? "",
             signingKey,
+            env,
+            vercelProtectionBypass: req.vercelProtectionBypass,
           });
           // Path 3: K=1 fallback on any failure (fetchJevPlan already logged
           // + captured the reason). streamCount mirrors the token's bound
@@ -1976,6 +1985,8 @@ analysis.post("/analyze-llm-stream", async (c) => {
       appUrl: req.appUrl || c.env.APP_URL || "https://getvintel.com",
       videoId: req.videoId,
       waitUntil: (p) => c.executionCtx.waitUntil(p),
+      env: c.env,
+      vercelProtectionBypass: req.vercelProtectionBypass,
     });
 
     const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, isProjectiveBundle(req.dimensions ?? []) ? 'projective' : 'grounded'), new ValidationService(), cache);
@@ -2012,6 +2023,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
           persistRetry: shadowRetry,
           promptBuilder: new PromptBuilder(promptConfig),
           cascade: new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, 'grounded'),
+          vercelProtectionBypass: req.vercelProtectionBypass,
         }));
       }
       : undefined;

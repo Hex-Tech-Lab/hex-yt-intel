@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/cloudflare';
 import { parseChapters } from './chapter-parser';
 import { signBoundContent } from '../crypto';
+import { getVercelBypassHeaders } from '../env-utils';
 
 /**
  * Decoupled chapter persistence (chapters-decoupling design, 2026-08-06).
@@ -52,6 +53,8 @@ export interface ChapterPersistDeps {
   videoId: string;
   waitUntil: (promise: Promise<unknown>) => void;
   fetchFn?: typeof fetch;
+  env?: { VERCEL_PROTECTION_BYPASS?: string; VERCEL_AUTOMATION_BYPASS_SECRET?: string } | null;
+  vercelProtectionBypass?: string | null;
 }
 
 /**
@@ -80,7 +83,10 @@ export function enqueueChapterPersist(deps: ChapterPersistDeps): void {
         const doFetch = deps.fetchFn ?? fetch;
         const response = await doFetch(`${deps.appUrl}/api/videos/${deps.videoId}/chapters`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getVercelBypassHeaders(deps.env, deps.vercelProtectionBypass),
+          },
           body: JSON.stringify({ chapters, sig, exp }),
           signal: controller.signal,
         });

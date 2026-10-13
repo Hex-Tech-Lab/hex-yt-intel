@@ -18,6 +18,7 @@ import { canonicalJson } from "../../../web/lib/utils/canonical-json";
 import { signEpistemicClaims } from "../../../web/lib/config/epistemic-shadow";
 import { EpistemicPipelineDispatcher } from "./EpistemicPipelineDispatcher";
 import { JevTextParser } from "./sensor-fusion/heuristics/jev-text-parser";
+import { getVercelBypassHeaders } from "../env-utils";
 import type { GroundedExtractionPayload } from "../types/grounded-extraction";
 import type { LLMCascadePort } from "../ports/LLMCascadePort";
 import type { PromptBuilderPort } from "../ports/PromptBuilderPort";
@@ -42,6 +43,7 @@ export interface EpistemicShadowParams {
   fetchImpl?: typeof fetch;
   /** Injected for tests so backoff does not wait in real time. */
   sleepImpl?: (ms: number) => Promise<void>;
+  vercelProtectionBypass?: string;
 }
 
 /** Body sent to Vercel's /api/analyses/[id]/grounded-claims route. */
@@ -104,7 +106,14 @@ export async function persistGroundedClaims(
   const contentSig = await signEpistemicClaims(params.signingSecret, params.analysisId, exp, canonical);
   const body: GroundedClaimsPersistBody = { analysisId: params.analysisId, groundedClaims, degradedSensors, exp, contentSig };
   const url = `${params.appUrl.replace(/\/+$/, "")}/api/analyses/${encodeURIComponent(params.analysisId)}/grounded-claims`;
-  const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const init: RequestInit = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getVercelBypassHeaders(undefined, params.vercelProtectionBypass),
+    },
+    body: JSON.stringify(body),
+  };
   const sleep = params.sleepImpl ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const { maxAttempts, backoffDelays, attemptTimeoutMs } = params.persistRetry;
 

@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/cloudflare';
 import { reconstructMarkdown, extractJsonPayload, type UCISPayloadV2 } from './MarkdownReconstructor';
 import { UCISPayloadSchema, ChunkPayloadSchema, UCISDimensionSchema } from './ZodSchemas';
 import { signBoundContent } from '../crypto';
+import { getVercelBypassHeaders } from '../env-utils';
 
 /**
  * How long a signed persist body stays valid. Generous (10 min) to absorb
@@ -62,6 +63,7 @@ export interface PersistOptions {
   // verified mechanism). Used as a merge/fallback source in
   // mergeDimensions() below.
   capturedDimensions?: Array<{ number: number; name: string; content: string }>;
+  vercelProtectionBypass?: string;
 }
 
 const rawFetch = fetch;
@@ -272,13 +274,17 @@ export class PersistService {
     channelMeta?: Record<string, unknown> | null;
     comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
     chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> | null;
+    vercelProtectionBypass?: string;
   }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
       try {
         const persistRes = await rawFetch(`${params.appUrl}/api/analyses/persist`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getVercelBypassHeaders(undefined, params.vercelProtectionBypass),
+          },
           signal: AbortSignal.timeout(10000),
           body: JSON.stringify({
             analysisId: params.analysisId,
@@ -356,6 +362,7 @@ export class PersistService {
     channelMeta?: Record<string, unknown> | null;
     comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
     finishReason?: string;
+    vercelProtectionBypass?: string;
   }): Promise<void> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
@@ -393,7 +400,10 @@ export class PersistService {
       try {
         await rawFetch(`${options.appUrl}/api/analyses/persist`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getVercelBypassHeaders(undefined, options.vercelProtectionBypass),
+          },
           signal: AbortSignal.timeout(10000),
           body: JSON.stringify({
             analysisId: options.analysisId,

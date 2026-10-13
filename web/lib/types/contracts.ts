@@ -309,6 +309,7 @@ export interface WorkerStreamRequest {
   channelMetaConfig?: ChannelMetaFetchConfig;
   commentsSamplePlan?: CommentsSamplePlanConfig;
   commentsSyncPoolConfig?: CommentsSyncPoolConfig;
+  vercelProtectionBypass?: string;
 }
 
 /**
