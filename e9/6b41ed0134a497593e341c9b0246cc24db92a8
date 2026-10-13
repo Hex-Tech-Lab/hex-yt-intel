@@ -1,0 +1,29 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_1e0a1347f04816 1592
+web/lib/config/dashboard-panels.purity.test.ts
+  s_291078cde7ba1a::t_991f543c5e1658 1-52
+web/lib/config/dashboard-panels.test.ts
+  s_291078cde7ba1a::t_11e7eaa22deb11 51-56
+web/lib/config/dashboard-panels.ts
+  s_291078cde7ba1a::t_57d7115452e2d8 10,50-62
+web/lib/hooks/useDashboardLayout.ts
+  s_291078cde7ba1a::t_1d06cf892c7190 26-46,191,194-195
+web/lib/types/dashboard-layout.ts
+  s_291078cde7ba1a::t_548a01fca3f051 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e96b41ed0134a497593e341c9b0246cc24db92a8",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
