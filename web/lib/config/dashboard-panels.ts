@@ -7,7 +7,7 @@ import {
   SIDEBAR_MIN,
   type LayoutShape,
   type PanelDefaults,
-} from '@/lib/hooks/useDashboardLayout';
+} from '@/lib/types/dashboard-layout';
 
 /**
  * Settings-Registry-driven default dashboard panel widths (ADR 042 follow-up,
@@ -47,14 +47,19 @@ export async function resolveDashboardPanelDefaults(): Promise<PanelDefaults> {
     [REGISTRY_KEYS['2col']]: toTuple('2col', DEFAULT_LAYOUT['2col']),
     [REGISTRY_KEYS['3col']]: toTuple('3col', DEFAULT_LAYOUT['3col']),
   };
-  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
-    Object.keys(fallbackRaw),
-    fallbackRaw
-  );
-  return {
-    '2col': parsePanelWidths('2col', resolved[REGISTRY_KEYS['2col']]) ?? DEFAULT_LAYOUT['2col'],
-    '3col': parsePanelWidths('3col', resolved[REGISTRY_KEYS['3col']]) ?? DEFAULT_LAYOUT['3col'],
-  };
+  try {
+    const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+      Object.keys(fallbackRaw),
+      fallbackRaw
+    );
+    return {
+      '2col': parsePanelWidths('2col', resolved?.[REGISTRY_KEYS['2col']]) ?? DEFAULT_LAYOUT['2col'],
+      '3col': parsePanelWidths('3col', resolved?.[REGISTRY_KEYS['3col']]) ?? DEFAULT_LAYOUT['3col'],
+    };
+  } catch (error) {
+    console.warn('[dashboard-panels] resolveDashboardPanelDefaults failed, using code fallback:', error);
+    return DEFAULT_LAYOUT;
+  }
 }
 
 function toTuple(shape: LayoutShape, layout: { sidebar: number; right: number }): number[] {
