@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 /**
  * INP T7: ChatDock subscribes to 14 store fields via useShallow instead of the
  * whole chat store. Properties checked:
