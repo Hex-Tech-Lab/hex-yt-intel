@@ -36,7 +36,9 @@ export interface IconProps {
  */
 // Memoized (INP T7): Icon is rendered once per list row / message action, so a
 // parent re-render (e.g. a streaming chat token) used to re-render every icon
-// SVG in the list even though the props were unchanged. memo() skips those.
+// SVG in the list even though the props were unchanged. memo() skips those when
+// props are referentially equal; call sites that pass an inline `style={{...}}`
+// object still re-render (hoist the object to benefit).
 export const Icon = memo(function Icon({ icon, size = 16, className = "", style = {} }: IconProps) {
   ensureIconsRegistered();
   return (

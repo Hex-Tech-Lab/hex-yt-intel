@@ -74,4 +74,15 @@ describe('Icon render count (INP T7)', () => {
     // count at the mount total instead of 4 * ROWS.
     expect(renderCount.n).toBe(afterMount);
   });
+
+  it('re-renders an icon whose props change', () => {
+    renderCount.n = 0;
+    function One({ icon }: { icon: string }) {
+      return <Icon icon={icon} size={13} />;
+    }
+    const { rerender } = render(<One icon="solar:copy-linear" />);
+    expect(renderCount.n).toBe(1);
+    rerender(<One icon="solar:check-read-linear" />);
+    expect(renderCount.n).toBe(2);
+  });
 });

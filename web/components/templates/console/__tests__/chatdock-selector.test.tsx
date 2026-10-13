@@ -1,11 +1,13 @@
 /** @vitest-environment jsdom */
 /**
  * INP T7: ChatDock subscribes to 14 store fields via useShallow instead of the
- * whole chat store. Two properties must hold:
+ * whole chat store. Properties checked:
  *  1. a write to a field ChatDock does not read (loadingList, networkBound)
- *     must NOT re-render the message list;
- *  2. a streaming write (new messagesByConv object, growing content) MUST still
- *     update the visible assistant message.
+ *     must NOT re-run the message-list render. Measured as calls to
+ *     preprocessMarkdown, which ChatDockImpl invokes inline per assistant
+ *     message on every render (this is the perf regression test);
+ *  2. selector correctness guards (these pass on the old whole-store code too):
+ *     streaming content updates, `error` and `sending` still reach the DOM.
  * Negative control: replace the useShallow selector with `useChatStore()` and
  * test 1 fails (preprocessMarkdown is called again after the unrelated write).
  */
@@ -59,7 +61,11 @@ describe('ChatDock store selector (INP T7)', () => {
     } as never);
   });
 
-  afterEach(() => cleanup());
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    cleanup();
+    window.matchMedia = originalMatchMedia;
+  });
 
   it('does not re-render the message list on writes to fields it does not read', () => {
     render(<ChatDock />);
@@ -88,5 +94,11 @@ describe('ChatDock store selector (INP T7)', () => {
     });
 
     expect(screen.getByText('partial answer grows')).toBeTruthy();
+  });
+
+  it('still shows a store error and the sending state (selected fields stay reactive)', () => {
+    render(<ChatDock />);
+    act(() => useChatStore.setState({ error: 'boom-error', sending: false }));
+    expect(screen.getByText(/boom-error/)).toBeTruthy();
   });
 });
