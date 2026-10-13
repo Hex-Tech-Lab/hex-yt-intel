@@ -10,8 +10,8 @@
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useState } from 'react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup, act } from '@testing-library/react';
 
 const renderCount = vi.hoisted(() => ({ n: 0 }));
