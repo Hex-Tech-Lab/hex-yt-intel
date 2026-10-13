@@ -1,0 +1,21 @@
+web/lib/services/CombinerPass.ts
+  s_291078cde7ba1a::t_ea7d7fda3855a2 35-40,42,230-232,238-240,257-258
+web/lib/services/combiner-dedupe.ts
+  s_291078cde7ba1a::t_81d0405aa1d696 1-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5e20f7c9d6e1eb7d4d8383cbed37f40488158648",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
