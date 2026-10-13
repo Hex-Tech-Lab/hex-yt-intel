@@ -10,6 +10,23 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-13T23:15:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Task A (combiner-dedupe superset_detail_retained timestamp upgrade) & Task B (technical debt roster documentation):
+  - Task A: Fixed superset_detail_retained in web/lib/services/combiner-dedupe.ts so longer block text is kept AND incoming real timestamp replaces placeholder timestamp on it ('[timestamp not provided]'). Preserves existing real timestamps and keeps both mentions if real timestamps differ. Negative-control TDD test written and passed.
+  - Task B: Recorded three accepted limitations (Items 23, 24, 25) in docs/TECH_DEBT_LEDGER.md with designated REVIEW TYPE for Jev engine Phase B.
+  - Zero grep usage. All verification gates passed clean: vitest combiner-dedupe-followup (11/11 pass), vitest lib/services (20/20 pass), tsc --noEmit with 6GB heap (clean), qa-intel:ci (0 new issues).
+  - Target files: web/lib/services/combiner-dedupe.ts, web/lib/__tests__/combiner-dedupe-followup.test.ts, docs/TECH_DEBT_LEDGER.md, .memory/AGENT_LEDGER.md.
+
+- [2026-10-13T21:56:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Combiner dedupe follow-up (post-merge audit of #501):
+  - Completed all 6 audited tasks:
+    1. Real timestamps preserved at distinct occurrences (ADR 022 per-mention seek) without merging conflicting timestamps; placeholder upgrade only.
+    2. Signed numbers preserve minus sign for '(-5%)' and unicode '−5%' without collapsing into positive '5%'.
+    3. matchSubHeader excludes metric/unit/suffix lines like '3.2x growth...' or '1.5-fold...' from being parsed as dimension headers.
+    4. CombinerPass identical-key intros differing by symbols or timestamps preserved separately without dropping the second.
+    5. timestamp_upgrade does not overwrite longer superset blocks (retains detailed superset text).
+    6. Hedges like '(approximate)' on numbers preserved in comparison text without merging with precise figures.
+  - Zero grep usage. All verification gates passed clean: tsc --noEmit (0 errors), vitest lib/services (20/20 pass), vitest combiner-dedupe-followup + pr442-group4-fixes (43/43 pass), qa-intel:ci (0 new issues).
+  - Target files: web/lib/services/combiner-dedupe.ts, web/lib/services/CombinerPass.ts, web/lib/__tests__/combiner-dedupe-followup.test.ts, .memory/AGENT_LEDGER.md.
+
 - [2026-10-12T19:44:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Configure UAT/production multi-environment deploy pipeline in deploy-worker.yml: added trigger on push to [main, uat]; added early step setting WENV/WORKER_URL based on github.ref_name; parameterized --env $WENV; switched deploy step to 'pnpm --filter youtube-intelligence-worker exec wrangler deploy --env $WENV'; parameterized verify curls with $WORKER_URL; scoped concurrency group to deploy-worker-${{ github.ref_name }}. Audited ci-cd.yml Deploy to Vercel job (already guarded for main/master). Validated YAMLs via python3 pyyaml. Target: .github/workflows/deploy-worker.yml, .memory/AGENT_LEDGER.md.
 ### Phase C Live Wire Calibration Results
 - [2026-10-12T19:05:00+03:00] [AGY (Flash 3.8)] [IN_PROGRESS] Stream C DB Security Advisors & Cross-Boundary Token Sign Test:

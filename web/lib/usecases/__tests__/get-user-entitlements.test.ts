@@ -1,9 +1,16 @@
+import * as Sentry from '@sentry/nextjs';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetUserEntitlementsUseCase } from '../GetUserEntitlementsUseCase';
+import { GetUserEntitlementsUseCase, resetFounderAllowlistWarnedForTesting } from '../GetUserEntitlementsUseCase';
 import * as supabaseModule from '@/lib/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: vi.fn(),
+}));
+
+vi.mock('@sentry/nextjs', () => ({
+  captureMessage: vi.fn(),
+  captureException: vi.fn(),
 }));
 
 describe('GetUserEntitlementsUseCase', () => {
@@ -11,6 +18,7 @@ describe('GetUserEntitlementsUseCase', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetFounderAllowlistWarnedForTesting();
     useCase = new GetUserEntitlementsUseCase();
   });
 
@@ -170,6 +178,52 @@ describe('GetUserEntitlementsUseCase', () => {
       const entitlements = await useCase.execute('da4381c6-f774-4c99-8f04-2c1c9e27d1fb', 'kellybakri@gmail.com');
 
       expect(entitlements.tier).toBe('free');
+      vi.unstubAllEnvs();
+    });
+
+    it('does not warn for a self-hosted production build with VERCEL_ENV unset', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('VERCEL_ENV', '');
+      vi.stubEnv('FOUNDER_USER_IDS', '');
+      vi.stubEnv('ADMIN_FOUNDER_EMAILS', '');
+      vi.mocked(supabaseModule.getSupabaseServiceClient).mockReturnValue(noSubscriptionSupabase() as any);
+
+      await useCase.execute('user-selfhost-prod');
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    });
+
+    it('warns via Sentry.captureMessage once in non-production when founder allowlist is unset and does not warn in production', async () => {
+      // Sub-case 1: In production environment, do NOT warn
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('VERCEL_ENV', 'production');
+      vi.stubEnv('FOUNDER_USER_IDS', '');
+      vi.stubEnv('ADMIN_FOUNDER_EMAILS', '');
+      vi.mocked(supabaseModule.getSupabaseServiceClient).mockReturnValue(noSubscriptionSupabase() as any);
+
+      await useCase.execute('user-prod-1');
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+
+      // Sub-case 2: In non-production (e.g. test / preview), warn once
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.stubEnv('VERCEL_ENV', 'preview');
+
+      await useCase.execute('user-dev-1');
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+      expect(Sentry.captureMessage).toHaveBeenCalledWith(
+        expect.stringContaining('founder allowlist is unset in this environment'),
+        expect.objectContaining({
+          level: 'warning',
+          tags: expect.objectContaining({
+            usecase: 'GetUserEntitlementsUseCase',
+          }),
+        }),
+      );
+
+      // Sub-case 3: Subsequent call does NOT warn again (once per server process)
+      await useCase.execute('user-dev-2');
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+
       vi.unstubAllEnvs();
     });
   });

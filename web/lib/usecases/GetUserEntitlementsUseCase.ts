@@ -22,6 +22,12 @@ const TIER_RANK: Record<PlanTier, number> = {
   free: 1,
 };
 
+let hasWarnedFounderAllowlistUnset = false;
+
+export function resetFounderAllowlistWarnedForTesting(): void {
+  hasWarnedFounderAllowlistUnset = false;
+}
+
 export class GetUserEntitlementsUseCase {
   async execute(userId: string, email?: string | null): Promise<EntitlementState> {
     const defaultFree: EntitlementState = {
@@ -58,14 +64,30 @@ export class GetUserEntitlementsUseCase {
       return founderEntitlement;
     }
 
+    const founderEmails = (process.env.ADMIN_FOUNDER_EMAILS ?? '')
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+
     if (email) {
-      const founderEmails = (process.env.ADMIN_FOUNDER_EMAILS ?? '')
-        .split(',')
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(Boolean);
       if (founderEmails.includes(email.toLowerCase())) {
         return founderEntitlement;
       }
+    }
+
+    // Prefer VERCEL_ENV (preview/development/production) when set; otherwise NODE_ENV, so a
+    // self-hosted production build with VERCEL_ENV unset is not treated as non-production.
+    const deployEnv = process.env.VERCEL_ENV || process.env.NODE_ENV;
+    const isNonProduction = deployEnv !== 'production';
+    if (isNonProduction && founderUserIds.length === 0 && founderEmails.length === 0 && !hasWarnedFounderAllowlistUnset) {
+      hasWarnedFounderAllowlistUnset = true;
+      Sentry.captureMessage(
+        'ADMIN_FOUNDER_EMAILS and FOUNDER_USER_IDS are empty; founder allowlist is unset in this environment.',
+        {
+          level: 'warning',
+          tags: { usecase: 'GetUserEntitlementsUseCase' },
+        },
+      );
     }
 
     try {

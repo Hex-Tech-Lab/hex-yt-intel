@@ -5,7 +5,7 @@ vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: vi.fn(),
 }));
 
-vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 
 function makeSupabaseRows(rows: Array<{ plan_tier: string; status: string; current_period_end: string | null }>) {
   return {
