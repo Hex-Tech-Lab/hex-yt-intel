@@ -89,7 +89,7 @@ describe('HighlightsScrubber – reel never scrolls the page (T5 b)', () => {
     render(<HighlightsScrubber analysisId="a-noscroll" videoDurationSeconds={60} />);
     await screen.findByTestId('highlights-collapse-toggle');
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Play highlights' }));
     });
     fireEvent.click(screen.getByRole('button', { name: 'Jump to highlight 2: Second moment' }));
