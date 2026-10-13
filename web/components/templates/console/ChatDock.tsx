@@ -491,8 +491,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   // covers Enter. Escape-to-close-dock isn't part of its API, so it's still
   // caught here via bubbling (ChatComposerInput has no stopPropagation on
   // keydown, confirmed by reading its source).
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') startTransition(() => { setOpen(false); });
+  const onKeyDown = (keyEvent: React.KeyboardEvent<HTMLDivElement>) => {
+    if (keyEvent.key === 'Escape') startTransition(() => { setOpen(false); });
   };
 
   // --- Collapsed / Expanded, animated with framer-motion -------------------
