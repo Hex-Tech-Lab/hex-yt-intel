@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -16,19 +16,11 @@ function localImports(src: string): string[] {
 }
 
 function resolveAlias(spec: string): string | null {
-  for (const ext of ['.ts', '.tsx', '/index.ts']) {
-    try {
-      const p = resolve(root, spec.slice(2) + ext);
-      readFileSync(p, 'utf8');
-      return p;
-    } catch {
-      /* try next extension */
-    }
-  }
-  return null;
+  const base = resolve(root, spec.replace('@/', ''));
+  return [`${base}.ts`, `${base}.tsx`, resolve(base, 'index.ts')].find(existsSync) ?? null;
 }
 
-export function isClientModule(src: string): boolean {
+function isClientModule(src: string): boolean {
   return /^\s*(?:\/\/[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*['"]use client['"]/.test(src);
 }
 
