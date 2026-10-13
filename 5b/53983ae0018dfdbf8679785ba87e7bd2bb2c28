@@ -1,0 +1,23 @@
+web/components/templates/console/__tests__/CommentInsightsUnavailable.test.tsx
+  s_291078cde7ba1a::t_ccd4d279652178 25-33
+web/hooks/__tests__/useCommentInsights.test.tsx
+  s_291078cde7ba1a::t_7d41d6c718b5b3 75,90
+web/hooks/useCommentInsights.ts
+  s_291078cde7ba1a::t_8c9b6f2c951c1d 113-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b53983ae0018dfdbf8679785ba87e7bd2bb2c28",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
