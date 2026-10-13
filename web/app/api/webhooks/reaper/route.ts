@@ -8,9 +8,9 @@ export const runtime = 'nodejs';
  * Signature-verified before doing any work.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { sweepStuckAnalyses } from '@/lib/services/analysis-reaper';
+import * as Sentry from '@sentry/nextjs';
 import { sweepStaleSampleRuns } from '@/lib/services/sample-run-sweep';
 
 /**

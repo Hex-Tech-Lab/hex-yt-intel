@@ -7,6 +7,9 @@
  * reaped them, so an orphaned run could hold the uq_comment_sample_runs_system_per_analysis
  * index for an analysis that is never re-finalized.
  *
+ * Scope: cochran (system-funded, zero wallet cost) runs only. User-funded 'uncapped' runs are left
+ * alone because failing one here would skip the credit-refund reconciliation in persist-sample-run.
+ *
  * Rules (thresholds are Settings Registry keys, fallbacks equal the seeds in
  * migration 20261013120000):
  *  - 'pending' older than comments.sweep.pendingStaleMinutes and never

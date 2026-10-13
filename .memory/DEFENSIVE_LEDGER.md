@@ -88,6 +88,9 @@ This ledger formalizes every defensive node into a traceable dependency graph.
 | `DAT-005` | `web/lib/adapters/PostgresBillingAdapter.ts` | L27, L73 | Missing `billing.quota.processingGraceWindowMs` | `REGISTRY_FALLBACK = 300000` (5 minutes) | Quota reservation expiry window |
 | `DAT-006` | `web/lib/config/pricing-settings.ts` | L11-20 | Missing `billing.pricing.*` registry entries | `PRICING_REGISTRY_FALLBACK` (free: $0, light: $5, pro: $9) | Checkout flow, pricing cards |
 | `DAT-007` | `web/lib/config/prior-payload.ts` | L16, L37 | Invalid or missing prior payload size limit | `PRIOR_PAYLOAD_MAX_BYTES_FALLBACK = 65536` (64 KB) | Projective synthesis context window payload |
+| `DAT-008` | `web/lib/services/sample-run-sweep.ts` | `SAMPLE_RUN_SWEEP_FALLBACK_MINUTES` | Missing/invalid `comments.sweep.pendingStaleMinutes` or `comments.sweep.samplingStaleMinutes` (registry read fails, 0, NaN) | `30` minutes (equals the migration 20261013120000 seeds; CF Queues consumer wall time is capped at 15 min, so 30 cannot fail a live run) | Reaper webhook tick, `comment_sample_runs` (cochran), `uq_comment_sample_runs_system_per_analysis` |
+| `DAT-009` | `worker/src/queue-consumers/comments-tier3.ts` | claim block (post `reportSampleRunResult`) | Claim POST not recorded after all retries | Fail closed: throw, `message.retry()`, ZERO paid work (never proceed unclaimed) | `worker/src/worker.ts` queue(), persist-sample-run route, reaper sweep (releases a run left pending) |
+| `DAT-010` | `worker/src/worker.ts` | `queue()` | `message.id` not stable across `retry()` (CF docs: unique system-generated id; stability unstated) | Retried claim gets `claimed:false` and skips; global sweep fails the run after `samplingStaleMinutes` | `comment_sample_runs.claimed_by`, `markSampleRunSampling` |
 
 ---
 

@@ -210,7 +210,6 @@ export class SupabaseAuxRemediationAdapter {
     if (updateError) throw updateError;
   }
 
-  /** A pending run whose worker enqueue never happened: mark it failed so it is never left orphaned (a later backfill retries it). */
   /**
    * Marks this analysis's system-funded runs that are still pending/sampling
    * after `staleMinutes` as failed, so a run orphaned by a failed status
@@ -230,6 +229,7 @@ export class SupabaseAuxRemediationAdapter {
     if (error) throw error;
   }
 
+  /** A pending run whose worker enqueue never happened: mark it failed so it is never left orphaned (a later backfill retries it). */
   static async markSampleRunFailed(sampleRunId: string): Promise<void> {
     const service = getSupabaseServiceClient();
     const { error } = await service.from('comment_sample_runs').update({ status: 'failed' }).eq('id', sampleRunId).eq('status', 'pending');
