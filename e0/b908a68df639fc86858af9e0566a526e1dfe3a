@@ -1,0 +1,25 @@
+.memory/DEFENSIVE_LEDGER.md
+  s_291078cde7ba1a::t_f4606afa0c4697 91-93
+web/app/api/webhooks/reaper/route.ts
+  s_291078cde7ba1a::t_bdef07bf2925fc 13
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_291078cde7ba1a::t_f9676535229a05 232
+web/lib/services/sample-run-sweep.ts
+  s_291078cde7ba1a::t_1bf5b85600690f 10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0b908a68df639fc86858af9e0566a526e1dfe3a",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
