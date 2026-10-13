@@ -1,0 +1,21 @@
+web/lib/__tests__/combiner-dedupe-followup.test.ts
+  s_291078cde7ba1a::t_a6f7c3fe528200 167-182
+web/lib/services/combiner-dedupe.ts
+  s_291078cde7ba1a::t_0936755bf8c0ac 64-65,323-329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0307df9016b020393552223c53185383a47bd218",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
