@@ -72,7 +72,7 @@ describe('useCommentInsights', () => {
       wrapper: StrictMode,
     });
 
-    await waitFor(() => expect(result.current.state).toBe('none'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
     expect(result.current.insights).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe('useCommentInsights', () => {
       wrapper: StrictMode,
     });
 
-    await waitFor(() => expect(result.current.state).toBe('none'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
     expect(result.current.insights).toBeNull();
   });
 
@@ -259,6 +259,19 @@ describe('useCommentInsights', () => {
       wrapper: StrictMode,
     });
 
+    await waitFor(() => expect(result.current.state).toBe('none'));
+  });
+
+  it('reports analyzing (not none) while the first fetch is in flight, then settles on none for no run', async () => {
+    let release: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => undefined;
+    const gate = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => { release = resolve; });
+    vi.stubGlobal('fetch', mockFetch((url) =>
+      url.includes('/api/comments/runs/')
+        ? Promise.resolve({ ok: true, json: () => Promise.resolve({ run: null }) })
+        : gate));
+    const { result } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
+    await act(() => { release({ ok: true, json: () => Promise.resolve({ analysis_payload: {} }) }); return Promise.resolve(); });
     await waitFor(() => expect(result.current.state).toBe('none'));
   });
 });

@@ -110,6 +110,9 @@ async function applyRunStatus(run: RunLookup, analysisId: string, signal: AbortS
  */
 async function pollCommentInsights(analysisId: string, signal: AbortSignal, setResult: SetResult): Promise<void> {
   const deadline = Date.now() + POLL_CAP_MS;
+  // 'analyzing' doubles as "checking" so "isn't available" is not shown while the first read is in flight.
+  // (The initial useState value is still 'none' for the render before this effect runs.)
+  setResult({ state: 'analyzing', insights: null });
   try {
     const persisted = await readPersistedInsights(analysisId, signal);
     if (typeof persisted === 'object') {
@@ -145,8 +148,9 @@ async function pollCommentInsights(analysisId: string, signal: AbortSignal, setR
  * Read order: (1) commentInsights already in the in-memory payload for THIS
  * analysis (same rawAnalysisPayloadId guard as useAuxElementStatus — the
  * store slot is global, not keyed per analysis) → 'ready'; (2) else fetch
- * the run status — pending|sampling → 'analyzing' with a bounded 5s poll
- * (3-minute cap); completed → refetch the persisted payload (same endpoint
+ * the run status. The state is 'analyzing' from the first read onward (also
+ * while it is still unknown whether a run exists); pending|sampling keeps it
+ * there with a bounded 5s poll (3-minute cap); completed → refetch the persisted payload (same endpoint
  * useAuxElementStatus uses) and derive insights from it; failed/absent →
  * 'failed'/'none'. State resets on every analysisId change (no ghosting of
  * analysis A's card into B). In-flight fetches are aborted on unmount or

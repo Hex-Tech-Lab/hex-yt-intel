@@ -34,6 +34,25 @@ const CHIP_STYLE = {
   color: 'var(--ink-secondary)',
 } as const;
 
+/**
+ * Designed fallback for a completed analysis with no usable sentiment card
+ * (no run, a failed run, or a run still in flight: 'analyzing').
+ * Never renders nothing: the reason is always stated so the gap is visible.
+ */
+export function CommentInsightsUnavailable({ state }: { state: 'none' | 'analyzing' | 'failed' }) {
+  const message =
+    state === 'analyzing'
+      ? 'Analyzing sentiment…'
+      : state === 'failed'
+        ? 'Comment sentiment failed for this video. Re-run the analysis to try again.'
+        : 'Comment sentiment isn\'t available for this video.';
+  return (
+    <section style={PANEL_STYLE} aria-label="Comment insights" role="status">
+      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-secondary)', lineHeight: 1.5 }}>{message}</p>
+    </section>
+  );
+}
+
 export function CommentInsightsCard({ insights }: { insights: CommentInsights }) {
   // Percentages are of `classified` (the Dispatch B contract), not of the
   // bucket sum -- the two differ when some classified comments land in no bucket.
