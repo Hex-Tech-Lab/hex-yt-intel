@@ -30,8 +30,10 @@ describe('get_temporal_subgraph ambiguity fix migration', () => {
     expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.get_temporal_subgraph(UUID) TO service_role;');
   });
 
-  it('is the newest migration in the directory (ADR 018 version ordering)', () => {
+  it('sorts after the migration whose function body it supersedes (ADR 018 version ordering)', () => {
     const versions = readdirSync(MIGRATIONS_DIR).filter((f) => /^\d{14}_.*\.sql$/.test(f)).sort();
-    expect(versions[versions.length - 1]).toBe(FIX_FILE);
+    const original = versions.find((f) => f.startsWith('20261012180000_'));
+    expect(original).toBeDefined();
+    expect(versions.indexOf(FIX_FILE)).toBeGreaterThan(versions.indexOf(original!));
   });
 });
