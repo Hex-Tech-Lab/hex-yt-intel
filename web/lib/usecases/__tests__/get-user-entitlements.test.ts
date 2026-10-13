@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Sentry from '@sentry/nextjs';
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetUserEntitlementsUseCase, resetFounderAllowlistWarnedForTesting } from '../GetUserEntitlementsUseCase';
 import * as supabaseModule from '@/lib/supabase';
 
