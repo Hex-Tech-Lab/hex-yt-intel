@@ -10,6 +10,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-13T21:52:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Fix Dependabot alerts in pnpm-lock.yaml: #157 basic-ftp, #160 postcss-selector-parser, audited #158 braces:
+  - Task 1: Queried GitHub Advisories via GitHub API for alerts #158, #157, #160. Found #157 first_patched_version: 6.2.1, #160 first_patched_version: 7.1.6. #158 (braces <=3.0.3) has first_patched_version: null (upstream maintainer rejected CVE, latest release remains 3.0.3).
+  - Task 2: Added overrides to pnpm-workspace.yaml: basic-ftp ^6.2.1, postcss-selector-parser ^7.1.6. Updated lockfile via pnpm install --lockfile-only with NODE_OPTIONS=--max-old-space-size=8192.
+  - Task 3: Verified single-version resolution via pnpm why (basic-ftp@6.2.3, postcss-selector-parser@7.1.6).
+  - Task 4: Verified web tsc --noEmit clean (exit code 0), web vitest smoke run passed (11/11 tests pass), and pnpm audit --prod clean (0 vulnerabilities found).
+  - Target: pnpm-workspace.yaml, pnpm-lock.yaml, .memory/AGENT_LEDGER.md.
 - [2026-10-12T19:44:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Configure UAT/production multi-environment deploy pipeline in deploy-worker.yml: added trigger on push to [main, uat]; added early step setting WENV/WORKER_URL based on github.ref_name; parameterized --env $WENV; switched deploy step to 'pnpm --filter youtube-intelligence-worker exec wrangler deploy --env $WENV'; parameterized verify curls with $WORKER_URL; scoped concurrency group to deploy-worker-${{ github.ref_name }}. Audited ci-cd.yml Deploy to Vercel job (already guarded for main/master). Validated YAMLs via python3 pyyaml. Target: .github/workflows/deploy-worker.yml, .memory/AGENT_LEDGER.md.
 ### Phase C Live Wire Calibration Results
 - [2026-10-12T19:05:00+03:00] [AGY (Flash 3.8)] [IN_PROGRESS] Stream C DB Security Advisors & Cross-Boundary Token Sign Test:

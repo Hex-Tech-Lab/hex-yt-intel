@@ -93,6 +93,10 @@ overrides:
   "browserslist": "^4.29.1"
   # Dependabot #131 (2026-09-27): baseline-browser-mapping 2.11.26 (process termination DoS).
   "baseline-browser-mapping": "^2.11.26"
+  # Dependabot #157 (2026-10-13): basic-ftp 6.2.1 (quadratic RE_LINE backtracking DoS).
+  "basic-ftp": "^6.2.1"
+  # Dependabot #160 (2026-10-13): postcss-selector-parser 7.1.6 (quadratic complexity in flat selector parsing).
+  "postcss-selector-parser": "^7.1.6"
 
 allowBuilds:
   '@astryxdesign/core': true
