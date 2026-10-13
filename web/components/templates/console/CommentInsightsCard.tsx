@@ -35,7 +35,8 @@ const CHIP_STYLE = {
 } as const;
 
 /**
- * Designed fallback for a completed analysis with no usable sentiment card.
+ * Designed fallback for a completed analysis with no usable sentiment card
+ * (no run, a failed run, or a run still in flight: 'analyzing').
  * Never renders nothing: the reason is always stated so the gap is visible.
  */
 export function CommentInsightsUnavailable({ state }: { state: 'none' | 'analyzing' | 'failed' }) {
