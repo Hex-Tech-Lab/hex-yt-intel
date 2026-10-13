@@ -107,15 +107,15 @@ function stripBullets(line: string): string {
   return stripped;
 }
 
+/** Upper bound on 0.3 Key Takeaways; matches the digest prompt's 3–12 cap. */
+const MAX_TAKEAWAYS = 12;
+
 /**
  * Parse the four `#### 0.x` tiers out of a digest completion. Returns null if
  * none of the tiers are present (so callers can treat the digest as absent
  * rather than render an empty card). Tolerant of a leading ```-fence and of the
  * model omitting one tier.
  */
-/** Upper bound on 0.3 Key Takeaways; matches the digest prompt's 3–12 cap. */
-const MAX_TAKEAWAYS = 12;
-
 export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveDigest | null {
   if (!raw || !raw.trim()) return null;
 
