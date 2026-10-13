@@ -187,11 +187,12 @@ export function BentoMetadata({
               <div
                 id={descriptionId}
                 data-testid="bento-description"
+                tabIndex={descriptionExpanded ? 0 : undefined}
                 className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line transition-[max-height] duration-[var(--motion-duration-description)] ease-out motion-reduce:transition-none ${
                   !canExpandDescription
                     ? ''
                     : descriptionExpanded
-                      ? 'max-h-[var(--description-max-height)] overflow-y-auto pr-1.5'
+                      ? 'max-h-[var(--description-max-height)] overflow-y-auto pr-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2'
                       : 'max-h-[var(--description-collapsed-height)] overflow-hidden'
                 }`}
               >

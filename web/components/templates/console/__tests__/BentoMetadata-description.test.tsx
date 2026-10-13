@@ -21,10 +21,14 @@ describe('BentoMetadata description show more', () => {
     // max-height needs a numeric start to animate; line-clamp (max-height: none) would snap.
     expect(body.className).toContain(COLLAPSED_CLASS);
 
+    expect(body.getAttribute('tabindex')).toBeNull();
+
     fireEvent.click(button);
 
     expect(screen.getByRole('button', { name: /show less/i }).getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByTestId('bento-description').className).toContain(CAPPED_CLASS);
+    // scrollable region must be keyboard-reachable (WCAG 2.1.1)
+    expect(screen.getByTestId('bento-description').getAttribute('tabindex')).toBe('0');
 
     fireEvent.click(screen.getByRole('button', { name: /show less/i }));
 
