@@ -135,3 +135,40 @@ describe('streamChatCascade deadline, abort, and in-band error handling', () => 
     expect(captureMessage.mock.calls[0]?.[1]?.tags).toMatchObject({ reason: 'stream_error' });
   });
 });
+
+describe('streamChatCascade code-level fallback deadline (timeoutMs not supplied)', () => {
+  it.each([
+    ['omitted', {}],
+    ['explicit undefined', { timeoutMs: undefined }],
+  ] as Array<[string, { timeoutMs?: number }]>)('aborts the attempt at 50_000 ms when timeoutMs is %s', async (_label, extra) => {
+    vi.useFakeTimers();
+    // Node's native AbortSignal.timeout runs on an internal timer that fake timers do not control,
+    // so back it with the faked setTimeout to observe when the cascade's deadline fires.
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException('timeout', 'TimeoutError')), ms);
+      return controller.signal;
+    });
+    try {
+      let attemptSignal: AbortSignal | undefined;
+      const fetchSpy = vi.fn((_url: string, init: RequestInit) => {
+        attemptSignal = init.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+        });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const run = streamChatCascade({ apiKey: 'k', grounding: 'g', history: [], onDelta: () => {}, cascade: [CASCADE[0]!], ...extra });
+      await vi.advanceTimersByTimeAsync(49_999);
+      expect(attemptSignal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(attemptSignal?.aborted).toBe(true);
+      expect(timeoutSpy).toHaveBeenCalledWith(50_000);
+      await run;
+    } finally {
+      timeoutSpy.mockRestore();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+});
