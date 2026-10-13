@@ -10,6 +10,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-14T02:27:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Fix purity negative control defect & document mock fallback in dashboard-panels test:
+  - Replaced inline throw in dashboard-panels.purity.test.ts with a real temp-fixture test that calls collectTransitiveDependencies against missing '@/does/not/exist' and asserts throw.
+  - Aligned header docstring claim with the temp entry fixture negative control.
+  - Added clarifying comment in dashboard-panels.test.ts explaining that 3col absent test passes via the mock fallback where getRegistrySettings merges fallback values when keys are absent.
+  - Verified tsc --noEmit, vitest on lib/config tests, qa-intel:ci (exit 0), and contract-audit (exit 0).
+  - Target files: web/lib/config/dashboard-panels.purity.test.ts, web/lib/config/dashboard-panels.test.ts, .memory/AGENT_LEDGER.md.
 - [2026-10-13T23:36:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Harden dashboard-panels purity tests and SSR panel resolver:
   - Task 1: Hardened `web/lib/config/dashboard-panels.purity.test.ts` to scan single & double-quoted specifiers, require(...), and dynamic import(...); strictly fail on unresolved '@/' aliases (no silent skipping); walk imports transitively up to depth 3 to catch client re-export bridges; added comprehensive docstrings of checked vs unchecked boundaries and robust negative controls.
   - Task 2: Added shape-by-shape fail-soft tests in `web/lib/config/dashboard-panels.test.ts` covering absent keys and invalid width tuples (summing to 99), and verified boundary parsing in `parsePanelWidths`.

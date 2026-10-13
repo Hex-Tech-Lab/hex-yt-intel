@@ -56,6 +56,7 @@ describe('resolveDashboardPanelDefaults', () => {
   });
 
   it('fails soft per shape: 2col valid while 3col is absent falls back 3col to DEFAULT_LAYOUT', async () => {
+    // Note: Passes via the mock fallback where getRegistrySettings merges fallback values when keys are absent.
     registryWith({
       'ui.dashboard.panelWidths.2col': [24, 76],
       // 3col key absent

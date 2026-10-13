@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
  *    disk FAILS the test immediately (no silent skipping).
  * 6. Negative controls proving the scanner detects direct client modules,
  *    a transitive client module behind a re-export bridge (temp fixture files run through the real scanner), double-quoted imports, require(...),
- *    dynamic import(...), and throws on unresolved '@/' aliases.
+ *    dynamic import(...), and throws on unresolved '@/' aliases via a temp entry fixture.
  *
  * WHAT IS NOT CHECKED:
  * 1. External packages in node_modules (e.g. '@sentry/nextjs', '@supabase/ssr')
@@ -169,16 +169,16 @@ describe('dashboard-panels server purity', () => {
     });
 
     it('unresolved @/ specifier throws an error instead of silently passing', () => {
-      const entry = resolve(__dirname, 'dashboard-panels.ts');
-      expect(() => {
-        const spec = '@/lib/non-existent-module-xyz-12345';
-        const resolved = resolveModulePath(spec, entry);
-        if (!resolved) {
-          throw new Error(
-            `Failed to resolve '@/' specifier '${spec}' imported from '${entry}'. Silent skipping is prohibited.`
-          );
-        }
-      }).toThrow(/Silent skipping is prohibited/);
+      const dir = mkdtempSync(join(tmpdir(), 'purity-unresolved-'));
+      try {
+        const entryPath = join(dir, 'entry.ts');
+        writeFileSync(entryPath, "import { missing } from '@/does/not/exist';\nexport const x = missing;\n");
+        expect(() => {
+          collectTransitiveDependencies(entryPath, 3);
+        }).toThrow(/Failed to resolve '@\/' specifier '@\/does\/not\/exist'/);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it('transitive scanner flags a client module reached through a re-export bridge', () => {
