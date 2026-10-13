@@ -44,10 +44,10 @@ export function CommentInsightsUnavailable({ state }: { state: 'none' | 'analyzi
       ? 'Analyzing sentiment…'
       : state === 'failed'
         ? 'Comment sentiment failed for this video. Re-run the analysis to try again.'
-        : 'Comment sentiment isn\'t ready for this video yet.';
+        : 'Comment sentiment isn\'t available for this video.';
   return (
     <section style={PANEL_STYLE} aria-label="Comment insights" role="status">
-      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>{message}</p>
+      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-secondary)', lineHeight: 1.5 }}>{message}</p>
     </section>
   );
 }

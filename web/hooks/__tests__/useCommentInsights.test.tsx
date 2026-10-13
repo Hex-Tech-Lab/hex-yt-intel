@@ -261,4 +261,17 @@ describe('useCommentInsights', () => {
 
     await waitFor(() => expect(result.current.state).toBe('none'));
   });
+
+  it('reports analyzing (not none) while the first fetch is in flight, then settles on none for no run', async () => {
+    let release: (v: { ok: boolean; json: () => Promise<unknown> }) => void = () => undefined;
+    const gate = new Promise<{ ok: boolean; json: () => Promise<unknown> }>((r) => { release = r; });
+    vi.stubGlobal('fetch', mockFetch((url) =>
+      url.includes('/api/comments/runs/')
+        ? Promise.resolve({ ok: true, json: async () => ({ run: null }) })
+        : gate));
+    const { result } = renderHook(() => useCommentInsights(ANALYSIS_ID, 'complete'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
+    await act(async () => { release({ ok: true, json: async () => ({ analysis_payload: {} }) }); });
+    await waitFor(() => expect(result.current.state).toBe('none'));
+  });
 });

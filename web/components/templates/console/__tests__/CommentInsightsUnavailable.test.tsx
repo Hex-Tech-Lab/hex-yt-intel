@@ -9,7 +9,7 @@ describe('CommentInsightsUnavailable (T12 designed empty state)', () => {
   it('states a reason when no sentiment run exists, instead of rendering nothing', () => {
     render(<CommentInsightsUnavailable state="none" />);
     const section = screen.getByRole('status', { name: 'Comment insights' });
-    expect(section).toHaveTextContent(/Comment sentiment isn't ready/);
+    expect(section).toHaveTextContent(/Comment sentiment isn't available/);
   });
 
   it('states a failed-run reason when the run failed', () => {
@@ -28,6 +28,6 @@ describe('CommentInsightsUnavailable analyzing state', () => {
     render(<CommentInsightsUnavailable state="analyzing" />);
     const el = screen.getByRole('status', { name: 'Comment insights' });
     expect(el).toHaveTextContent(/Analyzing sentiment/);
-    expect(el).not.toHaveTextContent(/isn't ready/);
+    expect(el).not.toHaveTextContent(/isn't available/);
   });
 });
