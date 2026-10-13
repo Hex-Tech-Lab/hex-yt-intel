@@ -3,6 +3,7 @@
 import { memo, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 import {
   IconButton,
   ChatMessageList,
@@ -158,11 +159,20 @@ export const chatMarkdownComponents: MarkdownComponents = {
  * navigation because the layout (and this dock) stay mounted.
  */
 function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
+  // INP T7: a whole-store subscription re-rendered the entire message list on
+  // every store write (loadingList, networkBound, hasMoreCommentsByConv, ...)
+  // even though ChatDock reads none of them. Select only the fields used here.
   const {
     conversations, activeId, messagesByConv, sending, persistState, error: chatError,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
     isChatOpen: open, setChatOpen: setOpen,
-  } = useChatStore();
+  } = useChatStore(useShallow((s) => ({
+    conversations: s.conversations, activeId: s.activeId, messagesByConv: s.messagesByConv,
+    sending: s.sending, persistState: s.persistState, error: s.error,
+    loadConversations: s.loadConversations, selectConversation: s.selectConversation,
+    newConversation: s.newConversation, sendMessage: s.sendMessage, deleteConversation: s.deleteConversation,
+    bindNetwork: s.bindNetwork, isChatOpen: s.isChatOpen, setChatOpen: s.setChatOpen,
+  })));
   const [showThreads, setShowThreads] = useState(false);
   const [heightState, setHeightState] = useState<'normal' | 'half' | 'full'>('normal');
   const videoId = useAnalysisStore((s) => s.videoMetadata?.videoId);
