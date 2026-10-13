@@ -1,0 +1,22 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 1592-1593
+.memory/DEFENSIVE_LEDGER.md
+  h_50fba0cdd9e5c4 91
+web/lib/__tests__/pr442-group4-fixes.test.ts
+  h_50fba0cdd9e5c4 250-359
+web/lib/services/CombinerPass.ts
+  h_50fba0cdd9e5c4 35-63,66,71-72,75-77,177-181,183-190,192-206,218-231,243,245-246,252-258,273-289,291-297,299-304
+web/lib/services/reduce-grounded-chunks.ts
+  h_50fba0cdd9e5c4 142-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ac57eb091bd6a5b43edd972d07f647a9c3287a7",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
