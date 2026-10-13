@@ -1,0 +1,21 @@
+web/components/templates/_shared/__tests__/icon-render-count.test.tsx
+  s_291078cde7ba1a::t_dae5a295591eba 14
+web/components/templates/console/__tests__/chatdock-selector.test.tsx
+  s_291078cde7ba1a::t_5467b1e1978f27 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f85cf7723031d93d85b8fb3b8e8ab6effd81d23",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
