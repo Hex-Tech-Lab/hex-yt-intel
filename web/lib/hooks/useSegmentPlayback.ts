@@ -77,6 +77,15 @@ export interface UseSegmentPlaybackOptions {
    *  key `highlights.seekSettlementTimeoutMs` via the highlights API
    *  response; falls back to the registry fallback value here. */
   seekSettlementTimeoutMs?: number;
+  /** Optional store-owned position (T5 a): survives caller remounts. */
+  controlled?: SegmentPlaybackControlled;
+}
+
+export interface SegmentPlaybackControlled {
+  playingIdx: number | null;
+  elapsedInSegmentSeconds: number | null;
+  setPlayingIdx: (idx: number | null) => void;
+  setElapsedInSegmentSeconds: (seconds: number | null) => void;
 }
 
 // Explicit list (2026-08-20 layout revision) rather than derived from
@@ -197,10 +206,26 @@ export function useSegmentPlayback({
   primitives,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
   seekSettlementTimeoutMs = DEFAULT_SEEK_SETTLEMENT_TIMEOUT_MS,
+  controlled,
 }: UseSegmentPlaybackOptions): UseSegmentPlaybackResult {
-  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [localPlayingIdx, setLocalPlayingIdx] = useState<number | null>(null);
+  const [localElapsed, setLocalElapsed] = useState<number | null>(null);
+  const controlledRef = useRef(controlled);
+  // Render-time assignment: setters below read the latest controlled bundle without re-creating.
+  controlledRef.current = controlled;
+  // Read through the controlled store when supplied; the setters below route
+  // to the same place so every existing call site stays unchanged.
+  const playingIdx = controlled ? controlled.playingIdx : localPlayingIdx;
+  const elapsedInSegmentSeconds = controlled ? controlled.elapsedInSegmentSeconds : localElapsed;
+  const setPlayingIdx = useCallback((idx: number | null) => {
+    if (controlledRef.current) controlledRef.current.setPlayingIdx(idx);
+    else setLocalPlayingIdx(idx);
+  }, []);
+  const setElapsedInSegmentSeconds = useCallback((seconds: number | null) => {
+    if (controlledRef.current) controlledRef.current.setElapsedInSegmentSeconds(seconds);
+    else setLocalElapsed(seconds);
+  }, []);
   const [speed, setSpeedState] = useState<number>(1);
-  const [elapsedInSegmentSeconds, setElapsedInSegmentSeconds] = useState<number | null>(null);
   const stopRef = useRef(false);
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -249,7 +274,7 @@ export function useSegmentPlayback({
     pendingStartIndexRef.current = null;
     setPlayingIdx(null);
     setElapsedInSegmentSeconds(null);
-  }, []);
+  }, [setPlayingIdx, setElapsedInSegmentSeconds]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
@@ -263,7 +288,16 @@ export function useSegmentPlayback({
     primitivesRef.current.play?.();
   }, []);
 
-  useEffect(() => stop, [stop]); // unmount cleanup
+  // Unmount halts this instance's poll loop. A controlled caller keeps the
+  // position in its own store, so a remount resumes it (T5 a); local-state
+  // instances clear exactly as before.
+  useEffect(() => {
+    stopRef.current = false; // re-arm after a StrictMode/remount cleanup
+    return () => {
+      stopRef.current = true;
+      if (!controlledRef.current) stop();
+    };
+  }, [stop]);
 
   const playFrom = useCallback((index: number) => {
     const currentSegments = segmentsRef.current;
@@ -296,7 +330,7 @@ export function useSegmentPlayback({
     primitivesRef.current.play?.();
     setPlayingIdx(index);
     setElapsedInSegmentSeconds(0);
-  }, []);
+  }, [setPlayingIdx, setElapsedInSegmentSeconds]);
 
   const start = useCallback(() => {
     stopRef.current = false;

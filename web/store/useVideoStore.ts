@@ -32,6 +32,16 @@ export interface VideoState {
   clearPendingNav: () => void;
   clearSeek: () => void;
   setTransitioning: (active: boolean, direction?: 'forward' | 'backward' | null) => void;
+  /** Highlights-reel playback position, kept here (not in the scrubber's local
+   *  state) because Simple and Pro each mount their own scrubber, so a mode
+   *  switch remounts it. T5 (a). `reelAnalysisId` tags which analysis the
+   *  position belongs to, so a different analysis still starts clean. */
+  reelAnalysisId: string | null;
+  reelPlayingIdx: number | null;
+  reelElapsedSeconds: number | null;
+  setReelAnalysisId: (id: string | null) => void;
+  setReelPlayingIdx: (idx: number | null) => void;
+  setReelElapsedSeconds: (seconds: number | null) => void;
   reset: () => void;
 }
 
@@ -58,8 +68,14 @@ export const useVideoStore = create<VideoState>((set) => ({
   revealRequest: 0,
   seekAndReveal: (seconds) => set((state) => ({ seekTo: seconds, pendingNav: 'console', isPlaying: true, revealRequest: state.revealRequest + 1 })),
   setCurrentPlaybackSeconds: (seconds) => set({ currentPlaybackSeconds: seconds }),
+  reelAnalysisId: null,
+  reelPlayingIdx: null,
+  reelElapsedSeconds: null,
+  setReelAnalysisId: (id) => set({ reelAnalysisId: id }),
+  setReelPlayingIdx: (idx) => set({ reelPlayingIdx: idx }),
+  setReelElapsedSeconds: (seconds) => set({ reelElapsedSeconds: seconds }),
   clearPendingNav: () => set({ pendingNav: null }),
   clearSeek: () => set({ seekTo: null }),
   setTransitioning: (active, direction = null) => set({ isTransitioning: active, transitionDirection: active ? (direction ?? 'forward') : null }),
-  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1, isTransitioning: false, transitionDirection: null }),
+  reset: () => set({ isPlaying: false, seekTo: null, pendingNav: null, currentPlaybackSeconds: null, playbackRate: 1, isTransitioning: false, transitionDirection: null, reelAnalysisId: null, reelPlayingIdx: null, reelElapsedSeconds: null }),
 }));
