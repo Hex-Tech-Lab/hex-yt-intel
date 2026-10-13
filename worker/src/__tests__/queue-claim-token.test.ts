@@ -21,18 +21,18 @@ beforeEach(() => {
 describe('queue consumer claim token', () => {
   it('passes message.id as the 3rd argument and acks on success', async () => {
     handle.mockResolvedValue(undefined);
-    const m = msg('msg-1');
-    await worker.queue({ messages: [m] } as never, {} as never);
-    expect(handle).toHaveBeenCalledWith(m.body, {}, 'msg-1');
-    expect(m.ack).toHaveBeenCalledTimes(1);
-    expect(m.retry).not.toHaveBeenCalled();
+    const message = msg('msg-1');
+    await worker.queue({ messages: [message] } as never, {} as never);
+    expect(handle).toHaveBeenCalledWith(message.body, {}, 'msg-1');
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
   });
 
   it('negative control: handler throws -> retry, never ack', async () => {
     handle.mockRejectedValue(new Error('claim not recorded'));
-    const m = msg('msg-2');
-    await worker.queue({ messages: [m] } as never, {} as never);
-    expect(m.retry).toHaveBeenCalledTimes(1);
-    expect(m.ack).not.toHaveBeenCalled();
+    const message = msg('msg-2');
+    await worker.queue({ messages: [message] } as never, {} as never);
+    expect(message.retry).toHaveBeenCalledTimes(1);
+    expect(message.ack).not.toHaveBeenCalled();
   });
 });
