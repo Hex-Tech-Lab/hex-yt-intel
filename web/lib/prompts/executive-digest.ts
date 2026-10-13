@@ -169,7 +169,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
       parsedVia: 'fallback',
     };
   }
-  located.sort((a, b) => a.start - b.start);
+  located.sort((first, second) => first.start - second.start);
 
   const sections: Partial<Record<keyof ExecutiveDigest, string>> = {};
   located.forEach((entry, index) => {
@@ -186,7 +186,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
 
   return {
     snapshot: sections.snapshot ?? markdown.slice(0, 500),
-    takeaways: takeaways.length > 0 ? takeaways : markdown.split('\n').filter(l => l.trim().length > 0).slice(0, 5),
+    takeaways: takeaways.length > 0 ? takeaways : markdown.split(/\r?\n/u).filter(l => l.trim().length > 0).slice(0, 5),
     overview: sections.overview ?? markdown.slice(0, 1000),
     detailedSummary: sections.detailedSummary ?? markdown.slice(0, 2000),
     parsedVia: 'headers',

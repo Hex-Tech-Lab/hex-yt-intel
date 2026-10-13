@@ -101,7 +101,7 @@ describe('T4 key takeaways cap (prompt wording)', () => {
 
 describe('T4 key takeaways: cap and migration/fallback sync', () => {
   it('caps 0.3 at 12 bullets: a 13th is dropped', () => {
-    const bullets = Array.from({ length: 13 }, (_, i) => `- Point ${i + 1}`).join('\n');
+    const bullets = Array.from({ length: 13 }, (unused, i) => `- Point ${i + 1}`).join('\n');
     const md = `#### 0.1 Snapshot\nS\n\n#### 0.2 Overview\nO\n\n#### 0.3 Key Takeaways\n${bullets}\n\n#### 0.4 Detailed Summary\nD`;
     const digest = parseExecutiveDigest(md);
     expect(digest.takeaways).toHaveLength(12);
