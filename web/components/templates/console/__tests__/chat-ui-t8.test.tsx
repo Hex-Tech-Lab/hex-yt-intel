@@ -2,13 +2,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen, cleanup } from "@testing-library/react";
+import postcss from "postcss";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import * as Sentry from "@sentry/nextjs";
 import { useChatStore } from "@/store/useChatStore";
+import { useAnalysisStore } from "@/store/useAnalysisStore";
 import { chatMarkdownComponents, ChatDock, USER_BUBBLE_SELECTION_CLASS } from "../ChatDock";
 
 vi.mock("@/store/useVideoStore", () => ({
   useVideoStore: (selector: (state: { seekAndReveal: () => void }) => unknown) =>
     selector({ seekAndReveal: () => {} }),
+}));
+
+type AlertConfig = { onAction: () => Promise<void> };
+const alertDialog = vi.hoisted(() => ({ shown: null as unknown, hide: () => {} }));
+
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@astryxdesign/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@astryxdesign/core")>()),
+  useImperativeAlertDialog: () => ({
+    show: (config: unknown) => { alertDialog.shown = config; },
+    hide: alertDialog.hide,
+  }),
 }));
 
 describe("T8 chat timestamp uses the flyout seek class", () => {
@@ -31,6 +46,7 @@ describe("T8 user bubble selection highlight", () => {
   beforeEach(() => {
     // jsdom has no Element.scrollTo; ChatDock auto-scrolls the message list on mount.
     Element.prototype.scrollTo = () => {};
+    Element.prototype.scrollIntoView = () => {};
     useChatStore.setState({
       isChatOpen: true,
       conversations: [{ id: "c-t8", title: "T8", updatedAt: new Date().toISOString() } as never],
@@ -54,13 +70,104 @@ describe("T8 user bubble selection highlight", () => {
     expect(text.closest(".user-chat-bubble")).not.toBeNull();
   });
 
-  it("globals.css scopes both ::selection declarations to the dock and the bubble class", () => {
-    const css = read("../../../../app/globals.css");
+  it("the ::selection pair is legible on the accent bubble and covers the bubble and its descendants", () => {
     expect(USER_BUBBLE_SELECTION_CLASS).toBe("user-chat-bubble");
-    const rule = css.match(/\[data-chat-dock="true"\] \.user-chat-bubble::selection[^{]*\{([^}]*)\}/);
-    expect(rule).not.toBeNull();
-    const body = rule![1];
-    expect(body).toMatch(/background-color:\s*var\(--void\)/);
-    expect(body).toMatch(/(^|[;\s])color:\s*var\(--accent-ink\)/);
+    const root = postcss.parse(read("../../../../app/globals.css"));
+    const tokens = new Map<string, string>();
+    const selectionDecls = new Map<string, string>();
+    root.walkRules((rule) => {
+      const isRoot = rule.selectors.some((sel) => sel === ":root" || sel === "html");
+      rule.walkDecls((decl) => {
+        if (isRoot && decl.prop.startsWith("--") && !tokens.has(decl.prop)) tokens.set(decl.prop, decl.value.trim());
+      });
+      for (const sel of rule.selectors) {
+        if (sel.includes("::selection") && sel.includes('[data-chat-dock="true"]') && sel.includes(".user-chat-bubble")) {
+          rule.walkDecls((decl) => selectionDecls.set(`${sel}|${decl.prop}`, decl.value.trim()));
+        }
+      }
+    });
+    const resolve = (value: string | undefined) => {
+      const ref = value?.match(/^var\((--[\w-]+)\)$/)?.[1];
+      return ref ? tokens.get(ref) : value;
+    };
+    const luminance = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    const contrast = (a: string, b: string) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi! + 0.05) / (lo! + 0.05);
+    };
+    const bubbleSel = '[data-chat-dock="true"] .user-chat-bubble::selection';
+    const descendantSel = '[data-chat-dock="true"] .user-chat-bubble *::selection';
+    for (const sel of [bubbleSel, descendantSel]) {
+      const bg = resolve(selectionDecls.get(`${sel}|background-color`));
+      const fg = resolve(selectionDecls.get(`${sel}|color`));
+      expect(bg, `${sel} background`).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(fg, `${sel} color`).toMatch(/^#[0-9a-f]{6}$/i);
+      // Text on the highlight must be AAA-legible, and the highlight must stand out from the bubble fill (--accent).
+      expect(contrast(bg!, fg!)).toBeGreaterThanOrEqual(7);
+      expect(contrast(bg!, tokens.get("--accent")!)).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("ChatDock comment-expansion failures are logged and captured", () => {
+  beforeEach(() => {
+    Element.prototype.scrollTo = () => {};
+    Element.prototype.scrollIntoView = () => {};
+    // Astryx Markdown (assistant bubbles) reads prefers-reduced-motion/color-scheme via matchMedia; jsdom lacks it.
+    window.matchMedia = ((query: string) => ({
+      matches: false, media: query, onchange: null,
+      addEventListener: () => {}, removeEventListener: () => {},
+      addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    alertDialog.shown = null;
+    vi.mocked(Sentry.captureException).mockClear();
+    useAnalysisStore.setState({ videoMetadata: { videoId: "vid-t8" } } as never);
+    useChatStore.setState({
+      isChatOpen: true,
+      conversations: [{ id: "c-x", title: "X", updatedAt: new Date().toISOString() } as never],
+      activeId: "c-x",
+      messagesByConv: {
+        "c-x": [{ id: "m-x", role: "assistant", content: 'Body\nOPTIONS: ["expand-comments"]', createdAt: new Date().toISOString() } as never],
+      },
+      loadConversations: () => Promise.resolve(),
+      selectConversation: () => Promise.resolve(),
+      bindNetwork: () => {},
+    } as never);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("captures a failed cost estimate with the comment-estimate tag", async () => {
+    const failure = new Error("estimate down");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(failure));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<ChatDock />);
+    fireEvent.click(screen.getByRole("button", { name: /Expand to full comments/ }));
+    await waitFor(() => expect(Sentry.captureException).toHaveBeenCalledTimes(1));
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, { tags: { component: "ChatDock", operation: "comment-estimate" } });
+    expect(errorSpy).toHaveBeenCalledWith("[ChatDock] Comment expansion cost estimate failed:", failure);
+  });
+
+  it("captures a failed expansion start with the comment-expansion tag", async () => {
+    const failure = new Error("start down");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ json: () => Promise.resolve({ estimatedCredits: 3 }) })
+      .mockRejectedValueOnce(failure);
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<ChatDock />);
+    fireEvent.click(screen.getByRole("button", { name: /Expand to full comments/ }));
+    await waitFor(() => expect(alertDialog.shown).not.toBeNull());
+    await (alertDialog.shown as AlertConfig).onAction();
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, { tags: { component: "ChatDock", operation: "comment-expansion" } });
+    expect(errorSpy).toHaveBeenCalledWith("[ChatDock] Comment expansion start failed:", failure);
   });
 });
