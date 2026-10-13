@@ -108,6 +108,13 @@ describe('T4 key takeaways: cap and migration/fallback sync', () => {
     expect(digest.takeaways).not.toContain('Point 13');
   });
 
+  it('caps the headerless fallback path at 12 bullets too', () => {
+    const bullets = Array.from({ length: 13 }, (unused, i) => `- Point ${i + 1}`).join('\n');
+    const digest = parseExecutiveDigest(`Intro line that is long enough\n${bullets}`);
+    expect(digest?.parsedVia).toBe('fallback');
+    expect(digest?.takeaways).toHaveLength(12);
+  });
+
   it('migration v3 digest text equals the fallback, and the chat rule is in the fallback', () => {
     const sql = readFileSync(
       resolve(__dirname, '../../../supabase/migrations/20261013100000_key_takeaways_redesign.sql'),
