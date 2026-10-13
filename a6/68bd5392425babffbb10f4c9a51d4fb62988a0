@@ -1,0 +1,23 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_6711dcc3070fb4 1591
+web/components/dashboard/HighlightsTrack.tsx
+  s_291078cde7ba1a::t_cb1b95cf914755 194-196
+web/components/dashboard/__tests__/playback-render-isolation.test.tsx
+  s_291078cde7ba1a::t_d9783edd47a577 1,4-6,25,83-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a668bd5392425babffbb10f4c9a51d4fb62988a0",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
