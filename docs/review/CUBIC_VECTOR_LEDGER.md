@@ -1,8 +1,7 @@
 # The Complete Cubic Vector Ledger
 
-> **Date Range Covered in this Ledger:** 2026-10-12 to 2026-10-13 (Batch 1: PRs #506 down to #471).  
+> **Date Range Covered in this Ledger:** 2026-10-04 to 2026-10-13 (Batches 1–2: PRs #506 down to #437).  
 > **Remaining Ranges to Process:**
-> - Batch 2: PRs #470 down to #437 (2026-10-04 to 2026-10-12)
 > - Batch 3: PRs #436 down to #404 (2026-10-02 to 2026-10-04)
 > - Batch 4: PRs #403 down to #374 (2026-09-30 to 2026-10-02)
 > - Batch 5: PRs #373 down to #343 (2026-09-24 to 2026-09-30)
@@ -246,3 +245,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 | **V01 (Documentation and ledger drift)** | Sourcery & CodeRabbit / PR #503 / 2026-10-13 | Discrepancy between THOS handover timestamp records and live code timeout settings | Does every timestamp, duration, and deadline in documentation exactly match the real constant values in code? | `none yet (review checklist enforced)` |
 | **V06 (Shared-state UI & layout regressions)** | CodeRabbit / PR #491 / 2026-10-12 | Panel default widths hardcoded inconsistently between local storage defaults and dashboard layout SSR hydration | Does layout sizing use single-source-of-truth default width constants across both server rendering and client hydration? | `ZustandWholeStoreInEffectDepsRule` (`scripts/quality-engine/rules/ui.ts`) |
 | **V18 (Prompt drift & LLM contract mismatches)** | CodeRabbit / PR #492 / 2026-10-12 | Exact Dim 7 placeholder string mismatch between backend generation prompt and frontend renderer parser | Does the renderer parse exact literal strings matching the system prompt Insufficient Data Protocol specification? | `none yet (evaluator benchmark enforced)` |
+
+
+---
+
+## 7. Batch 2 Harvested Entries (PRs #437–#470: 2026-10-04 to 2026-10-12)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V06 (Shared-state UI & layout regressions)** | Cubic / PR #470 / 2026-10-12 | Overlapping highlights clips start at previous end, but ticker revealed untrimmed excerpt from word one, causing visual stutter | Does the ticker or media subtitle display trim leading words to match the clamped segment start offset? | `CanvasStaleDataRule` (`scripts/quality-engine/rules/ui.ts`) |
+| **V10 (Dead code & complexity bounds)** | Cubic / PR #469 / 2026-10-12 | Hook complexity high due to inline pace condition; constants placed below JSDoc breaking documentation attachment | Are complex branching expressions extracted into single-purpose helpers and constants declared above doc comments? | `ComplexityRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V05 (Secret or signed-URL leakage)** | Cubic (`c6pP5Xz`) / PR #442 / 2026-10-08 | Upstream provider error text echoed into captured exception sent to Sentry, leaking signed audio media URLs | Does every provider error handler sanitize and redact raw URLs before forwarding to telemetry, logs, or thrown errors? | `SecretsExposureRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V03 (Silent success or fail-open fallback)** | Cubic (`c6pP5X7`) / PR #442 / 2026-10-08 | Omitted `persistGhostRow` callback returned synthetic `Promise.resolve(true)`, masking write failure as success | Does every fallback hook return an explicit false/error outcome instead of manufacturing a fake successful status? | `FailOpenUndefinedFilterRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
+| **V04 (Unvalidated model output & schema contract)** | Cubic (`c6pP5ZG`) / PR #442 / 2026-10-08 | `Boolean(parsed.uiFramesDetected)` accepted invalid model JSON objects `{}` and coerced them to `false`/0 | Does every LLM output property get checked against strict schema types rather than using loose boolean coercions? | `SchemaContractRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V08 (Unbounded waits & missing timeouts)** | Cubic (`c6pP5cR`) / PR #442 / 2026-10-08 | Polling sleep helper attached a new abort listener to shared signal on every iteration without removing it | Does every abort signal listener get explicitly removed on timer resolution to prevent listener accumulation leaks? | `TimeoutCleanupRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V11 (Zero, NaN and boundary inputs)** | Cubic (`c6pP5ZT`) / PR #442 / 2026-10-08 | `Number(env)` string typo evaluated to `NaN`, disabling paid JEV call cap and risking unbounded spending | Are numeric limits validated with `Number.isFinite()` and checked > 0 before proceeding to paid external API calls? | `NumberCoercionGuardRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V07 (Configuration or registry key gaps)** | Cubic (`c6pP5Za`) / PR #442 / 2026-10-08 | Configured `speechModel` accepted by constructor but ignored during submission body construction | Does the network adapter serialize every configured property into the outgoing provider payload? | `UnregisteredSettingsKeyRule` (`scripts/quality-engine/rules/lessons-20261009.ts`) |
+| **V18 (Prompt drift & LLM contract mismatches)** | Cubic (`c6pP5Xl`) / PR #442 / 2026-10-08 | Prompt example included invalid JSON `[start_seconds, end_seconds]` while claiming to be valid raw JSON | Are all example JSON strings in prompts validated via `JSON.parse` to ensure syntax validity? | `none yet (prompt evaluator benchmark)` |
+| **V16 (Database concurrency & JSONB clobber)** | DeepSource & CodeRabbit / PR #446 / 2026-10-08 | Epistemic pipeline shadow mode state grant read-modify-write race under concurrent requests | Does concurrent state persistence execute atomic jsonb_set or Postgres RPCs rather than full-object spread updates? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
