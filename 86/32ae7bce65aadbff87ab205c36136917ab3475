@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_cc4502c8cf9e9e 1593
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_a0bcd9d3f43f7b 1338-1344,1346
+web/lib/__tests__/executive-digest.test.ts
+  s_291078cde7ba1a::t_c24556f6676559 104
+web/lib/prompts/executive-digest.ts
+  s_291078cde7ba1a::t_f73e1b52d46d53 172,189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8632ae7bce65aadbff87ab205c36136917ab3475",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
