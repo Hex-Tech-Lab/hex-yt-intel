@@ -37,6 +37,20 @@ describe('HighlightsScrubber – remount keeps playback position (T5 a)', () => 
     await waitFor(() => expect(screen.getByText('#1 of 2')).toBeTruthy());
     expect(screen.queryByText('2 moments')).toBeNull();
   });
+
+  it('resumes polling after the remount (elapsed keeps updating from the store)', async () => {
+    const first = render(<HighlightsScrubber analysisId="a-resume" videoDurationSeconds={60} />);
+    await screen.findByTestId('highlights-collapse-toggle');
+    fireEvent.click(screen.getByRole('button', { name: 'Next highlight' }));
+    expect(await screen.findByText('#1 of 2')).toBeTruthy();
+    first.unmount();
+    render(<HighlightsScrubber analysisId="a-resume" videoDurationSeconds={60} />);
+    await screen.findByText('#1 of 2');
+
+    // Segment 0 lead-in is 10 - 2 = 8s; a player time of 12s means 4s elapsed.
+    act(() => useVideoStore.getState().setCurrentPlaybackSeconds(12));
+    await waitFor(() => expect(useVideoStore.getState().reelElapsedSeconds).toBe(4), { timeout: 2000 });
+  });
 });
 
 describe('HighlightsScrubber – reel never scrolls the page (T5 b)', () => {
