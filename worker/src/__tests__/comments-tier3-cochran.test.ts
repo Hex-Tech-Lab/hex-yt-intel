@@ -107,7 +107,7 @@ beforeEach(() => {
     if ((init as { method?: string } | undefined)?.method === 'GET') {
       return Promise.resolve(new Response(JSON.stringify({ status: 'pending' }), { status: 200 }));
     }
-    return Promise.resolve(new Response('{}', { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 }));
   });
   vi.stubGlobal('fetch', globalFetch);
   classifierMock = vi.fn();

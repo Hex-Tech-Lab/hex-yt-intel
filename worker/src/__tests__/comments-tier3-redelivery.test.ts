@@ -89,7 +89,7 @@ function stubPool(externalIds: string[]): Array<{ comments: VideoComment[]; exha
 
 /** Serves the status probe via GET and POST attempts per a per-call script. */
 type PostScript = (postCall: number) => Response;
-function stubFetch(probeStatus: number | { status: string }, postScript: PostScript = () => new Response('{}', { status: 200 })): void {
+function stubFetch(probeStatus: number | { status: string }, postScript: PostScript = () => new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 })): void {
   let postCall = 0;
   globalFetch.mockImplementation((unusedUrl: RequestInfo | URL, init?: RequestInit) => {
     if ((init as { method?: string } | undefined)?.method === 'GET') {
@@ -207,9 +207,39 @@ describe('handleCommentsTier3Message — redelivery pre-check (Finding A)', () =
   });
 });
 
+describe('handleCommentsTier3Message — claim failure fails closed (PR #494 audit)', () => {
+  it('claim POST fails on every attempt -> throws, zero paid work (no YouTube fetch, no classifier)', async () => {
+    // Every POST (claim = status sampling) returns 500; probe says pending.
+    stubFetch({ status: 'pending' }, () => new Response('{}', { status: 500 }));
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+    scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1'])[0]);
+
+    await expect(handleCommentsTier3Message(makeMessage(), ENV)).rejects.toThrow(/claim not recorded/);
+
+    expect(scraperStub.fetchCommentsPage).not.toHaveBeenCalled();
+    expect(classifierMock).not.toHaveBeenCalled();
+    expect(postBodies().every((body) => body.status === 'sampling')).toBe(true);
+  });
+
+  it('claim POST returns 200 OK without claimed: true (missing or false) -> skips run, zero paid work', async () => {
+    // Claim POST returns 200 OK with empty body / missing claimed field
+    stubFetch({ status: 'pending' }, () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+    scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1'])[0]);
+
+    await handleCommentsTier3Message(makeMessage(), ENV);
+
+    expect(scraperStub.fetchCommentsPage).not.toHaveBeenCalled();
+    expect(classifierMock).not.toHaveBeenCalled();
+    expect(postBodies().every((body) => body.status === 'sampling')).toBe(true);
+  });
+});
+
 describe('handleCommentsTier3Message — persist-sample-run failure hardening (Finding B)', () => {
   it('persist write fails once then succeeds on retry -> single logical persist (one 200 completed report)', async () => {
-    stubFetch({ status: 'pending' }, (postCall) => (postCall === 2 ? new Response('{}', { status: 500 }) : new Response('{}', { status: 200 })));
+    stubFetch({ status: 'pending' }, (postCall) => (postCall === 2 ? new Response('{}', { status: 500 }) : new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 })));
     const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
     nextScraperStub = scraperStub;
     scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12'])[0]);
@@ -228,7 +258,7 @@ describe('handleCommentsTier3Message — persist-sample-run failure hardening (F
   });
 
   it('persist write fails ALL attempts -> one best-effort failed report + Sentry capture with the phase tag', async () => {
-    stubFetch({ status: 'pending' }, (postCall) => (postCall === 1 || postCall >= 5 ? new Response('{}', { status: 200 }) : new Response('{}', { status: 500 })));
+    stubFetch({ status: 'pending' }, (postCall) => (postCall === 1 || postCall >= 5 ? new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 }) : new Response('{}', { status: 500 })));
     const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
     nextScraperStub = scraperStub;
     scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12'])[0]);

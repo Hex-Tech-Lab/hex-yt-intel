@@ -21,6 +21,8 @@ export interface ParsedDimensionAST {
   intro?: string;
   subsections: Map<string, ParsedSubSection>;
   rawTail?: string;
+  /** True when the same sub-number appeared more than once and was merged. */
+  hadDuplicateSubsections?: boolean;
 }
 
 export interface DimensionChunk {
@@ -29,6 +31,15 @@ export interface DimensionChunk {
   content: string;
   [key: string]: unknown;
 }
+
+import {
+  hasRealTimestamps,
+  matchSubHeader,
+  mergeSubSectionBodies,
+  normalizeForComparison,
+} from './combiner-dedupe';
+
+export * from './combiner-dedupe';
 
 /**
  * CombinerPass — merges per-chunk dimension markdown into one AST per
@@ -55,24 +66,37 @@ export class CombinerPass {
     let currentSubLines: string[] = [];
     const introLines: string[] = [];
 
-    const subHeaderRegex = /^#{2,4}\s+(\d+\.\d+)\s*[-:–—]?\s*(.*)$/u;
+    let headerCount = 0;
+    const saveSubSection = (numStr: string, title: string, bodyLines: string[]) => {
+      const body = bodyLines.join('\n').trim();
+      const existing = ast.subsections.get(numStr);
+      if (!existing) {
+        ast.subsections.set(numStr, {
+          numberStr: numStr,
+          title,
+          body,
+        });
+      } else {
+        existing.body = mergeSubSectionBodies(existing.body, body);
+        if (!existing.title && title) {
+          existing.title = title;
+        }
+      }
+    };
 
     for (const line of lines) {
-      const match = line.match(subHeaderRegex);
-      if (match?.[1]) {
+      const headerMatch = matchSubHeader(line, dimNumber);
+      if (headerMatch) headerCount += 1;
+      if (headerMatch) {
         if (currentSubNumber) {
-          ast.subsections.set(currentSubNumber, {
-            numberStr: currentSubNumber,
-            title: currentSubTitle,
-            body: currentSubLines.join('\n').trim(),
-          });
+          saveSubSection(currentSubNumber, currentSubTitle, currentSubLines);
           currentSubLines = [];
         } else if (introLines.length > 0) {
           ast.intro = introLines.join('\n').trim();
         }
 
-        currentSubNumber = match[1];
-        currentSubTitle = (match[2] || '').trim();
+        currentSubNumber = headerMatch.subNumber;
+        currentSubTitle = headerMatch.title;
       } else {
         if (currentSubNumber) {
           currentSubLines.push(line);
@@ -83,15 +107,12 @@ export class CombinerPass {
     }
 
     if (currentSubNumber) {
-      ast.subsections.set(currentSubNumber, {
-        numberStr: currentSubNumber,
-        title: currentSubTitle,
-        body: currentSubLines.join('\n').trim(),
-      });
+      saveSubSection(currentSubNumber, currentSubTitle, currentSubLines);
     } else if (introLines.length > 0) {
       ast.intro = introLines.join('\n').trim();
     }
 
+    ast.hadDuplicateSubsections = headerCount > ast.subsections.size;
     return ast;
   }
 
@@ -151,35 +172,72 @@ export class CombinerPass {
       return { number: dimNumber, content: '' } as T;
     }
     const base: T = chunks[0] ?? ({ number: dimNumber, content: '' } as T);
+    const name = chunks.find((c) => c.name)?.name || base.name || `Dimension ${dimNumber}`;
+
     if (chunks.length === 1) {
-      let content = base.content;
+      const single = chunks[0];
+      if (!single) return { number: dimNumber, content: '' } as T;
+      // Deduplicate any repeated subsections within the single chunk's own content
+      const parsed = this.parseDimensionMarkdown(dimNumber, name, single.content);
+      // Re-render only when a repeated sub-section was actually merged; otherwise
+      // keep the single chunk's markdown unchanged (Dimension 7 still gets its normalization).
+      if (parsed.hadDuplicateSubsections) {
+        const outputLines: string[] = [];
+        if (parsed.intro) {
+          outputLines.push(parsed.intro);
+          outputLines.push('');
+        }
+        const sortedSubKeys = Array.from(parsed.subsections.keys()).sort((a, b) => {
+          const aParts = a.split('.').map(Number);
+          const bParts = b.split('.').map(Number);
+          return (aParts[1] ?? 0) - (bParts[1] ?? 0);
+        });
+        for (const subKey of sortedSubKeys) {
+          const sub = parsed.subsections.get(subKey);
+          if (!sub) continue;
+          outputLines.push(`#### ${sub.numberStr} ${sub.title}`);
+          outputLines.push('');
+          outputLines.push(sub.body);
+          outputLines.push('');
+        }
+        let finalContent = outputLines.join('\n').trim();
+        if (dimNumber === 7) {
+          finalContent = this.normalizeDimension7(finalContent);
+        }
+        return {
+          ...single,
+          number: dimNumber,
+          content: finalContent,
+        };
+      }
+      let content = single.content;
       if (dimNumber === 7) {
         content = this.normalizeDimension7(content);
       }
       return {
-        ...base,
+        ...single,
         number: dimNumber,
         content,
       };
     }
 
-    const name = chunks.find((c) => c.name)?.name || base.name || `Dimension ${dimNumber}`;
     const combinedAst: ParsedDimensionAST = {
       number: dimNumber,
       name,
       subsections: new Map(),
     };
 
-    const introSet = new Set<string>();
+    // Distinct intros keyed by normalized text; a real-timestamp intro replaces a
+    // placeholder-timestamp twin in place (never downgrades real to placeholder).
+    const introByKey = new Map<string, string>();
 
     for (const chunk of chunks) {
       const parsed = this.parseDimensionMarkdown(dimNumber, name, chunk.content);
-      if (parsed.intro && !introSet.has(parsed.intro)) {
-        introSet.add(parsed.intro);
-        if (!combinedAst.intro) {
-          combinedAst.intro = parsed.intro;
-        } else {
-          combinedAst.intro += `\n\n${parsed.intro}`;
+      if (parsed.intro) {
+        const compIntro = normalizeForComparison(parsed.intro);
+        const prior = introByKey.get(compIntro);
+        if (prior === undefined || (hasRealTimestamps(parsed.intro) && !hasRealTimestamps(prior))) {
+          introByKey.set(compIntro, parsed.intro);
         }
       }
 
@@ -188,17 +246,15 @@ export class CombinerPass {
         if (!existing) {
           combinedAst.subsections.set(subKey, { ...subSec });
         } else {
-          // Compare normalized (trim + collapse whitespace) bodies and skip
-          // only full equality: a one-directional includes() both discards a
-          // distinct shorter body nested inside a longer one and appends the
-          // existing text again when the incoming body merely contains it.
-          const norm = (s: string) => s.trim().replace(/\s+/gu, ' ');
-          if (norm(existing.body) !== norm(subSec.body)) {
-            existing.body += `\n\n${subSec.body}`;
+          existing.body = mergeSubSectionBodies(existing.body, subSec.body);
+          if (!existing.title && subSec.title) {
+            existing.title = subSec.title;
           }
         }
       }
     }
+
+    if (introByKey.size > 0) combinedAst.intro = [...introByKey.values()].join('\n\n');
 
     const outputLines: string[] = [];
     if (combinedAst.intro) {

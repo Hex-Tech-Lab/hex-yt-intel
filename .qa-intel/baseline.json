@@ -1107,48 +1107,6 @@
   },
   {
     "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
-    "severity": "medium",
-    "title": "Error: .catch(() => {}) swallows promise rejection",
-    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
-    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
-  },
-  {
-    "file": "web/store/useChatStore.ts",
     "severity": "low",
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",

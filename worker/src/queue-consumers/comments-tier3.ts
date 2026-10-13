@@ -412,7 +412,16 @@ export async function handleCommentsTier3Message(
     sampledCount: 0,
     status: "sampling",
   });
-  if (claimOutcome.ok && claimOutcome.claimed === false) {
+  // Fail CLOSED: if the claim could not be recorded (every attempt failed),
+  // the run is still 'pending' and no lock is held. Doing paid classification
+  // now would risk a double-spend against a concurrent delivery, so rethrow
+  // (worker.ts queue handler -> message.retry()) and do no paid work.
+  if (!claimOutcome.ok) {
+    throw new Error(`comments-tier3 claim not recorded for run ${sampleRunId}; retrying without paid work`);
+  }
+  // Strictly mandate claimOutcome.claimed === true. If claimed is false (lost race to
+  // concurrent delivery) or undefined/falsy (malformed/unconfirmed payload), do NOT proceed to paid work.
+  if (claimOutcome.claimed !== true) {
     logSkippedRun("sampling", sampleRunId, videoId);
     return;
   }
