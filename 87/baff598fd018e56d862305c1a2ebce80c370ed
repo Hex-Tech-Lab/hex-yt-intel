@@ -1,0 +1,21 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_1ab8c76fa902c6 1592-1593
+worker/src/__tests__/get-temporal-subgraph-migration.test.ts
+  s_291078cde7ba1a::t_fa8640b7d56a55 33,35-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87baff598fd018e56d862305c1a2ebce80c370ed",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
