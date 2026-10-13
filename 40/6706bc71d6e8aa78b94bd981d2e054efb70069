@@ -1,0 +1,19 @@
+web/lib/usecases/__tests__/get-user-entitlements-expiry.test.ts
+  s_291078cde7ba1a::t_f38cbb31ddbd23 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "406706bc71d6e8aa78b94bd981d2e054efb70069",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
