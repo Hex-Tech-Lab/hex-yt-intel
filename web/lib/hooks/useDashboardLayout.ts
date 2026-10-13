@@ -23,27 +23,36 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 
-export {
-  DEFAULT_LAYOUT,
-  RIGHT_MAX,
-  RIGHT_MIN,
-  SIDEBAR_MAX,
-  SIDEBAR_MIN,
-  toGroupLayout,
-  type LayoutShape,
-  type PanelDefaults,
-} from '@/lib/types/dashboard-layout';
+export type LayoutShape = '2col' | '3col';
 
-import {
-  DEFAULT_LAYOUT,
-  RIGHT_MAX,
-  RIGHT_MIN,
-  SIDEBAR_MAX,
-  SIDEBAR_MIN,
-  toGroupLayout,
-  type LayoutShape,
-  type PanelDefaults,
-} from '@/lib/types/dashboard-layout';
+export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
+  '2col': { sidebar: 18, right: 0 },
+  '3col': { sidebar: 18, right: 28 },
+};
+
+/**
+ * Panel-id -> percent layout for a Group, with center taking the remainder
+ * so the panels always sum to 100. Single source for both the mount-time
+ * defaultLayout and the Reset Layout setLayout call.
+ */
+/** Per-shape default sizes (percent). Code fallback; the Settings Registry
+ *  (`ui.dashboard.panelWidths.*`) overrides these via resolveDashboardPanelDefaults. */
+export type PanelDefaults = Record<LayoutShape, { sidebar: number; right: number }>;
+
+export function toGroupLayout(
+  shape: LayoutShape,
+  sidebar: number,
+  right: number
+): Record<string, number> {
+  return shape === '3col'
+    ? { sidebar, center: 100 - sidebar - right, right }
+    : { sidebar, center: 100 - sidebar };
+}
+
+export const SIDEBAR_MIN = 10;
+export const SIDEBAR_MAX = 30;
+export const RIGHT_MIN = 10;
+export const RIGHT_MAX = 35;
 
 function storageKey(shape: LayoutShape): string {
   return `${LAYOUT_STORAGE_PREFIX}${shape}`;
@@ -188,11 +197,10 @@ export function useDashboardPanels(
   /** Group layout for a shape: saved sizes when present, else the defaults. */
   const layoutFor = (target: LayoutShape): Record<string, number> => {
     const current = saved?.[target] ?? null;
-    const targetDefaults = defaults?.[target] ?? DEFAULT_LAYOUT[target];
     return toGroupLayout(
       target,
-      current?.sidebar ?? targetDefaults.sidebar,
-      current?.right ?? targetDefaults.right
+      current?.sidebar ?? defaults[target].sidebar,
+      current?.right ?? defaults[target].right
     );
   };
   const layouts = { '2col': layoutFor('2col'), '3col': layoutFor('3col') };

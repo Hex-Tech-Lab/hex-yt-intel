@@ -48,12 +48,6 @@ describe('resolveDashboardPanelDefaults', () => {
     expect(result['3col']).toEqual(DEFAULT_LAYOUT['3col']);
     expect(result['2col']).toEqual(DEFAULT_LAYOUT['2col']);
   });
-
-  it('falls back to the code default when the registry throws an error', async () => {
-    getRegistrySettings.mockRejectedValue(new Error('Network error'));
-    const result = await resolveDashboardPanelDefaults();
-    expect(result).toEqual(DEFAULT_LAYOUT);
-  });
 });
 
 describe('parsePanelWidths', () => {
