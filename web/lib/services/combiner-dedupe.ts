@@ -35,25 +35,6 @@ export function isTokenSubsequence(shorter: string, longer: string): boolean {
 }
 
 /**
- * Normalizes text for comparison by stripping timestamps, approximate notes,
- * preserving distinct decimal separators, and collapsing whitespace.
- */
-export function normalizeForComparison(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?[^\]]*|timestamp not provided[^\]]*)\s*\]/giu, '')
-    .replace(/[[(]\s*approximate[^\])]*[\])]/giu, '')
-    // Keep a leading minus sign (e.g. "-5%") so opposite-signed facts do not collapse.
-    .replace(/(^|\s)-(?=\d)/gu, '$1minus')
-    // Keep decimal separators between digits distinct (e.g. "3.14" vs "3,14")
-    .replace(/(?<=\d)\.(?=\d)/gu, 'point')
-    .replace(/(?<=\d),(?=\d)/gu, 'comma')
-    .replace(/[^\p{L}\p{M}\p{N}\p{Sc}\s]/gu, ' ')
-    .replace(/\s+/gu, ' ')
-    .trim();
-}
-
-/**
  * Checks if text contains real, non-zero timestamps (e.g. `[01:23]`, `[00:45]`),
  * excluding placeholder zero timestamps like `[00:00]` or `[0:00]`.
  */
@@ -61,6 +42,37 @@ export function hasRealTimestamps(text: string): boolean {
   const matches = text.match(/\[\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*\]/gu);
   if (!matches) return false;
   return matches.some((m) => /[1-9]/u.test(m));
+}
+
+/**
+ * Extracts all real, non-zero timestamps from text in canonical order.
+ */
+export function extractRealTimestamps(text: string): string[] {
+  const matches = text.match(/\[\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*\]/gu);
+  if (!matches) return [];
+  return matches.filter((m) => /[1-9]/u.test(m));
+}
+
+/**
+ * Normalizes text for comparison by stripping placeholder timestamps,
+ * preserving distinct decimal separators, keeping signed numbers, and collapsing whitespace.
+ *
+ * Real timestamps and hedges (e.g. "(approximate)") are kept as part of comparison text
+ * so distinct mentions across timestamps or hedged statements do not falsely collapse.
+ */
+export function normalizeForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    // Strip timestamps: both real [12:40] and placeholder [timestamp not provided...]
+    .replace(/\[\s*(?:\d{1,2}:\d{2}(?::\d{2})?[^\]]*|timestamp not provided[^\]]*)\s*\](?:\s*\(\s*approximate(?:;?[^)]*)?\))?/giu, '')
+    // Keep minus signs (-, −, – when followed by digits) regardless of left context.
+    .replace(/[-−–](?=\d)/gu, 'minus')
+    // Keep decimal separators between digits distinct (e.g. "3.14" vs "3,14")
+    .replace(/(?<=\d)\.(?=\d)/gu, 'point')
+    .replace(/(?<=\d),(?=\d)/gu, 'comma')
+    .replace(/[^\p{L}\p{M}\p{N}\p{Sc}\s]/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
 }
 
 /**
@@ -72,6 +84,18 @@ export function matchSubHeader(line: string, dimNumber: number): { subNumber: st
   // Only this dimension's own sub-numbers (e.g. 4.x inside dimension 4) count as
   // headers, so prose such as "1.5 - ..." inside dimension 4 stays body text.
   const ownSub = (subNumber: string) => subNumber.split('.')[0] === String(dimNumber);
+
+  // Helper: validates that the candidate title looks like a header title,
+  // not a numeric metric unit/suffix (e.g. "x", "-fold", "%").
+  const isValidHeaderTitle = (title: string): boolean => {
+    if (!title) return false;
+    const firstWordMatch = title.match(/^[^\s]+/u);
+    if (!firstWordMatch) return false;
+    const firstWord = firstWordMatch[0];
+    // Reject units, multipliers, and suffixes like "x", "fold", "-fold", "%", "percent"
+    if (/^[-:–—.]?(?:x|fold|percent|%)[\w-]*$/iu.test(firstWord)) return false;
+    return true;
+  };
 
   // Pattern 1: Markdown headings: #{1,6} [Dimension] X.Y [-:–—.] Title
   // e.g. "#### 2.1 Header Intelligence", "### Dimension 2.1: Title"
@@ -87,7 +111,9 @@ export function matchSubHeader(line: string, dimNumber: number): { subNumber: st
   if (boldMatch?.[1] && ownSub(boldMatch[1])) {
     const rawTitle = (boldMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
-    return { subNumber: boldMatch[1], title: cleanTitle };
+    if (isValidHeaderTitle(cleanTitle)) {
+      return { subNumber: boldMatch[1], title: cleanTitle };
+    }
   }
 
   // Pattern 3: Plain text with delimiter: "X.Y: Title" or "X.Y - Title" or "Dimension X.Y: Title"
@@ -95,7 +121,9 @@ export function matchSubHeader(line: string, dimNumber: number): { subNumber: st
   if (plainMatch?.[1] && ownSub(plainMatch[1])) {
     const rawTitle = (plainMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').trim();
-    return { subNumber: plainMatch[1], title: cleanTitle };
+    if (isValidHeaderTitle(cleanTitle)) {
+      return { subNumber: plainMatch[1], title: cleanTitle };
+    }
   }
 
   return null;
@@ -154,28 +182,38 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
     const compIncoming = normalizeForComparison(trimmedIncoming);
 
     if (compExisting && compIncoming) {
-      if (compExisting === compIncoming) {
-        // Exact semantic match: if incoming has real timestamps and existing does not, prefer incoming
-        if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
-          return trimmedIncoming;
-        }
-        return trimmedExisting;
-      }
+      const existingReal = extractRealTimestamps(trimmedExisting);
+      const incomingReal = extractRealTimestamps(trimmedIncoming);
+      const timestampsConflict =
+        existingReal.length > 0 &&
+        incomingReal.length > 0 &&
+        (existingReal.length !== incomingReal.length ||
+          existingReal.some((timestampStr, i) => timestampStr !== incomingReal[i]));
 
-      // 3. One is completely contained in the other with high length overlap (> 75%)
-      const isContained =
-        compExisting.length <= compIncoming.length
-          ? isTokenSubsequence(compExisting, compIncoming)
-          : isTokenSubsequence(compIncoming, compExisting);
-
-      if (isContained) {
-        const minLen = Math.min(compExisting.length, compIncoming.length);
-        const maxLen = Math.max(compExisting.length, compIncoming.length);
-        if (minLen / maxLen > 0.75) {
+      if (!timestampsConflict) {
+        if (compExisting === compIncoming) {
+          // Exact semantic match: if incoming has real timestamps and existing does not, prefer incoming
           if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
             return trimmedIncoming;
           }
-          return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
+          return trimmedExisting;
+        }
+
+        // 3. One is completely contained in the other with high length overlap (> 75%)
+        const isContained =
+          compExisting.length <= compIncoming.length
+            ? isTokenSubsequence(compExisting, compIncoming)
+            : isTokenSubsequence(compIncoming, compExisting);
+
+        if (isContained) {
+          const minLen = Math.min(compExisting.length, compIncoming.length);
+          const maxLen = Math.max(compExisting.length, compIncoming.length);
+          if (minLen / maxLen > 0.75) {
+            if (hasRealTimestamps(trimmedIncoming) && !hasRealTimestamps(trimmedExisting)) {
+              return compExisting.length > compIncoming.length ? trimmedExisting : trimmedIncoming;
+            }
+            return compExisting.length >= compIncoming.length ? trimmedExisting : trimmedIncoming;
+          }
         }
       }
     }
@@ -216,6 +254,17 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
       const normEx = normalizeForComparison(exBlock);
       if (!normEx) continue;
 
+      const exReal = extractRealTimestamps(exBlock);
+      const inReal = extractRealTimestamps(inBlock);
+      const blockTimestampsConflict =
+        exReal.length > 0 &&
+        inReal.length > 0 &&
+        (exReal.length !== inReal.length || exReal.some((timestampStr, idx) => timestampStr !== inReal[idx]));
+
+      if (blockTimestampsConflict) {
+        continue;
+      }
+
       if (normEx === normIn) {
         isDuplicate = true;
         matchIdx = i;
@@ -250,10 +299,16 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
       let reason: string;
 
       if (inHasReal && !exHasReal) {
-        mergedBlocks[matchIdx] = inBlock;
-        keptBlock = inBlock;
-        droppedBlock = exBlock;
-        reason = 'timestamp_upgrade';
+        if (!incomingIsSuperset && normalizeForComparison(exBlock).length > normalizeForComparison(inBlock).length) {
+          keptBlock = exBlock;
+          droppedBlock = inBlock;
+          reason = 'superset_detail_retained';
+        } else {
+          mergedBlocks[matchIdx] = inBlock;
+          keptBlock = inBlock;
+          droppedBlock = exBlock;
+          reason = 'timestamp_upgrade';
+        }
       } else if (!inHasReal && exHasReal) {
         keptBlock = exBlock;
         droppedBlock = inBlock;
@@ -285,3 +340,4 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
   }
   return mergedBlocks.join('\n\n').trim();
 }
+

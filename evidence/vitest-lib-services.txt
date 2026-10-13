@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/kellyb_dev/projects/hex-yt-intel-wt-combiner-fix2/web
+
+
+ Test Files  5 passed (5)
+      Tests  20 passed (20)
+   Start at  21:55:53
+   Duration  3.84s (transform 1.22s, setup 923ms, import 3.47s, tests 258ms, environment 1ms)
+

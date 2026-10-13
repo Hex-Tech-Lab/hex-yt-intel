@@ -33,7 +33,9 @@ export interface DimensionChunk {
 }
 
 import {
+  extractRealTimestamps,
   hasRealTimestamps,
+  isSymbolOnly,
   matchSubHeader,
   mergeSubSectionBodies,
   normalizeForComparison,
@@ -229,17 +231,36 @@ export class CombinerPass {
 
     // Distinct intros keyed by normalized text; a real-timestamp intro replaces a
     // placeholder-timestamp twin in place (never downgrades real to placeholder).
+    // Intros with identical normalized keys that differ in raw content (e.g. symbol-only
+    // "★★★" vs "☆☆☆", or distinct timestamps "[00:12]" vs "[05:30]") are preserved separately.
     const introByKey = new Map<string, string>();
 
     for (const chunk of chunks) {
       const parsed = this.parseDimensionMarkdown(dimNumber, name, chunk.content);
       if (parsed.intro) {
         const compIntro = normalizeForComparison(parsed.intro);
-        const prior = introByKey.get(compIntro);
-        if (prior === undefined || (hasRealTimestamps(parsed.intro) && !hasRealTimestamps(prior))) {
-          introByKey.set(compIntro, parsed.intro);
+        const introKey = compIntro ? compIntro : parsed.intro.trim();
+        const prior = introByKey.get(introKey);
+
+        if (prior === undefined) {
+          introByKey.set(introKey, parsed.intro);
+        } else {
+          const priorReal = extractRealTimestamps(prior);
+          const currentReal = extractRealTimestamps(parsed.intro);
+          const diffReal =
+            priorReal.length > 0 &&
+            currentReal.length > 0 &&
+            (priorReal.length !== currentReal.length || priorReal.some((timestampStr, i) => timestampStr !== currentReal[i]));
+
+          if (diffReal || (isSymbolOnly(prior) && isSymbolOnly(parsed.intro) && prior.trim() !== parsed.intro.trim())) {
+            // Keep both distinct intros if they have conflicting real timestamps or distinct symbol sequences
+            introByKey.set(`${introKey}__${parsed.intro.trim()}`, parsed.intro);
+          } else if (hasRealTimestamps(parsed.intro) && !hasRealTimestamps(prior)) {
+            introByKey.set(introKey, parsed.intro);
+          }
         }
       }
+
 
       for (const [subKey, subSec] of parsed.subsections.entries()) {
         const existing = combinedAst.subsections.get(subKey);
