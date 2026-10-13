@@ -1,8 +1,7 @@
 # The Complete Cubic Vector Ledger
 
-> **Date Range Covered in this Ledger:** 2026-09-24 to 2026-10-13 (Batches 1–5: PRs #506 down to #343).  
+> **Date Range Covered in this Ledger:** 2026-09-15 to 2026-10-13 (Batches 1–6: PRs #506 down to #313; stop condition reached after Batch 6).  
 > **Remaining Ranges to Process:**
-> - Batch 6: PRs #342 down to #313 (2026-09-15 to 2026-09-24)
 > - Historical: PRs #312 down to repo first commit #7 (2026-05-15 to 2026-09-15)
 
 ---
@@ -314,3 +313,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 | **V15 (Untrusted tier grants & billing bypass)** | CodeRabbit / PR #345 / 2026-09-25 | Custom data payload from untrusted webhook body used as fallback tier when verified catalog returned null | Does user entitlement resolution reject unverified custom data fallbacks and default safely to free tier? | `UntrustedTierFallbackRule` (`scripts/quality-engine/rules/security-lessons-20260924.ts`) |
 | **V16 (Database concurrency & JSONB clobber)** | CodeRabbit / PR #343 / 2026-09-24 | Relations persist route executed full JSONB payload spread, risking race condition with concurrent chunk writes | Are multi-field JSONB updates performed via atomic PostgreSQL update queries or isolated table rows? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
 | **V05 (Secret or signed-URL leakage)** | CodeRabbit / PR #347 / 2026-09-26 | Sentry error capture logged full request URL with query parameters on auth failure, exposing tokens | Do error logging handlers strip or redact query parameters from captured URLs before logging? | `SecretsExposureRule` (`scripts/quality-engine/rules/security.ts`) |
+
+
+---
+
+## 11. Batch 6 Harvested Entries (PRs #313–#342: 2026-09-15 to 2026-09-24)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V14 (Privilege escalation & SQL grants)** | Cubic & CC / PR #322 / 2026-09-24 | SECURITY DEFINER RPC granted to `authenticated` accepted arbitrary caller payload key, allowing unprivileged JSONB overwrite | Does any SECURITY DEFINER SQL function restrict keys via an immutable allowlist when callable by `authenticated`? | `SqlSecurityDefinerCallerKeyRule` (`scripts/quality-engine/rules/sql-migrations.ts`) |
+| **V15 (Untrusted tier grants & billing bypass)** | Cubic & CodeRabbit / PR #325 / 2026-09-24 | User tier resolution fell back to granting `pro` tier for any subscription in webhook route without tier validation | Does every billing webhook validate tier entitlements against strict pricing tables rather than hardcoded string literals? | `HardcodedTierGrantRule` (`scripts/quality-engine/rules/security-lessons-20260924.ts`) |
+| **V16 (Database concurrency & JSONB clobber)** | Cubic / PR #322 / 2026-09-24 | Full `analysis_payload` read-modify-write spread from stale snapshot lost concurrent dimension updates | Are partial document updates written through atomic `jsonb_set` calls rather than full-object client spreads? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
+| **V08 (Unbounded waits & missing timeouts)** | Cubic / PR #321 / 2026-09-24 | Second fetch in observability logging handler lacked timeout or AbortSignal, holding admin requests open on hung APIs | Does every server-side `fetch` carry an explicit timeout via `AbortSignal.timeout()` or `fetchWithTimeout`? | `ServerFetchWithoutTimeoutRule` (`scripts/quality-engine/rules/reliability-lessons-20260924.ts`) |
+| **V05 (Secret or signed-URL leakage)** | CodeRabbit / PR #320 / 2026-09-24 | Sentry error capture logged non-2xx responses with raw body snippets without proven redaction of signed credentials | Are external response bodies bounded and redacted before being forwarded into Sentry or console logging? | `SecretsExposureRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V04 (Unvalidated model output & schema contract)** | Cubic / PR #321 / 2026-09-24 | Unexpected external observability response shape silently defaulted to empty array (`?.events ?? []`), masking API outage | Does the handler distinguish empty results from malformed response schemas by enforcing runtime Zod schema parsing? | `SilentDefaultOnExternalResponseRule` (`scripts/quality-engine/rules/reliability-lessons-20260924.ts`) |
+| **V03 (Silent success or fail-open fallback)** | CodeRabbit / PR #322 / 2026-09-24 | Stance relations persist skipped writes when result array was empty (`if (x.length > 0)`), turning empty result into perpetual recompute | Does persistence record valid empty results so that subsequent requests hit cache rather than forcing paid recomputes? | `SuccessGuardedPersistenceRule` (`scripts/quality-engine/rules/reliability-lessons-20260924.ts`) |
+| **V10 (Dead or unwired code, inflated measurement)** | Cubic / PR #330 / 2026-09-24 | CPU benchmark test measured pre-parsed JSON instead of actual caption mapping, producing meaningless benchmark metrics | Does every performance benchmark measure physical runtime parsing rather than synthetic pre-parsed fixtures? | `DeadCodeRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V01 (Documentation and ledger drift)** | Cubic / PR #329 / 2026-09-24 | ADR claiming "all parsing moves to Vercel" contradicted browser live display implementation in `useSSEStream` | Do architectural decision records accurately document the live distribution of client and server responsibilities? | `none yet (review checklist enforced)` |
+| **V02 (Pattern matcher & regex bypass)** | CodeRabbit / PR #328 / 2026-09-24 | Supabase migration dropped function with default arguments without signature match, breaking migration replay | Do database migration scripts drop functions by specifying exact signature parameter types? | `SqlDropFunctionDefaultArgRule` (`scripts/quality-engine/rules/sql-migrations.ts`) |
