@@ -108,7 +108,7 @@ function stripBullets(line: string): string {
 }
 
 /** Upper bound on 0.3 Key Takeaways; matches the digest prompt's 3–12 cap. */
-const MAX_TAKEAWAYS = 12;
+export const MAX_TAKEAWAYS = 12;
 
 /**
  * Parse the four `#### 0.x` tiers out of a digest completion. Returns null if
