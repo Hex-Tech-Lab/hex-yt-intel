@@ -75,7 +75,10 @@ export class GetUserEntitlementsUseCase {
       }
     }
 
-    const isNonProduction = process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV !== 'production';
+    // Prefer VERCEL_ENV (preview/development/production) when set; otherwise NODE_ENV, so a
+    // self-hosted production build with VERCEL_ENV unset is not treated as non-production.
+    const deployEnv = process.env.VERCEL_ENV || process.env.NODE_ENV;
+    const isNonProduction = deployEnv !== 'production';
     if (isNonProduction && founderUserIds.length === 0 && founderEmails.length === 0 && !hasWarnedFounderAllowlistUnset) {
       hasWarnedFounderAllowlistUnset = true;
       Sentry.captureMessage(

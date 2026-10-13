@@ -181,6 +181,18 @@ describe('GetUserEntitlementsUseCase', () => {
       vi.unstubAllEnvs();
     });
 
+    it('does not warn for a self-hosted production build with VERCEL_ENV unset', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('VERCEL_ENV', '');
+      vi.stubEnv('FOUNDER_USER_IDS', '');
+      vi.stubEnv('ADMIN_FOUNDER_EMAILS', '');
+      vi.mocked(supabaseModule.getSupabaseServiceClient).mockReturnValue(noSubscriptionSupabase() as any);
+
+      await useCase.execute('user-selfhost-prod');
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    });
+
     it('warns via Sentry.captureMessage once in non-production when founder allowlist is unset and does not warn in production', async () => {
       // Sub-case 1: In production environment, do NOT warn
       vi.stubEnv('NODE_ENV', 'production');
