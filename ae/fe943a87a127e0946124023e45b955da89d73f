@@ -1,0 +1,25 @@
+.memory/DEFENSIVE_LEDGER.md
+  s_291078cde7ba1a::t_e9b118750dd1c7 91
+web/lib/__tests__/pr442-group4-fixes.test.ts
+  s_291078cde7ba1a::t_734b3ae7fb76da 360-405
+web/lib/__tests__/reduce-grounded-section-merge.test.ts
+  s_291078cde7ba1a::t_24d841b6af871f 1-106
+web/lib/services/combiner-dedupe.ts
+  s_291078cde7ba1a::t_26830417e9f786 275-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aefe943a87a127e0946124023e45b955da89d73f",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
