@@ -719,6 +719,12 @@ export const useChatStore = create<ChatState>((set, get) => {
             // The persist: saved/failed SSE event is the authoritative signal.
           } catch (err) {
             handleChatStreamError(err, { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' }, get().setPersistState);
+            const isPermanentContractBreak = err instanceof Error && err.message.includes('Chat stream timeout missing');
+            if (isPermanentContractBreak) {
+              outbox.remove(e.clientMsgId);
+              console.warn('[ChatStore] flushOutbox discarded permanently unprocessable entry (missing timeoutMs)', { clientMsgId: e.clientMsgId });
+              continue;
+            }
             console.warn('[ChatStore] flushOutbox stopped; remaining entries wait for the next online event', { clientMsgId: e.clientMsgId });
             break; // still offline / failing — stop; retry on next online event
           }

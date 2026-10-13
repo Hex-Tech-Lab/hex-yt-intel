@@ -180,4 +180,42 @@ describe('useChatStore persist watchdog (T2 RCA)', () => {
     expect(useChatStore.getState().persistState).not.toBe('saving');
     expect(useChatStore.getState().error).toBeTruthy();
   });
+
+  it('flushOutbox discards permanently unprocessable entry (missing timeoutMs) and continues processing subsequent messages', async () => {
+    let callCount = 0;
+    const fetchMock = vi.fn((url: string, init?: RequestInit): Promise<Response> => {
+      if (url.includes('/messages')) {
+        callCount++;
+        const parsed = JSON.parse(String(init?.body)) as { clientMsgId: string; content: string };
+        currentReqId = parsed.clientMsgId;
+        const payload = parsed.content === 'bad' ? {} : { timeoutMs: TIMEOUT_MS };
+        return Promise.resolve(new Response(
+          JSON.stringify({
+            user: { id: 'u1', conversationId: CONV_ID, role: 'user', content: parsed.content, createdAt: new Date().toISOString() },
+            stream: { url: WORKER_URL, sig: 'sig', exp: 1 },
+            payload,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ));
+      }
+      const completedStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(frame({ type: 'persist', status: 'saved', requestId: currentReqId }));
+          controller.close();
+        },
+      });
+      return Promise.resolve(new Response(completedStream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    outbox.add({ conversationId: CONV_ID, clientMsgId: 'msg-bad', content: 'bad', createdAt: new Date().toISOString() });
+    outbox.add({ conversationId: CONV_ID, clientMsgId: 'msg-good', content: 'good', createdAt: new Date().toISOString() });
+    expect(outbox.all().length).toBe(2);
+
+    await useChatStore.getState().flushOutbox();
+
+    expect(outbox.all().some((m) => m.clientMsgId === 'msg-bad')).toBe(false);
+    expect(callCount).toBe(2);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('discarded permanently unprocessable entry'), expect.anything());
+  });
 });
