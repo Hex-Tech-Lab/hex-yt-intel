@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 
 const LONG_DESCRIPTION = 'x'.repeat(200);
+const COLLAPSED_CLASS = 'max-h-[var(--description-collapsed-height)]';
 const CAPPED_CLASS = 'max-h-[var(--description-max-height)]';
 
 describe('BentoMetadata description show more', () => {
@@ -17,6 +18,8 @@ describe('BentoMetadata description show more', () => {
 
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(body.className).not.toContain(CAPPED_CLASS);
+    // max-height needs a numeric start to animate; line-clamp (max-height: none) would snap.
+    expect(body.className).toContain(COLLAPSED_CLASS);
 
     fireEvent.click(button);
 

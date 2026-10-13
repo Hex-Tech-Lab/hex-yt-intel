@@ -192,7 +192,7 @@ export function BentoMetadata({
                     ? ''
                     : descriptionExpanded
                       ? 'max-h-[var(--description-max-height)] overflow-y-auto pr-1.5'
-                      : 'line-clamp-2 overflow-hidden'
+                      : 'max-h-[var(--description-collapsed-height)] overflow-hidden'
                 }`}
               >
                 {linkifyDescription(description)}
