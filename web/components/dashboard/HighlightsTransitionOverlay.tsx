@@ -98,7 +98,7 @@ export function HighlightsTransitionOverlay({ active, direction = 'forward', vol
           aria-hidden="true"
           data-testid="highlights-transition-overlay"
         >
-          {/* Layer 1: High-velocity motion-blur curtain */}
+          {/* Layer 1: High-velocity curtain */}
           <motion.div
             initial={{ x: enterX, skewX: isForward ? -18 : 18 }}
             animate={{ x: '0%', skewX: 0 }}
