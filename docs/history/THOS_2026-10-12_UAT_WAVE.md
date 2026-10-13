@@ -50,7 +50,7 @@ Merged to `uat` (not yet on `main`):
 - PRs 486-495 above.
 - Migrations only apply on `main` (CI `supabase db push` runs on main). PR 486 (advisor fixes) and PR 491 (Settings Registry panel widths) therefore take effect in production only after promotion.
 - PR 494 changes the comment sample run to an atomic claim. It does NOT prevent double paid classification: a retry after a timed-out claim, and the fall-through when every claim attempt fails, can both still run paid classification.
-- PR 486's `get_temporal_subgraph` body raises Postgres 42702 (ambiguous `anchor_id`/`depth`) on every call that passes the ownership check. Fixed in a new migration, `20261013100000_fix_get_temporal_subgraph_ambiguous_columns.sql`, which does not edit the merged file. Not applied to any database.
+- PR 486's `get_temporal_subgraph` body raises Postgres 42702 (ambiguous `anchor_id`/`depth`) on every call that passes the ownership check. Fixed in a new migration, `20261013110000_fix_get_temporal_subgraph_ambiguous_columns.sql`, which does not edit the merged file. Not applied to any database.
 
 ## Open items
 
@@ -73,7 +73,7 @@ Merged to `uat` (not yet on `main`):
 
 - Work lands on the `uat` branch first. `main` is promoted from `uat` only with owner sign-off.
 - Each OC or AGY task is supervised by a Haiku supervisor. The supervisor watches live logs and diffs, and kills drifting runs (two-strike rule).
-- OC model: default `glm-preset/@preset/glm-53-flash-on-cheap` (the server-side OpenRouter preset). Alternate pinned entry: `glm-mb/z-ai/glm-5.3-flash`. This follows the CLAUDE.md "OC model standard". Any change to the OC model, provider, or config must be reported to the owner in the same turn.
+- OC: dropped by the owner on 2026-10-13. Executors are AGY or CC's own subagents; do not launch opencode.
 - Merges use `scripts/strict-merge.sh` with the bypass list for DeepSource, Codacy, and CodeFactor. Those three checks were ACTION_REQUIRED on every PR this wave and were bypassed explicitly, not ignored silently.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
