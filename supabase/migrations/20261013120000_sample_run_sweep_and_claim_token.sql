@@ -4,11 +4,15 @@
 -- claimed_by:     queue delivery token that won the pending -> sampling claim. A redelivered
 --                 message carrying the same token may proceed (idempotent claim); any other
 --                 token gets claimed:false.
+-- claimed_at:     when the pending -> sampling claim landed. The sweep measures 'sampling'
+--                 staleness from here (not created_at), so a run that waited in pending and
+--                 was only just claimed by a live consumer is never failed under it.
 -- reenqueued_at:  set once the global sweep has re-enqueued a stale 'pending' run. A run that is
 --                 still 'pending' after a second threshold with this set is marked failed.
 
 alter table public.comment_sample_runs
   add column if not exists claimed_by text null,
+  add column if not exists claimed_at timestamptz null,
   add column if not exists reenqueued_at timestamptz null;
 
 insert into public.setting_definitions (key, tier, data_type, validation, default_value, description, owner_role)

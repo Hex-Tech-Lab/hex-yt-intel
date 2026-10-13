@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type Row = { id: string; status: string; claimed_by: string | null; reenqueued_at: string | null; created_at: string };
+type Row = { id: string; status: string; claimed_by: string | null; claimed_at: string | null; reenqueued_at: string | null; created_at: string };
 const store = vi.hoisted(() => ({ rows: [] as Array<Row> }));
 
 // Evaluate the subset of PostgREST filters the adapter uses against the store.
@@ -23,10 +23,16 @@ function makeBuilder() {
   b.is = (col: keyof Row, val: unknown) => chain((r) => r[col] === val);
   b.not = (col: keyof Row, _op: string, val: unknown) => chain((r) => (val === null ? r[col] !== null : r[col] !== val));
   b.lt = (col: keyof Row, val: string) => chain((r) => r[col] !== null && (r[col] as string) < val);
-  // Only the shape the adapter emits: "reenqueued_at.lt.<c>,and(reenqueued_at.is.null,created_at.lt.<c>)".
+  // Evaluates the real PostgREST or() expression: top-level alternatives, each
+  // either "col.lt.X" or "and(col.is.null,col.lt.X,...)", so a wrong filter fails tests.
   b.or = (expr: string) => {
-    const cutoff = (expr.match(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/) ?? [''])[0];
-    return chain((r) => (r.reenqueued_at !== null ? r.reenqueued_at < cutoff : r.created_at < cutoff));
+    const alts = expr.match(/and\([^)]*\)|[a-z_]+\.[a-z]+\.[^,()]+/g) ?? [];
+    const term = (r: Row, t: string): boolean => {
+      const [col, op, ...rest] = t.split('.');
+      const v = r[col as keyof Row];
+      return op === 'is' ? v === null : v !== null && (v as string) < rest.join('.');
+    };
+    return chain((r) => alts.some((alt) => (alt.startsWith('and(') ? alt.slice(4, -1).split(/,(?=[a-z_]+\.)/) : [alt]).every((t) => term(r, t))));
   };
   b.update = (p: Partial<Row>) => { patch = p; return b; };
   b.select = () => {
@@ -51,7 +57,7 @@ import { SupabaseAuxRemediationAdapter } from '@/lib/adapters/SupabaseAuxRemedia
 
 const RUN = 'run-1';
 function seed(status: string, claimed_by: string | null): void {
-  store.rows = [{ id: RUN, status, claimed_by, reenqueued_at: null, created_at: '2026-10-13T00:00:00Z' }];
+  store.rows = [{ id: RUN, status, claimed_by, claimed_at: null, reenqueued_at: null, created_at: '2026-10-13T00:00:00Z' }];
 }
 const row = (): Row => store.rows[0] as Row;
 
@@ -66,6 +72,7 @@ describe('markSampleRunSampling — per-delivery claim token', () => {
     expect(res).toEqual({ claimed: true });
     expect(row().status).toBe('sampling');
     expect(row().claimed_by).toBe('delivery-A');
+    expect(row().claimed_at).not.toBeNull();
   });
 
   it('timed-out claim retried by the SAME delivery: sampling + claimed_by matches -> claimed:true exactly once (no second owner)', async () => {
@@ -114,6 +121,15 @@ describe('global sweep transitions are conditional', () => {
   it('fails a stale sampling run (created before the cutoff) and then reports it changed', async () => {
     seed('sampling', 'delivery-A');
     expect(await SupabaseAuxRemediationAdapter.failStaleSampleRun(RUN, 'sampling', '2026-10-13T00:30:00Z')).toBe(true);
+    expect(row().status).toBe('failed');
+  });
+
+  it('a run created long ago but claimed just now is NOT stale (live consumer wins); negative control: stale claim is failed', async () => {
+    seed('sampling', 'delivery-A');
+    row().claimed_at = '2026-10-13T01:00:00Z'; // created 00:00 (stale by created_at), claimed 01:00 (fresh)
+    expect(await SupabaseAuxRemediationAdapter.failStaleSampleRun(RUN, 'sampling', '2026-10-13T00:30:00Z')).toBe(false);
+    expect(row().status).toBe('sampling');
+    expect(await SupabaseAuxRemediationAdapter.failStaleSampleRun(RUN, 'sampling', '2026-10-13T01:30:00Z')).toBe(true);
     expect(row().status).toBe('failed');
   });
 

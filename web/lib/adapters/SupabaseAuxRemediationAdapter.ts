@@ -22,6 +22,14 @@ export interface SweepRunRow {
 const SWEEP_RUN_COLUMNS = 'id, analysis_id, user_id, total_comment_count, reenqueued_at';
 
 /**
+ * 'sampling' staleness: measured from the claim (claimed_at). Rows claimed before
+ * the claimed_at column existed (null) fall back to their last pre-claim
+ * transition (the re-enqueue, else creation), the old behaviour.
+ */
+const staleSamplingFilter = (cutoffIso: string): string =>
+  `claimed_at.lt.${cutoffIso},and(claimed_at.is.null,reenqueued_at.lt.${cutoffIso}),and(claimed_at.is.null,reenqueued_at.is.null,created_at.lt.${cutoffIso})`;
+
+/**
  * Supabase access for the aux-remediation harness (channelMeta/comments
  * recovery, see aux-remediation.ts's module doc). Split out to keep this
  * service off `getSupabaseServiceClient()` directly (10X re-audit
@@ -250,7 +258,7 @@ export class SupabaseAuxRemediationAdapter {
     const { data, error, count } = await service
       .from('comment_sample_runs')
       .update(
-        { status: 'sampling', ...(mode ? { mode } : {}), ...(claimToken ? { claimed_by: claimToken } : {}) },
+        { status: 'sampling', ...(mode ? { mode } : {}), ...(claimToken ? { claimed_by: claimToken } : {}), claimed_at: new Date().toISOString() },
         { count: 'exact' }
       )
       .eq('id', sampleRunId)
@@ -309,8 +317,8 @@ export class SupabaseAuxRemediationAdapter {
   }
 
   /**
-   * Global sweep read: cochran 'sampling' runs whose last transition (the
-   * re-enqueue, or creation if never re-enqueued) is older than cutoffIso. Read-only.
+   * Global sweep read: cochran 'sampling' runs claimed longer ago than cutoffIso
+   * (see staleSamplingFilter for the legacy fallback). Read-only.
    */
   static async findSamplingRunsForFailure(
     cutoffIso: string,
@@ -322,7 +330,7 @@ export class SupabaseAuxRemediationAdapter {
       .select(SWEEP_RUN_COLUMNS)
       .eq('mode', 'cochran')
       .eq('status', 'sampling')
-      .or(`reenqueued_at.lt.${cutoffIso},and(reenqueued_at.is.null,created_at.lt.${cutoffIso})`)
+      .or(staleSamplingFilter(cutoffIso))
       .order('created_at', { ascending: true })
       .limit(limit);
     if (error) throw error;
@@ -362,7 +370,7 @@ export class SupabaseAuxRemediationAdapter {
       .eq('status', expected);
     query = expected === 'pending'
       ? query.not('reenqueued_at', 'is', null).lt('reenqueued_at', cutoffIso)
-      : query.or(`reenqueued_at.lt.${cutoffIso},and(reenqueued_at.is.null,created_at.lt.${cutoffIso})`);
+      : query.or(staleSamplingFilter(cutoffIso));
     const { data, error } = await query.select('id');
     if (error) throw error;
     return (data?.length ?? 0) > 0;
