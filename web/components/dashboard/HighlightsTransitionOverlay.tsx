@@ -81,6 +81,12 @@ export function HighlightsTransitionOverlay({ active, direction = 'forward', vol
     prevActive.current = active;
   }, [active, volumeGain]);
 
+  // T13 (playback stutter): this full-card wipe sits on top of the YouTube
+  // iframe for its 320ms run. Reduced-motion users get no wipe at all (the
+  // swoosh SFX above is unaffected). It is only read when `active`, so the
+  // matchMedia call never runs on the idle path.
+  const reduceMotion = active && typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
   const isForward = direction === 'forward';
   // Arabic broadcast whip-pan: forward slides right-to-left, backward slides left-to-right
   const enterX = isForward ? '100%' : '-100%';
@@ -88,7 +94,7 @@ export function HighlightsTransitionOverlay({ active, direction = 'forward', vol
 
   return (
     <AnimatePresence>
-      {active && (
+      {active && !reduceMotion && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -104,7 +110,7 @@ export function HighlightsTransitionOverlay({ active, direction = 'forward', vol
             animate={{ x: '0%', skewX: 0 }}
             exit={{ x: exitX, skewX: isForward ? 18 : -18 }}
             transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 w-full h-full bg-[#070b12]/90 backdrop-blur-md"
+            className="absolute inset-0 w-full h-full bg-[#070b12]/90"
           />
 
           {/* Layer 2: Broadcast energy wipe blade */}
