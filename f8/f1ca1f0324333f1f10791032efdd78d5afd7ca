@@ -1,0 +1,21 @@
+supabase/migrations/20261013110000_fix_get_temporal_subgraph_ambiguous_columns.sql
+  s_291078cde7ba1a::t_d14785fb1b4bde 48
+worker/src/__tests__/chat-cascade-deadline.test.ts
+  s_291078cde7ba1a::t_6c0e1350aa4e11 139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f8f1ca1f0324333f1f10791032efdd78d5afd7ca",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
