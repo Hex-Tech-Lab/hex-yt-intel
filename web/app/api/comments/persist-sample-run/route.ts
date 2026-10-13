@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
   // a final status if a retry races a completed report.
   if (status === 'sampling') {
     const { claimed } = await SupabaseAuxRemediationAdapter.markSampleRunSampling(sampleRunId, runMode);
-    return NextResponse.json({ ok: true, claimed, refundedCredits: 0 });
+    return NextResponse.json({ ok: true, claimed: claimed === true, refundedCredits: 0 });
   }
 
   await SupabaseAuxRemediationAdapter.finalizeSampleRun(sampleRunId, {
