@@ -11,7 +11,7 @@ export interface ExecutiveSummaryData {
   overview: string;
   /** Snapshot tier: max 5 lines */
   snapshot: string;
-  /** Key takeaways: up to 10 bullets */
+  /** Key takeaways: up to 12 bullets (parser cap MAX_TAKEAWAYS) */
   keyTakeaways: string[];
   /** Detailed summary: up to 5 paragraphs */
   detailedSummary: string;
