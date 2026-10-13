@@ -1,8 +1,7 @@
 # The Complete Cubic Vector Ledger
 
-> **Date Range Covered in this Ledger:** 2026-10-02 to 2026-10-13 (Batches 1–3: PRs #506 down to #404).  
+> **Date Range Covered in this Ledger:** 2026-09-30 to 2026-10-13 (Batches 1–4: PRs #506 down to #374).  
 > **Remaining Ranges to Process:**
-> - Batch 4: PRs #403 down to #374 (2026-09-30 to 2026-10-02)
 > - Batch 5: PRs #373 down to #343 (2026-09-24 to 2026-09-30)
 > - Batch 6: PRs #342 down to #313 (2026-09-15 to 2026-09-24)
 > - Historical: PRs #312 down to repo first commit #7 (2026-05-15 to 2026-09-15)
@@ -280,3 +279,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 | **V16 (Database concurrency & JSONB clobber)** | Cubic / PR #416 / 2026-10-02 | Post-crucible cleanup overwrote parent row `validation_report` JSONB, clobbering concurrent partial analysis states | Are partial validation findings atomically merged via jsonb_set rather than clobbering root JSONB columns? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
 | **V11 (Zero, NaN and boundary inputs)** | Cubic / PR #414 / 2026-10-02 | Reducer word count allowed unbounded K-value planning (>16 cells) leading to worker memory exhaustion | Does every planning engine enforce strict upper-bound caps on concurrency, partitions, and cell counts? | `ComplexityRule` (`scripts/quality-engine/rules/architecture.ts`) |
 | **V12 (Retry, redelivery, and idempotency)** | CodeRabbit / PR #424 / 2026-10-03 | System-funded sample runs could be re-triggered multiple times per analysis without checking prior execution | Is system-funded sample execution strictly gated to once per analysis record with an atomic database flag? | `NonIdempotentRetryRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
+
+
+---
+
+## 9. Batch 4 Harvested Entries (PRs #374–#403: 2026-09-30 to 2026-10-02)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V07 (Configuration or registry key gaps)** | Cubic / PR #403 / 2026-10-02 | Stream token minting signed tokens with currently resolved global settings instead of the analysis job settings | Does streaming token generation bind the immutable settings resolved at analysis job creation time? | `UnregisteredSettingsKeyRule` (`scripts/quality-engine/rules/lessons-20261009.ts`) |
+| **V04 (Unvalidated model output & schema contract)** | Cubic / PR #403 / 2026-10-02 | StoredPlanSchema accepted invalid plans whose slice boundaries or cell topology could not produce valid tokens | Does schema validation enforce strict structural invariants before persisting execution plan models? | `SchemaContractRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V06 (Shared-state UI & layout regressions)** | Cubic / PR #402 / 2026-10-02 | Highlights ticker reveal animation started prematurely during lead-in offset, causing text drift before playback | Does animated text synchronization pause reveal logic until video playback crosses the configured lead-in floor? | `StartTransitionWrappingRule` (`scripts/quality-engine/rules/ui.ts`) |
+| **V17 (Stream lifecycle & event-stream frames)** | CodeRabbit / PR #401 / 2026-10-01 | Named-event SSE frames (e.g. `event: plan`) crashed generic SSE frame consumer expecting anonymous data frames | Does the client SSE stream parser parse and handle named-event frames without choking or losing chunks? | `StreamResilienceRule` (`scripts/quality-engine/rules/streaming.ts`) |
+| **V02 (Pattern matcher & version validation)** | CodeRabbit / PR #399 / 2026-10-01 | Token envelope accepted unknown `tokenVersion` without emitting rejection, risking protocol mismatch | Does cryptographic token verification strictly reject unversioned or unknown token version tags? | `AuthorizationRegexBypassRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V14 (Privilege escalation & middleware bypass)** | CodeRabbit / PR #395 / 2026-10-01 | Middleware exempted worker S2S POSTs based on request path without requiring valid HMAC signature headers | Do middleware authentication exemptions require cryptographic verification of S2S signatures? | `AuthSecurityRule` (`scripts/quality-engine/rules/security.ts`) |
+| **V16 (Database concurrency & schema constraints)** | DeepSource / PR #396 / 2026-10-01 | Worker comment processor attempted to write to nonexistent `comment_classifications.author` column | Does every database insert or update query match the current Supabase schema without referencing dropped columns? | `DatabaseConstraintRule` (`scripts/quality-engine/rules/data-integrity.ts`) |
+| **V11 (Zero, NaN and boundary inputs)** | DeepSource / PR #397 / 2026-10-01 | Database CHECK constraint rejected valid comment classification type `experience` due to stale enum list | Do database enum CHECK constraints and application Zod schemas stay synchronously aligned? | `DatabaseConstraintRule` (`scripts/quality-engine/rules/data-integrity.ts`) |
+| **V08 (Unbounded waits & missing timeouts)** | CodeRabbit / PR #394 / 2026-10-01 | SSE consumer awaited execution plan without fallback timeout, risking perpetual hanging if plan frame dropped | Does every awaiting consumer have a fallback deadline that gracefully proceeds or fails closed? | `ServerFetchWithoutTimeoutRule` (`scripts/quality-engine/rules/reliability-lessons-20260924.ts`) |
+| **V05 (Secret or attribution leakage)** | CodeRabbit / PR #398 / 2026-10-01 | OpenRouter requests omitted X-Title attribution header, making request telemetry untraceable to specific project | Does every external AI provider call attach correct client attribution headers without leaking internal user PII? | `SanitizationRule` (`scripts/quality-engine/rules/security.ts`) |
