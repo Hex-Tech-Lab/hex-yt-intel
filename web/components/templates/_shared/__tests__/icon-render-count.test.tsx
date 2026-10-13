@@ -38,8 +38,8 @@ const ROWS = 40;
 function IconList() {
   return (
     <div>
-      {Array.from({ length: ROWS }, (_, i) => (
-        <Icon key={i} icon="solar:copy-linear" size={13} />
+      {Array.from({ length: ROWS }, (unusedItem, rowIndex) => (
+        <Icon key={rowIndex} icon="solar:copy-linear" size={13} />
       ))}
     </div>
   );
