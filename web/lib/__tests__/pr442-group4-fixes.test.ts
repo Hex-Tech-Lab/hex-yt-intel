@@ -357,3 +357,49 @@ describe('CombinerPass bounded logic & dedupe fixes (Tasks 1, 2, 3, 5)', () => {
   });
 });
 
+
+describe('CombinerPass token boundaries, empty bodies, intro upgrade (PR #501 review)', () => {
+  const mk = (number: number, content: string) => ({ number, content });
+  const orders: Array<[string, string, string]> = [
+    ['$5 then $50', 'Budget $5', 'Budget $50'],
+    ['$50 then $5', 'Budget $50', 'Budget $5'],
+    ['15000 then 150000', 'Subscribers 15000', 'Subscribers 150000'],
+    ['150000 then 15000', 'Subscribers 150000', 'Subscribers 15000'],
+  ];
+  for (const [label, a, b] of orders) {
+    it(`keeps both values when merging ${label}`, () => {
+      const out = CombinerPass.reduceDimensions([
+        mk(1, `#### 1.1 T\n${a}`),
+        mk(1, `#### 1.1 T\n${b}`),
+      ]);
+      expect(out[0].content).toMatch(new RegExp(`${a.replace('$', '\\$')}(?!\\d)`));
+      expect(out[0].content).toMatch(new RegExp(`${b.replace('$', '\\$')}(?!\\d)`));
+    });
+  }
+
+  it('negative control: identical values still collapse to one', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 T\nBudget $50'),
+      mk(1, '#### 1.1 T\nBudget $50'),
+    ]);
+    expect(out[0].content.match(/\$50/g)).toHaveLength(1);
+  });
+
+  it('does not collapse a timestamp-only body into a text body', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '#### 1.1 T\n[00:12]'),
+      mk(1, '#### 1.1 T\nReal content here'),
+    ]);
+    expect(out[0].content).toContain('Real content here');
+  });
+
+  it('a real-timestamp intro upgrades a placeholder intro', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(2, 'Overview of the talk [timestamp not provided in transcript]\n\n#### 2.1 A\nx'),
+      mk(2, 'Overview of the talk [04:15]\n\n#### 2.1 A\nx'),
+    ]);
+    expect(out[0].content).toContain('[04:15]');
+    expect(out[0].content).not.toContain('timestamp not provided');
+    expect(out[0].content.match(/Overview of the talk/g)).toHaveLength(1);
+  });
+});

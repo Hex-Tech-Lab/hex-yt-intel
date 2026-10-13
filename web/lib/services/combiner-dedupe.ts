@@ -272,8 +272,8 @@ export function mergeSubSectionBodies(existingBody: string, incomingBody: string
       droppedCount++;
       console.info('[CombinerPass] Dropped duplicate block in sub-section', {
         reason,
-        dropped: droppedBlock.slice(0, 100),
-        kept: keptBlock.slice(0, 100),
+        droppedChars: droppedBlock.length,
+        keptChars: keptBlock.length,
       });
     } else if (!isDuplicate) {
       mergedBlocks.push(inBlock);
