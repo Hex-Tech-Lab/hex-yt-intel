@@ -1,0 +1,20 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 13-18
+docs/TECH_DEBT_LEDGER.md
+  h_50fba0cdd9e5c4 45-47,333-355
+web/lib/__tests__/combiner-dedupe-followup.test.ts
+  h_50fba0cdd9e5c4 134-166
+web/lib/services/combiner-dedupe.ts
+  h_50fba0cdd9e5c4 56-70,235-237,327-329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4657842d4fbe44a4d20a6b65dca79622b42ed1c4",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
