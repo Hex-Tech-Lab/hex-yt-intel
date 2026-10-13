@@ -36,7 +36,7 @@ export class ChatIntentRouter implements ChatIntentRouterPort {
       return {
         intent: 'general_grounded_qa',
         confidence: 1.0,
-        jevVersion: 'bypassed',
+        jevVersion: 'disabled',
         isInherited: false,
         overrideApplied: false,
         suppressCommentsChip: false,
