@@ -22,3 +22,12 @@ describe('CommentInsightsUnavailable (T12 designed empty state)', () => {
     expect(screen.queryByRole('meter')).toBeNull();
   });
 });
+
+describe('CommentInsightsUnavailable analyzing state', () => {
+  it('shows the analyzing message, not the not-ready one', () => {
+    render(<CommentInsightsUnavailable state="analyzing" />);
+    const el = screen.getByRole('status', { name: 'Comment insights' });
+    expect(el).toHaveTextContent(/Analyzing sentiment/);
+    expect(el).not.toHaveTextContent(/isn't ready/);
+  });
+});

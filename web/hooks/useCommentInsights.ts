@@ -110,6 +110,8 @@ async function applyRunStatus(run: RunLookup, analysisId: string, signal: AbortS
  */
 async function pollCommentInsights(analysisId: string, signal: AbortSignal, setResult: SetResult): Promise<void> {
   const deadline = Date.now() + POLL_CAP_MS;
+  // Checking is not 'none': the first fetch must not flash "isn't ready".
+  setResult({ state: 'analyzing', insights: null });
   try {
     const persisted = await readPersistedInsights(analysisId, signal);
     if (typeof persisted === 'object') {

@@ -72,7 +72,7 @@ describe('useCommentInsights', () => {
       wrapper: StrictMode,
     });
 
-    await waitFor(() => expect(result.current.state).toBe('none'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
     expect(result.current.insights).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe('useCommentInsights', () => {
       wrapper: StrictMode,
     });
 
-    await waitFor(() => expect(result.current.state).toBe('none'));
+    await waitFor(() => expect(result.current.state).toBe('analyzing'));
     expect(result.current.insights).toBeNull();
   });
 
