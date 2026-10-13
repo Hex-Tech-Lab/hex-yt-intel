@@ -10,6 +10,12 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-13T23:36:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Harden dashboard-panels purity tests and SSR panel resolver:
+  - Task 1: Hardened `web/lib/config/dashboard-panels.purity.test.ts` to scan single & double-quoted specifiers, require(...), and dynamic import(...); strictly fail on unresolved '@/' aliases (no silent skipping); walk imports transitively up to depth 3 to catch client re-export bridges; added comprehensive docstrings of checked vs unchecked boundaries and robust negative controls.
+  - Task 2: Added shape-by-shape fail-soft tests in `web/lib/config/dashboard-panels.test.ts` covering absent keys and invalid width tuples (summing to 99), and verified boundary parsing in `parsePanelWidths`.
+  - Task 3: Added unit tests in `web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts` and `web/lib/hooks/__tests__/useDashboardLayout.test.ts` for `defaults?.[target]` fallback (undefined defaults and partial defaults) and re-export parity with `dashboard-layout.ts`.
+  - Task 4: Verified `vercel.json` remains identical to `origin/uat`, ran `tsc --noEmit` clean, passed all 8 test files (86 tests) in `lib/config` and `lib/hooks/__tests__`, and passed `qa-intel:ci` with 0 new issues.
+  - Target files: web/lib/config/dashboard-panels.purity.test.ts, web/lib/config/dashboard-panels.test.ts, web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts, web/lib/hooks/__tests__/useDashboardLayout.test.ts, .memory/AGENT_LEDGER.md.
 - [2026-10-12T19:44:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Configure UAT/production multi-environment deploy pipeline in deploy-worker.yml: added trigger on push to [main, uat]; added early step setting WENV/WORKER_URL based on github.ref_name; parameterized --env $WENV; switched deploy step to 'pnpm --filter youtube-intelligence-worker exec wrangler deploy --env $WENV'; parameterized verify curls with $WORKER_URL; scoped concurrency group to deploy-worker-${{ github.ref_name }}. Audited ci-cd.yml Deploy to Vercel job (already guarded for main/master). Validated YAMLs via python3 pyyaml. Target: .github/workflows/deploy-worker.yml, .memory/AGENT_LEDGER.md.
 ### Phase C Live Wire Calibration Results
 - [2026-10-12T19:05:00+03:00] [AGY (Flash 3.8)] [IN_PROGRESS] Stream C DB Security Advisors & Cross-Boundary Token Sign Test:

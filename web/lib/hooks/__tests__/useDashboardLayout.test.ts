@@ -108,3 +108,16 @@ describe('DEFAULT_LAYOUT bounds', () => {
     }
   });
 });
+
+describe('useDashboardLayout re-export parity', () => {
+  it('re-exports constants and functions identical to dashboard-layout types module', () => {
+    expect(toGroupLayout).toBeTypeOf('function');
+    expect(DEFAULT_LAYOUT['2col']).toEqual({ sidebar: 18, right: 0 });
+    expect(DEFAULT_LAYOUT['3col']).toEqual({ sidebar: 18, right: 28 });
+    expect(SIDEBAR_MIN).toBe(10);
+    expect(SIDEBAR_MAX).toBe(30);
+    expect(RIGHT_MIN).toBe(10);
+    expect(RIGHT_MAX).toBe(35);
+  });
+});
+

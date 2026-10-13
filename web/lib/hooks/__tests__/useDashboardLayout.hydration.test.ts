@@ -69,4 +69,28 @@ describe('useDashboardPanels hydration', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(result.current.groupLayout).toEqual({ sidebar: 12, center: 55, right: 33 });
   });
+
+  it('falls back to DEFAULT_LAYOUT when defaults prop is undefined or has missing target shape (defaults?.[target] branch)', async () => {
+    // Pass undefined explicitly for defaults to exercise defaults?.[target] ?? DEFAULT_LAYOUT[target]
+    // @ts-expect-error testing runtime fallback when defaults is undefined
+    const { result } = renderHook(() => useDashboardPanels('2col', undefined));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current.groupLayout).toEqual({ sidebar: 18, center: 82 });
+    expect(result.current.layouts['3col']).toEqual({ sidebar: 18, center: 54, right: 28 });
+  });
+
+  it('uses custom defaults when provided and falls back to DEFAULT_LAYOUT for missing shape', async () => {
+    // Custom defaults provided for 2col only
+    const customDefaults = {
+      '2col': { sidebar: 25, right: 0 },
+    };
+    // @ts-expect-error testing runtime fallback when target shape is absent from defaults
+    const { result } = renderHook(() => useDashboardPanels('2col', customDefaults));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // 2col uses provided defaults
+    expect(result.current.groupLayout).toEqual({ sidebar: 25, center: 75 });
+    // 3col missing from defaults falls back via defaults?.[target] ?? DEFAULT_LAYOUT[target]
+    expect(result.current.layouts['3col']).toEqual({ sidebar: 18, center: 54, right: 28 });
+  });
 });
+
