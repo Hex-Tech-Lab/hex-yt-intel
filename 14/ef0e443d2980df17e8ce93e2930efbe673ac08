@@ -1,0 +1,24 @@
+vercel.json
+  h_50fba0cdd9e5c4 5-7
+web/lib/__tests__/chat-intent-router.test.ts
+  h_50fba0cdd9e5c4 139-145
+web/lib/config/dashboard-panels.test.ts
+  h_50fba0cdd9e5c4 51-56
+web/lib/config/dashboard-panels.ts
+  h_50fba0cdd9e5c4 10,50-62
+web/lib/hooks/useDashboardLayout.ts
+  h_50fba0cdd9e5c4 26-46,191,194-195
+web/lib/types/dashboard-layout.ts
+  h_50fba0cdd9e5c4 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14ef0e443d2980df17e8ce93e2930efbe673ac08",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
