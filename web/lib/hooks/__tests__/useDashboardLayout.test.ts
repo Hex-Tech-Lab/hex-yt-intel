@@ -11,6 +11,7 @@ import {
   RIGHT_MIN,
   RIGHT_MAX,
 } from '../useDashboardLayout';
+import * as layoutTypes from '@/lib/types/dashboard-layout';
 
 const KEY_2COL = 'hex:layout:v1:2col';
 const KEY_3COL = 'hex:layout:v1:3col';
@@ -106,5 +107,16 @@ describe('DEFAULT_LAYOUT bounds', () => {
         expect(right).toBeLessThanOrEqual(RIGHT_MAX);
       }
     }
+  });
+});
+
+describe('useDashboardLayout re-export parity', () => {
+  it('re-exports the same bindings as the pure dashboard-layout types module', () => {
+    expect(toGroupLayout).toBe(layoutTypes.toGroupLayout);
+    expect(DEFAULT_LAYOUT).toBe(layoutTypes.DEFAULT_LAYOUT);
+    expect(SIDEBAR_MIN).toBe(layoutTypes.SIDEBAR_MIN);
+    expect(SIDEBAR_MAX).toBe(layoutTypes.SIDEBAR_MAX);
+    expect(RIGHT_MIN).toBe(layoutTypes.RIGHT_MIN);
+    expect(RIGHT_MAX).toBe(layoutTypes.RIGHT_MAX);
   });
 });

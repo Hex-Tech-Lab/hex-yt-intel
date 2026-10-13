@@ -104,6 +104,7 @@ This ledger formalizes every defensive node into a traceable dependency graph.
 | `UI-006` | `web/components/templates/console/ApexSummaryCard.tsx` | L106 | Selected summary tier tab is loading | `*Waiting for ${activeTab} summary layer...*` | Apex summary markdown renderer |
 | `UI-007` | `web/components/containers/DashboardContainer.tsx` | L448-451 | Timestamp seek value is `00:00:00` or invalid | Rejects seek (`secs > 0` required) to prevent jump to start | VideoPlayerCard, word cloud entity clicks |
 | `UI-008` | `web/components/organisms/ExecutiveSummary.tsx` | L97-100 | Stored digest payload has missing fields | Empty string `''` fallback per tier | 4-tier executive summary card |
+| `UI-009` | `web/lib/config/dashboard-panels.ts`, `web/lib/hooks/useDashboardLayout.ts` | resolveDashboardPanelDefaults catch; layoutFor `defaults?.` | Settings Registry read throws, or registry value is missing/invalid, or defaults prop absent | Returns code `DEFAULT_LAYOUT` (single source `web/lib/types/dashboard-layout.ts`); invalid tuple per shape falls back per shape | `/dashboard` SSR panel widths, Reset Layout |
 
 ---
 
