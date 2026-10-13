@@ -43,8 +43,8 @@ export function CommentInsightsUnavailable({ state }: { state: 'none' | 'analyzi
     state === 'analyzing'
       ? 'Analyzing sentiment…'
       : state === 'failed'
-        ? 'Sentiment unavailable: the comment sentiment run failed for this analysis.'
-        : 'Sentiment unavailable: no completed comment sentiment run exists for this analysis (it may still be queued, or it timed out).';
+        ? 'Comment sentiment failed for this video. Re-run the analysis to try again.'
+        : 'Comment sentiment isn\'t ready for this video yet.';
   return (
     <section style={PANEL_STYLE} aria-label="Comment insights" role="status">
       <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>{message}</p>
