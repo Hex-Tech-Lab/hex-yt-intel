@@ -1,0 +1,26 @@
+evidence/pr498/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-17
+evidence/pr499/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-17
+evidence/pr500/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-17
+evidence/pr501/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-89
+evidence/pr503/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-19
+evidence/pr504/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-18
+evidence/pr509/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ef6ed521725a51147b0306dee4e970a305b4e6c",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
