@@ -85,19 +85,19 @@ describe('useChatStore persist watchdog (T2 RCA)', () => {
         streamController = controller;
       },
     });
-    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit): Promise<Response> => {
       if (url.includes('/messages')) {
         currentReqId = String((JSON.parse(String(init?.body)) as { clientMsgId: string }).clientMsgId);
-        return new Response(
+        return Promise.resolve(new Response(
           JSON.stringify({
             user: { id: 'u1', conversationId: CONV_ID, role: 'user', content: 'hi', createdAt: new Date().toISOString() },
             stream: { url: WORKER_URL, sig: 'sig', exp: 1 },
             payload: { timeoutMs: TIMEOUT_MS },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
+        ));
       }
-      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+      return Promise.resolve(new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }));
     });
     vi.stubGlobal('fetch', fetchMock);
     return fetchMock;
