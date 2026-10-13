@@ -75,7 +75,9 @@ export default {
   async queue(batch: MessageBatch<CommentsTier3QueueMessage>, env: Env): Promise<void> {
     for (const message of batch.messages) {
       try {
-        await handleCommentsTier3Message(message.body, env);
+        // message.id is the per-delivery claim token: a retry of this same
+        // delivery carries the same id, so its claim is idempotent.
+        await handleCommentsTier3Message(message.body, env, message.id);
         message.ack();
       } catch (err) {
         // skipcq: JS-0827

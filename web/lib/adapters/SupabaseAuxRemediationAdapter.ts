@@ -11,6 +11,16 @@ export interface AuxScanRow {
   user_id: string;
 }
 
+/** A comment_sample_runs row as the global stale-run sweep needs it. */
+export interface SweepRunRow {
+  id: string;
+  analysis_id: string;
+  user_id: string;
+  total_comment_count: number;
+  reenqueued_at: string | null;
+}
+const SWEEP_RUN_COLUMNS = 'id, analysis_id, user_id, total_comment_count, reenqueued_at';
+
 /**
  * Supabase access for the aux-remediation harness (channelMeta/comments
  * recovery, see aux-remediation.ts's module doc). Split out to keep this
@@ -223,16 +233,139 @@ export class SupabaseAuxRemediationAdapter {
     if (error) console.error('[aux-remediation] markSampleRunFailed failed', { sampleRunId, err: error.message });
   }
 
-  static async markSampleRunSampling(sampleRunId: string, mode?: 'uncapped' | 'cochran'): Promise<{ claimed: boolean }> {
+  /**
+   * Claim a run for one queue delivery: conditional pending -> sampling, with
+   * the delivery token recorded in claimed_by. Idempotent per delivery: when
+   * the run is already 'sampling' and claimed_by equals this token (a retry of
+   * a claim whose response timed out on the client after the server recorded
+   * it), returns claimed:true. Any other token, or no token, on a 'sampling'
+   * row returns claimed:false.
+   */
+  static async markSampleRunSampling(
+    sampleRunId: string,
+    mode?: 'uncapped' | 'cochran',
+    claimToken?: string
+  ): Promise<{ claimed: boolean }> {
     const service = getSupabaseServiceClient();
     const { data, error, count } = await service
       .from('comment_sample_runs')
-      .update({ status: 'sampling', ...(mode ? { mode } : {}) }, { count: 'exact' })
+      .update(
+        { status: 'sampling', ...(mode ? { mode } : {}), ...(claimToken ? { claimed_by: claimToken } : {}) },
+        { count: 'exact' }
+      )
       .eq('id', sampleRunId)
       .eq('status', 'pending')
       .select('id');
     if (error) throw error;
-    return { claimed: (count ?? data?.length ?? 0) > 0 };
+    if ((count ?? data?.length ?? 0) > 0) return { claimed: true };
+    if (!claimToken) return { claimed: false };
+    const { data: owned, error: ownedError } = await service
+      .from('comment_sample_runs')
+      .select('id')
+      .eq('id', sampleRunId)
+      .eq('status', 'sampling')
+      .eq('claimed_by', claimToken)
+      .maybeSingle();
+    if (ownedError) throw ownedError;
+    return { claimed: owned !== null };
+  }
+
+  /** Global sweep read: cochran 'pending' runs older than cutoffIso that have never been re-enqueued. Read-only. */
+  static async findPendingRunsForRequeue(
+    cutoffIso: string,
+    limit: number
+  ): Promise<SweepRunRow[]> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('comment_sample_runs')
+      .select(SWEEP_RUN_COLUMNS)
+      .eq('mode', 'cochran')
+      .eq('status', 'pending')
+      .is('reenqueued_at', null)
+      .lt('created_at', cutoffIso)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as SweepRunRow[];
+  }
+
+  /** Global sweep read: cochran 'pending' runs whose one re-enqueue happened before cutoffIso (still never picked up). Read-only. */
+  static async findPendingRunsForFailure(
+    cutoffIso: string,
+    limit: number
+  ): Promise<SweepRunRow[]> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('comment_sample_runs')
+      .select(SWEEP_RUN_COLUMNS)
+      .eq('mode', 'cochran')
+      .eq('status', 'pending')
+      .not('reenqueued_at', 'is', null)
+      .lt('reenqueued_at', cutoffIso)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as SweepRunRow[];
+  }
+
+  /**
+   * Global sweep read: cochran 'sampling' runs whose last transition (the
+   * re-enqueue, or creation if never re-enqueued) is older than cutoffIso. Read-only.
+   */
+  static async findSamplingRunsForFailure(
+    cutoffIso: string,
+    limit: number
+  ): Promise<SweepRunRow[]> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('comment_sample_runs')
+      .select(SWEEP_RUN_COLUMNS)
+      .eq('mode', 'cochran')
+      .eq('status', 'sampling')
+      .or(`reenqueued_at.lt.${cutoffIso},and(reenqueued_at.is.null,created_at.lt.${cutoffIso})`)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as SweepRunRow[];
+  }
+
+  /** Sweep transition: claim the one re-enqueue (WHERE status='pending' AND reenqueued_at IS NULL). True only for the single winner. */
+  static async markSampleRunReenqueued(sampleRunId: string, nowIso: string): Promise<boolean> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('comment_sample_runs')
+      .update({ reenqueued_at: nowIso })
+      .eq('id', sampleRunId)
+      .eq('status', 'pending')
+      .is('reenqueued_at', null)
+      .select('id');
+    if (error) throw error;
+    return (data?.length ?? 0) > 0;
+  }
+
+  /**
+   * Sweep transition: mark a stale run failed, conditional on its status still
+   * being `expected` (WHERE status = expected) and its staleness still holding
+   * (so a consumer that claimed or a re-enqueue that landed after the read
+   * wins). Returns true only when this call changed the row.
+   */
+  static async failStaleSampleRun(
+    sampleRunId: string,
+    expected: 'pending' | 'sampling',
+    cutoffIso: string
+  ): Promise<boolean> {
+    const service = getSupabaseServiceClient();
+    let query = service
+      .from('comment_sample_runs')
+      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .eq('id', sampleRunId)
+      .eq('status', expected);
+    query = expected === 'pending'
+      ? query.not('reenqueued_at', 'is', null).lt('reenqueued_at', cutoffIso)
+      : query.or(`reenqueued_at.lt.${cutoffIso},and(reenqueued_at.is.null,created_at.lt.${cutoffIso})`);
+    const { data, error } = await query.select('id');
+    if (error) throw error;
+    return (data?.length ?? 0) > 0;
   }
 
   /** Final status write for a finished run: completed_at + cochran_n. */

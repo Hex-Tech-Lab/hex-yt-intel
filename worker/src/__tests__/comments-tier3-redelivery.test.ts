@@ -302,3 +302,46 @@ describe('handleCommentsTier3Message — persist-sample-run failure hardening (F
   });
 });
 
+
+describe('handleCommentsTier3Message — per-delivery claim token (T12c)', () => {
+  const CLAIM_OK = (): Response => new Response(JSON.stringify({ ok: true, claimed: true }), { status: 200 });
+  const CLAIM_LOST = (): Response => new Response(JSON.stringify({ ok: true, claimed: false }), { status: 200 });
+
+  it('timed-out claim retried by the SAME delivery: run is sampling and owned by this token -> proceeds exactly once', async () => {
+    stubFetch({ status: 'sampling' }, () => CLAIM_OK());
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+    scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1', 'c2'])[0]);
+
+    await handleCommentsTier3Message(makeMessage(), ENV, 'delivery-A');
+
+    const bodies = postBodies();
+    expect(bodies[0]?.status).toBe('sampling');
+    expect(bodies[0]?.claimToken).toBe('delivery-A');
+    expect(bodies.map((body) => body.status)).toEqual(['sampling', 'completed']);
+    expect(scraperStub.fetchCommentsPage).toHaveBeenCalled();
+    expect(classifierMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('negative control: a DIFFERENT delivery token on a sampling run gets claimed:false -> no paid work', async () => {
+    stubFetch({ status: 'sampling' }, () => CLAIM_LOST());
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+
+    await handleCommentsTier3Message(makeMessage(), ENV, 'delivery-B');
+
+    expect(postBodies().map((body) => body.status)).toEqual(['sampling']);
+    expect(postBodies()[0]?.claimToken).toBe('delivery-B');
+    expect(scraperStub.fetchCommentsPage).not.toHaveBeenCalled();
+    expect(classifierMock).not.toHaveBeenCalled();
+  });
+
+  it('no delivery token on a sampling run (legacy path) -> skipped with zero POSTs, as before', async () => {
+    stubFetch({ status: 'sampling' });
+
+    await handleCommentsTier3Message(makeMessage(), ENV);
+
+    expect(postBodies()).toEqual([]);
+    expect(classifierMock).not.toHaveBeenCalled();
+  });
+});

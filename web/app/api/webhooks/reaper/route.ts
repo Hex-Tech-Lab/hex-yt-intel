@@ -8,9 +8,10 @@ export const runtime = 'nodejs';
  * Signature-verified before doing any work.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { sweepStuckAnalyses } from '@/lib/services/analysis-reaper';
-import * as Sentry from '@sentry/nextjs';
+import { sweepStaleSampleRuns } from '@/lib/services/sample-run-sweep';
 
 /**
  * QStash-scheduled POST handler: verify the Upstash signature, then run one
@@ -30,8 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await sweepStuckAnalyses();
-    console.log('[reaper-webhook] sweep complete', result);
-    return NextResponse.json({ ok: true, ...result });
+    // T12c: same QStash tick also releases stuck comment_sample_runs (pending/sampling).
+    const sampleRuns = await sweepStaleSampleRuns();
+    console.log('[reaper-webhook] sweep complete', { ...result, sampleRuns });
+    return NextResponse.json({ ok: true, ...result, sampleRuns });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { contexts: { api: { endpoint: '/api/webhooks/reaper' } } });

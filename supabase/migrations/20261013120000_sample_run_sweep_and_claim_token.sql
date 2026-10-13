@@ -1,0 +1,34 @@
+-- T12c (2026-10-13): global sweep for stuck comment_sample_runs + per-delivery claim token.
+-- Additive and nullable only. NOT applied by the implementing agent (ADR 018/013: CI applies on merge).
+--
+-- claimed_by:     queue delivery token that won the pending -> sampling claim. A redelivered
+--                 message carrying the same token may proceed (idempotent claim); any other
+--                 token gets claimed:false.
+-- reenqueued_at:  set once the global sweep has re-enqueued a stale 'pending' run. A run that is
+--                 still 'pending' after a second threshold with this set is marked failed.
+
+alter table public.comment_sample_runs
+  add column if not exists claimed_by text null,
+  add column if not exists reenqueued_at timestamptz null;
+
+insert into public.setting_definitions (key, tier, data_type, validation, default_value, description, owner_role)
+values
+  (
+    'comments.sweep.pendingStaleMinutes',
+    'system',
+    'number',
+    '{"min": 1, "max": 1440}'::jsonb,
+    '30'::jsonb,
+    'Minutes a comment_sample_runs row may sit in pending before the global sweep re-enqueues it once (then fails it if still pending). Defaults to 30.',
+    'admin'
+  ),
+  (
+    'comments.sweep.samplingStaleMinutes',
+    'system',
+    'number',
+    '{"min": 1, "max": 1440}'::jsonb,
+    '30'::jsonb,
+    'Minutes a comment_sample_runs row may sit in sampling before the global sweep marks it failed. Defaults to 30.',
+    'admin'
+  )
+on conflict (key) do nothing;
