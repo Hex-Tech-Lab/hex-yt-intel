@@ -1598,3 +1598,4 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
 
 - [DONE] 2026-10-12T22:25:35Z CC/Haiku: T8 test rewrite (real render + CSS scope assertions), ledger 7.96 claim removed — files: web/components/templates/console/__tests__/chat-ui-t8.test.tsx, .memory/AGENT_LEDGER.md -- mechanical gates run; READY FOR CC REVIEW
 - [2026-10-13T12:04:00+03:00] [CC-review-T7] [IN_PROGRESS] fix/inp-t7 review: Icon memo + ChatDock useShallow; rebased onto fix/chat-ui-t8 (#499); PR to uat merges after #499. Files: web/components/templates/{_shared/primitives.tsx,console/ChatDock.tsx,**/__tests__}
+- [2026-10-13T14:12:25+03:00] [CC-review-T7] [DONE] fix/inp-t7 PR #507 opened (base uat, merges after #499). Gates: tsc, vitest 84/84, qa-intel diff clean, contract-audit 0 critical; qa-intel full NOT-RUN (>10min); Codacy red (details inaccessible).
