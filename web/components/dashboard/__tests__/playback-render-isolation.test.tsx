@@ -3,7 +3,7 @@
 // reel that sits beside the YouTube iframe. Each test has a negative control --
 // the same assertion flips when the fix it protects is reverted.
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const counters = vi.hoisted(() => ({ tooltipRenders: 0 }));
 
@@ -78,35 +78,10 @@ describe('HighlightsTrack render isolation (T13)', () => {
   });
 });
 
-describe('HighlightsTransitionOverlay reduced motion (T13)', () => {
-  const originalMatchMedia = window.matchMedia;
-
-  function stubReducedMotion(matches: boolean) {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches,
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    })) as unknown as typeof window.matchMedia;
-  }
-
-  afterEach(() => {
-    window.matchMedia = originalMatchMedia;
-  });
-
-  it('renders no whip-pan wipe over the player when the user prefers reduced motion', () => {
-    stubReducedMotion(true);
-    render(<HighlightsTransitionOverlay active={true} direction="forward" volumeGain={0} />);
-    expect(screen.queryByTestId('highlights-transition-overlay')).toBeNull();
-  });
-
-  it('still renders the whip-pan wipe for users without a reduced-motion preference (negative control)', () => {
-    stubReducedMotion(false);
-    render(<HighlightsTransitionOverlay active={true} direction="forward" volumeGain={0} />);
+describe('HighlightsTransitionOverlay (T13)', () => {
+  it('still renders the whip-pan wipe layer when active, without backdrop-blur', () => {
+    const { container } = render(<HighlightsTransitionOverlay active={true} direction="forward" volumeGain={0} />);
     expect(screen.getByTestId('highlights-transition-overlay')).toBeTruthy();
+    expect(container.innerHTML).not.toContain('backdrop-blur');
   });
 });
