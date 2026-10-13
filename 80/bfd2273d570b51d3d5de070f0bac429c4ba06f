@@ -1,0 +1,35 @@
+evidence/pr498/REVIEW_GATE.md
+  s_291078cde7ba1a::t_58b61c3c222988 1-17
+evidence/pr499/REVIEW_GATE.md
+  s_291078cde7ba1a::t_e4190c84ed6341 1-17
+evidence/pr500/REVIEW_GATE.md
+  s_291078cde7ba1a::t_a60bdc6c1bb6fe 1-17
+evidence/pr501/REVIEW_GATE.md
+  s_291078cde7ba1a::t_362ad13bd702db 1-89
+evidence/pr502/REVIEW_GATE.md
+  s_291078cde7ba1a::t_747e582aaf0be7 1-132
+evidence/pr503/REVIEW_GATE.md
+  s_291078cde7ba1a::t_e7727d59a02c63 1-19
+evidence/pr504/REVIEW_GATE.md
+  s_291078cde7ba1a::t_085b54d6a336cb 1-18
+evidence/pr506/REVIEW_GATE.md
+  s_291078cde7ba1a::t_3a31cad46b0f97 1-182
+evidence/pr509/REVIEW_GATE.md
+  s_291078cde7ba1a::t_ae230a30069e6e 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80bfd2273d570b51d3d5de070f0bac429c4ba06f",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
