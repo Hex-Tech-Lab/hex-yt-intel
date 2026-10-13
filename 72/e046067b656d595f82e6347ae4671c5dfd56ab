@@ -1,0 +1,21 @@
+vercel.json
+  s_291078cde7ba1a::t_5fb9119dd0c5c4 5-6
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_762615cc6b5472 17,46-47,71,599-602
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72e046067b656d595f82e6347ae4671c5dfd56ab",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
