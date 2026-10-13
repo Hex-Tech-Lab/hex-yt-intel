@@ -1,0 +1,19 @@
+web/components/organisms/ExecutiveSummary.tsx
+  s_291078cde7ba1a::t_302326acc14956 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de25d5beebd97877c25d6ba2349f3a5f6c87321c",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
