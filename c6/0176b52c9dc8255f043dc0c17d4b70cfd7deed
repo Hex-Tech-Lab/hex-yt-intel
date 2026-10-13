@@ -1,0 +1,20 @@
+.memory/AGENT_LEDGER.md
+  h_50fba0cdd9e5c4 13-16
+web/lib/config/dashboard-panels.test.ts
+  h_50fba0cdd9e5c4 3-7,29,40,47,58,61-63,66-69
+web/lib/config/dashboard-panels.ts
+  h_50fba0cdd9e5c4 1,63-65
+web/lib/hooks/useDashboardLayout.ts
+  h_50fba0cdd9e5c4 192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c60176b52c9dc8255f043dc0c17d4b70cfd7deed",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
