@@ -1345,87 +1345,10 @@
   },
   {
     "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "medium",
-    "title": "Observability: Catch block without error logging",
-    "why": "Error is caught but not logged, making debugging difficult.",
-    "fix": "Add error logging: console.error('[context]', error); or Sentry.captureException(error);"
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Import ordering violated",
-    "why": "Import '@sentry/nextjs' (framework) comes after thirdparty. Should follow order: framework \u2192 thirdparty \u2192 internal \u2192 types.",
-    "fix": "Reorganize imports to follow the correct order groups."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
     "severity": "low",
     "title": "Data Quality: String truncation without ellipsis indicator",
     "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
     "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Data Quality: String truncation without ellipsis indicator",
-    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
-    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 't'",
-    "why": "Single-letter variable 't' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 't' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
-  },
-  {
-    "file": "web/components/templates/console/ChatDock.tsx",
-    "severity": "low",
-    "title": "Code Quality: Unclear variable name 'e'",
-    "why": "Single-letter variable 'e' outside of loop context is unclear. Makes code harder to understand.",
-    "fix": "Rename to a descriptive name that explains the variable's purpose (e.g., 'e' \u2192 'question', 'error', etc.)."
   },
   {
     "file": "web/components/templates/console/ChatDock.tsx",
