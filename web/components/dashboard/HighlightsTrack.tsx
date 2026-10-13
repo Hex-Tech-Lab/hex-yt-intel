@@ -191,8 +191,9 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
 // plays (useSegmentPlayback's elapsed tick). Without this memo, every tick
 // rebuilt the whole marker track -- one Astryx Tooltip + button per highlight --
 // even though the only thing that changes per tick is the PlayheadNeedle, which
-// reads the store on its own. Props are reference-stable from the caller
-// (segments is memoized, onSelect is a useCallback), so the memo holds.
+// reads the store on its own. Callers MUST pass reference-stable props
+// (memoized highlights, useCallback onSelect) -- an inline array or callback
+// silently defeats this memo. HighlightsScrubber does today.
 export const HighlightsTrack = memo(HighlightsTrackInner);
 
 function HighlightsTrackInner({ highlights, activeIndex, onSelect, videoDurationSeconds, segmentDurationSeconds, hideNav = false }: HighlightsTrackProps) {

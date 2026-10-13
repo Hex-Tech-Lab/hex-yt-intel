@@ -1,8 +1,9 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // T13 (playback stutter): render-isolation and motion guards for the highlights
 // reel that sits beside the YouTube iframe. Each test has a negative control --
-// the same assertion flips when the fix it protects is reverted.
-import { render, screen } from '@testing-library/react';
+// the render-count and blur assertions flip when the fix they protect is reverted
+// (the "counter is live" test is the control for the render-count one).
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const counters = vi.hoisted(() => ({ tooltipRenders: 0 }));
@@ -21,6 +22,7 @@ vi.mock('@astryxdesign/core', async (importOriginal) => {
   };
 });
 
+import { useVideoStore } from '@/store/useVideoStore';
 import { HighlightsTrack, type HighlightsTrackHighlight } from '../HighlightsTrack';
 import { HighlightsTransitionOverlay } from '../HighlightsTransitionOverlay';
 
@@ -75,6 +77,19 @@ describe('HighlightsTrack render isolation (T13)', () => {
       <HighlightsTrack highlights={HIGHLIGHTS} activeIndex={1} onSelect={onSelect} videoDurationSeconds={300} segmentDurationSeconds={10} />
     );
     expect(counters.tooltipRenders).toBeGreaterThan(afterMount);
+  });
+});
+
+describe('HighlightsTrack playhead under memo (T13)', () => {
+  it('keeps the needle moving from the store while props are unchanged', async () => {
+    const onSelect = () => {};
+    render(
+      <HighlightsTrack highlights={HIGHLIGHTS} activeIndex={0} onSelect={onSelect} videoDurationSeconds={300} segmentDurationSeconds={10} />
+    );
+    act(() => {
+      useVideoStore.setState({ currentPlaybackSeconds: 150 });
+    });
+    await waitFor(() => expect(screen.getByTestId('playhead-needle').style.left).toBe('50%'), { timeout: 2000 });
   });
 });
 
