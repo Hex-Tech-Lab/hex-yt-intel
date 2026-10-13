@@ -416,6 +416,13 @@ export async function handleCommentsTier3Message(
     logSkippedRun("sampling", sampleRunId, videoId);
     return;
   }
+  // Fail CLOSED: if the claim could not be recorded (every attempt failed),
+  // the run is still 'pending' and no lock is held. Doing paid classification
+  // now would risk a double-spend against a concurrent delivery, so rethrow
+  // (worker.ts queue handler -> message.retry()) and do no paid work.
+  if (!claimOutcome.ok) {
+    throw new Error(`comments-tier3 claim not recorded for run ${sampleRunId}; retrying without paid work`);
+  }
 
   if (message.mode === "cochran") {
     const scraper = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL);

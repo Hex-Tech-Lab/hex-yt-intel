@@ -207,6 +207,22 @@ describe('handleCommentsTier3Message — redelivery pre-check (Finding A)', () =
   });
 });
 
+describe('handleCommentsTier3Message — claim failure fails closed (PR #494 audit)', () => {
+  it('claim POST fails on every attempt -> throws, zero paid work (no YouTube fetch, no classifier)', async () => {
+    // Every POST (claim = status sampling) returns 500; probe says pending.
+    stubFetch({ status: 'pending' }, () => new Response('{}', { status: 500 }));
+    const scraperStub = { fetchCommentsPage: vi.fn() as unknown as FetchPage };
+    nextScraperStub = scraperStub;
+    scraperStub.fetchCommentsPage.mockResolvedValue(stubPool(['c1'])[0]);
+
+    await expect(handleCommentsTier3Message(makeMessage(), ENV)).rejects.toThrow(/claim not recorded/);
+
+    expect(scraperStub.fetchCommentsPage).not.toHaveBeenCalled();
+    expect(classifierMock).not.toHaveBeenCalled();
+    expect(postBodies().every((body) => body.status === 'sampling')).toBe(true);
+  });
+});
+
 describe('handleCommentsTier3Message — persist-sample-run failure hardening (Finding B)', () => {
   it('persist write fails once then succeeds on retry -> single logical persist (one 200 completed report)', async () => {
     stubFetch({ status: 'pending' }, (postCall) => (postCall === 2 ? new Response('{}', { status: 500 }) : new Response('{}', { status: 200 })));
