@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Tooltip } from '@astryxdesign/core';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
@@ -187,7 +187,16 @@ function PlayheadNeedle({ maxTime }: { maxTime: number }) {
   );
 }
 
-export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, segmentDurationSeconds, hideNav = false }: HighlightsTrackProps) {
+// T13 (playback stutter): HighlightsScrubber re-renders ~4x/sec while a segment
+// plays (useSegmentPlayback's elapsed tick). Without this memo, every tick
+// rebuilt the whole marker track -- one Astryx Tooltip + button per highlight --
+// even though the only thing that changes per tick is the PlayheadNeedle, which
+// reads the store on its own. Callers MUST pass reference-stable props
+// (memoized highlights, useCallback onSelect) -- an inline array or callback
+// silently defeats this memo. HighlightsScrubber does today.
+export const HighlightsTrack = memo(HighlightsTrackInner);
+
+function HighlightsTrackInner({ highlights, activeIndex, onSelect, videoDurationSeconds, segmentDurationSeconds, hideNav = false }: HighlightsTrackProps) {
   // Real fix (/simplify + code-review pass, 2026-08-21): the empty-array
   // early return used to run BEFORE the hooks added below (markerLeftPcts/
   // labelVisibility useMemo) -- a Rules-of-Hooks violation, since hooks

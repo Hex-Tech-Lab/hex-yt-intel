@@ -98,13 +98,13 @@ export function HighlightsTransitionOverlay({ active, direction = 'forward', vol
           aria-hidden="true"
           data-testid="highlights-transition-overlay"
         >
-          {/* Layer 1: High-velocity motion-blur curtain */}
+          {/* Layer 1: High-velocity curtain */}
           <motion.div
             initial={{ x: enterX, skewX: isForward ? -18 : 18 }}
             animate={{ x: '0%', skewX: 0 }}
             exit={{ x: exitX, skewX: isForward ? 18 : -18 }}
             transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 w-full h-full bg-[#070b12]/90 backdrop-blur-md"
+            className="absolute inset-0 w-full h-full bg-[#070b12]/90"
           />
 
           {/* Layer 2: Broadcast energy wipe blade */}
