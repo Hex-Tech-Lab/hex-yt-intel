@@ -1,0 +1,23 @@
+web/lib/prompts/executive-digest.ts
+  s_291078cde7ba1a::t_5cfac1bd8305bb 111
+web/lib/prompts/highlights-extraction.test.ts
+  s_291078cde7ba1a::t_3d411c89461dcc 2,72-86
+web/lib/prompts/highlights-extraction.ts
+  s_291078cde7ba1a::t_ffa6b2a86da333 2,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ca10f25b1aabc1759ac1ae8e137d215c4ca4f42",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
