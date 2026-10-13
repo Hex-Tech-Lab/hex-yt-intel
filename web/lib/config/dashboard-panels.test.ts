@@ -5,7 +5,7 @@ vi.mock('@/lib/adapters/SupabaseSettingsAdapter', () => ({
   SupabaseSettingsAdapter: { getRegistrySettings: (...args: unknown[]) => getRegistrySettings(...args) },
 }));
 
-import { DEFAULT_LAYOUT } from '@/lib/hooks/useDashboardLayout';
+import { DEFAULT_LAYOUT } from '@/lib/types/dashboard-layout';
 import { parsePanelWidths, resolveDashboardPanelDefaults } from './dashboard-panels';
 
 /** Mimics the real adapter: registry value when present, otherwise the caller's fallback. */
@@ -121,5 +121,21 @@ describe('parsePanelWidths', () => {
   it('parses valid 2col and 3col tuples', () => {
     expect(parsePanelWidths('2col', [20, 80])).toEqual({ sidebar: 20, right: 0 });
     expect(parsePanelWidths('3col', [20, 50, 30])).toEqual({ sidebar: 20, right: 30 });
+  });
+});
+
+describe('parsePanelWidths inclusive limits', () => {
+  it('accepts the exact min and max bounds', () => {
+    expect(parsePanelWidths('3col', [10, 55, 35])).toEqual({ sidebar: 10, right: 35 });
+    expect(parsePanelWidths('3col', [30, 60, 10])).toEqual({ sidebar: 30, right: 10 });
+    expect(parsePanelWidths('2col', [10, 90])).toEqual({ sidebar: 10, right: 0 });
+    expect(parsePanelWidths('2col', [30, 70])).toEqual({ sidebar: 30, right: 0 });
+  });
+
+  it('rejects values just outside the bounds', () => {
+    expect(parsePanelWidths('3col', [9, 56, 35])).toBeNull();
+    expect(parsePanelWidths('3col', [31, 59, 10])).toBeNull();
+    expect(parsePanelWidths('3col', [30, 64, 6])).toBeNull();
+    expect(parsePanelWidths('3col', [30, 34, 36])).toBeNull();
   });
 });

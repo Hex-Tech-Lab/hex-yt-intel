@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -17,7 +18,7 @@ import { describe, expect, it } from 'vitest';
  * 5. Resolution strictness: any local '@/' specifier that cannot be resolved on
  *    disk FAILS the test immediately (no silent skipping).
  * 6. Negative controls proving the scanner detects direct client modules,
- *    transitive client re-exports (hops 1-3), double-quoted imports, require(...),
+ *    a transitive client module behind a re-export bridge (temp fixture files run through the real scanner), double-quoted imports, require(...),
  *    dynamic import(...), and throws on unresolved '@/' aliases.
  *
  * WHAT IS NOT CHECKED:
@@ -180,24 +181,21 @@ describe('dashboard-panels server purity', () => {
       }).toThrow(/Silent skipping is prohibited/);
     });
 
-    it('transitive scanner catches a client-only module through a re-export bridge (hops 1-3)', () => {
-      // Negative control: useDashboardLayout is a known 'use client' module
-      const clientPath = resolve(root, 'lib/hooks/useDashboardLayout.ts');
-      const content = readFileSync(clientPath, 'utf8');
-      expect(isClientModule(content)).toBe(true);
-
-      // Verify that running collectTransitiveDependencies from useDashboardLayout directly detects isClient=true
-      const deps = collectTransitiveDependencies(clientPath, 2);
-      // The entry itself is checked in caller, and its imports are collected
-      expect(deps.some((d) => d.path.includes('dashboard-layout'))).toBe(true);
-
-      // Verify that if a dependency is marked 'use client', an assertion on dep.isClient === false will fail
-      const clientDep = { path: clientPath, depth: 2, isClient: true, history: ['entry', 'bridge', clientPath] };
-      expect(() => {
-        if (clientDep.isClient) {
-          throw new Error(`Purity failure: ${clientDep.path} has use client`);
-        }
-      }).toThrow(/Purity failure/);
+    it('transitive scanner flags a client module reached through a re-export bridge', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'purity-'));
+      try {
+        writeFileSync(join(dir, 'entry.ts'), "import { v } from './bridge';\nexport const e = v;\n");
+        writeFileSync(join(dir, 'bridge.ts'), "export { v } from './client';\n");
+        writeFileSync(join(dir, 'client.ts'), "'use client';\nexport const v = 1;\n");
+        const deps = collectTransitiveDependencies(join(dir, 'entry.ts'), 3);
+        const bridge = deps.find((d) => d.path.endsWith('bridge.ts'));
+        const client = deps.find((d) => d.path.endsWith('client.ts'));
+        expect(bridge?.isClient).toBe(false);
+        expect(client?.isClient).toBe(true);
+        expect(client?.depth).toBe(2);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
   });
 
