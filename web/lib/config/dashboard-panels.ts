@@ -57,8 +57,9 @@ export async function resolveDashboardPanelDefaults(): Promise<PanelDefaults> {
       '3col': parsePanelWidths('3col', resolved?.[REGISTRY_KEYS['3col']]) ?? DEFAULT_LAYOUT['3col'],
     };
   } catch (error) {
+    // Fail soft: a registry outage must not 500 /dashboard; use the code defaults.
     console.warn('[dashboard-panels] resolveDashboardPanelDefaults failed, using code fallback:', error);
-    return DEFAULT_LAYOUT;
+    return structuredClone(DEFAULT_LAYOUT);
   }
 }
 

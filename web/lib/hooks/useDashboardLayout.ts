@@ -23,6 +23,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 export const LAYOUT_STORAGE_PREFIX = 'hex:layout:v1:';
 
+// Re-exported so existing importers keep working; server code imports the types module directly.
 export {
   DEFAULT_LAYOUT,
   RIGHT_MAX,

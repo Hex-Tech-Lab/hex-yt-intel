@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Regression for the /dashboard SSR 500: dashboard-panels.ts runs on the
- * server, so it must never import (transitively, one hop) a module that
- * starts with a 'use client' directive.
+ * server, so it must not directly import (one hop; single-quoted `@/` specifiers
+ * only) a module that starts with a 'use client' directive.
  */
 const root = resolve(__dirname, '../..');
 

@@ -1,5 +1,10 @@
+/**
+ * Server-safe layout types and constants. No React, no 'use client', so server
+ * modules (dashboard-panels.ts) can import them; useDashboardLayout re-exports them.
+ */
 export type LayoutShape = '2col' | '3col';
 
+/** Code fallback; the Settings Registry (`ui.dashboard.panelWidths.*`) overrides these via resolveDashboardPanelDefaults. */
 export type PanelDefaults = Record<LayoutShape, { sidebar: number; right: number }>;
 
 export const DEFAULT_LAYOUT: Record<LayoutShape, { sidebar: number; right: number }> = {
