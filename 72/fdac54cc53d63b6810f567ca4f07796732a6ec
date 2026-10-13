@@ -1,0 +1,18 @@
+evidence/pr502/REVIEW_GATE.md
+  h_50fba0cdd9e5c4 1-132
+web/store/__tests__/useChatStore-persist-watchdog.test.ts
+  h_50fba0cdd9e5c4 183-220
+web/store/useChatStore.ts
+  h_50fba0cdd9e5c4 722-727
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72fdac54cc53d63b6810f567ca4f07796732a6ec",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
