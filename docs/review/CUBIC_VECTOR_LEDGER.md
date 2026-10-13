@@ -1,8 +1,7 @@
 # The Complete Cubic Vector Ledger
 
-> **Date Range Covered in this Ledger:** 2026-09-30 to 2026-10-13 (Batches 1–4: PRs #506 down to #374).  
+> **Date Range Covered in this Ledger:** 2026-09-24 to 2026-10-13 (Batches 1–5: PRs #506 down to #343).  
 > **Remaining Ranges to Process:**
-> - Batch 5: PRs #373 down to #343 (2026-09-24 to 2026-09-30)
 > - Batch 6: PRs #342 down to #313 (2026-09-15 to 2026-09-24)
 > - Historical: PRs #312 down to repo first commit #7 (2026-05-15 to 2026-09-15)
 
@@ -297,3 +296,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 | **V11 (Zero, NaN and boundary inputs)** | DeepSource / PR #397 / 2026-10-01 | Database CHECK constraint rejected valid comment classification type `experience` due to stale enum list | Do database enum CHECK constraints and application Zod schemas stay synchronously aligned? | `DatabaseConstraintRule` (`scripts/quality-engine/rules/data-integrity.ts`) |
 | **V08 (Unbounded waits & missing timeouts)** | CodeRabbit / PR #394 / 2026-10-01 | SSE consumer awaited execution plan without fallback timeout, risking perpetual hanging if plan frame dropped | Does every awaiting consumer have a fallback deadline that gracefully proceeds or fails closed? | `ServerFetchWithoutTimeoutRule` (`scripts/quality-engine/rules/reliability-lessons-20260924.ts`) |
 | **V05 (Secret or attribution leakage)** | CodeRabbit / PR #398 / 2026-10-01 | OpenRouter requests omitted X-Title attribution header, making request telemetry untraceable to specific project | Does every external AI provider call attach correct client attribution headers without leaking internal user PII? | `SanitizationRule` (`scripts/quality-engine/rules/security.ts`) |
+
+
+---
+
+## 10. Batch 5 Harvested Entries (PRs #343–#373: 2026-09-24 to 2026-09-30)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V08 (Unbounded waits & missing timeouts)** | CodeRabbit / PR #356 / 2026-09-27 | Highlights window harvesting executed unboundedly across all chunks, causing memory pressure and rate limits | Does chunk harvesting throttle parallel requests using a concurrency pool (`runWithConcurrency`)? | `TimeoutCleanupRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V04 (Unvalidated model output & schema contract)** | CodeRabbit / PR #346 / 2026-09-27 | Knowledge graph edge cap mismatched between validator (18 edges) and synthesis schema (24 edges) | Do all AST/Zod schemas and domain validators share a single source of truth for entity and edge caps? | `SchemaContractRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V06 (Shared-state UI & layout regressions)** | CodeRabbit / PR #354 / 2026-09-27 | DimensionAccordion unmount cleared global text selection across the entire dashboard document | Does component unmount cleanup isolate selection clears strictly to the component container ref? | `ZustandWholeStoreInEffectDepsRule` (`scripts/quality-engine/rules/ui.ts`) |
+| **V03 (Silent success or fail-open fallback)** | CodeRabbit / PR #352 / 2026-09-27 | Analysis reaper marked stuck analyses `failed` unconditionally, dropping partially completed dimensions from recovery | Does the reap policy preserve partial status (`partial`) so background remediation crons can recover missing dimensions? | `FailOpenUndefinedFilterRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
+| **V12 (Retry, redelivery, and idempotency)** | CodeRabbit / PR #351 / 2026-09-27 | Remediation retry counter was not incremented when worker returned 500, causing infinite retry burn of monthly budget | Does every failed remediation attempt burn a retry count atomically to prevent budget drain loops? | `NonIdempotentRetryRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
+| **V18 (Prompt drift & LLM contract mismatches)** | CodeRabbit / PR #348 / 2026-09-26 | Persona steering instructions in UCIS prompt contradicted the v5.4 indicator-only protocol | Are prompt instructions verified against ADR architecture specifications to prevent hallucinated steering? | `none yet (prompt evaluator benchmark)` |
+| **V02 (Pattern matcher & regex bypass)** | CodeRabbit / PR #344 / 2026-09-25 | Single-letter callback argument in Zustand selector triggered false positive in variable naming linter | Do AST pattern matchers inspect structural context (e.g. single-argument arrow callbacks) rather than plain identifiers? | `VariableNamingRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V15 (Untrusted tier grants & billing bypass)** | CodeRabbit / PR #345 / 2026-09-25 | Custom data payload from untrusted webhook body used as fallback tier when verified catalog returned null | Does user entitlement resolution reject unverified custom data fallbacks and default safely to free tier? | `UntrustedTierFallbackRule` (`scripts/quality-engine/rules/security-lessons-20260924.ts`) |
+| **V16 (Database concurrency & JSONB clobber)** | CodeRabbit / PR #343 / 2026-09-24 | Relations persist route executed full JSONB payload spread, risking race condition with concurrent chunk writes | Are multi-field JSONB updates performed via atomic PostgreSQL update queries or isolated table rows? | `JsonbReadModifyWriteRule` (`scripts/quality-engine/rules/data-lessons-20260924.ts`) |
+| **V05 (Secret or signed-URL leakage)** | CodeRabbit / PR #347 / 2026-09-26 | Sentry error capture logged full request URL with query parameters on auth failure, exposing tokens | Do error logging handlers strip or redact query parameters from captured URLs before logging? | `SecretsExposureRule` (`scripts/quality-engine/rules/security.ts`) |
