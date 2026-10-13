@@ -1,3 +1,44 @@
+# The Complete Cubic Vector Ledger
+
+> **Date Range Covered in this Ledger:** 2026-10-12 to 2026-10-13 (Batch 1: PRs #506 down to #471).  
+> **Remaining Ranges to Process:**
+> - Batch 2: PRs #470 down to #437 (2026-10-04 to 2026-10-12)
+> - Batch 3: PRs #436 down to #404 (2026-10-02 to 2026-10-04)
+> - Batch 4: PRs #403 down to #374 (2026-09-30 to 2026-10-02)
+> - Batch 5: PRs #373 down to #343 (2026-09-24 to 2026-09-30)
+> - Batch 6: PRs #342 down to #313 (2026-09-15 to 2026-09-24)
+> - Historical: PRs #312 down to repo first commit #7 (2026-05-15 to 2026-09-15)
+
+---
+
+## Top Vector Coverage Table
+
+| Vector ID & Name | Enforcing qa-intel Rule | Rule Source File | Rule Exists? |
+|---|---|---|:---:|
+| **V01: Documentation and ledger drift** | *none yet* (Review checklist / CI comparison) | *none* | ❌ No |
+| **V02: Pattern matcher & regex bypass** | `AuthorizationRegexBypassRule`, `ConflictMarkerRule` | `scripts/quality-engine/rules/security.ts`, `data-lessons-20260924.ts` | ✅ Yes |
+| **V03: Silent success or fail-open fallback** | `FailOpenUndefinedFilterRule`, `InsecureFallbackRule` | `scripts/quality-engine/rules/artas-rules.ts`, `security.ts` | ✅ Yes |
+| **V04: Unvalidated model or external output** | `SchemaContractRule`, `SilentDefaultOnExternalResponseRule` | `scripts/quality-engine/rules/architecture.ts`, `reliability-lessons-20260924.ts` | ✅ Yes |
+| **V05: Secret or signed-URL leakage** | `SecretsExposureRule`, `CredentialLeakRule`, `UntrustedLogInterpolationRule` | `scripts/quality-engine/rules/security.ts`, `data-lessons-20260924.ts` | ✅ Yes |
+| **V06: Shared-state UI & layout regressions** | `ZustandWholeStoreInEffectDepsRule`, `InpAlertBlockerRule`, `StartTransitionWrappingRule` | `scripts/quality-engine/rules/ui.ts` | ✅ Yes |
+| **V07: Configuration or registry key gaps** | `UnregisteredSettingsKeyRule` | `scripts/quality-engine/rules/lessons-20261009.ts` | ✅ Yes |
+| **V08: Unbounded waits and missing timeouts** | `ServerFetchWithoutTimeoutRule`, `TimeoutCleanupRule`, `StreamReaderWithoutFinallyRule` | `scripts/quality-engine/rules/reliability-lessons-20260924.ts`, `quality.ts`, `lessons-20261009.ts` | ✅ Yes |
+| **V09: Installer, shell & config edge cases** | `CrossPlatformRule`, `YamlInjectionRule` | `scripts/quality-engine/rules/architecture.ts`, `security.ts` | ✅ Yes |
+| **V10: Dead or unwired code, inflated metrics**| `DeadCodeRule`, `AsyncWithoutAwaitRule` | `scripts/quality-engine/rules/quality.ts` | ✅ Yes |
+| **V11: Zero, NaN and boundary inputs** | `NumberCoercionGuardRule`, `TruncationValidationRule` | `scripts/quality-engine/rules/quality.ts`, `data-integrity.ts` | ✅ Yes |
+| **V12: Retry, redelivery, and idempotency** | `NonIdempotentRetryRule`, `SuccessGuardedPersistenceRule`, `RetryFlagInterferenceRule` | `scripts/quality-engine/rules/artas-rules.ts`, `reliability-lessons-20260924.ts`, `persistence.ts` | ✅ Yes |
+| **V13: SSRF and unbounded body buffer reads** | `UnboundedBodyReadRule`, `UnconsumedStreamLeakRule` | `scripts/quality-engine/rules/artas-rules.ts` | ✅ Yes |
+| **V14: Privilege escalation & SQL DEFINER** | `SqlSecurityDefinerCallerKeyRule`, `SqlDropFunctionDefaultArgRule` | `scripts/quality-engine/rules/sql-migrations.ts` | ✅ Yes |
+| **V15: Untrusted tier grants & billing bypass**| `HardcodedTierGrantRule`, `UntrustedTierFallbackRule`, `ServiceRoleAnonFallbackRule`, `RuntimeTierTrustRule` | `scripts/quality-engine/rules/security-lessons-20260924.ts` | ✅ Yes |
+| **V16: DB concurrency & JSONB clobber** | `JsonbReadModifyWriteRule`, `AdvisoryLockIsolationGuardRule` | `scripts/quality-engine/rules/data-lessons-20260924.ts`, `security-lessons-20261010.ts` | ✅ Yes |
+| **V17: Stream lifecycle & socket leaks** | `StreamResilienceRule`, `StreamSettleRule`, `StreamReaderWithoutFinallyRule` | `scripts/quality-engine/rules/streaming.ts`, `lessons-20261009.ts` | ✅ Yes |
+| **V18: Prompt drift & LLM contract mismatches**| *none yet* (Bake-off evaluation harnesses) | *none* | ❌ No |
+| **V19: Client-IP and header spoofing** | `IpHeaderSinkRule` | `scripts/quality-engine/rules/security-lessons-20261010.ts` | ✅ Yes |
+| **V20: Launch path & environment isolation** | `LaunchPathIsolationLiteralRule` | `scripts/quality-engine/rules/security-lessons-20261010.ts` | ✅ Yes |
+| **V21: Type-casting safety & non-null assert**| `NonNullAfterArraySortFilterRule` | `scripts/quality-engine/rules/security-lessons-20260905.ts` | ✅ Yes |
+
+---
+
 # Cubic Vector Ledger (PRs #440-#506)
 
 Source: `gh api` pulls of inline comments, issue comments and reviews for PRs 440-506
@@ -187,3 +228,21 @@ Pushback is not a dismissal. Each rejected or deferred item has a reason tied to
 - Cubic covered only PRs 442-472 in this window. It may have been turned off or stopped reviewing after #472. Check the Cubic settings before expecting it on newer PRs.
 - Vectors V1-V3 (docs drift, pattern bypass, silent success) account for about half of all hits. A pre-PR self-check on those three questions catches most of what Cubic flagged.
 - The counts above are approximate. The source data is in the `gh api` output for each PR (inline, issue and review endpoints). Re-run a count before quoting any number in a report.
+
+
+---
+
+## 6. Batch 1 Harvested Entries (PRs #471–#506: 2026-10-12 to 2026-10-13)
+
+| Vector Name | Source (Bot, PR/Finding ID, Date) | What Was Caught | The Question to Ask on Every Future PR | Enforcing qa-intel Rule (or none yet) |
+|---|---|---|---|---|
+| **V08 (Unbounded waits & missing timeouts)** | CodeRabbit / PR #502 / 2026-10-13 | Premature watchdog timer expiration during worker streaming persist frame (`saving` stuck indicator) | Does every watchdog or timeout timer arm only after receiving the initial streaming persist frame, and clear upon settlement? | `TimeoutCleanupRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V04 (Unvalidated model output & schema contract)** | Cubic (`f050cf0c`) / PR #472 / 2026-10-12 | Payoff extension pushes clip past next highlight start, causing subsequent highlights to move forward by a full line or drop | Does payoff or boundary extension check the next element start position to prevent collisions or dropped items? | `SchemaContractRule` (`scripts/quality-engine/rules/architecture.ts`) |
+| **V11 (Zero, NaN and boundary inputs)** | Cubic (`10e4ef99`) / PR #472 / 2026-10-12 | Follow-through line matching treated any line with a bare digit as a payoff, extending clips on unrelated text | Are numeric regex matchers bounded to conversational follow-through context rather than matching any raw digit? | `NumberCoercionGuardRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V10 (Dead code & redundant computation)** | Cubic (`4f8c32f3`) / PR #472 / 2026-10-12 | `withEnds` segment mapping rebuilt on every `harvestWindow` loop iteration and retry instead of being cached once | Are immutable collections computed outside of iterative/retry closures to prevent redundant allocations? | `DeadCodeRule` (`scripts/quality-engine/rules/quality.ts`) |
+| **V10 (Goal-driven test coverage & negative control)** | CodeRabbit (`0d0ad7b4`) / PR #472 / 2026-10-12 | Regression test suite missed assertion for `FOLLOW_THROUGH` behavior on completed sentences | Does every bug fix and feature addition have a regression test that fails if the implementation is removed? | `none yet (goal-driven test review)` |
+| **V03 (Silent success or fail-open fallback)** | Sourcery / PR #506 / 2026-10-13 | Comment sentiment consumer returned success without writing or notifying when sampling-claims failed | Does the consumer fail closed and re-raise/reject immediately when any required dependency step fails? | `FailOpenUndefinedFilterRule` (`scripts/quality-engine/rules/artas-rules.ts`) |
+| **V14 (Privilege escalation & SQL grants)** | CodeRabbit / PR #503 / 2026-10-13 | `get_temporal_subgraph` SECURITY DEFINER SQL function permissions and auth.uid() null check drift | Does every SECURITY DEFINER migration revoke execute from public/anon and check caller ownership explicitly? | `SqlSecurityDefinerCallerKeyRule` (`scripts/quality-engine/rules/sql-migrations.ts`) |
+| **V01 (Documentation and ledger drift)** | Sourcery & CodeRabbit / PR #503 / 2026-10-13 | Discrepancy between THOS handover timestamp records and live code timeout settings | Does every timestamp, duration, and deadline in documentation exactly match the real constant values in code? | `none yet (review checklist enforced)` |
+| **V06 (Shared-state UI & layout regressions)** | CodeRabbit / PR #491 / 2026-10-12 | Panel default widths hardcoded inconsistently between local storage defaults and dashboard layout SSR hydration | Does layout sizing use single-source-of-truth default width constants across both server rendering and client hydration? | `ZustandWholeStoreInEffectDepsRule` (`scripts/quality-engine/rules/ui.ts`) |
+| **V18 (Prompt drift & LLM contract mismatches)** | CodeRabbit / PR #492 / 2026-10-12 | Exact Dim 7 placeholder string mismatch between backend generation prompt and frontend renderer parser | Does the renderer parse exact literal strings matching the system prompt Insufficient Data Protocol specification? | `none yet (evaluator benchmark enforced)` |
