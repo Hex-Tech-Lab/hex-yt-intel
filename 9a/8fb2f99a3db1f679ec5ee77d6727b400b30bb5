@@ -1,0 +1,14 @@
+worker/src/__tests__/comments-tier3-cochran.test.ts
+  h_50fba0cdd9e5c4 110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a8fb2f99a3db1f679ec5ee77d6727b400b30bb5",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
