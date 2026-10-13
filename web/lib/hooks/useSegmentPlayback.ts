@@ -211,6 +211,7 @@ export function useSegmentPlayback({
   const [localPlayingIdx, setLocalPlayingIdx] = useState<number | null>(null);
   const [localElapsed, setLocalElapsed] = useState<number | null>(null);
   const controlledRef = useRef(controlled);
+  // Render-time assignment: setters below read the latest controlled bundle without re-creating.
   controlledRef.current = controlled;
   // Read through the controlled store when supplied; the setters below route
   // to the same place so every existing call site stays unchanged.
@@ -291,7 +292,7 @@ export function useSegmentPlayback({
   // position in its own store, so a remount resumes it (T5 a); local-state
   // instances clear exactly as before.
   useEffect(() => {
-    stopRef.current = false;
+    stopRef.current = false; // re-arm after a StrictMode/remount cleanup
     return () => {
       stopRef.current = true;
       if (!controlledRef.current) stop();

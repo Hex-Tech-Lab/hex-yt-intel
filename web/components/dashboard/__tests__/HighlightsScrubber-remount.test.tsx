@@ -38,6 +38,17 @@ describe('HighlightsScrubber – remount keeps playback position (T5 a)', () => 
     expect(screen.queryByText('2 moments')).toBeNull();
   });
 
+  it('clears the reel position when the analysis changes', async () => {
+    const first = render(<HighlightsScrubber analysisId="a-one" videoDurationSeconds={60} />);
+    await screen.findByTestId('highlights-collapse-toggle');
+    fireEvent.click(screen.getByRole('button', { name: 'Next highlight' }));
+    expect(await screen.findByText('#1 of 2')).toBeTruthy();
+    first.unmount();
+    render(<HighlightsScrubber analysisId="a-two" videoDurationSeconds={60} />);
+    await waitFor(() => expect(useVideoStore.getState().reelPlayingIdx).toBeNull());
+    expect(useVideoStore.getState().reelAnalysisId).toBe('a-two');
+  });
+
   it('resumes polling after the remount (elapsed keeps updating from the store)', async () => {
     const first = render(<HighlightsScrubber analysisId="a-resume" videoDurationSeconds={60} />);
     await screen.findByTestId('highlights-collapse-toggle');
@@ -56,6 +67,8 @@ describe('HighlightsScrubber – remount keeps playback position (T5 a)', () => 
 describe('HighlightsScrubber – reel never scrolls the page (T5 b)', () => {
   let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
   let scrollToSpy: ReturnType<typeof vi.fn>;
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+  const originalScrollTo = window.scrollTo;
 
   beforeEach(() => {
     window.localStorage.clear();
@@ -66,7 +79,11 @@ describe('HighlightsScrubber – reel never scrolls the page (T5 b)', () => {
     Element.prototype.scrollIntoView = scrollIntoViewSpy as unknown as Element['scrollIntoView'];
     window.scrollTo = scrollToSpy as unknown as typeof window.scrollTo;
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+    window.scrollTo = originalScrollTo;
+  });
 
   it('play, seek, prev/next and speed make zero scroll calls', async () => {
     render(<HighlightsScrubber analysisId="a-noscroll" videoDurationSeconds={60} />);
