@@ -1,0 +1,16 @@
+web/lib/usecases/GetUserEntitlementsUseCase.ts
+  h_50fba0cdd9e5c4 25-30,67-71,78-89
+web/lib/usecases/__tests__/get-user-entitlements.test.ts
+  h_50fba0cdd9e5c4 2-3,10-14,20,182-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a58191e9205a535ac4a394bab2b15b76c5f85f5",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
