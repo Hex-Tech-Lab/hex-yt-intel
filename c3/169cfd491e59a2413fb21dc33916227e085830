@@ -1,0 +1,21 @@
+web/components/templates/console/ChatDock.tsx
+  s_291078cde7ba1a::t_46d482643419f7 431-434,450-453
+web/components/templates/console/__tests__/chat-ui-t8.test.tsx
+  s_291078cde7ba1a::t_bcfe4c26e39491 2,89,94-96,98-99,105-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3169cfd491e59a2413fb21dc33916227e085830",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
