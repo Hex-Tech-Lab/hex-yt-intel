@@ -1,0 +1,21 @@
+web/components/dashboard/__tests__/HighlightsScrubber-remount.test.tsx
+  s_291078cde7ba1a::t_9b52593d8b47f5 41-51,70-71,82-86
+web/lib/hooks/useSegmentPlayback.ts
+  s_291078cde7ba1a::t_4cfd77a253d3a7 214,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37b5760500b45fca9ce46e905bd0b8f6b675761b",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
