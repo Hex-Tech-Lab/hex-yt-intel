@@ -114,9 +114,10 @@ export function HighlightsNav({
         }}
         title="Previous highlight"
         aria-label="Previous highlight"
-        className="min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[44px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
+        className="relative w-7 h-7 flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 before:content-[''] before:absolute before:-inset-2 before:rounded-full motion-reduce:transition-none"
       >
-        <span aria-hidden="true" className="text-base sm:text-lg font-bold">‹</span>
+        {/* Visible circle is 28px; the before: pseudo-element extends the clickable area to 44px without adding layout width. */}
+        <span aria-hidden="true" className="text-sm leading-none font-bold">‹</span>
       </button>
       <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
         {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
@@ -130,9 +131,9 @@ export function HighlightsNav({
         }}
         title="Next highlight"
         aria-label="Next highlight"
-        className="min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[44px] flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-sm leading-none text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed"
+        className="relative w-7 h-7 flex items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--line)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-raised)] hover:border-[var(--accent-a70)] active:bg-[var(--accent-a15)] disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 before:content-[''] before:absolute before:-inset-2 before:rounded-full motion-reduce:transition-none"
       >
-        <span aria-hidden="true" className="text-base sm:text-lg font-bold">›</span>
+        <span aria-hidden="true" className="text-sm leading-none font-bold">›</span>
       </button>
     </div>
   );
@@ -326,7 +327,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
                 >
                   <span
                     aria-hidden="true"
-                    className={`block transition-transform group-hover:scale-125 ${
+                    className={`block transition-transform motion-reduce:transition-none group-hover:scale-125 ${
                       isActive
                         ? 'w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent-glow)] z-10'
                         : 'w-0.5 h-3 bg-[var(--ink-muted)] group-hover:bg-[var(--accent)]'
