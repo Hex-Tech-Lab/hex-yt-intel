@@ -1,4 +1,5 @@
 import { parseJsonArray } from '@/lib/utils/json-parser';
+import { MAX_TAKEAWAYS } from '@/lib/prompts/executive-digest';
 /**
  * Highlights extraction -- timestamped keypoints for the auto-scrubber
  * (docs/private/2026-08-13_1539_v2_HIGHLIGHTS_REEL_SHARE_WORKFLOW_SPEC.md).
@@ -23,7 +24,7 @@ import { parseJsonArray } from '@/lib/utils/json-parser';
  * start). This value bounds that duration so the model doesn't produce
  * over-long segments.
  */
-export const MAX_PROMPT_TAKEAWAYS = 10;
+export const MAX_PROMPT_TAKEAWAYS = MAX_TAKEAWAYS;
 
 function findNearestSegmentStart(targetTime: number, availableStarts: Iterable<number>, maxEpsilon = 1.0): number | null {
   let closest: number | null = null;

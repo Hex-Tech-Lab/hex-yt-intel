@@ -107,6 +107,9 @@ function stripBullets(line: string): string {
   return stripped;
 }
 
+/** Upper bound on 0.3 Key Takeaways; matches the digest prompt's 3–12 cap. */
+export const MAX_TAKEAWAYS = 12;
+
 /**
  * Parse the four `#### 0.x` tiers out of a digest completion. Returns null if
  * none of the tiers are present (so callers can treat the digest as absent
@@ -152,7 +155,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
         const trimmed = l.replace(/^\s+/u, '');
         return trimmed.startsWith('-') || trimmed.startsWith('•');
       })
-      .slice(0, 10)
+      .slice(0, MAX_TAKEAWAYS)
       .map(stripBullets);
 
     // Fallback: if no bullet lines found, use first 3-5 non-empty lines as takeaways
@@ -166,7 +169,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
       parsedVia: 'fallback',
     };
   }
-  located.sort((a, b) => a.start - b.start);
+  located.sort((first, second) => first.start - second.start);
 
   const sections: Partial<Record<keyof ExecutiveDigest, string>> = {};
   located.forEach((entry, index) => {
@@ -178,11 +181,12 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
   const takeaways = (sections.takeaways ?? '')
     .split(/\r?\n/u)
     .map(stripBullets)
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0)
+    .slice(0, MAX_TAKEAWAYS);
 
   return {
     snapshot: sections.snapshot ?? markdown.slice(0, 500),
-    takeaways: takeaways.length > 0 ? takeaways : markdown.split('\n').filter(l => l.trim().length > 0).slice(0, 5),
+    takeaways: takeaways.length > 0 ? takeaways : markdown.split(/\r?\n/u).filter(l => l.trim().length > 0).slice(0, 5),
     overview: sections.overview ?? markdown.slice(0, 1000),
     detailedSummary: sections.detailedSummary ?? markdown.slice(0, 2000),
     parsedVia: 'headers',

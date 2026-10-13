@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHighlightsExtraction, buildHighlightsWindowedSystemPrompt } from './highlights-extraction';
+import { parseHighlightsExtraction, buildHighlightsWindowedSystemPrompt, buildHighlightsWindowedUserMessage } from './highlights-extraction';
 
 /**
  * Regression coverage for the 2026-08-20 uncap fix (live user report --
@@ -67,5 +67,20 @@ describe('buildHighlightsWindowedSystemPrompt', () => {
     expect(prompt).toContain('at most 6 moments');
     expect(prompt).toContain('duration <= 60');
     expect(prompt).toContain('or null if none matches'); // takeawayIdx optional, whole-timeline sampling
+  });
+});
+
+describe('takeaway cap follows the digest cap', () => {
+  const twelve = Array.from({ length: 12 }, (_unused, i) => `takeaway ${i}`);
+  const segs = [{ start: 0, text: 'x' }];
+
+  it('lists takeaway index 11 for a 12-takeaway digest', () => {
+    const msg = buildHighlightsWindowedUserMessage(segs, 3, twelve);
+    expect(msg).toContain('[Index 11] takeaway 11');
+  });
+
+  it('negative control: a 13th takeaway is still capped', () => {
+    const msg = buildHighlightsWindowedUserMessage(segs, 3, [...twelve, 'takeaway 12']);
+    expect(msg).not.toContain('[Index 12]');
   });
 });

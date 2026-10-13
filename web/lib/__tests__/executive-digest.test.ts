@@ -1,9 +1,12 @@
 /**
  * Executive Digest (Dimension 0) tier parser.
- * Locks the extraction of the three `#### 0.x` tiers from a digest completion,
+ * Locks the extraction of the four `#### 0.x` tiers from a digest completion,
  * including fence tolerance, bullet normalisation, and the absent-digest case.
  */
-import { parseExecutiveDigest, buildExecutiveDigestUserMessage } from '@/lib/prompts/executive-digest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parseExecutiveDigest, buildExecutiveDigestUserMessage, EXECUTIVE_DIGEST_SYSTEM_FALLBACK } from '@/lib/prompts/executive-digest';
+import { CHAT_GROUNDING_INSTRUCTIONS_FALLBACK } from '@/lib/prompts/chat-grounding';
 
 const SAMPLE = [
   '#### 0.1 Snapshot',
@@ -68,5 +71,59 @@ describe('buildExecutiveDigestUserMessage', () => {
     const message = buildExecutiveDigestUserMessage('   ### DIMENSION 1\ncontent  ');
     expect(message).toContain('### DIMENSION 1');
     expect(message.startsWith('Here is the completed')).toBe(true);
+  });
+});
+
+describe('T4 key takeaways cap (prompt wording)', () => {
+  it('digest 0.3 states the 3-12 bullet cap and aim 5-9', () => {
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('#### 0.3 Key Takeaways');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('3–12 bullets');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('aim for 5–9');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).toContain('never exceed 12');
+    expect(EXECUTIVE_DIGEST_SYSTEM_FALLBACK).not.toContain('Up to 10 bullets');
+  });
+
+  it('chat grounding fallback carries the KEY TAKEAWAYS TABLE rule', () => {
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('KEY TAKEAWAYS TABLE');
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('mirroring the digest');
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain('| Timestamp | Takeaway |');
+  });
+
+  it('parser keeps a 12-bullet digest as-is (no silent truncation at the cap)', () => {
+    const lines: string[] = [];
+    for (let i = 1; i <= 12; i += 1) lines.push(`- Point ${i}`);
+    const bullets = lines.join('\n');
+    const md = `#### 0.1 Snapshot\nS\n\n#### 0.2 Overview\nO\n\n#### 0.3 Key Takeaways\n${bullets}\n\n#### 0.4 Detailed Summary\nD`;
+    const digest = parseExecutiveDigest(md);
+    expect(digest.takeaways).toHaveLength(12);
+  });
+});
+
+describe('T4 key takeaways: cap and migration/fallback sync', () => {
+  it('caps 0.3 at 12 bullets: a 13th is dropped', () => {
+    const bullets = Array.from({ length: 13 }, (unused, i) => `- Point ${i + 1}`).join('\n');
+    const md = `#### 0.1 Snapshot\nS\n\n#### 0.2 Overview\nO\n\n#### 0.3 Key Takeaways\n${bullets}\n\n#### 0.4 Detailed Summary\nD`;
+    const digest = parseExecutiveDigest(md);
+    expect(digest.takeaways).toHaveLength(12);
+    expect(digest.takeaways).not.toContain('Point 13');
+  });
+
+  it('caps the headerless fallback path at 12 bullets too', () => {
+    const bullets = Array.from({ length: 13 }, (unused, i) => `- Point ${i + 1}`).join('\n');
+    const digest = parseExecutiveDigest(`Intro line that is long enough\n${bullets}`);
+    expect(digest?.parsedVia).toBe('fallback');
+    expect(digest?.takeaways).toHaveLength(12);
+  });
+
+  it('migration v3 digest text equals the fallback, and the chat rule is in the fallback', () => {
+    const sql = readFileSync(
+      resolve(__dirname, '../../../supabase/migrations/20261013100000_key_takeaways_redesign.sql'),
+      'utf8',
+    );
+    const digest = sql.match(/\$vault\$([\s\S]*?)\$vault\$/u)?.[1];
+    const chatRule = sql.match(/\$add\$([\s\S]*?)\$add\$/u)?.[1];
+    expect(digest).toBe(EXECUTIVE_DIGEST_SYSTEM_FALLBACK);
+    expect(chatRule).toBeDefined();
+    expect(CHAT_GROUNDING_INSTRUCTIONS_FALLBACK).toContain(chatRule!);
   });
 });
