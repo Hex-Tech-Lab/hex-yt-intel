@@ -203,6 +203,15 @@ describe("CombinerPass.reduceDimensions", () => {
     expect(out[0].content).toContain("[04:15]");
     expect(out[0].content).not.toContain("timestamp not provided");
   });
+
+  it("keeps distinct non-Latin bodies instead of normalizing them to the empty string", () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, "#### 1.1 T\nالنمو كان قويا في الربع الأول"),
+      mk(1, "#### 1.1 T\nانخفضت الأرباح بشكل حاد في الربع الثاني"),
+    ]);
+    expect(out[0].content).toContain("النمو");
+    expect(out[0].content).toContain("انخفضت");
+  });
 });
 
 describe('CombinerPass header scope and single-chunk passthrough (T1 review)', () => {

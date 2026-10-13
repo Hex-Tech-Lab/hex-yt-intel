@@ -43,7 +43,7 @@ function normalizeForComparison(text: string): string {
     .replace(/\(\s*approximate[^)]*\)/giu, '')
     // Keep a leading minus sign (e.g. "-5%") so opposite-signed facts do not collapse.
     .replace(/(^|\s)-(?=\d)/gu, '$1minus')
-    .replace(/[^\w\s]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim();
 }
