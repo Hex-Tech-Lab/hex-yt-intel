@@ -1335,5 +1335,33 @@
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (895 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "low",
+    "title": "Data Quality: String truncation without ellipsis indicator",
+    "why": "String is truncated but doesn't add '...' to indicate more content. User sees incomplete text.",
+    "fix": "Add ellipsis when truncating: text.slice(0, 50) + (text.length > 50 ? '...' : '')"
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/templates/console/ChatDock.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   }
 ]

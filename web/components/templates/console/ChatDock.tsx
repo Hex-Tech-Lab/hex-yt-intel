@@ -1,9 +1,9 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState, startTransition } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import * as Sentry from '@sentry/nextjs';
-import { Icon } from '@/components/templates/_shared/primitives';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 import {
   IconButton,
   ChatMessageList,
@@ -18,6 +18,7 @@ import {
   type MarkdownComponents,
   type MarkdownInlinePlugin,
 } from '@astryxdesign/core';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -85,8 +86,8 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
   if (expanded) {
     try {
       rest = decodeURIComponent(encodedRest);
-    } catch (e) {
-      console.debug('[ChatDock] Malformed EXPAND marker, showing empty expansion:', e);
+    } catch (error) {
+      console.debug('[ChatDock] Malformed EXPAND marker, showing empty expansion:', error);
     }
   }
   return (
@@ -96,7 +97,7 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
         type="button"
         aria-expanded={expanded}
         aria-label={expanded ? 'Hide full citation point' : 'Show full citation point'}
-        onClick={() => setExpanded((e) => !e)}
+        onClick={() => setExpanded((prev) => !prev)}
         className="text-[var(--accent)] hover:underline ml-1 font-medium"
       >
         {expanded ? 'less' : '…more'}
@@ -104,6 +105,14 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
     </>
   );
 }
+
+/** Cut to `max` chars, appending an ellipsis only when something was dropped. */
+function truncateWithEllipsis(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+/** Class that globals.css keys the user-bubble ::selection highlight on. */
+export const USER_BUBBLE_SELECTION_CLASS = 'user-chat-bubble';
 
 /**
  * Hoisted to module scope (mirrors SelectedDimensionReadout's
@@ -119,14 +128,14 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
  * that IS a real React-level override point Astryx exposes, just scoped to
  * text-node patterns rather than table structure.
  */
-const chatMarkdownComponents: MarkdownComponents = {
+export const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
     <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{children}</p>
   ),
   link: ({ href, children }) => {
     if (href?.startsWith('#t=')) {
       const timestamp = href.replace('#t=', '');
-      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+      return <TimestampLink timestamp={timestamp} asButton>{children}</TimestampLink>;
     }
     return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
   },
@@ -150,11 +159,20 @@ const chatMarkdownComponents: MarkdownComponents = {
  * navigation because the layout (and this dock) stay mounted.
  */
 function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
+  // INP T7: a whole-store subscription re-rendered the entire message list on
+  // every store write (loadingList, networkBound, hasMoreCommentsByConv, ...)
+  // even though ChatDock reads none of them. Select only the fields used here.
   const {
     conversations, activeId, messagesByConv, sending, persistState, error: chatError,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
     isChatOpen: open, setChatOpen: setOpen,
-  } = useChatStore();
+  } = useChatStore(useShallow((s) => ({
+    conversations: s.conversations, activeId: s.activeId, messagesByConv: s.messagesByConv,
+    sending: s.sending, persistState: s.persistState, error: s.error,
+    loadConversations: s.loadConversations, selectConversation: s.selectConversation,
+    newConversation: s.newConversation, sendMessage: s.sendMessage, deleteConversation: s.deleteConversation,
+    bindNetwork: s.bindNetwork, isChatOpen: s.isChatOpen, setChatOpen: s.setChatOpen,
+  })));
   const [showThreads, setShowThreads] = useState(false);
   const [heightState, setHeightState] = useState<'normal' | 'half' | 'full'>('normal');
   const videoId = useAnalysisStore((s) => s.videoMetadata?.videoId);
@@ -168,8 +186,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         showToast('Message copied to clipboard!');
         setTimeout(() => setCopiedMessageId((current) => (current === id ? null : current)), 2000);
       })
-      .catch((e) => {
-        const msg = e instanceof Error ? e.message : String(e);
+      .catch((error) => {
+        const msg = error instanceof Error ? error.message : String(error);
         console.error('[clipboard-copy]', { message: msg });
         showToast('Failed to copy message.', 'error');
       });
@@ -211,16 +229,16 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     try {
       const savedOpen = safeLocalStorage.getItem(OPEN_KEY);
       if (savedOpen === '1') setOpen(true);
-    } catch (e) {
-      console.debug('[ChatDock] LocalStorage open_key read failed:', e);
+    } catch (error) {
+      console.debug('[ChatDock] LocalStorage open_key read failed:', error);
     }
   }, [setOpen]);
 
   useEffect(() => {
     try {
       safeLocalStorage.setItem(OPEN_KEY, open ? '1' : '0');
-    } catch (e) {
-      console.debug('[ChatDock] LocalStorage open_key write failed:', e);
+    } catch (error) {
+      console.debug('[ChatDock] LocalStorage open_key write failed:', error);
     }
     if (!open) {
       setShowThreads(false);
@@ -443,22 +461,26 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
             await submit('Started full comment expansion.');
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
+            console.error('[ChatDock] Comment expansion start failed:', err);
+            Sentry.captureException(err, { tags: { component: 'ChatDock', operation: 'comment-expansion' } });
             showToast(`Expansion failed: ${msg}`, 'error');
           }
         },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error('[ChatDock] Comment expansion cost estimate failed:', err);
+      Sentry.captureException(err, { tags: { component: 'ChatDock', operation: 'comment-estimate' } });
       showToast(`Could not estimate cost: ${msg}`, 'error');
     }
   };
 
   const submit = async (text: string) => {
-    const t = text.trim();
-    if (!t || sending) return;
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
     setLocalInput('');
     scrollToBottom(); // user just sent — always follow to the bottom
-    await sendMessage(t, { analysisId: analysisId ?? null, videoId: videoId ?? null });
+    await sendMessage(trimmed, { analysisId: analysisId ?? null, videoId: videoId ?? null });
   };
 
   const handleNew = async () => {
@@ -479,8 +501,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   // covers Enter. Escape-to-close-dock isn't part of its API, so it's still
   // caught here via bubbling (ChatComposerInput has no stopPropagation on
   // keydown, confirmed by reading its source).
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape') startTransition(() => { setOpen(false); });
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') startTransition(() => { setOpen(false); });
   };
 
   // --- Collapsed / Expanded, animated with framer-motion -------------------
@@ -516,7 +538,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
             <Icon icon="solar:chat-round-dots-bold" size={17} className="text-[var(--accent-ink)]" />
             <span className="font-semibold text-[var(--ink)]">Synthesis Chat</span>
             <span className="text-[var(--ink-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
-              {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${analysisTitle.slice(0, 40)}”` : '· ask anything'}
+              {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${truncateWithEllipsis(analysisTitle, 40)}”` : '· ask anything'}
             </span>
             <PersistStatusIndicator state={persistState} />
           </button>
@@ -632,7 +654,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               // sibling widths -- CSS ellipsis truncates unpredictably when
               // a fixed-width sibling (the date) competes for the same row.
               const CHAT_TITLE_MAX_CHARS = 26;
-              const displayTitle = rawTitle.length > CHAT_TITLE_MAX_CHARS ? `${rawTitle.slice(0, CHAT_TITLE_MAX_CHARS)}...` : rawTitle;
+              const displayTitle = truncateWithEllipsis(rawTitle, CHAT_TITLE_MAX_CHARS);
               return (
                 <div key={c.id} className="flex items-center gap-1.5 px-1">
                   <button
@@ -669,7 +691,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           !sending ? (
             <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
               <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
-              <div>{analysisTitle ? `Ask about "${analysisTitle.slice(0, 48)}"` : 'Ask anything —'}</div>
+              <div>{analysisTitle ? `Ask about "${truncateWithEllipsis(analysisTitle, 48)}"` : 'Ask anything —'}</div>
               <div>this thread is saved to your history.</div>
             </div>
           ) : undefined
@@ -685,7 +707,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               <ChatMessageBubble
                 variant="filled"
                 className={isUser
-                  ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
+                  ? [USER_BUBBLE_SELECTION_CLASS, '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'].join(' ')
                   // max-w bumped 92% -> 98% (2026-08-02, live user report): the
                   // assistant bubble was leaving a wide unused margin on desktop
                   // for markdown-table responses ("how many comments?",
@@ -716,7 +738,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 {isUser ? (
                   body
                 ) : (
-                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact">
+                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact" contentWidth="100%">
                     {truncateCitationPoints(preprocessMarkdown(body))}
                   </Markdown>
                 )}
@@ -799,7 +821,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           history recall (see its handleKeyDown), so onKeyDown here only
           needs to catch Escape (bubbles up, no stopPropagation in the
           library's keydown handler). */}
-      <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
+      <div className="px-3 lg:px-4 py-2">
         <ChatComposer
           value={localInput}
           onChange={setLocalInput}
@@ -841,8 +863,8 @@ function parseAssistant(content: string): { body: string; options: string[] } {
         }
       }
     }
-  } catch (e) {
-    console.debug('[ChatDock] Assistant reply options JSON parse failed (streaming/malformed):', e);
+  } catch (error) {
+    console.debug('[ChatDock] Assistant reply options JSON parse failed (streaming/malformed):', error);
   }
   const bodyText = content.slice(0, matchResult.index).trim();
   return { body: bodyText || content.trim(), options: validOptions };

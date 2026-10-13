@@ -461,6 +461,14 @@ div[data-chat-dock="true"] div[class*="content"] {
   border-radius: 8px !important;
 }
 
+/* User bubble text selection (T8). The bubble is accent-filled, so the default
+   selection colour is invisible on it; invert to the void/accent-ink pair. */
+[data-chat-dock="true"] .user-chat-bubble::selection,
+[data-chat-dock="true"] .user-chat-bubble *::selection {
+  background-color: var(--void);
+  color: var(--accent-ink);
+}
+
 /* Chat composer (input box) styling override.
    Real root cause (2026-08-20, same class of bug as the toast fix above):
    only the OUTER `.astryx-chat-composer` wrapper was ever targeted. The

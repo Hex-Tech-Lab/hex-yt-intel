@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, CSSProperties } from 'react';
+import { memo, ReactNode, CSSProperties } from 'react';
 // Offline variant: never performs a network fetch, only renders icons registered
 // via addCollection/addIcon. This is what actually delivers the "bundled, never
 // fails or disappears" guarantee -- the default `@iconify/react` `Icon` fetches
@@ -34,7 +34,12 @@ export interface IconProps {
  * with zero runtime network calls -- never fail or disappear when third-party
  * CDNs (api.iconify.design) time out or block network requests.
  */
-export function Icon({ icon, size = 16, className = "", style = {} }: IconProps) {
+// Memoized (INP T7): Icon is rendered once per list row / message action, so a
+// parent re-render (e.g. a streaming chat token) used to re-render every icon
+// SVG in the list even though the props were unchanged. memo() skips those when
+// props are referentially equal; call sites that pass an inline `style={{...}}`
+// object still re-render (hoist the object to benefit).
+export const Icon = memo(function Icon({ icon, size = 16, className = "", style = {} }: IconProps) {
   ensureIconsRegistered();
   return (
     <IconifyIcon
@@ -45,7 +50,7 @@ export function Icon({ icon, size = 16, className = "", style = {} }: IconProps)
       className={className}
     />
   );
-}
+});
 
 export interface GlowBorderProps {
   children: ReactNode;
