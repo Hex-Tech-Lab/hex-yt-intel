@@ -10,6 +10,10 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-10-14T02:37:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Report registry outage to Sentry, drop dead hook fallback (PR #513):
+  - Target files: web/lib/config/dashboard-panels.ts, web/lib/config/dashboard-panels.test.ts, web/lib/hooks/useDashboardLayout.ts, web/lib/hooks/__tests__/useDashboardLayout.hydration.test.ts.
+  - Adding Sentry.captureException to resolveDashboardPanelDefaults catch block; adding unit test for Sentry capture and fallback.
+  - Dropping dead defaults?.[target] fallback in useDashboardLayout.ts and removing impossible case hydration tests.
 - [2026-10-14T02:27:00+03:00] [AGY (Antigravity Orchestrator)] [DONE] Fix purity negative control defect & document mock fallback in dashboard-panels test:
   - Replaced inline throw in dashboard-panels.purity.test.ts with a real temp-fixture test that calls collectTransitiveDependencies against missing '@/does/not/exist' and asserts throw.
   - Aligned header docstring claim with the temp entry fixture negative control.

@@ -189,7 +189,7 @@ export function useDashboardPanels(
   /** Group layout for a shape: saved sizes when present, else the defaults. */
   const layoutFor = (target: LayoutShape): Record<string, number> => {
     const current = saved?.[target] ?? null;
-    const targetDefaults = defaults?.[target] ?? DEFAULT_LAYOUT[target];
+    const targetDefaults = defaults[target];
     return toGroupLayout(
       target,
       current?.sidebar ?? targetDefaults.sidebar,

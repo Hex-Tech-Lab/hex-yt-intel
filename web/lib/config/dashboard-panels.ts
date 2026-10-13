@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import {
   DEFAULT_LAYOUT,
@@ -59,6 +60,9 @@ export async function resolveDashboardPanelDefaults(): Promise<PanelDefaults> {
   } catch (error) {
     // Fail soft: a registry outage must not 500 /dashboard; use the code defaults.
     console.warn('[dashboard-panels] resolveDashboardPanelDefaults failed, using code fallback:', error);
+    Sentry.captureException(error, {
+      tags: { component: 'dashboard-panels', method: 'resolveDashboardPanelDefaults' },
+    });
     return structuredClone(DEFAULT_LAYOUT);
   }
 }
