@@ -2,8 +2,9 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
-      "phase-c": true,
-      "*": false
+      "uat": true,
+      "main": true,
+      "*": true
     }
   }
 }

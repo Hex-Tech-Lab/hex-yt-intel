@@ -136,6 +136,13 @@ describe('Chat Intent & Prompt Guard Boundary Contracts (ADR-043)', () => {
       expect(PromptGuardModeSchema.safeParse('quarantine').success).toBe(false);
     });
 
+    it('validates PromptGuardVerdict enum (pass, flag, block)', () => {
+      expect(PromptGuardVerdictSchema.safeParse('pass').success).toBe(true);
+      expect(PromptGuardVerdictSchema.safeParse('flag').success).toBe(true);
+      expect(PromptGuardVerdictSchema.safeParse('block').success).toBe(true);
+      expect(PromptGuardVerdictSchema.safeParse('unknown').success).toBe(false);
+    });
+
     it('validates a complete PromptGuardResult payload', () => {
       const validResult = {
         verdict: 'flag',
