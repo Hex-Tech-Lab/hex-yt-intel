@@ -1,0 +1,21 @@
+.qa-intel/baseline.json
+  s_291078cde7ba1a::t_02b1e5aefcecd2 1367
+web/components/templates/console/ChatDock.tsx
+  s_291078cde7ba1a::t_586b2d37ade9db 5,20,88-89,99,108-112,179-180,222-223,230-231,454-455,462-463,469-470,473,494-495,531,647,684,856-857
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52a35e4d82a864c643cc7600da30557a5ec9b98d",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
