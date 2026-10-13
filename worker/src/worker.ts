@@ -75,7 +75,11 @@ export default {
   async queue(batch: MessageBatch<CommentsTier3QueueMessage>, env: Env): Promise<void> {
     for (const message of batch.messages) {
       try {
-        await handleCommentsTier3Message(message.body, env);
+        // message.id is the claim token. ASSUMPTION (CF docs: unique system-generated id
+        // per message, separate `attempts` counter; not stated explicitly): it is stable
+        // across message.retry(). If it were not, a retried claim gets claimed:false and
+        // the run is released by the global sweep instead.
+        await handleCommentsTier3Message(message.body, env, message.id);
         message.ack();
       } catch (err) {
         // skipcq: JS-0827

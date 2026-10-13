@@ -206,7 +206,8 @@ describe('POST /api/comments/persist-sample-run — cochran mode', () => {
   it('accepts the sampling heartbeat and never stamps completed_at', async () => {
     const res = await post({ ...cochranBody(), status: 'sampling', cochran: undefined });
     expect(res.status).toBe(200);
-    expect(SupabaseAuxRemediationAdapter.markSampleRunSampling).toHaveBeenCalledWith(RUN_ID, 'cochran');
+    // No claimToken in this body (legacy caller): the claim is token-less.
+    expect(SupabaseAuxRemediationAdapter.markSampleRunSampling).toHaveBeenCalledWith(RUN_ID, 'cochran', undefined);
     expect(SupabaseAuxRemediationAdapter.finalizeSampleRun).not.toHaveBeenCalled();
   });
 

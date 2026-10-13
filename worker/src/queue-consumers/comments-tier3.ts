@@ -155,12 +155,15 @@ async function postSampleRunResult(
   userId: string,
   mode: "uncapped" | "cochran",
   result: SampleRunResult,
+  claimToken?: string,
 ): Promise<{ ok: true; claimed?: boolean } | { ok: false; httpStatus: number }> {
   const exp = Date.now() + PERSIST_SIG_TTL_MS;
   // #378 review P1: the signature covers the ENTIRE write body (canonical
   // JSON, keys sorted), so classifications/insights/comments/mode cannot be
   // altered under a valid signature. `mode` is sent on EVERY callback
   // (heartbeat, success, failure) so the route never infers it.
+  // claimToken (queue message id) rides on the 'sampling' claim only, and is
+  // signed with the rest of the body.
   const writeBody = {
     sampleRunId,
     userId,
@@ -169,6 +172,7 @@ async function postSampleRunResult(
     status: result.status,
     comments: result.comments ?? [],
     cochran: result.cochran,
+    ...(claimToken ? { claimToken } : {}),
   };
   const sig = await signBoundContent(env.STREAM_HMAC_SECRET, "comments-tier3", sampleRunId, exp, canonicalJson(writeBody));
 
@@ -195,6 +199,7 @@ async function reportSampleRunResult(
   userId: string,
   mode: "uncapped" | "cochran",
   result: SampleRunResult,
+  claimToken?: string,
 ): Promise<{ ok: boolean; claimed?: boolean }> {
   let lastError: unknown = null;
   let lastHttpStatus: number | null = null;
@@ -204,7 +209,7 @@ async function reportSampleRunResult(
       if (backoff !== undefined) await sleep(backoff);
     }
     try {
-      const outcome = await postSampleRunResult(env, appUrl, sampleRunId, userId, mode, result);
+      const outcome = await postSampleRunResult(env, appUrl, sampleRunId, userId, mode, result, claimToken);
       if (outcome.ok) return { ok: true, claimed: outcome.claimed };
       lastHttpStatus = outcome.httpStatus;
       // skipcq: JS-0827
@@ -366,6 +371,7 @@ async function runCochranMode(
 export async function handleCommentsTier3Message(
   message: CommentsTier3QueueMessage,
   env: QueueConsumerEnv,
+  deliveryToken?: string,
 ): Promise<void> {
   const { sampleRunId, videoId, userId, totalCommentCount, appUrl } = message;
   const mode = message.mode === "cochran" ? "cochran" : "uncapped";
@@ -401,7 +407,12 @@ export async function handleCommentsTier3Message(
   // 'failed' too: Vercel marks a run failed when its enqueue fetch errors,
   // but a timeout can land after the queue accepted the message. That run's
   // finalize-retry inserts a fresh row, so processing this one would double-spend.
-  if (priorStatus !== "pending") {
+  // A 'sampling' run may be re-entered only by a delivery that carries a token; the
+  // authority is the claim POST below (server returns claimed:true only when
+  // claimed_by equals this token), so a retry of a claim that timed out after the
+  // server recorded it proceeds exactly once. Any other token gets claimed:false.
+  const ownRedelivery = priorStatus === "sampling" && deliveryToken !== undefined;
+  if (priorStatus !== "pending" && !ownRedelivery) {
     logSkippedRun(priorStatus, sampleRunId, videoId);
     return;
   }
@@ -411,10 +422,17 @@ export async function handleCommentsTier3Message(
   const claimOutcome = await reportSampleRunResult(env, appUrl, sampleRunId, userId, mode, {
     sampledCount: 0,
     status: "sampling",
-  });
+  }, deliveryToken);
   if (claimOutcome.ok && claimOutcome.claimed === false) {
     logSkippedRun("sampling", sampleRunId, videoId);
     return;
+  }
+  // Fail CLOSED: if the claim could not be recorded (every attempt failed),
+  // the run is still 'pending' and no lock is held. Doing paid classification
+  // now would risk a double-spend against a concurrent delivery, so rethrow
+  // (worker.ts queue handler -> message.retry()) and do no paid work.
+  if (!claimOutcome.ok) {
+    throw new Error(`comments-tier3 claim not recorded for run ${sampleRunId}; retrying without paid work`);
   }
 
   if (message.mode === "cochran") {

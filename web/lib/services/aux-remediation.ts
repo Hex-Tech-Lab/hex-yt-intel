@@ -319,7 +319,8 @@ export async function enqueueSystemCommentSampleRun(params: { analysisId: string
   }
 }
 
-async function enqueueInsertedSystemSampleRun(
+/** Exported for the global stale-run sweep (sample-run-sweep.ts) to re-enqueue a stuck pending run. */
+export async function enqueueInsertedSystemSampleRun(
   params: { analysisId: string; userId: string; videoId: string },
   runRowId: string,
   totalCommentCount: number

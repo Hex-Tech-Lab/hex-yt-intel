@@ -73,6 +73,8 @@ const PersistRequestSchema = z.object({
   sampledCount: z.number().int().min(0),
   status: z.enum(['sampling', 'completed', 'failed']),
   mode: z.enum(['uncapped', 'cochran']).optional(),
+  // Per-delivery claim token (queue message id), sent on the 'sampling' claim only.
+  claimToken: z.string().min(1).max(256).optional(),
   comments: z.array(PersistedCommentSchema).optional(),
   cochran: CochranPayloadSchema.optional(),
   sig: z.string(),
@@ -166,7 +168,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
-  const { sampleRunId, userId, sampledCount, status, mode, comments, cochran, sig, exp } = parsed.data;
+  const { sampleRunId, userId, sampledCount, status, mode, claimToken, comments, cochran, sig, exp } = parsed.data;
 
   // #378 review P1: the signature covers the WHOLE write body -- canonical
   // JSON of the raw request minus sig/exp -- so no field (classifications,
@@ -271,7 +273,7 @@ export async function POST(request: NextRequest) {
   // 'pending' (Dispatch A §1.4) — it must NOT stamp completed_at or clobber
   // a final status if a retry races a completed report.
   if (status === 'sampling') {
-    const { claimed } = await SupabaseAuxRemediationAdapter.markSampleRunSampling(sampleRunId, runMode);
+    const { claimed } = await SupabaseAuxRemediationAdapter.markSampleRunSampling(sampleRunId, runMode, claimToken);
     return NextResponse.json({ ok: true, claimed, refundedCredits: 0 });
   }
 
