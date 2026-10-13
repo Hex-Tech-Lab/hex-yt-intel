@@ -176,7 +176,7 @@ async function readSSE(
         } catch {
           // RCA (2026-07-23): a per-frame log here flooded the console (10-25K+
           // lines per stream). Count the skipped frames and report ONE warning
-          // per stream below, so a malformed stream is still visible.
+          // per stream (reported when the stream completes), so a malformed stream is still visible.
           parseFailures++;
           if (isDebugEnabled()) console.debug('[ChatStore] Skipped unparseable SSE frame', { frameCount });
         }
@@ -196,7 +196,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   async function deliver(convId: string, clientMsgId: string, content: string): Promise<void> {
     const pendingAssistantId = `pending-${clientMsgId}`;
     set({ activePersistRequestId: clientMsgId });
-    // Deliberately NOT setPersistState('saving'): that arms the 8s watchdog, and the
+    // Set 'saving' directly (so the UI shows it) instead of via setPersistState('saving'): that arms the 8s watchdog, and the
     // worker only emits persist:saving after the whole LLM generation (chat-stream.ts
     // STAGE 3). Arming here cleared a healthy in-flight reply to idle on any reply
     // slower than 8s. The watchdog is armed by the worker's own persist:saving frame

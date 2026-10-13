@@ -79,7 +79,7 @@ describe('useChatStore persist watchdog (T2 RCA)', () => {
   });
 
   /** Mock the Vercel bouncer (JSON job) and a worker SSE stream we control frame by frame. */
-  function mockBouncerAndStream() {
+  function mockBouncerAndStream(payload: Record<string, unknown> = { timeoutMs: TIMEOUT_MS }) {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         streamController = controller;
@@ -92,7 +92,7 @@ describe('useChatStore persist watchdog (T2 RCA)', () => {
           JSON.stringify({
             user: { id: 'u1', conversationId: CONV_ID, role: 'user', content: 'hi', createdAt: new Date().toISOString() },
             stream: { url: WORKER_URL, sig: 'sig', exp: 1 },
-            payload: { timeoutMs: TIMEOUT_MS },
+            payload,
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ));
@@ -153,5 +153,31 @@ describe('useChatStore persist watchdog (T2 RCA)', () => {
 
     expect(useChatStore.getState().persistState).not.toBe('saved');
     expect(useChatStore.getState().persistState).toBe('idle');
+  });
+
+  it('the worker persist:saving frame arms the 8s watchdog, which then clears a stuck save', async () => {
+    mockBouncerAndStream();
+    const sendPromise = useChatStore.getState().sendMessage('hi', { analysisId: null, videoId: 'vid1' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    streamController!.enqueue(frame({ type: 'persist', status: 'saving', requestId: currentReqId }));
+    await vi.advanceTimersByTimeAsync(7_000);
+    expect(useChatStore.getState().persistState).toBe('saving');
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(useChatStore.getState().persistState).toBe('idle');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('stuck at "saving"'));
+
+    streamController!.close();
+    await sendPromise;
+  });
+
+  it('fails loudly, without opening the worker stream, when the server omits timeoutMs', async () => {
+    const fetchMock = mockBouncerAndStream({});
+    await useChatStore.getState().sendMessage('hi', { analysisId: null, videoId: 'vid1' });
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === WORKER_URL)).toBe(false);
+    expect(useChatStore.getState().persistState).not.toBe('saving');
+    expect(useChatStore.getState().error).toBeTruthy();
   });
 });
