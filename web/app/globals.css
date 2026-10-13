@@ -142,6 +142,10 @@
   --card: rgb(15 23 42 / 0.5);     /* slate-900/50 — elevated cards         */
   --card-quiet: rgb(15 23 42 / 0.4); /* slate-900/40                        */
 
+  /* --- Video description "show more" -------------------------------------- */
+  --description-max-height: 240px;   /* expanded cap; overflow scrolls inside */
+  --motion-duration-description: 300ms;
+
   /* --- Hairlines --------------------------------------------------------- */
   --line: #1E293B;            /* slate-800 — default border                 */
   --line-strong: #334155;     /* slate-700 — emphasized border              */

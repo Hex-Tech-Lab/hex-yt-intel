@@ -184,12 +184,19 @@ export function BentoMetadata({
           </p>
           {description && (
             <div className="mt-2">
-              <p
+              <div
                 id={descriptionId}
-                className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${canExpandDescription && !descriptionExpanded ? 'line-clamp-2' : ''}`}
+                data-testid="bento-description"
+                className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line transition-[max-height] duration-[var(--motion-duration-description)] ease-out motion-reduce:transition-none ${
+                  !canExpandDescription
+                    ? ''
+                    : descriptionExpanded
+                      ? 'max-h-[var(--description-max-height)] overflow-y-auto pr-1.5'
+                      : 'line-clamp-2 overflow-hidden'
+                }`}
               >
                 {linkifyDescription(description)}
-              </p>
+              </div>
               {canExpandDescription && (
                 <button
                   type="button"
@@ -213,7 +220,9 @@ export function BentoMetadata({
           variants={item}
           variant="default"
           padding={0}
-          className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-2.5"
+          className={`col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-2.5 transition-transform duration-[var(--motion-duration-description)] ease-out motion-reduce:transition-none ${
+            descriptionExpanded ? 'xl:-translate-x-3' : 'xl:translate-x-0'
+          }`}
         >
           <Icon icon={stat.icon} size={16} className="mb-0.5 text-[var(--ink-muted)]" />
           <span className="text-[15px] font-bold text-[var(--ink)]">{stat.value}</span>
