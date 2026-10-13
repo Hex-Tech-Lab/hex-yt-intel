@@ -1,0 +1,32 @@
+web/hooks/useSSEStream.ts
+  h_50fba0cdd9e5c4 288-290,312,505,855,898,1019,1148
+web/middleware.ts
+  h_50fba0cdd9e5c4 203-205,209-210,213-216,218-220
+web/store/useChatStore.ts
+  h_50fba0cdd9e5c4 79,243
+worker/src/chat-stream.ts
+  h_50fba0cdd9e5c4 17,596
+worker/src/queue-consumers/comments-tier3.ts
+  h_50fba0cdd9e5c4 83,179
+worker/src/routes/analysis.ts
+  h_50fba0cdd9e5c4 30,1198
+worker/src/services/EpistemicShadowRunner.ts
+  h_50fba0cdd9e5c4 107
+worker/src/services/PersistService.ts
+  h_50fba0cdd9e5c4 281,396
+worker/src/services/chapter-persist.ts
+  h_50fba0cdd9e5c4 83
+worker/wrangler.toml
+  h_50fba0cdd9e5c4 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "42e6afc5c05cdf4a801d13d66fdddbfc7efe9423",
+  "prompts": {},
+  "humans": {
+    "h_50fba0cdd9e5c4": {
+      "author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
