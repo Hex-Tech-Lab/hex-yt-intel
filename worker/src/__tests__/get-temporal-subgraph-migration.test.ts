@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../supabase/migrations');
-const FIX_FILE = '20261013100000_fix_get_temporal_subgraph_ambiguous_columns.sql';
+const FIX_FILE = '20261013110000_fix_get_temporal_subgraph_ambiguous_columns.sql';
 
 describe('get_temporal_subgraph ambiguity fix migration', () => {
   const sql = readFileSync(resolve(MIGRATIONS_DIR, FIX_FILE), 'utf8');
