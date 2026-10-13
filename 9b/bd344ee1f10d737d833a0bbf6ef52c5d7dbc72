@@ -1,0 +1,21 @@
+web/components/templates/console/BentoMetadata.tsx
+  s_291078cde7ba1a::t_670ae9e70a7dcf 187-188,221
+web/components/templates/console/__tests__/BentoMetadata-description.test.tsx
+  s_291078cde7ba1a::t_282b75ee39247d 2,39-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9bbd344ee1f10d737d833a0bbf6ef52c5d7dbc72",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
