@@ -239,7 +239,9 @@ export class CombinerPass {
       const parsed = this.parseDimensionMarkdown(dimNumber, name, chunk.content);
       if (parsed.intro) {
         const compIntro = normalizeForComparison(parsed.intro);
-        const introKey = compIntro ? compIntro : parsed.intro.trim();
+        // Timestamp-only intros normalize to '' — key them on one constant so a placeholder
+        // intro and a real-timestamp intro reach the upgrade path instead of coexisting.
+        const introKey = compIntro || parsed.intro.replace(/\[[^\]]*\]/gu, '').trim() || 'timestamp-only';
         const prior = introByKey.get(introKey);
 
         if (prior === undefined) {

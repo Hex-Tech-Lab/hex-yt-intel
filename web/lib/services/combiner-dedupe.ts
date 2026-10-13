@@ -57,8 +57,10 @@ export function extractRealTimestamps(text: string): string[] {
  * Normalizes text for comparison by stripping placeholder timestamps,
  * preserving distinct decimal separators, keeping signed numbers, and collapsing whitespace.
  *
- * Real timestamps and hedges (e.g. "(approximate)") are kept as part of comparison text
- * so distinct mentions across timestamps or hedged statements do not falsely collapse.
+ * All bracketed timestamps (real and placeholder) are stripped here; callers compare real
+ * timestamps separately via extractRealTimestamps so distinct mentions at different real
+ * timestamps are kept. Hedges such as "(approximate)" not directly after a timestamp stay
+ * in the comparison text.
  */
 export function normalizeForComparison(text: string): string {
   return text
@@ -105,7 +107,10 @@ export function matchSubHeader(line: string, dimNumber: number): { subNumber: st
   if (mdMatch?.[1] && ownSub(mdMatch[1])) {
     const rawTitle = (mdMatch[2] || '').trim();
     const cleanTitle = rawTitle.replace(/^\*{1,2}|\*{1,2}$/gu, '').replace(/^[-:–—.]\s*/u, '').trim();
-    return { subNumber: mdMatch[1], title: cleanTitle };
+    // A bare "#### 1.1" heading (no title) stays a header; a title that is only a unit is not.
+    if (!cleanTitle || isValidHeaderTitle(cleanTitle)) {
+      return { subNumber: mdMatch[1], title: cleanTitle };
+    }
   }
 
   // Pattern 2: Bold headings: **[Dimension ]X.Y Title** or **X.Y: Title** or **X.Y** Title

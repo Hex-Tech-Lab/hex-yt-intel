@@ -70,6 +70,22 @@ describe('Combiner dedupe follow-up negative controls (Tasks 1-6)', () => {
     expect(Array.from(ast.subsections.keys())).toEqual(['2.1', '2.2', '2.3']);
   });
 
+  it('Task 3c: markdown lines like "### 3.2x growth" and "#### 1.5-fold" are not headers', () => {
+    const metricAst = CombinerPass.parseDimensionMarkdown(3, 'D3', '#### 3.1 Overview\nIntro.\n\n### 3.2x growth in revenue this year.');
+    expect(Array.from(metricAst.subsections.keys())).toEqual(['3.1']);
+    const foldAst = CombinerPass.parseDimensionMarkdown(1, 'D1', '#### 1.1 Overview\nIntro.\n\n#### 1.5-fold increase in retention.');
+    expect(Array.from(foldAst.subsections.keys())).toEqual(['1.1']);
+  });
+
+  it('Task 4b: a placeholder-timestamp intro upgrades to a real-timestamp intro instead of coexisting', () => {
+    const out = CombinerPass.reduceDimensions([
+      mk(1, '[timestamp not provided in transcript]\n\n#### 1.1 A\nBody A'),
+      mk(1, '[12:40]\n\n#### 1.1 A\nBody B'),
+    ]);
+    expect(out[0].content).toContain('[12:40]');
+    expect(out[0].content).not.toContain('timestamp not provided');
+  });
+
   // Task 4: CombinerPass.ts:234 — identical-key intros differing only by symbols/timestamps must not drop the second
   it('Task 4: identical-key intros differing by symbols or timestamps do not drop the second intro', () => {
     const outSymbols = CombinerPass.reduceDimensions([
