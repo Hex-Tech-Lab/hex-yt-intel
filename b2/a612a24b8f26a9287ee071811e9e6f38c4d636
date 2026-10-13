@@ -1,0 +1,37 @@
+evidence/vitest-lib-services.txt
+  s_291078cde7ba1a::t_92d3494b0f3b07 1-9
+.memory/AGENT_LEDGER.md
+  s_f5cf97ef77e0a9::t_460b7d83632712 13-23
+evidence/qa-intel-ci.txt
+  s_f5cf97ef77e0a9::t_9f67ea32185dd5 1-55
+web/lib/__tests__/combiner-dedupe-followup.test.ts
+  s_f5cf97ef77e0a9::t_32bb6fe39f1cc4 1-109
+web/lib/services/CombinerPass.ts
+  s_f5cf97ef77e0a9::t_3edffc064bda23 36,38,234-235,242-260,264
+web/lib/services/combiner-dedupe.ts
+  s_f5cf97ef77e0a9::t_9503033e61774a 38-61,66-69,88-99,114-116,124-126,185-195,199-216,257-267,302-311,343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b2a612a24b8f26a9287ee071811e9e6f38c4d636",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_f5cf97ef77e0a9": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "7eded47b-7017-49d0-81b1-1c12ba54a240",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
