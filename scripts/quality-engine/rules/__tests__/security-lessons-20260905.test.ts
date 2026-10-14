@@ -177,3 +177,47 @@ describe("NonNullAfterArraySortFilterRule", () => {
     expect(findings).toHaveLength(0);
   });
 });
+
+describe("SecurityFixWithoutTestRule diff-mode sibling lookup", () => {
+  test("does NOT flag when the sibling test exists in the tracked list but was not changed", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const src = "web/app/api/billing/checkout/route.ts";
+    project.createSourceFile(
+      src,
+      `export async function GET() {
+        const founderUserIds = (process.env.FOUNDER_USER_IDS ?? '').split(',');
+        return founderUserIds.length;
+      }`,
+    );
+    // Diff-mode scan set: only the changed source file.
+    const ctx = {
+      filePath: src,
+      ast: project.getSourceFileOrThrow(src),
+      allFiles: [src],
+      // Repo-wide tracked list: the unchanged sibling test is present.
+      scanWideFiles: [src, "web/app/api/billing/checkout/__tests__/route.test.ts"],
+    };
+    const findings = SecurityFixWithoutTestRule.check(ctx as never);
+    expect(findings.filter((f) => f.title.includes("no sibling test"))).toHaveLength(0);
+  });
+
+  test("still flags when neither the scan set nor the tracked list has a sibling test", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const src = "web/app/api/billing/checkout/route.ts";
+    project.createSourceFile(
+      src,
+      `export async function GET() {
+        const founderUserIds = (process.env.FOUNDER_USER_IDS ?? '').split(',');
+        return founderUserIds.length;
+      }`,
+    );
+    const ctx = {
+      filePath: src,
+      ast: project.getSourceFileOrThrow(src),
+      allFiles: [src],
+      scanWideFiles: [src],
+    };
+    const findings = SecurityFixWithoutTestRule.check(ctx as never);
+    expect(findings.some((f) => f.title.includes("no sibling test"))).toBe(true);
+  });
+});

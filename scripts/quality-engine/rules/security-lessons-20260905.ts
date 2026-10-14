@@ -116,7 +116,10 @@ export const SecurityFixWithoutTestRule: Rule = {
     const base = filePath.split("/").pop() ?? filePath;
     const candidateStems = candidateStemsFor(base);
 
-    const hasSiblingTest = allFiles.some((f) => {
+    // Prefer the repo-wide tracked list: in diff mode allFiles is only the changed
+    // files, so an unchanged sibling test would otherwise look missing.
+    const siblingUniverse = ctx.scanWideFiles ?? allFiles;
+    const hasSiblingTest = siblingUniverse.some((f) => {
       const norm = normalizePosixPath(f);
       if (!isTestFile(norm)) return false;
       const testDir = norm.split("/").slice(0, -1).join("/");

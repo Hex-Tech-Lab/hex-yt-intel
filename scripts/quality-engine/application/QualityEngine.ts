@@ -68,6 +68,7 @@ export class QualityEngine {
                 graph: scope === "file" ? undefined : graph,
                 allFiles: existing,
                 scanMode: this.config.mode,
+                scanWideFiles: this.config.scanWideFiles,
               });
 
               findings.push(...ruleFindings);

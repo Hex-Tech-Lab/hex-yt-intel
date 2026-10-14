@@ -21,6 +21,10 @@ export interface RuleContext {
   // SecurityFixWithoutTestRule checks this to flag an authorization change
   // with no corresponding test file touched in the same diff.
   allFiles?: string[];
+  /** Repo-wide tracked file list. Unlike allFiles (the scan set), this is
+   *  independent of mode, so a rule can check for a sibling test that was not
+   *  itself changed in a diff scan. Optional; rules fall back to allFiles. */
+  scanWideFiles?: string[];
   // The engine's scan mode (EngineConfig.mode): "diff"-like scans only
   // include changed files, "full" scans every tracked file. Lets a rule
   // distinguish "in the scan" (= edited, in diff mode) from "merely present

@@ -238,6 +238,9 @@ async function run() {
       mode: mode === "full" || mode === "watch" ? "full" : "diff",
       defaultScope: "file",
       concurrency,
+      // Repo-wide tracked list so the sibling-test check sees unchanged test files
+      // in diff mode (ctx.allFiles stays the scan set; sql-migrations depends on that).
+      scanWideFiles: listTrackedFiles(),
     }
   );
   console.log("--- Source Provenance & Runtime Honesty Audit ---");
