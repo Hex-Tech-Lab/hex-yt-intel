@@ -25,6 +25,7 @@ import { EXPAND_MARKER_PATTERN, truncateCitationPoints } from '@/lib/utils/citat
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { CHAT_REGISTRY_FALLBACK } from '@/lib/utils/chat-options-settings';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
+import { shouldOfferCommentsChip } from '@/lib/utils/comments-chip';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
@@ -348,11 +349,15 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         conversationHistory,
       });
 
-      const hasMoreComments = useChatStore.getState().hasMoreCommentsByConv[activeId];
-      const isCommentRelevant = /comment|viewer|audience|feedback|sentiment|reaction/i.test(
-        `${userMessage.content} ${latestMessage.content}`
-      );
-      if (hasMoreComments && isCommentRelevant) {
+      // ADR-043: the stream's intent contract decides the chip when present; the keyword
+      // trigger only runs on turns with no metadata (router disabled).
+      const offerCommentsChip = shouldOfferCommentsChip({
+        hasMoreComments: useChatStore.getState().hasMoreCommentsByConv[activeId],
+        intentMeta: useChatStore.getState().chatIntentByConv[activeId],
+        userText: userMessage.content,
+        assistantText: latestMessage.content,
+      });
+      if (offerCommentsChip) {
         prompts.unshift('[ACTION:expand-comments]');
       }
 

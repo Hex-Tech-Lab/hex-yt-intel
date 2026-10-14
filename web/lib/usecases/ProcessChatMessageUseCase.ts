@@ -19,6 +19,9 @@ import { resolveChatCascade, resolveChatWritingCascade, resolveReasoningCascade,
 import { isWritingRequest } from '@/lib/utils/chat-intent';
 import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
 import { chatPayloadDigest } from '@/lib/utils/chat-payload-digest';
+import { ChatIntentConfigPayloadSchema } from '@/lib/validators/chat-intent';
+import type { ChatIntentConfigPayload } from '@/lib/types/chat-intent';
+import { CHAT_INTENT_SETTINGS_DEFAULTS } from '@/lib/config/chat-intent-settings';
 
 // Fallback used only if the settings registry is unreachable (see
 // getRegistrySettings call below) -- matches the values these keys replaced
@@ -78,6 +81,8 @@ export interface ProcessChatMessageSuccess {
     hasMoreComments?: boolean;
     // Client and worker timeout in milliseconds resolved from Settings Registry (T20)
     timeoutMs?: number;
+    // ADR-043 router settings. Present only when chat.intent.enabled; bound into the digest.
+    intentConfig?: ChatIntentConfigPayload;
   };
 }
 
@@ -553,15 +558,34 @@ export class ProcessChatMessageUseCase {
     // T20: decoupling hardcoded 50s timeout into settings registry. Writing requests
     // use chat.stream.writingTimeoutMs (default 90s); standard chat uses chat.stream.timeoutMs (default 50s).
     const timeoutSettings = await SupabaseSettingsAdapter.getRegistrySettings(
-      ['chat.stream.timeoutMs', 'chat.stream.writingTimeoutMs'],
+      ['chat.stream.timeoutMs', 'chat.stream.writingTimeoutMs', 'chat.intent.enabled', 'chat.intent.overrideConfidence', 'chat.intent.timeoutMs', 'chat.intent.modelByIntent'],
       {
         'chat.stream.timeoutMs': CHAT_STREAM_TIMEOUT_MS_FALLBACK,
         'chat.stream.writingTimeoutMs': CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK,
+        'chat.intent.enabled': CHAT_INTENT_SETTINGS_DEFAULTS['chat.intent.enabled'],
+        'chat.intent.overrideConfidence': CHAT_INTENT_SETTINGS_DEFAULTS['chat.intent.overrideConfidence'],
+        'chat.intent.timeoutMs': CHAT_INTENT_SETTINGS_DEFAULTS['chat.intent.timeoutMs'],
+        'chat.intent.modelByIntent': CHAT_INTENT_SETTINGS_DEFAULTS['chat.intent.modelByIntent'],
       }
     );
     const resolvedTimeoutMs = writingCascade
       ? Number(timeoutSettings['chat.stream.writingTimeoutMs']) || CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK
       : Number(timeoutSettings['chat.stream.timeoutMs']) || CHAT_STREAM_TIMEOUT_MS_FALLBACK;
+
+    // 10b. ADR-043 router settings. Relayed only when enabled. Malformed registry values
+    // fail the schema here, so the router stays off for this turn and the turn still runs.
+    const intentParsed = timeoutSettings['chat.intent.enabled'] === true
+      ? ChatIntentConfigPayloadSchema.safeParse({
+          enabled: true,
+          overrideConfidence: Number(timeoutSettings['chat.intent.overrideConfidence']),
+          timeoutMs: Number(timeoutSettings['chat.intent.timeoutMs']),
+          modelByIntent: timeoutSettings['chat.intent.modelByIntent'],
+        })
+      : null;
+    if (intentParsed && !intentParsed.success) {
+      console.warn('[ProcessChatMessageUseCase] chat.intent settings invalid; router disabled for this turn');
+    }
+    const intentConfig: ChatIntentConfigPayload | undefined = intentParsed?.success ? intentParsed.data : undefined;
 
     // 11. Generate cryptographic stream token
     // The browser relays these to the worker; signing their digest stops a
@@ -573,6 +597,7 @@ export class ProcessChatMessageUseCase {
       history: relayedHistory,
       cascade: chatCascade,
       timeoutMs: resolvedTimeoutMs,
+      intentConfig,
     });
     let sig: string;
     let exp: number;
@@ -615,6 +640,7 @@ export class ProcessChatMessageUseCase {
           models: chatModels,
           cascade: chatCascade,
           timeoutMs: resolvedTimeoutMs,
+          ...(intentConfig ? { intentConfig } : {}),
           // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
           // actually vary by conversation content instead of always falling
           // through to the static fallback (this field was previously never

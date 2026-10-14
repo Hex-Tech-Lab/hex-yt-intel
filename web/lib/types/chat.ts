@@ -51,3 +51,6 @@ export interface ErrorEvent {
 }
 
 export type ChatSSEEvent = DeltaEvent | DoneEvent | PersistEvent | ErrorEvent;
+
+// ADR-043: per-turn intent contract carried on the worker `meta` frame (read-only on the client).
+export type { ChatTurnIntentMeta } from './chat-intent';

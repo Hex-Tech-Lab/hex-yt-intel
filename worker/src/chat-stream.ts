@@ -5,6 +5,8 @@ import * as Sentry from "@sentry/cloudflare";
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CASCADE_FALLBACKS } from "../../web/lib/config/cascade";
 import { chatPayloadDigest, chatTokenMessage } from "../../web/lib/utils/chat-payload-digest";
+import { ChatIntentConfigPayloadSchema } from "../../web/lib/validators/chat-intent";
+import type { ChatIntentConfigPayload, ChatTurnIntentMeta } from "../../web/lib/types/chat-intent";
 
 // Deploy-time snapshot only -- see CASCADE_FALLBACKS' doc comment in cascade.ts.
 // Real per-request values come from ChatStreamRequest.cascade, registry-resolved
@@ -17,6 +19,7 @@ import { signBoundContent, secretFingerprint } from "./crypto";
 import { isProductionEnv } from "./env-utils";
 import { isValidAppUrl } from "./middleware/cors";
 import { buildAdaptiveOptions, getStaticOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
+import { ChatIntentRouter, buildTurnIntentMeta } from "./services/ChatIntentRouter";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -66,6 +69,8 @@ interface ChatStreamRequest {
   knowledgeContext?: UserKnowledgeContext;
   // Registry-resolved streaming timeout per model tier (T20).
   timeoutMs?: number;
+  // ADR-043 router settings, bound into the digest. Present only when chat.intent.enabled.
+  intentConfig?: unknown;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -116,6 +121,8 @@ export interface StreamChatCascadeOptions {
   userId?: string;
   timeoutMs?: number;
   clientSignal?: AbortSignal;
+  /** Extra system instruction appended after grounding (ADR-043: timestamp suppression on writing turns). */
+  extraSystem?: string;
 }
 
 /** Run the chat cascade, committing to the first model that produces tokens. Falls back
@@ -131,6 +138,7 @@ export async function streamChatCascade(opts: StreamChatCascadeOptions): Promise
     userId,
     timeoutMs,
     clientSignal,
+    extraSystem,
   } = opts;
   const effectiveTimeoutMs = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 50000;
   // One cumulative budget for the whole cascade: every fallback model gets only the time left.
@@ -140,6 +148,7 @@ export async function streamChatCascade(opts: StreamChatCascadeOptions): Promise
   const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
+  if (extraSystem) messages.push({ role: "system", content: extraSystem });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 
   const chain = cascade && cascade.length > 0
@@ -360,6 +369,61 @@ export async function streamChatCascade(opts: StreamChatCascadeOptions): Promise
   return { content: "", servedByModel: null, servedByProvider: null, attempts, partial: false, outcome: 'exhausted' };
 }
 
+/** Writing turns never carry timestamps unless asked. Prompt-level instruction, not a hard filter. */
+const SUPPRESS_TIMESTAMPS_INSTRUCTION =
+  "Do not add timestamps, time codes or video time references to this reply unless the user explicitly asked for them in this message.";
+
+/**
+ * Validates the signed router settings. Anything malformed is treated as disabled,
+ * so a bad setting never fails the chat turn (ADR-043).
+ */
+function parseIntentConfig(raw: unknown): ChatIntentConfigPayload | null {
+  if (raw === undefined || raw === null) return null;
+  const parsed = ChatIntentConfigPayloadSchema.safeParse(raw);
+  if (!parsed.success) {
+    // skipcq: JS-0827
+    console.warn("[chat-stream] intentConfig failed validation; router disabled for this turn");
+    return null;
+  }
+  return parsed.data;
+}
+
+/** One Jev intent call for the turn. The router never throws; this guards that contract. */
+async function resolveTurnIntentMeta(
+  config: ChatIntentConfigPayload,
+  apiKey: string,
+  history: Array<{ role: string; content: string }>,
+  conversationId: string,
+): Promise<ChatTurnIntentMeta> {
+  const currentMessage = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+  try {
+    const router = new ChatIntentRouter({
+      openRouterApiKey: apiKey,
+      enabled: true,
+      overrideConfidence: config.overrideConfidence,
+      timeoutMs: config.timeoutMs,
+    });
+    const output = await router.resolveTurnIntent({ currentMessage, historyLength: history.length });
+    return buildTurnIntentMeta(output, config.modelByIntent);
+  } catch (err) {
+    Sentry.captureException(err, { contexts: { chat: { conversationId, action: "chatIntentRouter" } } });
+    // skipcq: JS-0827
+    console.warn("[chat-stream] intent router threw; falling back to general_grounded_qa", err instanceof Error ? err.message : String(err));
+    return buildTurnIntentMeta(
+      {
+        intent: "general_grounded_qa",
+        confidence: 0,
+        jevVersion: "unavailable",
+        isInherited: false,
+        overrideApplied: false,
+        suppressCommentsChip: false,
+        suppressTimestamps: false,
+      },
+      config.modelByIntent,
+    );
+  }
+}
+
 export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const req = (await c.req.json()) as ChatStreamRequest;
   const secret = c.env.STREAM_HMAC_SECRET;
@@ -406,6 +470,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     history: req.history,
     cascade: req.cascade,
     timeoutMs: req.timeoutMs,
+    intentConfig: req.intentConfig,
   });
   for (const s of secretsToTry) {
     if (!s) continue;
@@ -438,6 +503,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const encoder = new TextEncoder();
   const grounding = typeof req.grounding === "string" ? req.grounding : "";
   const history = Array.isArray(req.history) ? req.history : [];
+  const intentConfig = parseIntentConfig(req.intentConfig);
 
   const rawReq = c.req.raw;
   const clientSignal = rawReq.signal;
@@ -475,12 +541,19 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         }
       };
 
+      // ADR-043 Part A: one router call per turn, before the meta frame so the client
+      // gets the contract first. Null when disabled, so the frame is unchanged.
+      const turnIntentMeta = intentConfig
+        ? await resolveTurnIntentMeta(intentConfig, apiKey, history, req.conversationId)
+        : null;
+
       // Emit SSE metadata frame with tier and model cascade info for client-side observability (Task 3 / D2)
       sendEvent("meta", {
         tier: req.tier || "free",
         models: req.models || [],
         cascade: req.cascade ? req.cascade.map((c) => c.model) : [],
         requestId: req.requestId,
+        ...(turnIntentMeta ?? {}),
       });
 
       // STAGE 1: Generate and emit OPTIONS IMMEDIATELY (blocking step)
@@ -534,6 +607,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           userId: req.userId,
           timeoutMs: req.timeoutMs,
           clientSignal,
+          extraSystem: turnIntentMeta?.suppressTimestamps ? SUPPRESS_TIMESTAMPS_INSTRUCTION : undefined,
         });
         full = result.content;
         servedByModel = result.servedByModel;

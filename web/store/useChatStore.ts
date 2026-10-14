@@ -22,7 +22,8 @@ import * as Sentry from '@sentry/nextjs';
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
 import { safeLocalStorage } from '@/lib/utils/safe-storage';
 
-import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
+import type { ChatConversation, ChatMessage, ChatSSEEvent, ChatTurnIntentMeta } from '@/lib/types/chat';
+import { parseTurnIntentMeta } from '@/lib/utils/comments-chip';
 
 const VALID_PERSIST_STATUSES = new Set(['saving', 'saved', 'failed', 'aborted'] as const);
 
@@ -43,6 +44,10 @@ interface ChatState {
   // actual grounding data) -- drives the "Expand to full comments" chip.
   // Real data, not a client-side keyword guess.
   hasMoreCommentsByConv: Record<string, boolean>;
+
+  // ADR-043 Part A: intent contract from the latest turn's stream `meta` frame, per
+  // conversation. Absent when the router is disabled. Read-only on the client.
+  chatIntentByConv: Record<string, ChatTurnIntentMeta>;
 
   isChatOpen: boolean;
   setChatOpen: (open: boolean) => void;
@@ -304,6 +309,13 @@ export const useChatStore = create<ChatState>((set, get) => {
         throw new Error('Chat stream timeout missing from server payload (chat.stream.timeoutMs)');
       }
 
+      // Drop the previous turn's intent contract so a disabled turn never inherits it.
+      set((s) => {
+        const next = { ...s.chatIntentByConv };
+        delete next[convId];
+        return { chatIntentByConv: next };
+      });
+
       const streamRes = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -331,6 +343,12 @@ export const useChatStore = create<ChatState>((set, get) => {
             console.log('[ChatStore] Ignoring stale event', { eventRequestId: e.requestId, clientMsgId });
           }
           return; // ignore stale/old request events
+        }
+
+        // ADR-043: the server's intent contract. Frames without the fields parse to null.
+        const intentMeta = parseTurnIntentMeta(e);
+        if (intentMeta) {
+          set((s) => ({ chatIntentByConv: { ...s.chatIntentByConv, [convId]: intentMeta } }));
         }
 
         const handlers: {
@@ -427,6 +445,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     activeId: null,
     messagesByConv: {},
     hasMoreCommentsByConv: {},
+    chatIntentByConv: {},
     loadingList: false,
     loadingThread: false,
     sending: false,
@@ -747,6 +766,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         activeId: null,
         messagesByConv: {},
         hasMoreCommentsByConv: {},
+        chatIntentByConv: {},
         error: null,
         sending: false,
         isChatOpen: false,
