@@ -1,9 +1,20 @@
 /**
- * GroqPromptGuardClient — Groq Llama Prompt Guard 2 API Client (ADR-043 Scaffolding)
+ * GroqPromptGuardClient — Groq Llama Prompt Guard 2 API Client (ADR-043 Part B)
  *
- * Implements interface and typed error hierarchy for screening prompt injection and jailbreaks.
- * Advance Scout stub: CCT will implement full sliding-window segment batching and Groq REST invocation.
+ * Calls the Groq chat-completions endpoint with a Prompt Guard model and maps the
+ * classification output to a 0..1 attack score. The API key is injected by the caller
+ * and must come from the environment (ADR 016); it is never stored in the registry.
+ *
+ * UNVERIFIED CONTRACT: Groq's docs confirm the model ids and the chat-completions call,
+ * but do not document a numeric score or the exact output labels. The label mapping
+ * below (BENIGN -> 0, MALICIOUS -> 1) is a binary assumption and must be checked against
+ * a live response before `block` mode is considered.
  */
+
+const GROQ_CHAT_COMPLETIONS_URL = 'https://api.groq.com/v1/chat/completions';
+const DEFAULT_MODEL = 'meta-llama/llama-prompt-guard-2-86m';
+const DEFAULT_TIMEOUT_MS = 5000;
+const BATCH_CONCURRENCY = 4;
 
 export interface GroqPromptGuardConfig {
   apiKey: string;
@@ -61,6 +72,14 @@ export interface IGroqPromptGuardClient {
   scoreBatch(texts: string[], options?: { timeoutMs?: number }): Promise<GroqPromptGuardScoreResponse[]>;
 }
 
+/** Maps the classifier's text output to a score. Unknown labels throw (caller fails open). */
+function labelToScore(content: unknown): number {
+  const label = typeof content === 'string' ? content.trim().toUpperCase() : '';
+  if (label === 'BENIGN') return 0;
+  if (label === 'MALICIOUS') return 1;
+  throw new GroqPromptGuardError(`Groq Prompt Guard returned an unrecognised label: ${label.slice(0, 40) || '(empty)'}`);
+}
+
 export class GroqPromptGuardClient implements IGroqPromptGuardClient {
   private readonly apiKey: string;
   private readonly defaultModel: string;
@@ -71,23 +90,76 @@ export class GroqPromptGuardClient implements IGroqPromptGuardClient {
       throw new Error('GroqPromptGuardClient requires a valid apiKey');
     }
     this.apiKey = config.apiKey;
-    this.defaultModel = config.model ?? 'meta-llama/llama-prompt-guard-2-86m';
-    this.defaultTimeoutMs = config.timeoutMs ?? 5000;
+    this.defaultModel = config.model ?? DEFAULT_MODEL;
+    this.defaultTimeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   /**
-   * Evaluates a single text segment for prompt injection probability.
-   * Stub implementation for Advance Scout phase; CCT will wire HTTP fetch.
+   * Evaluates a single text segment. Timeout, 429 and 5xx surface as typed errors.
    */
   public async scoreText(request: GroqPromptGuardScoreRequest): Promise<GroqPromptGuardScoreResponse> {
-    throw new Error('GroqPromptGuardClient.scoreText: Not implemented (scaffolded for CCT Wave 2 implementation)');
+    const model = request.model ?? this.defaultModel;
+    const timeoutMs = request.timeoutMs ?? this.defaultTimeoutMs;
+    const started = Date.now();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: request.text }],
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) throw new GroqPromptGuardTimeoutError(timeoutMs);
+      throw new GroqPromptGuardError(error instanceof Error ? error.message : 'Groq Prompt Guard network error');
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (response.status === 429) {
+      const retryAfterSeconds = Number(response.headers.get('retry-after'));
+      throw new GroqPromptGuardRateLimitError(Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : undefined);
+    }
+    if (!response.ok) {
+      throw new GroqPromptGuardError(`Groq Prompt Guard returned HTTP ${response.status}`, { status: response.status });
+    }
+
+    const body = (await response.json()) as {
+      model?: unknown;
+      choices?: Array<{ message?: { content?: unknown } }>;
+    };
+    const content = body.choices?.[0]?.message?.content;
+    return {
+      score: labelToScore(content),
+      model: typeof body.model === 'string' ? body.model : model,
+      latencyMs: Date.now() - started,
+      rawResponse: body as Record<string, unknown>,
+    };
   }
 
   /**
-   * Concurrently scores a list of segmented windows with bounded parallelism.
-   * Stub implementation for Advance Scout phase; CCT will wire HTTP fetch.
+   * Scores a list of segments with bounded parallelism. Result order matches input order.
+   * Any segment failure rejects the batch; the caller decides the fail-open verdict.
    */
   public async scoreBatch(texts: string[], options?: { timeoutMs?: number }): Promise<GroqPromptGuardScoreResponse[]> {
-    throw new Error('GroqPromptGuardClient.scoreBatch: Not implemented (scaffolded for CCT Wave 2 implementation)');
+    const results: GroqPromptGuardScoreResponse[] = new Array(texts.length);
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (next < texts.length) {
+        const index = next++;
+        results[index] = await this.scoreText({ text: texts[index] ?? '', timeoutMs: options?.timeoutMs });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, texts.length) }, () => worker()));
+    return results;
   }
 }

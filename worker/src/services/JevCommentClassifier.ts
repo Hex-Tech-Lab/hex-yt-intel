@@ -22,7 +22,7 @@ import type { VideoComment } from '../ports/CommentIngestionPort';
  */
 
 const JEV_URL = 'https://openrouter.ai/api/alpha/decisions';
-const JEV_MODEL = '~typesafe/jev-latest'; // resolves typesafe/jev-1.13-20260917
+export const JEV_MODEL = '~typesafe/jev-latest'; // resolves typesafe/jev-1.13-20260917
 const HTTP_REFERER = 'https://getvintel.com';
 const X_TITLE = 'vIntel - Jev Comment Classifier';
 const MAX_COMMENT_CHARS = 2000;
@@ -103,7 +103,7 @@ export const JEV_COMMENT_QUESTIONS = {
   },
 } as const;
 
-interface JevAnswer {
+export interface JevAnswer {
   type?: string;
   choice?: string;
   noul?: number;
@@ -112,7 +112,7 @@ interface JevAnswer {
   confidence?: number;
 }
 
-interface JevResponse {
+export interface JevResponse {
   model?: string;
   answers?: Record<string, JevAnswer>;
   usage?: { cost?: number };
@@ -251,27 +251,40 @@ export class JevCommentClassifier implements CommentClassificationPort {
   }
 
   private async callDecisions(state: Record<string, unknown>): Promise<JevResponse> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
-    try {
-      const res = await fetch(JEV_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': HTTP_REFERER,
-          'X-Title': X_TITLE,
-        },
-        body: JSON.stringify({ model: JEV_MODEL, state, questions: JEV_COMMENT_QUESTIONS }),
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        throw new Error(`Jev Decisions ${res.status}`);
-      }
-      return (await res.json()) as JevResponse;
-    } finally {
-      clearTimeout(timer);
+    return callJevDecisions(this.apiKey, { state, questions: JEV_COMMENT_QUESTIONS }, this.config.requestTimeoutMs);
+  }
+}
+
+/**
+ * Shared Jev Decisions client (ADR-043 chat intent router reuses it). One POST
+ * to the OpenRouter Decisions endpoint with attribution headers and a hard
+ * abort timeout. Throws on transport error, timeout or non-2xx status.
+ */
+export async function callJevDecisions(
+  apiKey: string,
+  payload: { state: Record<string, unknown>; questions: unknown; xTitle?: string },
+  timeoutMs: number,
+): Promise<JevResponse> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(JEV_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': HTTP_REFERER,
+        'X-Title': payload.xTitle ?? X_TITLE,
+      },
+      body: JSON.stringify({ model: JEV_MODEL, state: payload.state, questions: payload.questions }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Jev Decisions ${res.status}`);
     }
+    return (await res.json()) as JevResponse;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

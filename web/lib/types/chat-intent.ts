@@ -14,6 +14,35 @@ export const CHAT_INTENTS = [
 
 export type ChatIntent = (typeof CHAT_INTENTS)[number];
 
+/** Version of the SSE `meta` intent contract. Bump on any shape change. */
+export const CHAT_INTENT_VERSION = 1;
+
+export const MODEL_TIERS = ['primary', 'cheap'] as const;
+export type ModelTier = (typeof MODEL_TIERS)[number];
+
+/**
+ * Per-turn intent contract carried on the worker SSE `meta` frame. Computed once
+ * per turn by the worker; the browser reads it and never re-derives intent.
+ */
+export interface ChatTurnIntentMeta {
+  intent: ChatIntent;
+  suppressCommentsChip: boolean;
+  suppressTimestamps: boolean;
+  modelTier: ModelTier;
+  intentVersion: number;
+}
+
+/**
+ * Registry-resolved router settings relayed from the Vercel bouncer. Bound into the
+ * stream HMAC digest, so the browser cannot edit them. Present only when enabled.
+ */
+export interface ChatIntentConfigPayload {
+  enabled: true;
+  overrideConfidence: number;
+  timeoutMs: number;
+  modelByIntent: Record<string, ModelTier>;
+}
+
 export interface ChatIntentClassification {
   intent: ChatIntent;
   confidence: number;

@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { CHAT_INTENTS } from '../types/chat-intent';
+import { CHAT_INTENTS, CHAT_INTENT_VERSION, MODEL_TIERS } from '../types/chat-intent';
 
 /**
  * Strict Zod Schema for the closed Chat Intent enumeration.
@@ -94,3 +94,28 @@ export const GroqPromptGuardResponseSchema = z
       .optional(),
   })
   .passthrough();
+
+/**
+ * Per-turn intent contract on the worker SSE `meta` frame. Non-strict on purpose:
+ * the same object carries tier/models/cascade/requestId alongside these fields.
+ */
+export const ChatTurnIntentMetaSchema = z.object({
+  intent: ChatIntentSchema,
+  suppressCommentsChip: z.boolean(),
+  suppressTimestamps: z.boolean(),
+  modelTier: z.enum(MODEL_TIERS),
+  intentVersion: z.literal(CHAT_INTENT_VERSION),
+});
+
+/**
+ * Registry-resolved router settings relayed in the signed chat payload. Present
+ * only when chat.intent.enabled is true; absence means the router is disabled.
+ */
+export const ChatIntentConfigPayloadSchema = z
+  .object({
+    enabled: z.literal(true),
+    overrideConfidence: z.number().min(0).max(1),
+    timeoutMs: z.number().min(1000).max(30000),
+    modelByIntent: z.record(z.string(), z.enum(MODEL_TIERS)),
+  })
+  .strict();

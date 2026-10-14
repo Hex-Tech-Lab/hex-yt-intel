@@ -16,10 +16,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PromptGuard, type PromptGuardServiceConfig } from '../services/PromptGuard';
 import {
   GroqPromptGuardClient,
+  GroqPromptGuardError,
   GroqPromptGuardTimeoutError,
   GroqPromptGuardRateLimitError,
   type IGroqPromptGuardClient,
 } from '../services/GroqPromptGuardClient';
+
+// Scripted Groq scores: any segment containing a known injection phrase scores high, the rest low.
+const ATTACK_PATTERN = /Ignore all prior|DAN mode/;
+const scoreByContent = async (texts: string[]) =>
+  texts.map((text) => ({ score: ATTACK_PATTERN.test(text) ? 0.97 : 0.02, model: 'mock', latencyMs: 0 }));
 
 describe('PromptGuard & Groq Client (ADR-043 Part B)', () => {
   const mockConfig: PromptGuardServiceConfig = {
@@ -35,7 +41,7 @@ describe('PromptGuard & Groq Client (ADR-043 Part B)', () => {
     vi.restoreAllMocks();
     mockClient = {
       scoreText: vi.fn(),
-      scoreBatch: vi.fn(),
+      scoreBatch: vi.fn(scoreByContent),
     };
   });
 
@@ -111,6 +117,7 @@ describe('PromptGuard & Groq Client (ADR-043 Part B)', () => {
 
   describe('Fail-Open Network Resilience (ADR-043 §B.4)', () => {
     it('fails open with flag verdict when Groq request times out', async () => {
+      mockClient.scoreBatch = vi.fn().mockRejectedValue(new GroqPromptGuardTimeoutError(5000));
       const guard = new PromptGuard(mockClient, mockConfig);
       const result = await guard.screenInput({ userText: 'Testing timeout fail-open' });
 
@@ -120,6 +127,7 @@ describe('PromptGuard & Groq Client (ADR-043 Part B)', () => {
     });
 
     it('fails open when Groq returns 429 rate limit error', async () => {
+      mockClient.scoreBatch = vi.fn().mockRejectedValue(new GroqPromptGuardRateLimitError(1200));
       const guard = new PromptGuard(mockClient, mockConfig);
       const result = await guard.screenInput({ userText: 'Testing 429 fail-open' });
 
@@ -128,6 +136,7 @@ describe('PromptGuard & Groq Client (ADR-043 Part B)', () => {
     });
 
     it('fails open when Groq returns 500 server error', async () => {
+      mockClient.scoreBatch = vi.fn().mockRejectedValue(new GroqPromptGuardError('Groq 500', { status: 500 }));
       const guard = new PromptGuard(mockClient, mockConfig);
       const result = await guard.screenInput({ userText: 'Testing 500 fail-open' });
 
