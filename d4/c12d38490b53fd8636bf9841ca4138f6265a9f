@@ -1,0 +1,29 @@
+scripts/quality-engine/application/EngineConfig.ts
+  s_4e2b0b0a92fc08::t_84da9772735de5 6-7
+scripts/quality-engine/application/QualityEngine.ts
+  s_4e2b0b0a92fc08::t_b9939e9a19f121 71
+scripts/quality-engine/domain/Rule.ts
+  s_4e2b0b0a92fc08::t_9d2ec157e6a24a 24-27
+scripts/quality-engine/rules/__tests__/security-lessons-20260905.test.ts
+  s_4e2b0b0a92fc08::t_d8962d46ecb873 180-223
+scripts/quality-engine/rules/security-lessons-20260905.ts
+  s_4e2b0b0a92fc08::t_743092b579eab4 119-122
+scripts/verify-quality-engine.ts
+  s_4e2b0b0a92fc08::t_0233449ed6da59 241-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4c12d38490b53fd8636bf9841ca4138f6265a9f",
+  "prompts": {},
+  "sessions": {
+    "s_4e2b0b0a92fc08": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69ec633a-0c01-486a-80de-180205f86530",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
