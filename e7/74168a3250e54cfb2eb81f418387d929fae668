@@ -1,0 +1,23 @@
+web/lib/utils/highlights-settings.ts
+  s_291078cde7ba1a::t_412e185d2362fb 177-185
+web/lib/utils/__tests__/highlights-duration.test.ts
+  s_291078cde7ba1a::t_938cb6bdfc91fd 1-35
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_03e4c1869c1772 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e774168a3250e54cfb2eb81f418387d929fae668",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
