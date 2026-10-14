@@ -11,11 +11,10 @@
 **Target Agent**: <AGY-1 (Flash) (OpenCode) (Pro) AGY-2 OC |>
 **Effort Level**: <high | medium | low>
 
-> **Before dispatching**: run the `improve-prompt` skill against the filled-in
-> prompt below. It mechanizes this file's own Model-tuning rule and report
-> contract as a checklist — cheaper than re-deriving them from memory each
-> time, and catches drift the way this template's own history shows prose
-> reminders alone don't.
+> **Before dispatching**: `improve-prompt` is **NOT-INSTALLED** (absent from
+> ~/.claude/skills; do not treat it as a required step). Instead, check the
+> filled-in prompt by hand against this file's Model-tuning rule and §6 report
+> contract.
 
 ---
 
@@ -155,7 +154,7 @@ Before writing sections 1–2 below, decide:
   - `supabase-postgres-best-practices` — query/index/lock patterns.
   - `supabase` — broader: RLS, Auth, Edge Functions, Realtime, Storage, pg_cron/pg_vector.
   - `database-sentinel` — RLS/rules misconfiguration, exposed credentials, auth-bypass audit.
-  - `db-arch-10x` — heavier structural audit; invoke when the diff is migration-heavy, adds >1 table/relationship, or the user explicitly asks for a schema audit (not on every small migration).
+  - `database-architect-10x` — heavier structural audit; invoke when the diff is migration-heavy, adds >1 table/relationship, or the user explicitly asks for a schema audit (not on every small migration).
   - **Mandatory sub-check whenever a migration creates or replaces a function**: verify `REVOKE EXECUTE ... FROM anon, authenticated, public` is present unless the function is genuinely meant to be client-callable, AND that any ownership/authorization check inside a `SECURITY DEFINER` function checks the actual role (`auth.jwt() ->> 'role'`) rather than inferring service-role from `auth.uid() IS NULL` (real fail-open IDOR found this way, 2026-09-05 audit, `get_temporal_subgraph`). Verify live via `select grantee, privilege_type from information_schema.routine_privileges where routine_name = '<fn>'` after applying — don't just trust the SQL text.
   - `planetscale-postgres-safety-review` is **NOT applicable to this repo** (wrong DB platform — Supabase Postgres, not PlanetScale). Do not invoke.
 
@@ -170,7 +169,40 @@ Before writing sections 1–2 below, decide:
 - **Suspected Vercel cost/perf regression (new route, new data-fetch pattern, bundle growth)**:
   - `vercel-optimize` — metrics-first (needs Observability Plus), not code-only guessing.
 
-- **Explicitly NOT installed / do not reference as available**: `webapp-testing`, `agent-browser` (confirmed absent, not stubs). `code-modernization` plugin exists but is scoped to legacy COBOL/.NET-Framework migrations — wrong shape for this stack, do not enable for routine review.
+- **Explicitly NOT installed / do not reference as available**: `agent-browser` (confirmed absent, not stubs). `webapp-testing` IS installed (~/.claude/skills/webapp-testing) and is wired below for runtime checks. `code-modernization` plugin exists but is scoped to legacy COBOL/.NET-Framework migrations — wrong shape for this stack, do not enable for routine review.
+
+- **Vetted skill wiring (added 2026-10-13, skill-scout; every name confirmed present in ~/.claude/skills)**:
+  - `webapp-testing` — Playwright run against the local app with screenshots; post-edit runtime check for UI changes.
+  - `next-best-practices` — Next.js file conventions, RSC/client boundaries, async APIs, route handlers; IF `web/app/**`.
+  - `frontend-patterns` — React and Next.js state, performance, and UI patterns; IF `web/components/**` or `web/hooks/**`.
+  - `accessibility` — WCAG 2.2 audit and fix workflow; IF `web/components/**` or `web/app/**` UI changes.
+  - `accessibility-review` — WCAG 2.1 AA page audit report (overlaps `accessibility`; pick one per PR).
+  - `react-testing` — RTL + Vitest + MSW component tests with a11y assertions (ADR 024); IF component tests change.
+  - `e2e-testing` — Playwright page-object patterns and CI artifacts; PR gate for UI-touching PRs.
+  - `hex-yt-intel-design` — project design system (frozen palette, stateless React 19 components); IF `web/components/**`.
+  - `web-perf` — Core Web Vitals and Lighthouse audit; audit phase for perf questions.
+  - `motion-foundations` — motion tokens, reduced-motion, SSR-safe motion; IF motion code changes (with `motion-patterns`).
+  - `hex-yt-intel-supabase-query-safety` — null-filter leaks, ghost sessions, and stale realtime subscriptions in Supabase reads; IF `.from(` or realtime code changes.
+  - `hex-yt-intel-oom-prevention-jsonb` — PostgREST JSONB projection to avoid edge-runtime OOM on `analysis_payload` reads; IF reads under `web/app/api`.
+  - `hex-yt-intel-supabase-production-fix` — remote-vs-local migration drift fix (ADR 013/018); PR gate for `supabase/migrations/**`.
+  - `postgres-patterns` — query, index, schema, and security patterns (overlaps `supabase-postgres-best-practices`; pick one); IF SQL changes.
+  - `workers-best-practices` — production Workers patterns for `worker/**`; pre-edit.
+  - `workers-profiling` — CPU and memory profiling of deployed Workers (exceededCpu incident, ADR 032 target); audit phase.
+  - `wrangler` — Wrangler CLI and config troubleshooting; IF `wrangler.*` changes.
+  - `behavioral-evals` — create, run, fix, and promote behavioral evals for agent decisions; post-edit for `lib/services/**` prompt changes (ADR 038 gating).
+  - `evaluator-calibration` — few-shot rubric calibration for LLM judges so scoring does not drift; audit when a judge prompt is added.
+  - `spawn-ori-eval` — throwaway model eval on a pinned harness for bake-offs (ADR 038 rollout gate); audit only.
+  - `ecc-security-review` — checklist for auth, user input, secrets, and new API endpoints; pre-edit for `web/app/api` and `worker/` auth paths.
+  - `sharp-edges` — footgun defaults in crypto and config APIs (HMAC, CORS per ADR 041); PR gate when those change.
+  - `gha-security-review` — GitHub Actions workflow exploitation review; PR gate for `.github/workflows/**`.
+  - `error-handling` — typed errors, boundaries, and retries across TypeScript; pre-edit next to `silent-failure-hunter`.
+  - `systematic-debugging` — root cause before fixes for any bug or test failure; pre-edit (alongside `diagnosing-bugs`).
+  - `verification-loop` — six-phase build, type, lint, test, and coverage run (overlaps the runtime check); optional PR gate.
+  - `hexagonal-architecture` — ports and adapters design and refactor; pre-edit for `*ports*` or `*adapters*`.
+  - `upstash-ratelimit-js` — rate limiting with @upstash/ratelimit (ADR 002 family); IF rate-limit code changes.
+  - `upstash-redis-js` — @upstash/redis client usage in serverless code; IF Redis code changes.
+  - `upstash-qstash-js` — QStash scheduling and retries (ADR 007 reaper); IF QStash code changes.
+  - `database-architect-10x` — live DB schema audit against the codebase (the name previously written as `db-arch-10x`); audit phase.
 
 ---
 
