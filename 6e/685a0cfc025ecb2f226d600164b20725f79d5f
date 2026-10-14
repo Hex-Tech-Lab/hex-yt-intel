@@ -1,0 +1,25 @@
+.memory/AGENT_LEDGER.md
+  s_291078cde7ba1a::t_9eb4202fe0bb5c 12-18
+web/app/status/status-dashboard-client.tsx
+  s_291078cde7ba1a::t_f86c6308df5e9c 109
+web/lib/services/__tests__/sentry-telemetry.test.ts
+  s_291078cde7ba1a::t_40c4c411d09f0e 1-76
+web/lib/services/sentry-telemetry.ts
+  s_291078cde7ba1a::t_03aa3008864d06 12,38,86-91,104,118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e685a0cfc025ecb2f226d600164b20725f79d5f",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
