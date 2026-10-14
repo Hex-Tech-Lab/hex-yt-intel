@@ -1,0 +1,98 @@
+web/lib/__tests__/comments-chip-intent.test.ts
+  s_291078cde7ba1a::t_06d7057da3c657 1-100
+worker/src/services/GroqPromptGuardClient.ts
+  s_291078cde7ba1a::t_be2d7d8b9f8fec 2,4-11,14-18,75-82,93-94,98,101-146,150-151,154-158,160-163
+  s_291078cde7ba1a::t_8007a94db1f7b1 159
+worker/src/services/PromptGuard.ts
+  s_291078cde7ba1a::t_5fbfb95863090c 99
+  s_291078cde7ba1a::t_4826a1a708a7ae 2,4-6,14-15,17,26-52,56,58-62,65,70-71,87-98,100-136
+web/components/templates/console/ChatDock.tsx
+  s_291078cde7ba1a::t_9b42e959d412d8 28
+  s_291078cde7ba1a::t_c54ed5fab57e1d 352-360
+web/lib/utils/comments-chip.ts
+  s_291078cde7ba1a::t_ab7f4a310afd8d 1-16,19-32
+  s_291078cde7ba1a::t_ba1c9037c23875 17-18
+worker/src/chat-stream.ts
+  s_291078cde7ba1a::t_6a902601ca7d11 124-125
+  s_291078cde7ba1a::t_60d96090c55ece 473
+  s_291078cde7ba1a::t_b53d7a663137b9 22
+  s_291078cde7ba1a::t_e5d1d84f2a0c06 372-426
+  s_291078cde7ba1a::t_3edefe9356d0d6 8
+  s_291078cde7ba1a::t_db242f1727c295 544-549,556
+  s_291078cde7ba1a::t_71b5b85dd3da42 506
+  s_291078cde7ba1a::t_326157b3c5b4a7 610
+  s_291078cde7ba1a::t_064f5f733e08e6 9
+  s_291078cde7ba1a::t_84f41b00425382 151
+  s_291078cde7ba1a::t_d293ae12ded448 141
+  s_291078cde7ba1a::t_83ee554d99e6a4 72-73
+web/lib/types/chat-intent.ts
+  s_291078cde7ba1a::t_1d9bf6ed423bb8 17-45
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_291078cde7ba1a::t_c7dfdd005604c9 561,565-568,575-588
+  s_291078cde7ba1a::t_d4b50a052696b7 643
+  s_291078cde7ba1a::t_5347b350b05387 24
+  s_291078cde7ba1a::t_de0004d5b1c522 84-85
+  s_291078cde7ba1a::t_329e1a29d270bf 22-23
+  s_291078cde7ba1a::t_732e44a493366a 600
+  s_291078cde7ba1a::t_611c36cab84f55 589
+worker/src/__tests__/chat-intent-stream-meta.test.ts
+  s_291078cde7ba1a::t_178a1ad7ce28c7 1-171
+web/lib/utils/chat-payload-digest.ts
+  s_291078cde7ba1a::t_225196afc88cd4 11,18,22-23
+  s_291078cde7ba1a::t_a8cfd3d56d69d4 12
+web/store/useChatStore.ts
+  s_291078cde7ba1a::t_eab8f2cda5a52b 48-51
+  s_291078cde7ba1a::t_b4d297bb893a1a 348-353
+  s_291078cde7ba1a::t_af7503db17263a 769
+  s_291078cde7ba1a::t_0264dec7a6d92e 448
+  s_291078cde7ba1a::t_6aa0afcd1d1d82 25-26
+  s_291078cde7ba1a::t_b1ae8c6e3a7747 312-318
+web/lib/validators/chat-intent.ts
+  s_291078cde7ba1a::t_7ac39af4e56c2c 8
+  s_291078cde7ba1a::t_5664f97eec24a6 97-121
+worker/src/__tests__/prompt-guard.test.ts
+  s_291078cde7ba1a::t_15adb54a30cfd5 130
+  s_291078cde7ba1a::t_e68f3cdc519a6f 139
+  s_291078cde7ba1a::t_667b65fd270be6 120
+  s_291078cde7ba1a::t_ec1eebc0485596 19,25-29,44
+worker/src/services/ChatIntentRouter.ts
+  s_291078cde7ba1a::t_e09597a6ea0c11 181
+  s_291078cde7ba1a::t_a2ed318ef2a9e8 20
+  s_291078cde7ba1a::t_493f81eef4c97c 61,67,82,168-180,182-190
+  s_291078cde7ba1a::t_a720bf850c7855 17-19
+  s_291078cde7ba1a::t_e63b9eadf03030 58-60
+  s_291078cde7ba1a::t_70bae8442a96c9 62-66
+  s_291078cde7ba1a::t_b699ab8dd585c3 68-70,79-81
+  s_291078cde7ba1a::t_5bc1cc4ac2b341 83
+  s_81dcf693735f90::t_d3f5f9e9e6aaa7 2,4-14,35-57,71-78,92-93,97-121,123,125-126,129-165
+web/lib/types/chat.ts
+  s_291078cde7ba1a::t_8c0cebe9ee8fa3 54-56
+worker/src/__tests__/chat-intent-router.test.ts
+  s_291078cde7ba1a::t_8b302af5fa01c0 2,6,9,11-13,16,19-28,38-43,49-50,57,68,83,96,106-114,119,135,153,166-176
+worker/src/services/JevCommentClassifier.ts
+  s_291078cde7ba1a::t_0e21a405643084 25,106,115,254-283,285-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5793f9781d498c723b0fce6d2e18d2a4b7ef642b",
+  "prompts": {},
+  "sessions": {
+    "s_291078cde7ba1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e8bf4d0-a061-4cb6-a487-5d76a4bef71f",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    },
+    "s_81dcf693735f90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1f42c90df9ca856c",
+        "model": "unknown"
+      },
+      "human_author": "techhypexp <104952356+TechHypeXP@users.noreply.github.com>"
+    }
+  }
+}
