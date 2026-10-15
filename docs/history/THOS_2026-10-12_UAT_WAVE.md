@@ -76,4 +76,16 @@ Merged to `uat` (not yet on `main`):
 - OC: dropped by the owner on 2026-10-13. Executors are AGY or CC's own subagents; do not launch opencode.
 - Merges use `scripts/strict-merge.sh` with the bypass list for DeepSource, Codacy, and CodeFactor. Those three checks were ACTION_REQUIRED on every PR this wave and were bypassed explicitly, not ignored silently.
 
+## Addendum 2026-10-15 (weekly ledger sync; facts from git history and the GitHub PR list)
+
+**Branch state:** `main` has 0 commits `uat` lacks; `uat` is 15 commits ahead of `main`. The promotion sign-off block above is still blank.
+
+**Merged to `uat` after this handover was written:** #496 (this handover), #503 (#486 temporal-subgraph migration, THOS corrections, 50s deadline test), #501 (T1: dedupe repeated dimension sub-sections across chunks), #502 (T2: arm persist watchdog on the worker's persist frame), #506 (T12b: comment sentiment consumer fails closed when the claim fails).
+
+**Merged to `main` 2026-10-08 evening → 2026-10-12, not listed above:** #446 (Phase C epistemic shadow mode behind `analysis.pipeline.epistemic`), #447 (Jev commit guard), #448 (store server-fetched transcript segments at ingestion), #449 (keep metadata counts on restore; history status chips), #451 (bounded retry for grounded-claims persist), #452 (persist JEV router skill + harness), #453 (retire v-intel.getmytestdrive.com; mandate getvintel.com + uat.getvintel.com), #454 (register `cascade.diarization`), #457 (mobile ticker layout), #458 (legacy v-intel 301 redirect), #459 (ORIG./TRANS. ticker toggle), #460 (security-lessons-20261010 rules), #461 and #466 (dashboard panel defaults), #462 (untrack research corpus and root clutter), #463 (ARTAS v4 registry V24-V32; artas-v3 rules land in warn mode), #464 (next 16.3.8 + transitive security patches), #465 (persist video-metadata columns; restore description from `validation_report`).
+
+**Open at sync (not merged):** #497 (ADR 043 chat intent routing), #498, #499, #500, #504, #505, #507-#513.
+
+
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
