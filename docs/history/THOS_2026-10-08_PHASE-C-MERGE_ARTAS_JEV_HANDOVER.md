@@ -1,5 +1,7 @@
 # THOS — 2026-10-08 · Phase C merge, ARTAS v3, Haiku 5.5 + JEV reasoning, OC router
 
+> **Status 2026-10-15 (weekly sync):** partly superseded by `THOS_2026-10-12_UAT_WAVE.md`. PRs #446-#449 listed as open elsewhere were merged to `main` 2026-10-08/09. Work now lands on `uat` first; the owner dropped OC on 2026-10-13, so the OC router/config items below are historical.
+
 **Session:** CC (Claude Code) as sink orchestrator, with OC (opencode) fleets doing the legwork.
 **Read this first** if you pick up hex-yt-intel after 2026-10-08.
 
