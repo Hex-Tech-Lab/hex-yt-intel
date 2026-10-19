@@ -38,7 +38,7 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${safeName}"`,
-            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Cache-Control': 'private, no-store',
           },
         })
       );

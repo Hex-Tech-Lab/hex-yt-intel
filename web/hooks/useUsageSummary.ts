@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { getCachedQuery, peekCachedQuery } from '@/lib/utils/client-cache';
 
 export interface UsageSummary {
@@ -9,22 +10,32 @@ export interface UsageSummary {
   estimatedCostUsd: number;
 }
 
-/** Fetches the current user's this-month usage (GET /api/usage/summary) once on mount with 5-minute client cache. */
-export function useUsageSummary(enabled: boolean) {
-  const cached = peekCachedQuery<UsageSummary>('usage-summary');
+/** Fetches the current user's this-month usage (GET /api/usage/summary) once on mount with 5-minute client cache scoped to userId. */
+export function useUsageSummary(enabled: boolean, overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId ?? user?.id;
+  const cacheKey = userId ? `usage-summary:${userId}` : null;
+
+  const cached = cacheKey ? peekCachedQuery<UsageSummary>(cacheKey) : undefined;
   const [summary, setSummary] = useState<UsageSummary | null>(cached ?? null);
-  const [loading, setLoading] = useState(enabled && !cached);
+  const [loading, setLoading] = useState(Boolean(enabled && userId && !cached));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled) return;
+    // If not enabled or unauthenticated, bypass cache and do not issue query
+    if (!enabled || !userId || !cacheKey) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     if (!cached) setLoading(true);
     setError(null);
+
     void (async () => {
       try {
         const data = await getCachedQuery<UsageSummary>(
-          'usage-summary',
+          cacheKey,
           async () => {
             const res = await fetch('/api/usage/summary');
             if (!res.ok) {
@@ -41,10 +52,11 @@ export function useUsageSummary(enabled: boolean) {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [enabled, cached]);
+  }, [enabled, userId, cacheKey, cached]);
 
   return { summary, loading, error };
 }

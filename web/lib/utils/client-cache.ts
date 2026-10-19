@@ -4,6 +4,10 @@
  * Enforces:
  * - Configurable staleTime (default 5 minutes: 5 * 60 * 1000).
  * - Concurrent in-flight request deduplication per query key.
+ * - Monotonic generation tracking to fence against stale in-flight resolution
+ *   after invalidation or cache clearing.
+ * - Reference-checked in-flight promise cleanup to prevent premature deletion
+ *   of newer requests.
  * - Explicit invalidation and cache clearing.
  * - refetchOnWindowFocus disabled by default to eliminate egress bleed on tab switches.
  */
@@ -24,6 +28,17 @@ interface CacheEntry<T = unknown> {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 const inFlight = new Map<string, Promise<unknown>>();
+const generations = new Map<string, number>();
+
+function getGeneration(key: string): number {
+  return generations.get(key) ?? 0;
+}
+
+function nextGeneration(key: string): number {
+  const next = (generations.get(key) ?? 0) + 1;
+  generations.set(key, next);
+  return next;
+}
 
 /**
  * Retrieve a query result from cache if fresh; otherwise invoke fetcher,
@@ -48,18 +63,27 @@ export async function getCachedQuery<T>(
     return existingInFlight as Promise<T>;
   }
 
-  // 3. Start a new fetch and record in-flight promise
-  const promise = (async () => {
+  // 3. Start a new fetch and record in-flight promise with generation tracking
+  const requestGen = getGeneration(key);
+
+  let promise: Promise<T> = null as unknown as Promise<T>;
+  promise = (async () => {
     try {
       const data = await fetcher();
-      cache.set(key, {
-        data,
-        timestamp: Date.now(),
-        staleTime,
-      });
+      // Generation fence: only populate cache if key generation has not advanced
+      if (getGeneration(key) === requestGen) {
+        cache.set(key, {
+          data,
+          timestamp: Date.now(),
+          staleTime,
+        });
+      }
       return data;
     } finally {
-      inFlight.delete(key);
+      // In-flight guard: only delete if the active in-flight promise strictly matches this resolving promise
+      if (inFlight.get(key) === promise) {
+        inFlight.delete(key);
+      }
     }
   })();
 
@@ -69,10 +93,12 @@ export async function getCachedQuery<T>(
 
 /**
  * Invalidate a specific cached query by key so subsequent calls fetch fresh data.
+ * Advances the generation counter to invalidate any in-flight requests.
  */
 export function invalidateCachedQuery(key: string): void {
   cache.delete(key);
   inFlight.delete(key);
+  nextGeneration(key);
 }
 
 /**
@@ -109,8 +135,12 @@ export function peekCachedQuery<T>(
 
 /**
  * Reset all cached items and in-flight requests (primarily for tests and user sign-out).
+ * Advances generations for all active keys to discard any pending resolutions.
  */
 export function clearClientCache(): void {
   cache.clear();
   inFlight.clear();
+  for (const key of Array.from(generations.keys())) {
+    generations.set(key, (generations.get(key) ?? 0) + 1);
+  }
 }

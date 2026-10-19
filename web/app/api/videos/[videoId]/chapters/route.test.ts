@@ -14,6 +14,7 @@ import { NextRequest } from 'next/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const upsertChapters = vi.hoisted(() => vi.fn());
+const getChaptersWithStatus = vi.hoisted(() => vi.fn());
 const captureMessage = vi.hoisted(() => vi.fn());
 const captureException = vi.hoisted(() => vi.fn());
 
@@ -21,12 +22,12 @@ vi.mock('@/lib/env', () => ({
   env: { streamHmacSecret: 'test-hmac-secret', isProduction: false },
 }));
 vi.mock('@/lib/adapters/SupabaseTranscriptAdapter', () => ({
-  SupabaseTranscriptAdapter: { upsertChapters },
+  SupabaseTranscriptAdapter: { upsertChapters, getChaptersWithStatus },
 }));
 vi.mock('@sentry/nextjs', () => ({ captureMessage, captureException }));
 
 import { boundContentMessage } from '@/lib/stream-token';
-import { POST } from '@/app/api/videos/[videoId]/chapters/route';
+import { POST, GET } from '@/app/api/videos/[videoId]/chapters/route';
 
 const VIDEO_ID = '4mTLpuQpB80';
 const SECRET = 'test-hmac-secret';
@@ -142,3 +143,68 @@ describe('POST /api/videos/[videoId]/chapters (route-boundary HMAC contract)', (
     );
   });
 });
+
+describe('GET /api/videos/[videoId]/chapters (cache header bounding)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('bounds max-age by earliestExpiresAt when confirmed with future expiration', async () => {
+    const futureDate = new Date(Date.now() + 3600 * 1000).toISOString(); // 1 hour remaining
+    getChaptersWithStatus.mockResolvedValue({
+      chapters: [{ idx: 0, start_seconds: 0, end_seconds: 60, label: 'Intro' }],
+      confirmed: true,
+      earliestExpiresAt: futureDate,
+    });
+
+    const req = new NextRequest(`http://localhost/api/videos/${VIDEO_ID}/chapters`);
+    const res = await GET(req, { params });
+    expect(res.status).toBe(200);
+
+    const cacheControl = res.headers.get('Cache-Control');
+    expect(cacheControl).toContain('public');
+    expect(cacheControl).toMatch(/max-age=(359[0-9]|3600)/);
+    expect(cacheControl).toMatch(/s-maxage=(359[0-9]|3600)/);
+  });
+
+  it('falls back to no-store when earliestExpiresAt is in the past', async () => {
+    const pastDate = new Date(Date.now() - 10_000).toISOString();
+    getChaptersWithStatus.mockResolvedValue({
+      chapters: [{ idx: 0, start_seconds: 0, end_seconds: 60, label: 'Intro' }],
+      confirmed: true,
+      earliestExpiresAt: pastDate,
+    });
+
+    const req = new NextRequest(`http://localhost/api/videos/${VIDEO_ID}/chapters`);
+    const res = await GET(req, { params });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('falls back to no-store when earliestExpiresAt is indeterminate/null', async () => {
+    getChaptersWithStatus.mockResolvedValue({
+      chapters: [{ idx: 0, start_seconds: 0, end_seconds: 60, label: 'Intro' }],
+      confirmed: true,
+      earliestExpiresAt: null,
+    });
+
+    const req = new NextRequest(`http://localhost/api/videos/${VIDEO_ID}/chapters`);
+    const res = await GET(req, { params });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('falls back to no-store when chapters are unconfirmed', async () => {
+    getChaptersWithStatus.mockResolvedValue({
+      chapters: [],
+      confirmed: false,
+      earliestExpiresAt: new Date(Date.now() + 86400 * 1000).toISOString(),
+    });
+
+    const req = new NextRequest(`http://localhost/api/videos/${VIDEO_ID}/chapters`);
+    const res = await GET(req, { params });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+});
+

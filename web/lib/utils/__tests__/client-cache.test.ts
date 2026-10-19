@@ -155,4 +155,73 @@ describe('client-cache utility', () => {
     expect(recovered).toBe('recovered-data');
     expect(failingFetcher).toHaveBeenCalledTimes(2);
   });
+
+  it('resolving an invalidated in-flight request does not populate peekCachedQuery (generation fence)', async () => {
+    let resolveFirst!: (val: string) => void;
+    const fetcher = vi.fn().mockImplementation(
+      () =>
+        new Promise<string>((res) => {
+          resolveFirst = res;
+        })
+    );
+
+    // 1. Dispatch request (enters in-flight)
+    const pendingPromise = getCachedQuery('fenced-key', fetcher);
+
+    // 2. Invalidate while request is in flight
+    invalidateCachedQuery('fenced-key');
+
+    // 3. Resolve the stale in-flight request
+    resolveFirst('stale-data');
+    await pendingPromise;
+
+    // 4. Assert that peekCachedQuery was NOT populated with the stale data
+    expect(peekCachedQuery('fenced-key')).toBeUndefined();
+  });
+
+  it('resolving an old in-flight request does not displace a newer replacement from inFlight', async () => {
+    let resolveFirst!: (val: string) => void;
+    let resolveSecond!: (val: string) => void;
+
+    const fetcher1 = vi.fn().mockImplementation(
+      () =>
+        new Promise<string>((res) => {
+          resolveFirst = res;
+        })
+    );
+    const fetcher2 = vi.fn().mockImplementation(
+      () =>
+        new Promise<string>((res) => {
+          resolveSecond = res;
+        })
+    );
+
+    // 1. First request is in flight
+    const promise1 = getCachedQuery('displace-key', fetcher1);
+
+    // 2. Invalidate, clearing in-flight and advancing generation
+    invalidateCachedQuery('displace-key');
+
+    // 3. Start a second request
+    const promise2 = getCachedQuery('displace-key', fetcher2);
+
+    // 4. Resolve the first (old) request
+    resolveFirst('old-data');
+    await promise1;
+
+    // 5. Subsequent getCachedQuery while promise2 is still in-flight should reuse promise2 (deduplication)
+    const fetcher3 = vi.fn().mockResolvedValue('third-data');
+    const promise3 = getCachedQuery('displace-key', fetcher3);
+
+    // fetcher3 must NOT be called because promise2 is still active in inFlight
+    expect(fetcher3).not.toHaveBeenCalled();
+
+    // 6. Now resolve promise2
+    resolveSecond('new-data');
+    const [res2, res3] = await Promise.all([promise2, promise3]);
+    expect(res2).toBe('new-data');
+    expect(res3).toBe('new-data');
+    expect(peekCachedQuery('displace-key')).toBe('new-data');
+  });
 });
+

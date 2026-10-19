@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { getCachedQuery, peekCachedQuery } from '@/lib/utils/client-cache';
 
 export interface HistoryItem {
@@ -18,18 +19,28 @@ interface HistoryState {
 /**
  * Fetch and manage the user's analysis history from the server.
  * Automatically loads on mount and handles loading/error states.
- * Uses client-cache with 5-minute TTL to eliminate duplicate egress on re-mounts.
+ * Uses client-cache with 5-minute TTL scoped to the authenticated userId.
  * @returns Object with items (analysis history), isLoading, and error state
  */
-export function useAnalysisHistory() {
-  const cached = peekCachedQuery<HistoryItem[]>('analysis-history');
+export function useAnalysisHistory(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId ?? user?.id;
+  const cacheKey = userId ? `analysis-history:${userId}` : null;
+
+  const cached = cacheKey ? peekCachedQuery<HistoryItem[]>(cacheKey) : undefined;
   const [state, setState] = useState<HistoryState>({
     items: cached ?? [],
-    isLoading: !cached,
+    isLoading: Boolean(userId && !cached),
     error: null,
   });
 
   useEffect(() => {
+    // If no authenticated user, bypass cache and do not issue query
+    if (!userId || !cacheKey) {
+      setState({ items: [], isLoading: false, error: null });
+      return;
+    }
+
     let cancelled = false;
 
     const fetchHistory = async () => {
@@ -39,7 +50,7 @@ export function useAnalysisHistory() {
         }
 
         const items = await getCachedQuery<HistoryItem[]>(
-          'analysis-history',
+          cacheKey,
           async () => {
             const res = await fetch('/api/analyses', {
               method: 'GET',
@@ -80,7 +91,7 @@ export function useAnalysisHistory() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId, cacheKey, cached]);
 
   return state;
 }

@@ -54,7 +54,7 @@ function item(id: string, status: HistoryOverviewItem['status']): HistoryOvervie
   } as HistoryOverviewItem;
 }
 
-import { clearClientCache } from '@/lib/utils/client-cache';
+import { clearClientCache, peekCachedQuery } from '@/lib/utils/client-cache';
 
 describe('useHistoryOverview fetch race (sequence guard)', () => {
   const originalFetch = globalThis.fetch;
@@ -167,4 +167,33 @@ describe('useHistoryOverview fetch race (sequence guard)', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.isLoading).toBe(false);
   });
+
+  it('user-scoped cache keys: stores items under history-overview:${userId}', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okResponse([item('user1-vid', 'complete')])));
+
+    const { result } = renderHook(() => useHistoryOverview('user-alpha'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.items).toHaveLength(1);
+    expect(peekCachedQuery('history-overview:user-alpha')).toBeDefined();
+    expect(peekCachedQuery('history-overview:user-beta')).toBeUndefined();
+  });
+
+  it('unauthenticated bypass: does not fetch or touch cache when userId is absent', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { result } = renderHook(() => useHistoryOverview(''));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.items).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+    expect(peekCachedQuery('history-overview:')).toBeUndefined();
+  });
 });
+

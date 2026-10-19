@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { HistoryOverviewItem } from '@/lib/ports';
+import { useAuth } from '@/hooks/useAuth';
 import { getCachedQuery, peekCachedQuery, setCachedQuery } from '@/lib/utils/client-cache';
 
 interface HistoryOverviewState {
@@ -32,24 +33,33 @@ export function hasLiveStatusItems(items: Pick<HistoryOverviewItem, 'status'>[])
  * Fetches the video-centric history overview — one aggregated row per underlying
  * video (archived re-runs collapsed) — from GET /api/analyses/overview.
  *
- * Uses client-cache with 5-minute TTL for initial mount and tab-switch caching,
- * while allowing background polling when live status items exist.
+ * Uses client-cache with 5-minute TTL scoped to the authenticated userId for initial
+ * mount and tab-switch caching, while allowing background polling when live status
+ * items exist. Fences setCachedQuery by request sequence to prevent stale overwrites.
  */
-export function useHistoryOverview() {
-  const cached = peekCachedQuery<HistoryOverviewItem[]>('history-overview');
+export function useHistoryOverview(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId ?? user?.id;
+  const cacheKey = userId ? `history-overview:${userId}` : null;
+
+  const cached = cacheKey ? peekCachedQuery<HistoryOverviewItem[]>(cacheKey) : undefined;
   const [state, setState] = useState<HistoryOverviewState>({
     items: cached ?? [],
-    isLoading: !cached,
+    isLoading: Boolean(userId && !cached),
     error: null,
   });
   const cancelledRef = useRef(false);
   // Monotonic request sequence: only the most recently STARTED fetch may
-  // settle state. Mount, silent poll, and manual refetch can all overlap
-  // (a slow silent poll resolving after a fresh manual refetch must not
-  // overwrite the newer response with older data).
+  // settle state or update the cache.
   const seqRef = useRef(0);
+  const userIdRef = useRef<string | undefined>(userId);
+  userIdRef.current = userId;
 
   const fetchOverview = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
+    const activeUserId = userIdRef.current;
+    if (!activeUserId) return;
+    const activeCacheKey = `history-overview:${activeUserId}`;
+
     const seq = ++seqRef.current;
     try {
       if (!opts?.silent) {
@@ -69,11 +79,15 @@ export function useHistoryOverview() {
         }
         const data = await res.json();
         items = (data.items || []) as HistoryOverviewItem[];
-        setCachedQuery('history-overview', items, 5 * 60 * 1000);
+
+        // Sequence fencing: only cache if this response belongs to the latest request generation
+        if (!cancelledRef.current && seqRef.current === seq) {
+          setCachedQuery(activeCacheKey, items, 5 * 60 * 1000);
+        }
       } else {
         // Initial load or normal non-silent fetch uses getCachedQuery
         items = await getCachedQuery<HistoryOverviewItem[]>(
-          'history-overview',
+          activeCacheKey,
           async () => {
             const res = await fetch('/api/analyses/overview', {
               method: 'GET',
@@ -108,21 +122,25 @@ export function useHistoryOverview() {
 
   useEffect(() => {
     cancelledRef.current = false;
+    if (!userId) {
+      setState({ items: [], isLoading: false, error: null });
+      return;
+    }
     void fetchOverview();
     return () => {
       cancelledRef.current = true;
     };
-  }, [fetchOverview]);
+  }, [userId, fetchOverview]);
 
   const hasLive = hasLiveStatusItems(state.items);
 
   useEffect(() => {
-    if (!hasLive) return;
+    if (!hasLive || !userId) return;
     const pollId = setInterval(() => {
       void fetchOverview({ silent: true });
     }, HISTORY_LIVE_POLL_MS);
     return () => clearInterval(pollId);
-  }, [hasLive, fetchOverview]);
+  }, [hasLive, userId, fetchOverview]);
 
   const refetch = useCallback(
     (opts?: { silent?: boolean; force?: boolean }) =>

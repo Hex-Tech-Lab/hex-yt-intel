@@ -33,6 +33,7 @@ export interface ChapterRow {
   start_seconds: number;
   end_seconds: number;
   label: string;
+  expires_at?: string;
 }
 
 
@@ -225,11 +226,11 @@ export class SupabaseTranscriptAdapter {
    * indistinguishable [] and (per useChapters' retry logic) would
    * permanently cache a false "no chapters" instead of retrying.
    */
-  static async getChaptersWithStatus(videoId: string): Promise<{ chapters: ChapterRow[]; confirmed: boolean }> {
+  static async getChaptersWithStatus(videoId: string): Promise<{ chapters: ChapterRow[]; confirmed: boolean; earliestExpiresAt?: string | null }> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('transcript_chapters')
-      .select('video_id, idx, start_seconds, end_seconds, label')
+      .select('video_id, idx, start_seconds, end_seconds, label, expires_at')
       .eq('video_id', videoId)
       .gt('expires_at', new Date().toISOString())
       .order('start_seconds', { ascending: true });
@@ -237,7 +238,17 @@ export class SupabaseTranscriptAdapter {
     const rows = (data as ChapterRow[]) || [];
     const hasSentinel = rows.some((row) => row.idx === -1);
     const chapters = rows.filter((row) => row.idx >= 0);
-    return { chapters, confirmed: hasSentinel || chapters.length > 0 };
+
+    let earliestExpiresAt: string | null = null;
+    for (const row of rows) {
+      if (row.expires_at) {
+        if (!earliestExpiresAt || new Date(row.expires_at).getTime() < new Date(earliestExpiresAt).getTime()) {
+          earliestExpiresAt = row.expires_at;
+        }
+      }
+    }
+
+    return { chapters, confirmed: hasSentinel || chapters.length > 0, earliestExpiresAt };
   }
 
   /** Maps a snake_case {video_id, deleted_at}[] purge-RPC result to the
