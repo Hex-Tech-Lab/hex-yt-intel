@@ -62,4 +62,68 @@ describe('SupabaseAuthAdapter.authenticate — fail-closed tier normalization', 
     const identity = await new SupabaseAuthAdapter().authenticate();
     expect(identity?.tier).toBe('free');
   });
+
+  it('uses getClaims fast-path when claims.sub is present without calling getUser', async () => {
+    const getUserSpy = vi.fn();
+    const getClaimsSpy = vi.fn().mockResolvedValue({
+      data: {
+        claims: {
+          sub: 'u-claims-1',
+          email: 'claims@example.com',
+        },
+      },
+      error: null,
+    });
+
+    (getSupabaseClientWithAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: {
+        getClaims: getClaimsSpy,
+        getUser: getUserSpy,
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { tier: 'pro' }, error: null }),
+          }),
+        }),
+      }),
+    });
+
+    const identity = await new SupabaseAuthAdapter().authenticate();
+    expect(getClaimsSpy).toHaveBeenCalledTimes(1);
+    expect(getUserSpy).not.toHaveBeenCalled();
+    expect(identity).toEqual({
+      userId: 'u-claims-1',
+      email: 'claims@example.com',
+      tier: 'pro',
+    });
+  });
+
+  it('falls back to getUser when getClaims throws or returns no claims', async () => {
+    const getUserSpy = vi.fn().mockResolvedValue({ data: { user: { id: 'u-fallback', email: 'fallback@example.com' } } });
+    const getClaimsSpy = vi.fn().mockRejectedValue(new Error('JWT validation failed'));
+
+    (getSupabaseClientWithAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: {
+        getClaims: getClaimsSpy,
+        getUser: getUserSpy,
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { tier: 'max' }, error: null }),
+          }),
+        }),
+      }),
+    });
+
+    const identity = await new SupabaseAuthAdapter().authenticate();
+    expect(getClaimsSpy).toHaveBeenCalledTimes(1);
+    expect(getUserSpy).toHaveBeenCalledTimes(1);
+    expect(identity).toEqual({
+      userId: 'u-fallback',
+      email: 'fallback@example.com',
+      tier: 'max',
+    });
+  });
 });

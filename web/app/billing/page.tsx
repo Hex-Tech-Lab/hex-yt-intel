@@ -18,7 +18,7 @@ async function getBillingData(userId: string) {
 
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('*')
+    .select('id, email, name, tier, role, analyses_used, stripe_customer_id')
     .eq('id', userId)
     .maybeSingle();
 

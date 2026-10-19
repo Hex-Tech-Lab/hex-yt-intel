@@ -54,15 +54,19 @@ function item(id: string, status: HistoryOverviewItem['status']): HistoryOvervie
   } as HistoryOverviewItem;
 }
 
+import { clearClientCache } from '@/lib/utils/client-cache';
+
 describe('useHistoryOverview fetch race (sequence guard)', () => {
   const originalFetch = globalThis.fetch;
   beforeEach(() => {
     vi.useFakeTimers();
+    clearClientCache();
   });
   afterEach(() => {
     vi.useRealTimers();
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
+    clearClientCache();
   });
 
   it('an older mount response resolving after a newer refetch is discarded (negative control: fails without the guard)', async () => {

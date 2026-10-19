@@ -38,6 +38,7 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${safeName}"`,
+            'Cache-Control': 'public, max-age=31536000, immutable',
           },
         })
       );
@@ -97,7 +98,7 @@ export async function GET(
 
     const query = service
       .from('analyses')
-      .select('*')
+      .select('id, title, channel_title, created_at, analysis_markdown')
       .eq('id', id);
     if (!isAdmin) {
       query.eq('user_id', userId);

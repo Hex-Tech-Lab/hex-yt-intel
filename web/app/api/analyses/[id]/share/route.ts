@@ -22,7 +22,7 @@ export async function POST(
   // Fetch analysis
   const { data: analysis, error } = await supabase
     .from('analyses')
-    .select('*')
+    .select('id')
     .eq('id', id)
     .eq('user_id', userId)
     .maybeSingle();

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, channel_title, analysis_markdown, created_at, updated_at, model_used, validation_report, billing_status')
+          .select('id, title, channel_title, created_at, updated_at, model_used, validation_report, billing_status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })

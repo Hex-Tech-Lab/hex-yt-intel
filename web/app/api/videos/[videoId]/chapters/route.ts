@@ -128,7 +128,16 @@ export async function GET(
 
   try {
     const { chapters, confirmed } = await SupabaseTranscriptAdapter.getChaptersWithStatus(videoId);
-    return NextResponse.json({ chapters, confirmed });
+    return NextResponse.json(
+      { chapters, confirmed },
+      {
+        headers: {
+          'Cache-Control': confirmed
+            ? 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400'
+            : 'no-store',
+        },
+      }
+    );
   } catch (error: unknown) {
     const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
     Sentry.captureException(error, {

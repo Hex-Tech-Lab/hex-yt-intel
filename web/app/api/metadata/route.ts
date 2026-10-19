@@ -62,7 +62,12 @@ export async function GET(request: NextRequest) {
 
     try {
       const result = await resolveMetadata(videoId);
-      return NextResponse.json(result, { status: 200 });
+      return NextResponse.json(result, {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+        },
+      });
     } catch (error) {
       const err = categorizeError(error, ERROR_PHASES.EXTERNAL_SERVICE);
       console.error('[/api/metadata] GET metadata fetch failed', { videoId, message: err.message });

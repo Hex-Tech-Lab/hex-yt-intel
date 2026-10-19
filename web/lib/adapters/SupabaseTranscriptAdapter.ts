@@ -88,7 +88,11 @@ export class SupabaseTranscriptAdapter {
 
   static async getTranscript(videoId: string): Promise<TranscriptRow | null> {
     const service = getSupabaseServiceClient();
-    const { data, error } = await service.from('transcripts').select('*').eq('video_id', videoId).maybeSingle();
+    const { data, error } = await service
+      .from('transcripts')
+      .select('video_id, content, segments, language, created_at, expires_at, last_accessed_at, transcript_hash')
+      .eq('video_id', videoId)
+      .maybeSingle();
     if (error) throw error;
     if (data) {
       await service.from('transcripts').update({ last_accessed_at: new Date().toISOString() }).eq('video_id', videoId);
@@ -123,7 +127,11 @@ export class SupabaseTranscriptAdapter {
 
   static async getMarkers(videoId: string): Promise<TranscriptMarker[]> {
     const service = getSupabaseServiceClient();
-    const { data, error } = await service.from('transcript_markers').select('*').eq('video_id', videoId).order('start_seconds', { ascending: true });
+    const { data, error } = await service
+      .from('transcript_markers')
+      .select('video_id, idx, start_seconds, end_seconds, keywords, entities, quote_hash, importance, dim_refs, genre, source')
+      .eq('video_id', videoId)
+      .order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as TranscriptMarker[]) || [];
   }
@@ -196,7 +204,7 @@ export class SupabaseTranscriptAdapter {
     // purge cron hasn't swept yet even though they're past their TTL.
     const { data, error } = await service
       .from('transcript_chapters')
-      .select('*')
+      .select('video_id, idx, start_seconds, end_seconds, label')
       .eq('video_id', videoId)
       .gte('idx', 0)
       .gt('expires_at', new Date().toISOString())
@@ -221,7 +229,7 @@ export class SupabaseTranscriptAdapter {
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('transcript_chapters')
-      .select('*')
+      .select('video_id, idx, start_seconds, end_seconds, label')
       .eq('video_id', videoId)
       .gt('expires_at', new Date().toISOString())
       .order('start_seconds', { ascending: true });
