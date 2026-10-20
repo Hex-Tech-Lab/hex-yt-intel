@@ -104,6 +104,7 @@ export default defineConfig({
       // sibling regression test). Named explicitly, same rationale as the
       // globs above.
       'app/api/analyses/\\[id\\]/relations/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/share/**/*.test.ts',
       'app/pricing/__tests__/page.test.ts',
       // PR #320 round-2 (2026-09-24): the videos/[videoId]/chapters route
       // boundary test — the middleware EXEMPTS this route's POST from the

@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic';
 
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+
+import { randomBytes } from 'crypto';
+
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { DubShortLinkAdapter } from '@/lib/adapters/DubShortLinkAdapter';
 
 export async function POST(

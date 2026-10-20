@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { ERROR_CODES } from '@/lib/error-codes';
-import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 import { VideoIdSchema } from '@/lib/types/contracts';
 import { getMissingDimensionNumbers } from '@/lib/services/chunk-presence';

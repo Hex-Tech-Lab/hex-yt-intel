@@ -76,12 +76,17 @@ export function useAnalysisHistory(overrideUserId?: string) {
           });
         }
       } catch (err) {
+        console.error('[useAnalysisHistory]', err);
         if (!cancelled) {
           setState((prev) => ({
             ...prev,
             isLoading: false,
             error: err instanceof Error ? err.message : 'Failed to load history',
           }));
+        }
+      } finally {
+        if (!cancelled) {
+          setState((prev) => ({ ...prev, isLoading: false }));
         }
       }
     };

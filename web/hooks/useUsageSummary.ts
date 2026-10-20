@@ -47,6 +47,7 @@ export function useUsageSummary(enabled: boolean, overrideUserId?: string) {
         );
         if (!cancelled) setSummary(data);
       } catch (err) {
+        console.error('[useUsageSummary]', err);
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load usage');
       } finally {
         if (!cancelled) setLoading(false);

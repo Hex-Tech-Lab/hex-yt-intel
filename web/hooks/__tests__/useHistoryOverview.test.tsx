@@ -10,6 +10,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useHistoryOverview, HISTORY_LIVE_POLL_MS } from '@/hooks/useHistoryOverview';
+import { clearClientCache, peekCachedQuery } from '@/lib/utils/client-cache';
 import type { HistoryOverviewItem } from '@/lib/ports';
 
 function deferred<T>() {
@@ -54,7 +55,6 @@ function item(id: string, status: HistoryOverviewItem['status']): HistoryOvervie
   } as HistoryOverviewItem;
 }
 
-import { clearClientCache, peekCachedQuery } from '@/lib/utils/client-cache';
 
 describe('useHistoryOverview fetch race (sequence guard)', () => {
   const originalFetch = globalThis.fetch;

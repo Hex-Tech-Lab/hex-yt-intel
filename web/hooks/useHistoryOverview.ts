@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { HistoryOverviewItem } from '@/lib/ports';
+
 import { useAuth } from '@/hooks/useAuth';
 import { getCachedQuery, peekCachedQuery, setCachedQuery } from '@/lib/utils/client-cache';
+
+import type { HistoryOverviewItem } from '@/lib/ports';
 
 interface HistoryOverviewState {
   items: HistoryOverviewItem[];
@@ -107,6 +109,7 @@ export function useHistoryOverview(overrideUserId?: string) {
       if (cancelledRef.current || seqRef.current !== seq) return;
       setState({ items, isLoading: false, error: null });
     } catch (err) {
+      console.error('[useHistoryOverview]', err);
       if (cancelledRef.current || seqRef.current !== seq) return;
       // A failed background poll is silent on the error surface too: keep the
       // last good items rendered and retry on the next tick, rather than
@@ -117,6 +120,10 @@ export function useHistoryOverview(overrideUserId?: string) {
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to load history',
       }));
+    } finally {
+      if (!cancelledRef.current && seqRef.current === seq && !opts?.silent) {
+        setState((prev) => ({ ...prev, isLoading: false }));
+      }
     }
   }, []);
 

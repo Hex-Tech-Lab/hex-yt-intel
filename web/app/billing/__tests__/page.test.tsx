@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// Sibling test for BillingPage — verified for PR #515 egress optimization.
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BillingPage from '../page';
