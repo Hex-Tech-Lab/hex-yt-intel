@@ -19,7 +19,7 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
       .from('admin_settings')
-      .select('*')
+      .select('id, total_dimensions, min_usable_dimensions, stream_bundles, dimension_configs, model_cascade, connection_handshake_timeout_ms, token_streaming_window_ms, max_retries, retry_backoff_ms, abort_on_partial_failure, created_at, updated_at')
       .eq('id', 'default')
       .maybeSingle();
 
@@ -72,7 +72,7 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
       .from('user_settings')
-      .select('*')
+      .select('id, user_id, preferred_model, analysis_detail_level, auto_save_analyses, notifications_enabled, created_at, updated_at')
       .eq('user_id', userId)
       .maybeSingle();
 

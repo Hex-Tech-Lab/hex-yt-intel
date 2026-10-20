@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { useAuth } from '@/hooks/useAuth';
+import { getCachedQuery, peekCachedQuery, setCachedQuery } from '@/lib/utils/client-cache';
+
 import type { HistoryOverviewItem } from '@/lib/ports';
 
 interface HistoryOverviewState {
@@ -31,52 +35,81 @@ export function hasLiveStatusItems(items: Pick<HistoryOverviewItem, 'status'>[])
  * Fetches the video-centric history overview — one aggregated row per underlying
  * video (archived re-runs collapsed) — from GET /api/analyses/overview.
  *
- * RCA (2026-07-24, live production): fetched once on mount only. A re-analysis
- * completed while the History tab stayed mounted showed the DIGEST/DESCRIPTION/
- * CHANNEL META/COMMENTS chips and status stuck at their pre-analysis values --
- * the server-side data was correct, but nothing ever told this hook to refetch.
- * `refetch` lets callers (AnalysisHistory, watching analysis-completion status)
- * force a fresh read without needing to unmount/remount the whole component.
- *
- * RCA (2026-09-25, live production, analysis 6047514f): while that row died
- * mid-stream and the reaper later settled it, the History card kept showing
- * 'Processing' until manual reload — the 2026-07-24 fix only refetches on
- * analysis-completion events, never on BACKGROUND transitions (reaper settle,
- * remediation requeue). Polling: while any item is processing/stalled, the
- * overview is refetched every HISTORY_LIVE_POLL_MS; the moment every row is
- * terminal, polling stops. Background polls are silent (no skeleton flash).
+ * Uses client-cache with 5-minute TTL scoped to the authenticated userId for initial
+ * mount and tab-switch caching, while allowing background polling when live status
+ * items exist. Fences setCachedQuery by request sequence to prevent stale overwrites.
  */
-export function useHistoryOverview() {
+export function useHistoryOverview(overrideUserId?: string) {
+  const { user } = useAuth();
+  const userId = overrideUserId ?? user?.id;
+  const cacheKey = userId ? `history-overview:${userId}` : null;
+
+  const cached = cacheKey ? peekCachedQuery<HistoryOverviewItem[]>(cacheKey) : undefined;
   const [state, setState] = useState<HistoryOverviewState>({
-    items: [],
-    isLoading: true,
+    items: cached ?? [],
+    isLoading: Boolean(userId && !cached),
     error: null,
   });
   const cancelledRef = useRef(false);
   // Monotonic request sequence: only the most recently STARTED fetch may
-  // settle state. Mount, silent poll, and manual refetch can all overlap
-  // (a slow silent poll resolving after a fresh manual refetch must not
-  // overwrite the newer response with older data).
+  // settle state or update the cache.
   const seqRef = useRef(0);
+  const userIdRef = useRef<string | undefined>(userId);
+  userIdRef.current = userId;
 
-  const fetchOverview = useCallback(async (opts?: { silent?: boolean }) => {
+  const fetchOverview = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
+    const activeUserId = userIdRef.current;
+    if (!activeUserId) return;
+    const activeCacheKey = `history-overview:${activeUserId}`;
+
     const seq = ++seqRef.current;
     try {
       if (!opts?.silent) {
-        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+        setState((prev) => (prev.items.length > 0 ? prev : { ...prev, isLoading: true, error: null }));
       }
-      const res = await fetch('/api/analyses/overview', {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${res.status}`);
+
+      let items: HistoryOverviewItem[];
+      if (opts?.silent || opts?.force) {
+        // Silent poll or forced refetch bypasses cache read, but updates cache on success
+        const res = await fetch('/api/analyses/overview', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        items = (data.items || []) as HistoryOverviewItem[];
+
+        // Sequence fencing: only cache if this response belongs to the latest request generation
+        if (!cancelledRef.current && seqRef.current === seq) {
+          setCachedQuery(activeCacheKey, items, 5 * 60 * 1000);
+        }
+      } else {
+        // Initial load or normal non-silent fetch uses getCachedQuery
+        items = await getCachedQuery<HistoryOverviewItem[]>(
+          activeCacheKey,
+          async () => {
+            const res = await fetch('/api/analyses/overview', {
+              method: 'GET',
+              credentials: 'include',
+            });
+            if (!res.ok) {
+              const errorData = await res.json().catch(() => ({}));
+              throw new Error(errorData.error || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            return (data.items || []) as HistoryOverviewItem[];
+          },
+          { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
+        );
       }
-      const data = await res.json();
+
       if (cancelledRef.current || seqRef.current !== seq) return;
-      setState({ items: data.items || [], isLoading: false, error: null });
+      setState({ items, isLoading: false, error: null });
     } catch (err) {
+      console.error('[useHistoryOverview]', err);
       if (cancelledRef.current || seqRef.current !== seq) return;
       // A failed background poll is silent on the error surface too: keep the
       // last good items rendered and retry on the next tick, rather than
@@ -87,26 +120,40 @@ export function useHistoryOverview() {
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to load history',
       }));
+    } finally {
+      if (!cancelledRef.current && seqRef.current === seq && !opts?.silent) {
+        setState((prev) => ({ ...prev, isLoading: false }));
+      }
     }
   }, []);
 
   useEffect(() => {
     cancelledRef.current = false;
+    if (!userId) {
+      setState({ items: [], isLoading: false, error: null });
+      return;
+    }
     void fetchOverview();
     return () => {
       cancelledRef.current = true;
     };
-  }, [fetchOverview]);
+  }, [userId, fetchOverview]);
 
   const hasLive = hasLiveStatusItems(state.items);
 
   useEffect(() => {
-    if (!hasLive) return;
+    if (!hasLive || !userId) return;
     const pollId = setInterval(() => {
       void fetchOverview({ silent: true });
     }, HISTORY_LIVE_POLL_MS);
     return () => clearInterval(pollId);
-  }, [hasLive, fetchOverview]);
+  }, [hasLive, userId, fetchOverview]);
 
-  return { ...state, refetch: fetchOverview };
+  const refetch = useCallback(
+    (opts?: { silent?: boolean; force?: boolean }) =>
+      fetchOverview({ force: true, ...opts }),
+    [fetchOverview]
+  );
+
+  return { ...state, refetch };
 }

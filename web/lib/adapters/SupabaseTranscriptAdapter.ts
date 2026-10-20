@@ -33,6 +33,7 @@ export interface ChapterRow {
   start_seconds: number;
   end_seconds: number;
   label: string;
+  expires_at?: string;
 }
 
 
@@ -177,8 +178,13 @@ export class SupabaseTranscriptAdapter {
     }
   }
 
-  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {    const service = getSupabaseServiceClient();
-    const { data, error } = await service.from('transcripts').select('*').eq('video_id', videoId).maybeSingle();
+  static async getTranscript(videoId: string): Promise<TranscriptRow | null> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('transcripts')
+      .select('video_id, content, segments, language, created_at, expires_at, last_accessed_at, transcript_hash')
+      .eq('video_id', videoId)
+      .maybeSingle();
     if (error) throw error;
     if (data) {
       await service.from('transcripts').update({ last_accessed_at: new Date().toISOString() }).eq('video_id', videoId);
@@ -213,7 +219,11 @@ export class SupabaseTranscriptAdapter {
 
   static async getMarkers(videoId: string): Promise<TranscriptMarker[]> {
     const service = getSupabaseServiceClient();
-    const { data, error } = await service.from('transcript_markers').select('*').eq('video_id', videoId).order('start_seconds', { ascending: true });
+    const { data, error } = await service
+      .from('transcript_markers')
+      .select('video_id, idx, start_seconds, end_seconds, keywords, entities, quote_hash, importance, dim_refs, genre, source')
+      .eq('video_id', videoId)
+      .order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as TranscriptMarker[]) || [];
   }
@@ -286,7 +296,7 @@ export class SupabaseTranscriptAdapter {
     // purge cron hasn't swept yet even though they're past their TTL.
     const { data, error } = await service
       .from('transcript_chapters')
-      .select('*')
+      .select('video_id, idx, start_seconds, end_seconds, label')
       .eq('video_id', videoId)
       .gte('idx', 0)
       .gt('expires_at', new Date().toISOString())
@@ -307,11 +317,11 @@ export class SupabaseTranscriptAdapter {
    * indistinguishable [] and (per useChapters' retry logic) would
    * permanently cache a false "no chapters" instead of retrying.
    */
-  static async getChaptersWithStatus(videoId: string): Promise<{ chapters: ChapterRow[]; confirmed: boolean }> {
+  static async getChaptersWithStatus(videoId: string): Promise<{ chapters: ChapterRow[]; confirmed: boolean; earliestExpiresAt?: string | null }> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('transcript_chapters')
-      .select('*')
+      .select('video_id, idx, start_seconds, end_seconds, label, expires_at')
       .eq('video_id', videoId)
       .gt('expires_at', new Date().toISOString())
       .order('start_seconds', { ascending: true });
@@ -319,7 +329,17 @@ export class SupabaseTranscriptAdapter {
     const rows = (data as ChapterRow[]) || [];
     const hasSentinel = rows.some((row) => row.idx === -1);
     const chapters = rows.filter((row) => row.idx >= 0);
-    return { chapters, confirmed: hasSentinel || chapters.length > 0 };
+
+    let earliestExpiresAt: string | null = null;
+    for (const row of rows) {
+      if (row.expires_at) {
+        if (!earliestExpiresAt || new Date(row.expires_at).getTime() < new Date(earliestExpiresAt).getTime()) {
+          earliestExpiresAt = row.expires_at;
+        }
+      }
+    }
+
+    return { chapters, confirmed: hasSentinel || chapters.length > 0, earliestExpiresAt };
   }
 
   /** Maps a snake_case {video_id, deleted_at}[] purge-RPC result to the
@@ -369,45 +389,59 @@ export function calculateDynamicBudget(
   chapters: number,
   genre: string
 ): number {
-  const L = durationSeconds / 60;
+  const durationMinutes = durationSeconds / 60;
   const alpha = 0.8, beta = 12, gamma = 3, delta = 2;
   let factor = 1;
-  let minM = 8, maxM = 150;
+  let minBudget = 8, maxBudget = 150;
 
-  if (genre === 'tutorial') { factor = 1.5; minM = 15; maxM = 150; }
-  else if (genre === 'monologue') { factor = 0.6; minM = 8; maxM = 40; }
-  else if (genre === 'movie') { factor = 0.8; minM = 15; maxM = 90; }
-  else if (genre === 'news') { factor = 1.2; minM = 12; maxM = 80; }
+  if (genre === 'tutorial') { factor = 1.5; minBudget = 15; maxBudget = 150; }
+  else if (genre === 'monologue') { factor = 0.6; minBudget = 8; maxBudget = 40; }
+  else if (genre === 'movie') { factor = 0.8; minBudget = 15; maxBudget = 90; }
+  else if (genre === 'news') { factor = 1.2; minBudget = 12; maxBudget = 80; }
 
-  if (L < 5) { maxM = Math.min(maxM, 20); }
-  else if (L < 20) { minM = Math.max(minM, 12); maxM = Math.min(maxM, 50); }
-  else if (L < 60) { minM = Math.max(minM, 30); maxM = Math.min(maxM, 90); }
-  else { minM = Math.max(minM, 60); }
+  if (durationMinutes < 5) { maxBudget = Math.min(maxBudget, 20); }
+  else if (durationMinutes < 20) { minBudget = Math.max(minBudget, 12); maxBudget = Math.min(maxBudget, 50); }
+  else if (durationMinutes < 60) { minBudget = Math.max(minBudget, 30); maxBudget = Math.min(maxBudget, 90); }
+  else { minBudget = Math.max(minBudget, 60); }
 
-  const raw = Math.floor((alpha * L + beta * drift + gamma * entityChurn + delta * chapters) * factor);
-  return Math.max(minM, Math.min(maxM, raw));
+  const raw = Math.floor((alpha * durationMinutes + beta * drift + gamma * entityChurn + delta * chapters) * factor);
+  return Math.max(minBudget, Math.min(maxBudget, raw));
 }
 
 export function deduplicateMarkers(markers: TranscriptMarker[], thresholdSeconds = 5): TranscriptMarker[] {
   if (markers.length === 0) return [];
-  const sorted = [...markers].sort((a, b) => a.start_seconds - b.start_seconds);
+  const sorted = [...markers].sort((markerA, markerB) => markerA.start_seconds - markerB.start_seconds);
+  const firstMarker = sorted[0];
+  if (!firstMarker) return [];
   const result: TranscriptMarker[] = [];
-  let cluster: TranscriptMarker[] = [sorted[0]!];
+  let cluster: TranscriptMarker[] = [firstMarker];
 
   for (let i = 1; i < sorted.length; i++) {
-    const curr = sorted[i]!;
-    const anchorStart = cluster[0]!.start_seconds;
+    const curr = sorted[i];
+    if (!curr) continue;
+    const anchor = cluster[0];
+    const anchorStart = anchor ? anchor.start_seconds : 0;
     if (Math.abs(curr.start_seconds - anchorStart) < thresholdSeconds) {
       cluster.push(curr);
     } else {
-      const best = cluster.reduce((best, m) => (m.importance > best.importance ? m : best), cluster[0]!);
+      const best = cluster.reduce(
+        (bestMarker, candidate) => (candidate.importance > bestMarker.importance ? candidate : bestMarker),
+        anchor ?? curr
+      );
       result.push(best);
       cluster = [curr];
     }
   }
   if (cluster.length > 0) {
-    const best = cluster.reduce((best, m) => (m.importance > best.importance ? m : best), cluster[0]!);
-    result.push(best);
+    const anchor = cluster[0];
+    const fallback = anchor ?? cluster[0];
+    if (fallback) {
+      const best = cluster.reduce(
+        (bestMarker, candidate) => (candidate.importance > bestMarker.importance ? candidate : bestMarker),
+        fallback
+      );
+      result.push(best);
+    }
   }
-  return result.map((m, idx) => ({ ...m, idx }));
+  return result.map((marker, idx) => ({ ...marker, idx }));
 }

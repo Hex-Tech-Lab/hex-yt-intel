@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { ERROR_CODES } from '@/lib/error-codes';
-import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 import { VideoIdSchema } from '@/lib/types/contracts';
 import { getMissingDimensionNumbers } from '@/lib/services/chunk-presence';
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, channel_title, analysis_markdown, created_at, updated_at, model_used, validation_report, billing_status')
+          .select('id, title, channel_title, created_at, updated_at, model_used, validation_report, billing_status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })

@@ -1,7 +1,6 @@
 /**
  * Sibling test for the /api/analyses/check route — added 2026-09-09 (ADR 021
- * Phase 2) after qa-intel flagged the route as an authorization-relevant file
- * with no sibling regression test.
+ * Phase 2) and verified for PR #515 egress projection hardening.
  *
  * Covers:
  * - the authorization branch (unauthenticated request → route's own failure
