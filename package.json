@@ -21,5 +21,12 @@
   },
   "resolutions": {
     "nanoid": "^6.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "basic-ftp": ">=6.2.1",
+      "braces": ">=3.0.3",
+      "postcss-selector-parser": ">=6.0.15"
+    }
   }
 }
