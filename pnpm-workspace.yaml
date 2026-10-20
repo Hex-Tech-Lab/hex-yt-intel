@@ -93,6 +93,10 @@ overrides:
   "browserslist": "^4.29.1"
   # Dependabot #131 (2026-09-27): baseline-browser-mapping 2.11.26 (process termination DoS).
   "baseline-browser-mapping": "^2.11.26"
+  # Dependabot #157, #158, #160 (2026-10-20):
+  "basic-ftp": ">=6.2.1"
+  "braces": ">=3.0.3"
+  "postcss-selector-parser": ">=6.0.15"
 
 allowBuilds:
   '@astryxdesign/core': true
