@@ -4,19 +4,19 @@ import type { AuthIdentity, AuthOptions, AuthPort } from '../AuthPort';
 describe('AuthPort interface contract', () => {
   it('conforms to the AuthPort contract with requireActiveSession option', async () => {
     const mockAuthAdapter: AuthPort = {
-      authenticate: async (options?: AuthOptions): Promise<AuthIdentity | null> => {
+      authenticate: (options?: AuthOptions): Promise<AuthIdentity | null> => {
         if (options?.requireActiveSession) {
-          return {
+          return Promise.resolve({
             userId: 'user-active-1',
             email: 'active@example.com',
             tier: 'pro',
-          };
+          });
         }
-        return {
+        return Promise.resolve({
           userId: 'user-cached-1',
           email: 'cached@example.com',
           tier: 'free',
-        };
+        });
       },
     };
 

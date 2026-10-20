@@ -5,7 +5,6 @@ import {
   setCachedQuery,
   peekCachedQuery,
   clearClientCache,
-  DEFAULT_STALE_TIME,
 } from '../client-cache';
 
 describe('client-cache utility', () => {

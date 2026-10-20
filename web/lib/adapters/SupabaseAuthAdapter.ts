@@ -30,8 +30,8 @@ export class SupabaseAuthAdapter implements AuthPort {
             email = typeof claims.email === 'string' ? claims.email : undefined;
           }
         }
-      } catch {
-        // Fall through to getUser() network verification
+      } catch (error) {
+        console.warn('[SupabaseAuthAdapter] getClaims failed, falling back to getUser:', error instanceof Error ? error.message : String(error));
       }
     }
 
