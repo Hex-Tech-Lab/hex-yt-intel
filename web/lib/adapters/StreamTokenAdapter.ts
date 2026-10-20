@@ -28,8 +28,9 @@ export class StreamTokenAdapter implements CryptographicTokenPort {
     conversationId: string;
     userId: string;
     models: string[];
+    payloadDigest: string;
   }): Promise<StreamToken> {
-    return signChatToken(params.conversationId, params.userId, params.models);
+    return signChatToken(params.conversationId, params.userId, params.models, params.payloadDigest);
   }
 
   /**

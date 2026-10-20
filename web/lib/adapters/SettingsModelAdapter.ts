@@ -119,10 +119,14 @@ export class SettingsModelAdapter implements ModelResolutionPort {
       }
     }
 
-    // Defensive mapping
-    return resolved.map((m) =>
-      m === 'anthropic/claude-4.5-haiku' ? 'anthropic/claude-haiku-4.5' : m
-    );
+    // ADR 040/041: the registry is the SSOT — no silent rewriting of resolved
+    // model IDs. The old inline typo-correction mapping
+    // ('anthropic/claude-4.5-haiku' → canonical) is removed: ADR 040's
+    // save-time allowlist validation now prevents invalid IDs from entering
+    // the registry, so a legacy hand-edited row with a typo'd ID fails open to
+    // the next cascade tier (designed fallback behavior) instead of being
+    // invisibly substituted here.
+    return resolved;
   }
 }
 

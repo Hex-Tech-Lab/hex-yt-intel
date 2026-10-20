@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Skeleton, Markdown } from '@astryxdesign/core';
 import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
+import { useJevRunStore } from '@/store/useJevRunStore';
 
 // Line-clamped preview card previously hid tables via `prose-table:hidden`
 // (Astryx Markdown renders its own Table components, not Tailwind Typography
@@ -53,7 +54,10 @@ const SPAN_MAP: Record<number, string> = { 1: "span 2", 2: "span 3", 3: "span 4"
 
 export function DimensionCard({ dimension, index, onOpen, delayClass }: DimensionCardProps) {
   const { key, label, icon, status, content, span = 1 } = dimension;
-  const streaming = status === "streaming";
+  // R3b 2.5e: during a K>1 run the server has not reduced yet, so every
+  // card keeps the active edge, even "done" ones (they stay clickable).
+  const jevRunActive = useJevRunStore((s) => s.run !== null);
+  const streaming = status === "streaming" || (jevRunActive && status === "done");
   const interactive = status === "done" && Boolean(onOpen);
   const strippedContent = useMemo(() => (content ? stripMarkdownTables(content) : ''), [content]);
 

@@ -82,7 +82,18 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   },
 
   setClassification: (data: ClassificationData) => {
-    if (get().classification?.recommendation === data.recommendation) return;
+    const prev = get().classification;
+    if (
+      prev &&
+      prev.recommendation === data.recommendation &&
+      prev.authoritative === data.authoritative &&
+      prev.practicallyActionable === data.practicallyActionable &&
+      prev.knowledgeGraphReady === data.knowledgeGraphReady &&
+      prev.safe === data.safe &&
+      prev.personaOptimised === data.personaOptimised
+    ) {
+      return;
+    }
     set({ classification: data });
     console.debug('[Metadata] Classification received:', data.recommendation);
   },

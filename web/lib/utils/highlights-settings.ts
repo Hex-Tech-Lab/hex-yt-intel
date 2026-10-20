@@ -159,6 +159,10 @@ export const HIGHLIGHTS_SPEED_MAX = 3;
  *  registry has no partition-level key to hang it on. */
 export const HIGHLIGHTS_COVERAGE_WINDOW_SECONDS = 300;
 
+/** Seconds of the next window's transcript each highlights window may read
+ *  (not start in), so a moment near a window edge can finish (T25). */
+export const HIGHLIGHTS_WINDOW_READAHEAD_SECONDS = 30;
+
 /**
  * Concurrency ceiling for windowed highlights extraction (Wave 3).
  * Sized at 3 to prevent slamming upstream LLM provider rate limits
@@ -283,3 +287,41 @@ export function calculateEffectiveHighlightBudget(
 }
 
 export const calculateHighlightBudgetSeconds = calculateAttentionBoundedBudget;
+
+/**
+ * A highlight's own speaking length (end - start) for ticker pacing, or 0 when
+ * it can't be trusted: legacy rows stored end = next highlight's start (often
+ * minutes), so a span outside [minDur, maxDur] falls back to the registry pace.
+ */
+export function getSpeakingSeconds(highlight: { start: number; end?: number | null }, minDur: number, maxDur: number): number {
+  if (highlight.end == null) return 0;
+  const span = highlight.end - highlight.start;
+  return span >= minDur && span <= maxDur ? span : 0;
+}
+
+/** Playback length given to a highlight wholly contained in the one before it. */
+const CONTAINED_SEGMENT_SECONDS = 0.05;
+
+/**
+ * Makes consecutive playback segments disjoint (owner report T8: clips repeated
+ * the previous clip's last words). A segment starting before the previous one
+ * ended is moved to start there, and every segment's lead-in is floored at the
+ * previous segment's end, so no clip replays another's audio.
+ */
+export function separateSegments<T extends { start: number; end: number }>(segments: readonly T[]): Array<T & { leadFloor?: number }> {
+  const out: Array<T & { leadFloor?: number }> = [];
+  for (const segment of segments) {
+    const previous = out[out.length - 1];
+    if (!previous) {
+      out.push({ ...segment });
+      continue;
+    }
+    const start = Math.max(segment.start, previous.end);
+    // A segment lying wholly inside the previous one has nothing new to play;
+    // a zero-length end would read as "no end" and fall back to a full fixed
+    // duration, so it gets a token length that playback steps straight past.
+    const end = segment.end > start ? segment.end : start + CONTAINED_SEGMENT_SECONDS;
+    out.push({ ...segment, start, end, leadFloor: previous.end });
+  }
+  return out;
+}

@@ -1,9 +1,10 @@
+import { sentry } from "@sentry/hono/cloudflare";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { sentry } from "@sentry/hono/cloudflare";
 
 import { optionalAuthMiddleware } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
+import { isProductionEnv } from "./env-utils";
 import { resolveCorsOrigin } from "./middleware/cors";
 import health from "./routes/health";
 import metadata from "./routes/metadata";
@@ -48,7 +49,7 @@ app.use("*", sentry(app, (env: Env) => ({
 })));
 
 app.use("*", cors({
-  origin: resolveCorsOrigin,
+  origin: (origin, ctx) => resolveCorsOrigin(origin, isProductionEnv(ctx.env)),
   allowHeaders: ["Content-Type", "Authorization"],
   allowMethods: ["GET", "POST", "OPTIONS"],
 }));

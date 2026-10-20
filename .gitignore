@@ -57,3 +57,29 @@ testsprite_tests/tmp/config.json
 
 # agent scratch output (never commit)
 .scratch/
+
+# Research corpus is private IP (2026-10-11): kept locally under docs/private/research, never pushed.
+docs/research/
+
+# Root clutter untracked 2026-10-11 (copies in docs/private/root-artifacts of the main checkout)
+/rewrite.py
+/patch_script.cjs
+/patch_script.js
+/patch_types.sh
+/pr_62_comments.txt
+/snyk_web_results.json
+/snyk_worker_results.json
+/test-or.js
+/test-proxy.ts
+/test-weight.js
+/dependency_list.json
+/huly_replica.html
+/design.html
+/landing.html
+/mockup.png
+docs/private
+
+# Python compiled bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class

@@ -78,7 +78,11 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   try {
     const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
     if (!res.ok) {
-      throw new Error(`${res.status}: ${await res.text().catch(() => '')}`);
+      const body = await res.text().catch((readError: unknown) => {
+        console.error('[ChatStore] could not read error body', { status: res.status, url, error: readError });
+        return '';
+      });
+      throw new Error(`${res.status}: ${body}`);
     }
     return res.json() as Promise<T>;
   } finally {
@@ -112,21 +116,29 @@ const handleChatStreamError = (
 };
 
 /** Read an SSE stream, dispatching each `data: {...}` JSON object. */
-async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => void): Promise<void> {
+async function readSSE(
+  res: Response,
+  onEvent: (e: Record<string, unknown>) => void,
+  timeoutMs: number
+): Promise<void> {
   if (!res.body) throw new Error('No stream body');
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let frameCount = 0;
   let eventCount = 0;
+  let parseFailures = 0;
 
-  // 25s maximum streaming read per Law #2 in GEMINI.md
+  // Maximum streaming read per the server-resolved timeoutMs (chat.stream.timeoutMs).
   // qa-intel compliance key: setError (handled in sendMessage/setPersistState)
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    reader.cancel().catch(() => {});
-  }, 25000);
+    reader.cancel().catch((cancelError: unknown) => {
+      console.error('[ChatStore] SSE reader cancel failed after timeout', { timeoutMs, error: cancelError });
+      Sentry.captureException(cancelError, { contexts: { chat: { action: 'readSSE.cancel', timeoutMs } } });
+    });
+  }, timeoutMs);
 
   try {
     if (isDebugEnabled()) console.log('[ChatStore] SSE stream reading started');
@@ -134,8 +146,9 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
       const { done, value } = await reader.read();
       if (done) {
         if (isDebugEnabled()) console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
+        if (parseFailures > 0) console.warn('[ChatStore] SSE frames skipped (unparseable JSON or event-handler error)', { parseFailures, frameCount, eventCount });
         if (timedOut) {
-          throw new DOMException('Stream timed out after 25s', 'AbortError');
+          throw new DOMException(`Stream timed out after ${timeoutMs}ms`, 'AbortError');
         }
         break;
       }
@@ -160,15 +173,12 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
           eventCount++;
           if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: (parsed as Record<string, unknown>).type, frameCount });
           onEvent(parsed as Record<string, unknown>);
-        } catch (e) {
-          // RCA (2026-07-23): a partial/incomplete JSON frame mid-stream is
-          // expected and frequent -- every sibling log in this loop is
-          // gated behind isDebugEnabled(), this one was the sole exception.
-          // Console output at 10-25K+ lines was reported live; this fires
-          // on every incomplete-frame parse attempt for the entire duration
-          // of a chat stream, which is by far the highest-frequency call
-          // site in this file.
-          if (isDebugEnabled()) console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
+        } catch {
+          // RCA (2026-07-23): a per-frame log here flooded the console (10-25K+
+          // lines per stream). Count the skipped frames and report ONE warning
+          // per stream (reported when the stream completes), so a malformed stream is still visible.
+          parseFailures++;
+          if (isDebugEnabled()) console.debug('[ChatStore] Skipped SSE frame (parse or handler error)', { frameCount });
         }
       }
     }
@@ -186,7 +196,12 @@ export const useChatStore = create<ChatState>((set, get) => {
   async function deliver(convId: string, clientMsgId: string, content: string): Promise<void> {
     const pendingAssistantId = `pending-${clientMsgId}`;
     set({ activePersistRequestId: clientMsgId });
-    get().setPersistState('saving', clientMsgId);
+    // Set 'saving' directly (so the UI shows it) instead of via setPersistState('saving'): that arms the 8s watchdog, and the
+    // worker only emits persist:saving after the whole LLM generation (chat-stream.ts
+    // STAGE 3). Arming here cleared a healthy in-flight reply to idle on any reply
+    // slower than 8s. The watchdog is armed by the worker's own persist:saving frame
+    // (see the persist handler below).
+    set({ persistState: 'saving' });
 
     // Ensure optimistic rows exist (idempotent for replay).
     set((s) => {
@@ -281,6 +296,14 @@ export const useChatStore = create<ChatState>((set, get) => {
         console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
       }
 
+      // The server resolves chat.stream.timeoutMs from the Settings Registry and sends it
+      // in the payload (ProcessChatMessageUseCase). No client-side fallback: a missing value
+      // is a server contract break and must fail loudly into the outbox/Sentry path.
+      const clientTimeoutMs = job.payload?.timeoutMs;
+      if (typeof clientTimeoutMs !== 'number' || clientTimeoutMs <= 0) {
+        throw new Error('Chat stream timeout missing from server payload (chat.stream.timeoutMs)');
+      }
+
       const streamRes = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,7 +314,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
           requestId: clientMsgId,
         }),
-        signal: AbortSignal.timeout(50000),
+        signal: AbortSignal.timeout(clientTimeoutMs),
       });
 
       if (isDebugEnabled()) {
@@ -370,11 +393,16 @@ export const useChatStore = create<ChatState>((set, get) => {
               break;
           }
         }
-      });
+      }, clientTimeoutMs);
 
       // Delivered + persisted → clear the outbox entry.
       outbox.remove(clientMsgId);
     } finally {
+      // The stream ended (or threw) without a terminal persist frame for this request.
+      // Clear the in-flight 'saving' so the UI unblocks. This never marks 'saved'.
+      if (get().persistState === 'saving' && get().activePersistRequestId === clientMsgId) {
+        set({ persistState: 'idle', activePersistRequestId: null });
+      }
       // Clear pending assistant message if stream ended without content (error case)
       // or leave it intact if it has accumulated content from successful stream
       set((s) => {
@@ -505,6 +533,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         }
         set({ conversations, loadingList: false });
       } catch (e) {
+        console.error('[ChatStore]', { message: 'loadConversations failed', error: e instanceof Error ? e.message : String(e) });
+        Sentry.captureException(e, { contexts: { chat: { action: 'loadConversations' } } });
         set({ loadingList: false, error: e instanceof Error ? e.message : 'Failed to load chats' });
       }
     },
@@ -558,6 +588,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         const { messages } = await api<{ messages: ChatMessage[] }>(`/api/chat/conversations/${id}/messages`);
         set((s) => ({ messagesByConv: { ...s.messagesByConv, [id]: messages }, loadingThread: false }));
       } catch (e) {
+        console.error('[ChatStore]', { message: 'selectConversation failed', error: e instanceof Error ? e.message : String(e), conversationId: id });
+        Sentry.captureException(e, { contexts: { chat: { action: 'selectConversation', conversationId: id } } });
         set({ loadingThread: false, error: e instanceof Error ? e.message : 'Failed to load thread' });
       }
     },
@@ -575,6 +607,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         }));
         return conversation.id;
       } catch (e) {
+        console.error('[ChatStore]', { message: 'newConversation failed', error: e instanceof Error ? e.message : String(e) });
+        Sentry.captureException(e, { contexts: { chat: { action: 'newConversation' } } });
         set({ error: e instanceof Error ? e.message : 'Failed to start chat' });
         return null;
       }
@@ -600,6 +634,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       } catch (e) {
         // Stays in outbox; user bubble kept, pending assistant bubble NOT stripped — retry loop needs full context.
         const { msg } = handleChatStreamError(e, { convId: convId!, clientMsgId, action: 'sendMessage' }, get().setPersistState);
+        console.warn('[ChatStore] sendMessage left queued in outbox for retry', { clientMsgId, conversationId: convId, error: msg });
         set({ error: msg || 'Send failed (queued for retry)' });
         // The error text above promises "queued for retry" — honor it (2026-09-15,
         // incident video rDhaCLrdWHk): the only automatic replay trigger previously
@@ -684,6 +719,13 @@ export const useChatStore = create<ChatState>((set, get) => {
             // The persist: saved/failed SSE event is the authoritative signal.
           } catch (err) {
             handleChatStreamError(err, { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' }, get().setPersistState);
+            const isPermanentContractBreak = err instanceof Error && err.message.includes('Chat stream timeout missing');
+            if (isPermanentContractBreak) {
+              outbox.remove(e.clientMsgId);
+              console.warn('[ChatStore] flushOutbox discarded permanently unprocessable entry (missing timeoutMs)', { clientMsgId: e.clientMsgId });
+              continue;
+            }
+            console.warn('[ChatStore] flushOutbox stopped; remaining entries wait for the next online event', { clientMsgId: e.clientMsgId });
             break; // still offline / failing — stop; retry on next online event
           }
         }

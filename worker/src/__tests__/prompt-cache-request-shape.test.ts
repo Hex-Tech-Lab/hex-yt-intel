@@ -38,7 +38,7 @@ function cacheSseResponse(cachedTokens: number): Response {
   ]);
 }
 
-const HAIKU_CHAIN = [{ model: 'anthropic/claude-haiku-4.5', name: 'Haiku 4.5', providerOrder: ['anthropic'] }];
+const HAIKU_CHAIN = [{ model: 'test/model-a', name: 'Model A', providerOrder: ['anthropic'] }];
 
 function baseContext(dimensions: number[]): EngineContext {
   return {

@@ -78,22 +78,23 @@ describe('LLMCascade.streamCascade', () => {
   });
 
   // Issue #241: LLMCascade.ts previously ignored the forwarded `cascade` field's
-  // per-tier providerOrder for claude-haiku-4.5 tiers and always substituted its
-  // own hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] literal
-  // (missing 'azure' entirely) -- a third, independently-drifting source of
-  // truth alongside web/lib/config/cascade.ts and the `cascade.analysis`
-  // Settings Registry key. These tests prove the forwarded value from the
-  // `cascade` constructor arg (the payload field populated end-to-end from
-  // CreateAnalysisUseCase's resolveAnalysisCascade()) is what actually reaches
-  // OpenRouter, and that the hardcoded literal is used only as a defensive
-  // fallback when a tier genuinely carries no providerOrder.
-  it('uses the forwarded per-tier providerOrder for a claude-haiku-4.5 tier, not the hardcoded default', async () => {
+  // per-tier providerOrder and always substituted its own hardcoded
+  // multi-provider default literal (missing the tier's provider entirely) -- a
+  // third, independently-drifting source of truth alongside
+  // web/lib/config/cascade.ts and the `cascade.analysis` Settings Registry
+  // key. These tests prove the forwarded value from the `cascade` constructor
+  // arg (the payload field populated end-to-end from CreateAnalysisUseCase's
+  // resolveAnalysisCascade()) is what actually reaches OpenRouter, and that
+  // the provider pinning guard is driven by the tier's stamped
+  // requiresProviderOrder capability (ADR 041), never by an inline model-ID
+  // comparison.
+  it('uses the forwarded per-tier providerOrder for a tier that requires it, not the hardcoded default', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', providerOrder: ['azure'] }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'test/model-a', name: 'Model A (Azure)', providerOrder: ['azure'], requiresProviderOrder: true }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
 
     await cascade.streamCascade('sys', () => {}, () => {});
 
@@ -104,10 +105,77 @@ describe('LLMCascade.streamCascade', () => {
     expect(body.provider).toEqual({ order: ['azure'], allow_fallbacks: false });
   });
 
-  it('fails closed when a claude-haiku-4.5 tier has no providerOrder at all', async () => {
-    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (no providerOrder)' }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
-    
+  it('fails closed when a tier requires providerOrder but has none at all', async () => {
+    const cascade = new LLMCascade('test-api-key', undefined, [{ model: 'test/model-a', name: 'Model A (no providerOrder)', requiresProviderOrder: true }], { haiku: 8192, default: 16000 }, 'user1', 240000, 15000);
+
     // Attempting to stream should throw because buildRequestProvider fails
-    await expect(cascade.streamCascade('sys', vi.fn())).rejects.toThrow('LLMCascade SSOT Violation: Haiku 4.5 requested without explicit providerOrder from Settings Registry');
+    await expect(cascade.streamCascade('sys', vi.fn())).rejects.toThrow('LLMCascade SSOT Violation: Model requires explicit providerOrder from Settings Registry');
+  });
+});
+
+describe('LLMCascade per-stream reasoning effort (analysis.reasoning.*)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  async function requestBodyFor(
+    tier: { model: string; name: string; reasoningGrounded?: string; reasoningProjective?: string },
+    streamKind?: 'grounded' | 'projective',
+  ): Promise<Record<string, unknown>> {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const cascade = new LLMCascade('k', undefined, [tier], { haiku: 8192, default: 16000 }, 'u', 240000, 15000, true, streamKind);
+    await cascade.streamCascade('prompt', () => undefined);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    return JSON.parse(init.body as string);
+  }
+
+  const tier = { model: 'model/a', name: 'A', reasoningGrounded: 'none', reasoningProjective: 'low' };
+
+  it('disables reasoning for grounded streams', async () => {
+    expect((await requestBodyFor(tier, 'grounded')).reasoning).toEqual({ enabled: false });
+  });
+
+  it('requests low effort for projective streams', async () => {
+    expect((await requestBodyFor(tier, 'projective')).reasoning).toEqual({ effort: 'low' });
+  });
+
+  it('defaults to the historical low effort when the tier carries no stamp (older client)', async () => {
+    expect((await requestBodyFor({ model: 'model/a', name: 'A' })).reasoning).toEqual({ effort: 'low' });
+  });
+
+  it('clamps an out-of-set (tampered) effort to low instead of forwarding it', async () => {
+    expect((await requestBodyFor({ model: 'model/a', name: 'A', reasoningGrounded: 'max' }, 'grounded')).reasoning).toEqual({ effort: 'low' });
+  });
+});
+
+describe('LLMCascade.generateStream (Phase C engines)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('streams the cascade output as text and sends system + user prompt together', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"{\\"claims\\":"}}]}', 'data: {"choices":[{"delta":{"content":"[]}"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const cascade = new LLMCascade('k', undefined, [{ model: 'model/a', name: 'A' }], { haiku: 8192, default: 16000 }, 'u', 240000, 15000);
+    const stream = await cascade.generateStream({ systemPrompt: 'SYS', userPrompt: 'USER' });
+    const reader = stream.getReader();
+    let text = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += value;
+    }
+    expect(text).toBe('{"claims":[]}');
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(JSON.stringify(body.messages)).toContain('SYS');
+    expect(JSON.stringify(body.messages)).toContain('USER');
+  });
+
+  it('errors the stream when no tier produces output', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('boom', { status: 500 })));
+    const cascade = new LLMCascade('k', undefined, [{ model: 'model/a', name: 'A' }], { haiku: 8192, default: 16000 }, 'u', 240000, 15000);
+    const stream = await cascade.generateStream({ systemPrompt: 'SYS', userPrompt: '' });
+    await expect(stream.getReader().read()).rejects.toThrow(/no tier produced output/);
   });
 });

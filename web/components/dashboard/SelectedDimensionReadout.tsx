@@ -1,16 +1,20 @@
 'use client';
 
-import type React from 'react';
 import { Markdown } from '@astryxdesign/core';
-import { preprocessMarkdown } from '@/lib/utils/format';
+
 import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
+import { preprocessMarkdown } from '@/lib/utils/format';
+
+import type React from 'react';
 
 const HEADING_CLASS: Record<1 | 2 | 3 | 4 | 5 | 6, string> = {
   1: 'font-mono text-[16px] font-bold text-[var(--ink)] mt-6 mb-3 pb-2 border-b border-[var(--line-faint)]',
   2: 'font-mono text-[14px] font-bold text-[var(--ink)] mt-6 mb-3 pb-1 border-b border-[var(--line-faint)]',
   3: 'font-mono text-[13px] font-bold text-[var(--ink)] mt-5 mb-2',
   4: 'font-mono text-[12px] font-bold uppercase tracking-wider text-[var(--ink-secondary)] mt-5 mb-2',
-  5: 'font-mono text-[12px] font-bold uppercase tracking-wider text-[var(--ink-secondary)] mt-5 mb-2',
+  // h5 = a numbered System block inside a section (Dim 7): accent bar and
+  // colour, sentence case, so it reads apart from the uppercase h4 sections.
+  5: 'text-[13px] font-semibold text-[var(--accent)] mt-5 mb-2 pl-2 border-l-2 border-[var(--accent)]',
   6: 'font-mono text-[12px] font-bold uppercase tracking-wider text-[var(--ink-secondary)] mt-5 mb-2',
 };
 
@@ -56,7 +60,10 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-4 hx-custom-scrollbar">
+    <div
+      className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-4 hx-custom-scrollbar"
+      style={{ scrollbarGutter: 'stable' }}
+    >
       {dimension.content ? (
         <div className="text-[14px] leading-relaxed text-[var(--ink-secondary)]">
           <Markdown components={readoutComponents}>

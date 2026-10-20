@@ -217,6 +217,11 @@ export interface AnalysisPersistencePort {
   persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
+    // R3b 2-D chunk matrix (ADR 037 Addendum A): 0-based Jev conceptual-chunk
+    // slice this bundle belongs to. K=1 today, so every caller passes the
+    // default 0 (the legacy slice); the column participates in the new
+    // unique_analysis_chunk_cell key.
+    jevChunkIndex?: number;
     dimensionsCovered: number[];
     payload: any;
     status: 'completed' | 'failed' | 'interrupted';
@@ -309,6 +314,9 @@ export interface AnalysisPersistencePort {
   /**
    * Update validation report and status.
    */
+  /** Atomic shallow merge into validation_report; never replaces keys it does not name. */
+  mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void>;
+
   updateValidationReport(params: {
     analysisId: string;
     report: any;
@@ -336,5 +344,36 @@ export interface AnalysisPersistencePort {
     userId: string;
     digest: unknown;
   }): Promise<boolean>;
+
+  /**
+   * Persist the computed Jev plan (ADR 037 Addendum A, R3b 2.3 Option P1)
+   * idempotently: the write is conditional on the row having no stored plan,
+   * so a concurrent/second caller can never re-chunk. Returns the plan that
+   * is now authoritative for the row — the caller's plan when the write
+   * landed, or the previously stored plan when it did not (second call
+   * returns STORED plan, never re-chunks).
+   */
+  persistJevPlan(params: {
+    analysisId: string;
+    plan: unknown;
+  }): Promise<{ plan: unknown; stored: boolean }>;
+
+  /** Read the stored Jev plan for an analysis, or null when none is stored. */
+  findJevPlan(params: { analysisId: string }): Promise<unknown | null>;
+
+  /** R3b admin gate: users.role === 'admin' for this user, or this analysis's owner. Unknown => false. */
+  isAdminUser(params: { userId: string } | { analysisId: string }): Promise<boolean>;
+
+  /** R3b 2.5: mark a K>1 plan degraded after the browser fell back to K=1. */
+  markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void>;
+
+  /**
+   * R3b 2.5c: every cell row of an analysis, ALL jev_chunk_index values
+   * (findAnalysisChunks returns jev chunk 0 only). Used by the K>1 finalize,
+   * which reduces each bundle's cells before the per-bundle stitch.
+   */
+  findAnalysisCells(params: {
+    analysisId: string;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 }
 

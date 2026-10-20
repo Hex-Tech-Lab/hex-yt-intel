@@ -1,12 +1,12 @@
 name = "yt-intel"
 main = "dist/worker.js"
 compatibility_date = "2026-04-21"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat", "enable_request_signal"]
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
 
 [env.production]
 name = "yt-intel"
-vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production", APP_URL = "https://yt-intel.getmytestdrive.com" }
+vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production", APP_URL = "https://www.getvintel.com" }
 # Production secrets (deploy via wrangler secret put):
 #   wrangler secret put RESIDENTIAL_PROXY_URL --env production
 #   wrangler secret put STREAM_HMAC_SECRET --env production
@@ -43,6 +43,38 @@ persist = true
 invocation_logs = true
 
 [env.production.observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
+[env.uat]
+name = "youtube-intelligence-worker-uat"
+workers_dev = true
+vars = { REGION = "eu-west-3", WORKER_NAME = "youtube-intelligence-worker-uat", ENVIRONMENT = "uat", APP_URL = "https://uat.getvintel.com", SUPABASE_POOLER_URL = "postgresql://postgres.adnmbikaqnxivalqoild@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" }
+
+[[env.uat.queues.producers]]
+queue = "yt-intel-comments-tier3-uat"
+binding = "COMMENTS_TIER3_QUEUE"
+
+[[env.uat.queues.consumers]]
+queue = "yt-intel-comments-tier3-uat"
+max_batch_size = 1
+max_retries = 3
+dead_letter_queue = "yt-intel-comments-tier3-uat-dlq"
+
+[env.uat.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.uat.observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+# Mirror production's trace persistence so UAT traces survive invocation end
+# (parity with [env.production.observability.traces] above).
+[env.uat.observability.traces]
 enabled = true
 persist = true
 head_sampling_rate = 1

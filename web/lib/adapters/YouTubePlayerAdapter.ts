@@ -22,6 +22,8 @@ interface YTPlayerConstructor {
     container: HTMLElement | string,
     config: {
       videoId: string;
+      /** Undocumented-but-real iframe_api option (see mount()); not in the official typings. */
+      host?: string;
       playerVars?: Record<string, number | string>;
       events?: {
         onReady?: () => void;
@@ -110,7 +112,7 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     this.destroyed = false;
     this.container = container;
 
-    const timeout = new Promise<never>((_, reject) => {
+    const timeout = new Promise<never>((_unused, reject) => {
       this.loadTimeout = setTimeout(() => {
         reject(new Error('YouTube Player mount timed out after 30s'));
       }, 30000);
@@ -132,6 +134,17 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       }
       this.player = new YT.Player(container, {
         videoId,
+        // Undocumented-but-real YT widget constructor option (supported by the
+        // iframe_api script itself): forces the widget to construct the embed
+        // iframe against this host explicitly, aligning the internal
+        // postMessage listener's expected iframe origin with the real one.
+        // Without it the widget can bind its listener to a default that
+        // mismatches the actual iframe origin, producing the console error
+        // "Failed to execute 'postMessage' on 'DOMWindow': The target origin
+        // provided ('https://www.youtube.com') does not match the recipient
+        // window's origin". The `origin` playerVar below is still required
+        // (embed-side identity), but does not address the listener side.
+        host: 'https://www.youtube.com',
         playerVars: {
           modestbranding: 1,
           rel: 0,
@@ -142,21 +155,25 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
           onReady: () => {
             if (this.destroyed) {
               if (this.player?.destroy) {
-                try { this.player.destroy(); } catch (_) { /* ignore */ }
+                try { this.player.destroy(); } catch (mountRaceError) {
+                  // Expected path when racing an unmount during mount -- stale
+                  // iframe teardown failure is harmless, log for diagnostics.
+                  console.error('[YouTubePlayerAdapter]', mountRaceError instanceof Error ? mountRaceError.message : String(mountRaceError));
+                }
               }
               if (this.container) this.container.innerHTML = '';
               return;
             }
             callbacks?.onReady?.();
           },
-          onError: (e: YTPlayerEvent) => {
-            if (!this.destroyed) callbacks?.onError?.(new Error(`YouTube error: ${e.data}`));
+          onError: (event: YTPlayerEvent) => {
+            if (!this.destroyed) callbacks?.onError?.(new Error(`YouTube error: ${event.data}`));
           },
-          onStateChange: (e: YTPlayerEvent) => {
+          onStateChange: (event: YTPlayerEvent) => {
             if (this.destroyed) return;
-            if (e.data === 1) callbacks?.onPlay?.();
-            else if (e.data === 2) callbacks?.onPause?.();
-            else if (e.data === 0) callbacks?.onEnded?.();
+            if (event.data === 1) callbacks?.onPlay?.();
+            else if (event.data === 2) callbacks?.onPause?.();
+            else if (event.data === 0) callbacks?.onEnded?.();
           },
         },
       });
@@ -215,8 +232,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       this.loadTimeout = null;
     }
     if (this.player?.destroy) {
-      try { this.player.destroy(); } catch (err) {
-        Sentry.captureException(err, { tags: { operation: 'youtube-player-destroy' } });
+      try { this.player.destroy(); } catch (destroyError) {
+        Sentry.captureException(destroyError, { tags: { operation: 'youtube-player-destroy' } });
       }
     }
     if (this.container) {
@@ -235,7 +252,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     try {
       const vol = this.player.getVolume();
       return typeof vol === 'number' && Number.isFinite(vol) ? Math.max(0, Math.min(100, vol)) : 100;
-    } catch {
+    } catch (volumeError) {
+      console.error('[YouTubePlayerAdapter]', volumeError instanceof Error ? volumeError.message : String(volumeError));
       return 100;
     }
   }
@@ -244,7 +262,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
     if (this.destroyed || !this.player?.isMuted) return false;
     try {
       return Boolean(this.player.isMuted());
-    } catch {
+    } catch (mutedError) {
+      console.error('[YouTubePlayerAdapter]', mutedError instanceof Error ? mutedError.message : String(mutedError));
       return false;
     }
   }

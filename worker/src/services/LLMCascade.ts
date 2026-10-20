@@ -15,7 +15,7 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 //   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
 //     (3s first-token, 19-33s total). Lead model.
 //   - gemini-2.0-flash: fast, sub-second TTFB, highly reliable.
-//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
+//   - Claude Haiku 4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 
@@ -49,14 +49,19 @@ const LLM_MAX_TOKENS_FALLBACK = { haiku: 8192, default: 16000 } as const;
  * duplication finding 2026-08-20, /simplify review) -- was identical
  * inline logic at both callLLMStream and callLLM, meaning any future
  * change to the fallback/allow_fallbacks behavior had to be made twice.
+ *
+ * ADR 041: the model-specific knowledge (which models require explicit
+ * provider pinning) is stamped per tier by the registry-definition layer
+ * (web/lib/config/cascade.ts#MODEL_CAPABILITIES) and forwarded on the
+ * cascade item — no inline model-ID comparisons in dispatch code.
  */
 function buildRequestProvider(
-  isHaiku45: boolean,
+  requiresProviderOrder: boolean,
   providerOrder: string[] | undefined
 ): { order: string[]; allow_fallbacks: false } | undefined {
-  if (isHaiku45) {
+  if (requiresProviderOrder) {
     if (!providerOrder || providerOrder.length === 0) {
-      throw new Error('LLMCascade SSOT Violation: Haiku 4.5 requested without explicit providerOrder from Settings Registry');
+      throw new Error('LLMCascade SSOT Violation: Model requires explicit providerOrder from Settings Registry');
     }
     return {
       order: providerOrder,
@@ -66,12 +71,36 @@ function buildRequestProvider(
   return providerOrder && providerOrder.length > 0 ? { order: providerOrder, allow_fallbacks: false } : undefined;
 }
 
+/** Reasoning efforts this worker will ever request (see migration 20261008120000). */
+const REASONING_EFFORTS = ['none', 'minimal', 'low'] as const;
+type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
+/**
+ * Per-tier reasoning effort for this stream kind. The cascade reaches the
+ * worker through the browser-relayed (not yet signed) request body, so any
+ * value outside the cheap set -- or a missing one from an older client --
+ * clamps to 'low', the historical hardcoded default.
+ */
+function tierReasoningEffort(
+  tier: { reasoningGrounded?: string; reasoningProjective?: string },
+  streamKind: 'grounded' | 'projective'
+): ReasoningEffort {
+  const raw = streamKind === 'projective' ? tier.reasoningProjective : tier.reasoningGrounded;
+  return (REASONING_EFFORTS as readonly string[]).includes(raw ?? '') ? (raw as ReasoningEffort) : 'low';
+}
+
+/** OpenRouter `reasoning` request field: 'none' disables reasoning, otherwise an effort level. */
+function buildReasoning(effort: ReasoningEffort): { enabled: false } | { effort: 'minimal' | 'low' } {
+  return effort === 'none' ? { enabled: false } : { effort };
+}
+
 export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
-  // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
-  // bouncer may inject a per-tier list (resolved from app_settings) — the DB config is
-  // the override source of truth; MODEL_CHAIN is the safety-net fallback.
-  private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
+  // The ordered cascade actually used, forwarded from the client (resolved
+  // from the Settings Registry web-side; the worker has no DB access per
+  // ADR 005). Missing/empty cascade is a hard construction error — there is
+  // no hardcoded chain fallback (removed; see constructor throw).
+  private chain: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: string; reasoningProjective?: string }>;
   private maxTokens: { haiku: number; default: number };
   private llmTimeoutMs: number;
   private llmHandshakeTimeoutMs: number;
@@ -89,20 +118,24 @@ export class LLMCascade implements LLMCascadePort {
   // a stale client that doesn't forward the flag still benefits (write 1.25x
   // on bundle 1's shared ~19.2k-token prefix, reads 0.1x on bundles 2-5).
   private promptCachingEnabled: boolean;
+  // Selects which stamped per-tier reasoning effort applies to this cascade's calls.
+  private streamKind: 'grounded' | 'projective';
   // One-shot: a byte-identity breach is a caller contract bug, not transient.
   private byteIdentityWarningLogged = false;
 
   constructor(
     apiKey: string,
     models?: string[],
-    cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
+    cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: string; reasoningProjective?: string }>,
     maxOutputTokens?: { haiku: number; default: number },
     userId?: string,
     llmTimeoutMs?: number,
     llmHandshakeTimeoutMs?: number,
-    promptCachingEnabled?: boolean
+    promptCachingEnabled?: boolean,
+    streamKind: 'grounded' | 'projective' = 'grounded'
   ) {
     this.apiKey = apiKey;
+    this.streamKind = streamKind;
     this.promptCachingEnabled = promptCachingEnabled !== false;
     this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs && llmHandshakeTimeoutMs > 0 ? llmHandshakeTimeoutMs : LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK;
     this.maxTokens = maxOutputTokens ?? LLM_MAX_TOKENS_FALLBACK;
@@ -111,7 +144,54 @@ export class LLMCascade implements LLMCascadePort {
     if (!cascade || cascade.length === 0) {
       throw new Error('LLMCascade SSOT Violation: Missing cascade configuration from Settings Registry');
     }
+    // ADR 041 fail-fast (10X registry-enforcement mission): a structurally
+    // invalid tier (blank model ID or display name) would otherwise ship as a
+    // guaranteed OpenRouter 400 at stream time, after quota has already been
+    // consumed. Throw at construction instead.
+    for (const tier of cascade) {
+      if (!tier || typeof tier.model !== 'string' || tier.model.trim().length === 0) {
+        throw new Error('LLMCascade SSOT Violation: cascade tier with empty or missing model ID');
+      }
+      if (typeof tier.name !== 'string' || tier.name.trim().length === 0) {
+        throw new Error(`LLMCascade SSOT Violation: cascade tier '${tier.model}' has empty or missing display name`);
+      }
+    }
     this.chain = cascade;
+  }
+
+  /**
+   * Epistemic engines' streaming entry point (Phase C). Runs the normal tier
+   * cascade (same fallback, provider pinning and per-stream reasoning as the
+   * live path) over `systemPrompt` + `userPrompt`, and exposes the deltas as a
+   * text ReadableStream. The stream errors if no tier produced output.
+   * The text is emitted only once a tier commits, so a tier that fails
+   * mid-stream never leaves partial output ahead of the fallback's.
+   * Limitation: `maxTokens` / `temperature` are not forwarded -- each tier's
+   * registry-stamped output cap and the cascade's fixed temperature apply.
+   */
+  generateStream(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    maxTokens?: number;
+    temperature?: number;
+  }): Promise<ReadableStream<string>> {
+    const prompt = params.userPrompt ? `${params.systemPrompt}\n\n${params.userPrompt}` : params.systemPrompt;
+    return Promise.resolve(new ReadableStream<string>({
+      start: async (controller) => {
+        try {
+          const result = await this.streamCascade(prompt, () => undefined);
+          if (!result.started || !result.finalText) {
+            controller.error(new Error('LLMCascade.generateStream: no tier produced output'));
+            return;
+          }
+          controller.enqueue(result.finalText);
+          controller.close();
+        } catch (error) {
+          console.error('[LLMCascade] generateStream failed', error);
+          controller.error(error);
+        }
+      },
+    }));
   }
 
   /**
@@ -149,7 +229,8 @@ export class LLMCascade implements LLMCascadePort {
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
       const tier = this.chain[tierIndex];
       if (!tier) continue;
-      const { model, name, providerOrder } = tier;
+      const { model, name, providerOrder, maxOutputTokens, requiresProviderOrder } = tier;
+      const reasoningEffort = tierReasoningEffort(tier, this.streamKind);
 
       if (signal?.aborted) {
         // skipcq: JS-0827
@@ -173,7 +254,10 @@ export class LLMCascade implements LLMCascadePort {
         this.llmTimeoutMs,
         signal,
         providerOrder as string[] | undefined,
-        cacheSplit
+        cacheSplit,
+        maxOutputTokens,
+        requiresProviderOrder,
+        reasoningEffort
       );
 
       if (result.started && finalText && !result.error) {
@@ -253,14 +337,18 @@ export class LLMCascade implements LLMCascadePort {
     metadata: EngineMetadata,
     accept?: (text: string) => boolean
   ): Promise<{ text: string; modelUsed: string } | null> {
-    for (const { model, name, providerOrder } of this.chain) {
+    for (const tier of this.chain) {
+      const { model, name, providerOrder, maxOutputTokens, requiresProviderOrder } = tier;
       const result = await this.callLLM(
         model,
         systemPrompt,
         transcript,
         metadata,
         45000,
-        providerOrder as string[] | undefined
+        providerOrder as string[] | undefined,
+        maxOutputTokens,
+        requiresProviderOrder,
+        tierReasoningEffort(tier, this.streamKind)
       );
       if (result.success && result.text) {
         if (!accept || accept(result.text)) {
@@ -284,7 +372,10 @@ export class LLMCascade implements LLMCascadePort {
     timeoutMs: number,
     signal?: AbortSignal,
     providerOrder?: string[],
-    cacheSplit?: { prefix: string; suffix: string }
+    cacheSplit?: { prefix: string; suffix: string },
+    maxOutputTokens?: number,
+    requiresProviderOrder?: boolean,
+    reasoningEffort: ReasoningEffort = 'low'
   ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; cachedTokens?: number; generationId?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
@@ -316,9 +407,13 @@ export class LLMCascade implements LLMCascadePort {
       signal.addEventListener('abort', onAbort);
     }
 
-    const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? this.maxTokens.haiku : this.maxTokens.default;
+    // ADR 041: the per-tier output cap is stamped by the registry-definition
+    // layer (web/lib/config/cascade.ts, resolving analysis.maxOutputTokens.*)
+    // and forwarded on the cascade item — no model-ID comparison here. The
+    // constructor-level {haiku, default} fallback only applies to tiers that
+    // carry no stamped cap (chat paths / stale clients).
+    const requestMaxTokens = maxOutputTokens ?? this.maxTokens.default;
     // Prompt caching (2026-09-25): explicit Anthropic cache_control breakpoint
     // on the shared prefix block, per OpenRouter's documented per-block
     // pattern (works across all Anthropic-compatible providers incl.
@@ -359,7 +454,7 @@ export class LLMCascade implements LLMCascadePort {
       : [{ role: 'system', content: systemPrompt }];
     // RCA (2026-07-23): this used to unconditionally override `providerOrder`
     // with a hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] for
-    // ANY claude-haiku-4.5 tier, silently discarding the "Alternate Route"
+    // ANY Haiku 4.5 tier, silently discarding the "Alternate Route"
     // cascade tier's own providerOrder (['google-vertex', 'amazon-bedrock'],
     // deliberately configured to skip the direct 'anthropic' provider). Net
     // effect: the primary tier and the "alternate route" tier sent the exact
@@ -378,7 +473,7 @@ export class LLMCascade implements LLMCascadePort {
     // its own tier-to-tier fallback (Cerebras -> Groq -> Baseten -> ...), so
     // OpenRouter-level substitution is redundant and actively defeats
     // deliberate provider choice (e.g. paying more for Cerebras speed).
-    const requestProvider = buildRequestProvider(isHaiku45, providerOrder);
+    const requestProvider = buildRequestProvider(requiresProviderOrder === true, providerOrder);
 
     try {
       const response = await fetch(OPENROUTER_URL, {
@@ -394,10 +489,10 @@ export class LLMCascade implements LLMCascadePort {
           temperature: 1,
           max_tokens: requestMaxTokens,
           stream: true,
-          // Default to low reasoning effort for reasoning-capable models unless
-          // the caller explicitly needs more (user directive 2026-07-25) -- keeps
-          // cost/latency down for cascade tiers that don't need deep reasoning.
-          reasoning: { effort: 'low' },
+          // Per-stream reasoning (2026-10-08): stamped per tier from the
+          // analysis.reasoning.* registry keys -- off for grounded bundles,
+          // 'low' for projective/combiner; defaults to the historical 'low'.
+          reasoning: buildReasoning(reasoningEffort),
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
           // echo the prompt header instead of analyzing.
@@ -556,14 +651,17 @@ export class LLMCascade implements LLMCascadePort {
     transcript: string,
     metadata: EngineMetadata,
     timeoutMs = 45000,
-    providerOrder?: string[]
+    providerOrder?: string[],
+    maxOutputTokens?: number,
+    requiresProviderOrder?: boolean,
+    reasoningEffort: ReasoningEffort = 'low'
   ): Promise<{ success: boolean; text?: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? this.maxTokens.haiku : this.maxTokens.default;
+    // ADR 041: per-tier stamped cap, same mechanism as callLLMStream.
+    const requestMaxTokens = maxOutputTokens ?? this.maxTokens.default;
     // Same tier-override bug as callLLMStream (see RCA there), plus this copy
     // additionally had wrong-cased provider slugs ('Amazon'/'Anthropic'/'Google')
     // -- OpenRouter provider slugs are lowercase ('anthropic', 'google-vertex',
@@ -573,7 +671,7 @@ export class LLMCascade implements LLMCascadePort {
     // there. OpenRouter-level provider substitution is redundant given the
     // cascade's own tier-to-tier fallback and defeats deliberate provider
     // pinning (e.g. Cerebras for chat speed).
-    const requestProvider = buildRequestProvider(isHaiku45, providerOrder);
+    const requestProvider = buildRequestProvider(requiresProviderOrder === true, providerOrder);
 
     try {
       const response = await fetch(OPENROUTER_URL, {
@@ -582,13 +680,13 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
-          'X-Title': 'vIntel - Synthesis Stream',
+          'X-Title': 'vIntel - Synthesis (Non-Stream)',
         },
         body: JSON.stringify({
           model: requestModel,
           temperature: 1,
           max_tokens: requestMaxTokens,
-          reasoning: { effort: 'low' },
+          reasoning: buildReasoning(reasoningEffort),
           messages: [
             { role: 'system', content: systemPrompt },
           ],

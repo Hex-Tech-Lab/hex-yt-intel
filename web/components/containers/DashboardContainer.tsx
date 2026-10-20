@@ -80,6 +80,7 @@ import { useAutoRestoreAnalysis } from "@/hooks/useAutoRestoreAnalysis";
 import { useExecutiveDigest } from "@/hooks/useExecutiveDigest";
 import { useChapters } from "@/hooks/useChapters";
 import { useAuxElementStatus } from "@/hooks/useAuxElementStatus";
+import { useCommentInsights } from "@/hooks/useCommentInsights";
 import { extractVideoId } from "@/lib/youtube";
 import { useExistingAnalysisCheck } from "@/hooks/useExistingAnalysisCheck";
 import { UsageTab } from "@/components/templates/console/UsageTab";
@@ -91,6 +92,7 @@ import {
 import { useSynthesisNucleus } from "@/lib/stores/synthesis-nucleus-store";
 import { useKnowledgeGraph } from "@/hooks/useKnowledgeGraph";
 import { useRelations } from "@/hooks/useRelations";
+import type { PanelDefaults } from "@/lib/hooks/useDashboardLayout";
 import type { ConsoleProfile } from "@/lib/services/console-profile";
 import type { KnowledgeGraph } from "@/lib/types/knowledge-graph";
 import type { KnowledgeGraphV2 } from "@/lib/types/synthesis-nucleus";
@@ -113,6 +115,7 @@ import { Avatar } from "@astryxdesign/core";
 
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
+  panelDefaults?: PanelDefaults;
 }
 
 // Reference-stable empty fallback for displayGraph -- an inline `{nodes:[],
@@ -174,7 +177,7 @@ function cleanDimensionContent(raw: string): string {
 }
 
 // skipcq: JS-0067, JS-R1005
-export function DashboardContainer({ profile }: DashboardContainerProps) {
+export function DashboardContainer({ profile, panelDefaults }: DashboardContainerProps) {
   // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
   // this store now also carries currentPlaybackSeconds, updated 4x/sec
   // while playing (post-review finding, 2026-08-06); DashboardContainer is
@@ -392,7 +395,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       startTransition(() => setSelectedNodeId(id));
       if (!id) return;
 
-      const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
+      const { entityTimeSeekEnabled, seekAndReveal } = useVideoStore.getState();
       // displayGraph, not graph: WordCloud renders displayGraph (which can
       // be the streaming nucleusKnowledgeGraph while graph is still empty --
       // see displayGraph's own comment above), so a click there must resolve
@@ -447,7 +450,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           }
           if (timestamp) {
             const secs = parseTimestamp(timestamp);
-            if (secs >= 0) setSeekTo(secs);
+            // `00:00` is a valid seek target; the retry path below already
+            // uses `>= 0` — keep the two consistent.
+            if (secs >= 0) seekAndReveal(secs);
           } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
             // Race condition: dimension not yet streamed into store. This
             // retry path only makes sense mid-generation -- for a completed/
@@ -479,7 +484,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 )?.timestamp ?? null;
               if (retryTs) {
                 const secs = parseTimestamp(retryTs);
-                if (secs >= 0) setSeekTo(secs);
+                if (secs >= 0) seekAndReveal(secs);
               }
             });
           }
@@ -582,11 +587,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       status === "downloading" ||
       status === "parsing";
 
-    if (displayGraph.nodes.length > 0 || isAnalyzing) {
+    // Always present (like Pro's other panels): collapsed with nothing to
+    // show, opening on its own once an analysis starts or words exist.
+    {
       items.push({
         id: "word-cloud",
         title: "Word Cloud",
-        defaultOpen: true,
+        defaultOpen: displayGraph.nodes.length > 0 || isAnalyzing,
         content: () => (
           <WordCloud
             graph={displayGraph}
@@ -745,6 +752,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     status,
   );
   const auxStatus = useAuxElementStatus(analysisId, status);
+  const commentInsights = useCommentInsights(analysisId, status);
 
   const getUserTimezone = (): string => {
     try {
@@ -925,10 +933,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const drawerDimensionData = useMemo(() => {
     if (!selectedDimension) return null;
+    const dimensionNumber = Number(selectedDimension.key.replace(/^dim-/, ''));
     return {
       label: selectedDimension.label,
       content: selectedDimension.content,
       icon: selectedDimension.icon,
+      number: Number.isInteger(dimensionNumber) ? dimensionNumber : undefined,
     };
   }, [selectedDimension]);
 
@@ -991,6 +1001,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   return (
     <div className="relative w-full min-h-[100dvh] xl:h-screen overflow-x-hidden xl:overflow-hidden">
       <DashboardLayout
+        panelDefaults={panelDefaults}
         sidebar={
           <Sidebar
             items={sidebarItems}
@@ -1142,6 +1153,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     partialInfo={partialInfo}
                     TOTAL_DIMENSIONS={TOTAL_DIMENSIONS}
                     auxStatus={auxStatus}
+                    commentInsights={commentInsights}
                     chaptersStatus={chaptersStatus}
                     chapters={chapters}
                     dimensions={dimensions}

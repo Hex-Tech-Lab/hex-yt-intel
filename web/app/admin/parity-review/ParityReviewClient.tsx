@@ -137,7 +137,7 @@ export function ParityReviewClient() {
         />
         <p className="mt-2 text-[11px] text-[var(--ink-muted)] max-w-[60ch]">
           The real Haiku-4.5-vs-GPT-OSS-120B batch hasn&apos;t been generated yet at
-          <code className="mx-1 bg-[var(--surface)] px-1 py-0.5 rounded">docs/research/2026-08-18-parity-batch-results.json</code>.
+          <code className="mx-1 bg-[var(--surface)] px-1 py-0.5 rounded">docs/private/research/2026-08-18-parity-batch-results.json</code>.
           This page intentionally does not render placeholder/mock data as if it were a real result.
         </p>
       </div>

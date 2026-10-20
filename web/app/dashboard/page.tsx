@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { loadConsoleProfile } from '@/lib/services/console-profile';
 import { DashboardContainer } from '@/components/containers/DashboardContainer';
+import { resolveDashboardPanelDefaults } from '@/lib/config/dashboard-panels';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,5 +14,6 @@ export default async function DashboardPage() {
 
   // /dashboard is an alias for the Synthesis Console (landing CTAs + nav link
   // point here); the root route serves the same console to authenticated users.
-  return <DashboardContainer profile={profile} />;
+  const panelDefaults = await resolveDashboardPanelDefaults();
+  return <DashboardContainer profile={profile} panelDefaults={panelDefaults} />;
 }

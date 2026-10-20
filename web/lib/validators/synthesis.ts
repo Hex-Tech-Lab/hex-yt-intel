@@ -126,9 +126,12 @@ const normalizeKgNodeFields = (val: unknown): unknown => {
   out.dimension = Math.min(TOTAL_DIMENSIONS, Math.max(0, dimNum));
   out.weight = clampNumber(out.weight, 0.1, 10, 5);
   out.polarity = clampNumber(out.polarity, -1, 1, 0);
-  if (Array.isArray(out.keyTerms)) {
-    out.keyTerms = out.keyTerms.filter((t): t is string => typeof t === "string").slice(0, 10);
-  }
+  // A missing keyTerms used to reject the whole graph; a lone string is kept
+  // as a one-element list, any other non-array becomes [].
+  const terms = out.keyTerms;
+  out.keyTerms = Array.isArray(terms)
+    ? terms.filter((term): term is string => typeof term === "string").slice(0, 10)
+    : typeof terms === "string" && terms.trim() ? [terms.trim()] : [];
   if (typeof out.label === "string") out.label = out.label.slice(0, 200);
   if (typeof out.id === "string") out.id = out.id.slice(0, 100);
   if (out.content !== undefined && typeof out.content !== "string") delete out.content;
@@ -280,15 +283,19 @@ export const PersonaConfigSchema = z.preprocess(
 export const UCISDimensionV2Schema = UCISDimensionSchema;
 
 /**
- * Classification data for the analysis.
+ * Classification data for the analysis. Tolerant of live LLM drift: known key
+ * aliases are mapped (canonical key wins), "true"/"false" strings coerced in
+ * any case, unknown keys dropped. The five qualifiers are nullish and never
+ * invented; `recommendation` stays required. The worker keeps its own strict
+ * copy in worker/src/services/ZodSchemas.ts.
  */
-export const ClassificationDataSchema = z
+const ClassificationDataShape = z
   .object({
-    authoritative: z.boolean(),
-    practicallyActionable: z.boolean(),
-    knowledgeGraphReady: z.boolean(),
-    safe: z.boolean(),
-    personaOptimised: z.boolean(),
+    authoritative: z.boolean().nullish(),
+    practicallyActionable: z.boolean().nullish(),
+    knowledgeGraphReady: z.boolean().nullish(),
+    safe: z.boolean().nullish(),
+    personaOptimised: z.boolean().nullish(),
     recommendation: z.enum([
       "highly_recommended",
       "recommended",
@@ -297,6 +304,38 @@ export const ClassificationDataSchema = z
     ]),
   })
   .strict();
+const CLASSIFICATION_KEYS: readonly string[] = Object.keys(ClassificationDataShape.shape);
+const CLASSIFICATION_KEY_ALIASES: Record<string, string> = {
+  personaIndicatorIdentified: "personaOptimised",
+  personaOptimized: "personaOptimised",
+};
+const normalizeClassificationFields = (val: unknown): unknown => {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return val;
+  const out: Record<string, unknown> = {};
+  for (const [rawKey, v] of Object.entries(val as Record<string, unknown>)) {
+    const key = CLASSIFICATION_KEY_ALIASES[rawKey] ?? rawKey;
+    if (!CLASSIFICATION_KEYS.includes(key) || (key in out && rawKey !== key)) continue;
+    const s = typeof v === "string" ? v.trim().toLowerCase() : null;
+    out[key] = s === "true" ? true : s === "false" ? false : v;
+  }
+  if (typeof out.recommendation === "string") {
+    out.recommendation = out.recommendation.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  }
+  return out;
+};
+
+export const ClassificationDataSchema = z.preprocess(normalizeClassificationFields, ClassificationDataShape);
+
+/**
+ * Validate a classification from any path (stream, restore). Logs only issue
+ * paths and codes, never values, and returns null on rejection.
+ */
+export function parseClassification(raw: unknown, tag: string, quiet = false): z.infer<typeof ClassificationDataShape> | null {
+  const parsed = ClassificationDataSchema.safeParse(raw);
+  if (parsed.success) return parsed.data;
+  if (!quiet) console.warn(`[${tag}] classification rejected`, parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.code}`));
+  return null;
+}
 
 /**
  * Monetization verdicts for different persona types.
@@ -479,7 +518,10 @@ export const UCISStreamFragmentSchema = z.preprocess((val) => {
         // (the exact end-to-end contract lesson this file's KG section
         // documents). carried fields optional; strict() keeps unknown keys
         // rejected so future frame drift still surfaces.
-        "transcript-truncated"]),
+        "transcript-truncated",
+        // R3b 2.3.5d: the worker could not verify a K>1 cell's signed
+        // transcript slice and ran the cell on the full transcript instead.
+        "jev-fallback"]),
       videoId: z.string().optional(),
       model: z.string().optional(),
       from: z.string().optional(),
@@ -489,6 +531,8 @@ export const UCISStreamFragmentSchema = z.preprocess((val) => {
       message: z.string().optional(),
       transcriptLength: z.number().optional(),
       budget: z.number().optional(),
+      // jev-fallback payload (optional on other stages):
+      reason: z.enum(["slice_hash_mismatch", "slice_out_of_range"]).optional(),
     })
     .strict(),
 

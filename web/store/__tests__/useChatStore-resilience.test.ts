@@ -155,7 +155,8 @@ describe('useChatStore outbox resilience exemption (PR #315 review round 2 P2)',
         // Bouncer: return a valid job descriptor with a stream URL.
         return Promise.resolve(new Response(JSON.stringify({
           stream: { url: 'https://worker.example.com/stream', sig: 'sig', exp: 0 },
-          payload: {},
+          // Server always sends the registry-resolved chat.stream.timeoutMs (ProcessChatMessageUseCase).
+          payload: { timeoutMs: 50000 },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       }
       // Stream fetch: stalled, only rejects on abort.

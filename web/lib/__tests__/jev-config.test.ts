@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { JEV_BOUNDS, JEV_DEFAULTS, resolveJevConfig } from '@/lib/config/jev';
+import { describe, expect, it, vi } from 'vitest';
+import { JEV_BOUNDS, JEV_DEFAULTS, gateJevForUser, resolveJevConfig } from '@/lib/config/jev';
 
 describe('resolveJevConfig', () => {
   it('returns defaults for empty raw', () => {
@@ -101,5 +101,54 @@ describe('resolveJevConfig', () => {
     expect(config.countProperNouns).toBe(false);
     expect(config.countNumbers).toBe(false);
     expect(config.countContentWords).toBe(false);
+  });
+});
+
+describe('maxChunks clamp (R3b 2.5 audit)', () => {
+  it('caps K at 16 so K x 4 grounded bundles fits one /stream-tokens request (64 cells)', () => {
+    expect(JEV_BOUNDS.maxChunks.max).toBe(16);
+    expect(resolveJevConfig({ 'analysis.jev.maxChunks': 32 }).maxChunks).toBe(16);
+  });
+});
+
+describe('gateJevForUser + real planner (R3b admin gate)', () => {
+  // A transcript well over the char budget, so an enabled config plans K>1.
+  const transcript = Array.from({ length: 6000 }, (unusedSlot, wordIndex) => `Carmack${wordIndex % 50} engine latency rendering ${wordIndex}`).join(' ');
+  const plan = async (isAdmin: boolean) => {
+    const { planAnalysis } = await import('@/lib/usecases/PlanAnalysisUseCase');
+    const jevConfig = await gateJevForUser({ ...JEV_DEFAULTS, enabled: true, minChunkTokens: 1000, maxChunkTokens: 4000 }, () => Promise.resolve(isAdmin));
+    return planAnalysis({
+      transcript,
+      jevConfig,
+      bundles: [[1, 10], [2, 4, 6], [5, 7], [3, 8], [9, 11]],
+      transcriptBudgetChars: 48000,
+      costCapCents: 100000,
+      inputUsdPerMTok: 1,
+      outputUsdPerMTok: 1,
+      promptPrefixTokens: 1000,
+      maxOutputTokens: 8192,
+    });
+  };
+
+  it('NEGATIVE CONTROL: a standard user gets K=1 with the flag on; an admin gets K>1 on the same transcript', async () => {
+    expect((await plan(false)).K).toBe(1);
+    expect((await plan(true)).K).toBeGreaterThan(1);
+  });
+
+  it('never consults the role when the flag is off', async () => {
+    const isAdmin = vi.fn().mockResolvedValue(true);
+    expect((await gateJevForUser({ ...JEV_DEFAULTS, enabled: false }, isAdmin)).enabled).toBe(false);
+    expect(isAdmin).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveJevTimeMarkerIntervalSeconds (R3b Phase 2.6)', () => {
+  it('clamps to [5, 300], floors, and falls back to 30 for non-numeric values', async () => {
+    const { resolveJevTimeMarkerIntervalSeconds } = await import('@/lib/config/jev');
+    expect([1, 30, 45.9, 999, 'x', undefined].map(resolveJevTimeMarkerIntervalSeconds)).toEqual([5, 30, 45, 300, 30, 30]);
+    // Unset registry values fall back; they are never coerced to 0/1 and clamped.
+    expect([null, '', '  ', false, true, '45'].map(resolveJevTimeMarkerIntervalSeconds)).toEqual([30, 30, 30, 30, 30, 45]);
+    const { resolveJevMaxParallelStreams } = await import('@/lib/config/jev');
+    expect([null, '', false, '8', 3].map(resolveJevMaxParallelStreams)).toEqual([6, 6, 6, 8, 3]);
   });
 });

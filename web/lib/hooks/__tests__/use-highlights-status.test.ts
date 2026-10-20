@@ -163,6 +163,47 @@ describe('useHighlightsStatus', () => {
     expect(result.current.count).toBe(2);
   });
 
+  it('does NOT abort/restart the active fetch cycle when digestLoading flips false->true mid-retry (phase-c T2 abort-loop regression)', async () => {
+    // phase-c T2 (2026-10-08): the old single effect keyed on
+    // [analysisId, status, digestLoading] ran its cleanup (abort) before its
+    // body on EVERY dep change, so a digestLoading flip during streaming
+    // killed the in-flight cycle and restarted the loop at attempt 0 --
+    // rapid-fire CANCELLED requests and a retry budget that never completed
+    // (badge stuck null = silent hang). Same bug class Cubic flagged on PR
+    // #298 in HighlightsScrubber. The fix splits the lifecycle: only
+    // analysisId/status changes may abort a cycle; a digestLoading flip is
+    // either a no-op (false->true) or a deliberate new-cycle START
+    // (true->false), never an abort of the active cycle.
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender } = renderHook(
+      ({ digestLoading }: { digestLoading: boolean }) => useHighlightsStatus('a1', 'complete', digestLoading),
+      { initialProps: { digestLoading: false } }
+    );
+
+    // Attempt 0 fires and resolves empty; the cycle is now sitting in its
+    // backoff wait (attempt 1 scheduled at +3s).
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A digest refresh STARTING (false->true) must not abort/restart the
+    // active cycle -- no new fetch, no reset of the backoff schedule.
+    rerender({ digestLoading: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // The original cycle's backoff is still intact: attempt 1 lands on the
+    // ORIGINAL schedule (~3s after attempt 0), not restarted from scratch.
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // And the cycle still completes normally to confirmed-empty.
+    await act(async () => { await vi.advanceTimersByTimeAsync(60000); });
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+  });
+
   it('encodes the analysisId in the request URL', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}] }) });
     vi.stubGlobal('fetch', fetchMock);
@@ -171,5 +212,56 @@ describe('useHighlightsStatus', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const calledUrl = fetchMock.mock.calls[0][0] as string;
     expect(calledUrl).toContain(encodeURIComponent('id with spaces & stuff'));
+  });
+
+  it('restores A badge (no refetch) when returning to A while B is in flight (A -> B -> A, PR #442 5a)', async () => {
+    // The stale-B request never resolves -- B stays pending the whole time.
+    let pendingB: (value: unknown) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}] }) }))
+      .mockImplementationOnce(() => new Promise((resolve) => { pendingB = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result, rerender } = renderHook(({ id }: { id: string }) => useHighlightsStatus(id, 'complete'), {
+      initialProps: { id: 'a1' },
+    });
+
+    // A settles with highlights.
+    await waitFor(() => expect(result.current).toEqual({ hasHighlights: true, count: 2 }));
+
+    // Switch to B -- still in flight, badge must reset to null.
+    rerender({ id: 'b1' });
+    expect(result.current).toEqual({ hasHighlights: null, count: 0 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Back to A: badge restored from cache, and B's in-flight request must
+    // be aborted -- no third fetch, and A's settled value wins over B's
+    // late resolution.
+    rerender({ id: 'a1' });
+    await waitFor(() => expect(result.current).toEqual({ hasHighlights: true, count: 2 }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Negative-guard: B's late resolution can never clobber A's badge.
+    pendingB({ ok: true, json: () => Promise.resolve({ highlights: [{}, {}, {}, {}] }) });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(result.current).toEqual({ hasHighlights: true, count: 2 });
+  });
+
+  it('does NOT fetch when digestLoading goes true -> false while status is not complete (PR #442 5b)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ highlights: [{}] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { rerender, result } = renderHook(
+      ({ digestLoading }: { digestLoading: boolean }) => useHighlightsStatus('a1', 'analyzing', digestLoading),
+      { initialProps: { digestLoading: true } }
+    );
+
+    rerender({ digestLoading: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ hasHighlights: null, count: 0 });
   });
 });

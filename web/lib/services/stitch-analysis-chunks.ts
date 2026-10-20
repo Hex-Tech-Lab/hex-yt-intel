@@ -18,6 +18,7 @@ import { TOTAL_DIMENSIONS } from "@/lib/config/synthesis";
 import { normalizeEntityType } from "@/lib/design/entity-taxonomy";
 import { reconstructMarkdown } from "@/lib/utils/markdown-reconstructor";
 import { normalizeNodeWeight } from "@/lib/utils/node-weight-normalization";
+import { CombinerPass } from "@/lib/services/CombinerPass";
 import {
   UCISPayloadV2Schema,
   KGNodeSchema,
@@ -232,9 +233,14 @@ export function stitchChunksIntoPayload(
     return { payload: undefined, markdown: "", validationPassed: false };
   }
 
-  const cleanDimensions = stitchedDimensions
-    .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
-    .sort((a, b) => a.number - b.number);
+  const cleanDimensions = CombinerPass.reduceDimensions(
+    stitchedDimensions
+      .filter((d) => d && typeof d.number === "number" && !isNaN(d.number))
+      // Malformed model output (non-string content) must not throw inside
+      // reduceDimensions (content.trim()/includes()) — drop those rows here so
+      // they take the normal partial/validation path instead of aborting stitch.
+      .filter((d) => typeof d.content === "string")
+  ).sort((a, b) => a.number - b.number);
 
   // Normalize KG node.weight / edge.strength scale before validation.
   //
@@ -627,9 +633,17 @@ export function stitchChunksIntoPayload(
     };
   }
 
-  const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+  // Persist the schema-normalized classification and graph (alias keys
+  // mapped, string booleans coerced, missing keyTerms defaulted), not the raw
+  // chunk copy that only the validator saw normalized.
+  const normalizedPayload = {
+    ...stitchedPayload,
+    classification: parseResult.data.classification,
+    knowledgeGraph: parseResult.data.knowledgeGraph,
+  };
+  const stitchedMarkdown = reconstructMarkdown(normalizedPayload);
   return {
-    payload: stitchedPayload,
+    payload: normalizedPayload,
     markdown: stitchedMarkdown,
     validationPassed: true,
   };

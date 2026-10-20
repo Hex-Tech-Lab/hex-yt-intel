@@ -33,14 +33,13 @@ describe('streamChatCascade', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const deltas: string[] = [];
-    const result = await streamChatCascade(
-      'test-api-key',
-      'grounding text',
-      [{ role: 'user', content: 'hi' }],
-      (delta) => deltas.push(delta),
-      undefined,
-      [{ model: 'model/a', name: 'Model A' }],
-    );
+    const result = await streamChatCascade({
+      apiKey: 'test-api-key',
+      grounding: 'grounding text',
+      history: [{ role: 'user', content: 'hi' }],
+      onDelta: (delta) => deltas.push(delta),
+      cascade: [{ model: 'model/a', name: 'Model A' }],
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -62,14 +61,13 @@ describe('streamChatCascade', () => {
       .mockResolvedValueOnce(sseResponse(['data: {"choices":[{"delta":{"content":"fallback"}}]}', 'data: [DONE]']));
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await streamChatCascade(
-      'test-api-key',
-      '',
-      [],
-      () => {},
-      undefined,
-      [{ model: 'model/a', name: 'Model A' }, { model: 'model/b', name: 'Model B' }],
-    );
+    const result = await streamChatCascade({
+      apiKey: 'test-api-key',
+      grounding: '',
+      history: [],
+      onDelta: () => {},
+      cascade: [{ model: 'model/a', name: 'Model A' }, { model: 'model/b', name: 'Model B' }],
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result.servedByModel).toBe('model/b');

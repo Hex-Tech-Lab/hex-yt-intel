@@ -131,12 +131,12 @@ function RelationCard({
   const meta = CARD[kind];
   return (
     <AstryxCard variant="transparent" padding={0} className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.5)]">
-      <div className="flex items-center justify-between p-2 px-3 border-b border-[var(--line)]">
-        <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-tight uppercase" style={{ color: meta.color }}>
+      <div className="flex items-center justify-between p-2 px-3 border-b border-[var(--line)] select-none pointer-events-none">
+        <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-tight uppercase select-none pointer-events-none" style={{ color: meta.color }}>
           <Icon icon={meta.icon} size={14} />
           {meta.label}
         </span>
-        <span className="text-[var(--ink-muted)] font-mono text-[10px]">{refs.length}</span>
+        <span className="text-[var(--ink-muted)] font-mono text-[10px] select-none pointer-events-none">{refs.length}</span>
       </div>
       {refs.length === 0 ? (
         <div className="p-2.5 px-3 text-[var(--ink-muted)] font-mono text-[10px]">{meta.hint} — none</div>

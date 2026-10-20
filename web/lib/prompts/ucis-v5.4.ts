@@ -266,7 +266,7 @@ Key assumptions – Base case – Optimistic – Pessimistic – Tail risk.
 
 #### 7.1 Implementation Systems
 
-For each actionable system extracted from the content, repeat the following template (generate one **System: [Name]** block per actionable system):
+Generate one **System: [Name]** block for EVERY distinct tool, repository, product, or workflow the speaker presents as something to set up or use. Never merge two into one block and never drop one for brevity: if the speaker walks through six repos, there are six blocks. Repeat the following template for each:
 
 **System: [Name]**
 - Source section, difficulty, time investment, prerequisite knowledge.
@@ -274,6 +274,7 @@ For each actionable system extracted from the content, repeat the following temp
   1. [Step] — [parameters, duration]
   2. [Step] — [parameters, duration]
 - **Success metrics**, **common pitfalls**, **troubleshooting guide**, **risk factors & mitigation**.
+- **Empty fields**: if the transcript does not state some of a block's fields (for example pricing, headcount, timeline), do NOT write one placeholder per field. Write exactly ONE line listing all of them, in the form **Not stated in the video: field one, field two, field three** (for example: Not stated in the video: pricing, headcount, timeline).
 
 #### 7.2 Execution Sequencing & Dependencies
 

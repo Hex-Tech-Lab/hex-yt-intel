@@ -39,6 +39,8 @@ export async function POST(
         return !error && !!data && data.user_id === userId;
       },
       findChunks: (analysisId) => persistence.findAnalysisChunks({ analysisId }),
+      findJevPlan: (analysisId) => persistence.findJevPlan({ analysisId }),
+      findCells: (analysisId) => persistence.findAnalysisCells({ analysisId }),
       resolveSettings: async () => {
         const fallback = {
           'analysis.streamBundles': STREAM_BUNDLES as unknown,

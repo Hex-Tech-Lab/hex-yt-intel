@@ -65,4 +65,24 @@ describe('middleware public-route allowlist', () => {
     const res = await middleware(req);
     expect(res.status).toBe(401);
   });
+
+  // 2026-10-01: worker S2S POSTs with no cookies, HMAC-gated in the handler.
+  it.each([
+    '/api/comments/persist-sample-run',
+    '/api/analyses/ab5f54bd-0bbf-4848-acd7-deb6db94df70/plan',
+  ])('exempts the worker S2S POST to %s from the session gate', async (path) => {
+    const res = await middleware(new NextRequest(`https://getvintel.com${path}`, { method: 'POST' }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-next')).toBe('1');
+  });
+
+  it.each([
+    ['GET', '/api/comments/persist-sample-run'],
+    ['GET', '/api/analyses/ab5f54bd-0bbf-4848-acd7-deb6db94df70/plan'],
+    ['POST', '/api/analyses/a/b/plan'],
+    ['POST', '/api/comments/persist-sample-run/x'],
+  ])('does NOT exempt %s %s', async (method, path) => {
+    const res = await middleware(new NextRequest(`https://getvintel.com${path}`, { method }));
+    expect(res.status).toBe(401);
+  });
 });

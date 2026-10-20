@@ -133,3 +133,27 @@ export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
   }
   return true;
 }
+
+/**
+ * R3b 2.5d: the K>1 counterpart of chunksAreFullyComplete. True only when the
+ * cell set is EXACTLY the expected set: every expected (jevChunkIndex,
+ * chunkIndex) cell is present, completed and carries a dimensions array, and
+ * no row exists outside the expected set (an unexpected row means the set is
+ * not the one the plan describes, so it is not "fully complete").
+ */
+export function cellsAreFullyComplete(
+  cells: ReadonlyArray<{ jev_chunk_index: number; chunk_index: number; payload: Record<string, unknown> | null; status: string }>,
+  expected: ReadonlyArray<{ jevChunkIndex: number; chunkIndex: number }>,
+): boolean {
+  const key = (jevChunkIndex: number, chunkIndex: number) => `${jevChunkIndex}:${chunkIndex}`;
+  const expectedKeys = new Set(expected.map((cell) => key(cell.jevChunkIndex, cell.chunkIndex)));
+  if (cells.length !== expectedKeys.size) return false;
+  const seen = new Set<string>();
+  for (const cell of cells) {
+    const cellKey = key(cell.jev_chunk_index, cell.chunk_index);
+    if (!expectedKeys.has(cellKey) || seen.has(cellKey)) return false;
+    seen.add(cellKey);
+    if (cell.status !== 'completed' || !Array.isArray((cell.payload as { dimensions?: unknown } | null)?.dimensions)) return false;
+  }
+  return seen.size === expectedKeys.size;
+}

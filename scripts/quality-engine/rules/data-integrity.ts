@@ -148,8 +148,16 @@ export const TruncationValidationRule: IRule = {
     source.forEachDescendant((node) => {
       // Look for string truncation without ellipsis or validation
       if (Node.isCallExpression(node)) {
-        const expr = node.getExpression().getText();
-        if (expr.includes('slice') || expr.includes('substring') || expr.includes('substr')) {
+        // Only the actual string-truncation METHODS count (x.slice / x.substring /
+        // x.substr). A substring match on the callee text also flagged any
+        // function merely NAMED like them (sliceText, sliceDigest in the R3b
+        // transcript-slice module, 2026-10-01) -- not truncation at all.
+        const callee = node.getExpression();
+        const method = Node.isPropertyAccessExpression(callee) ? callee.getName() : '';
+        if (method === 'slice' || method === 'substring' || method === 'substr') {
+          // Array.prototype.slice copies a range of elements; it is not text
+          // truncation (e.g. words.slice(start, end) in transcript-slice.ts).
+          if (Node.isPropertyAccessExpression(callee) && callee.getExpression().getType().isArray()) return;
           // A negative end index (e.g. slice(0, -1)) means "drop the last N
           // characters" -- structurally never a "truncate to length N for
           // display" operation, so it can't need an ellipsis (real

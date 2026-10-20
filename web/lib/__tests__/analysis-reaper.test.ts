@@ -201,7 +201,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
       getSupabaseServiceClient: () => ({
         from: (_table: string) => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+            eq: () => ({ eq: (col: string, val: unknown) => Promise.resolve(col === 'jev_chunk_index' && val === 0 ? { data: chunkRows, error: null } : { data: null, error: new Error(`unexpected filter ${col}=${String(val)}`) }) }),
           }),
         }),
       }),
@@ -209,6 +209,8 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = updateAnalysisResultMock;
+        // R3b 2.5d: tryChunkRecovery reads the stored plan first; no plan = K=1 path.
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 
@@ -359,7 +361,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
       getSupabaseServiceClient: () => ({
         from: () => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: null, error: new Error('chunk select failed') }),
+            eq: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('chunk select failed') }) }),
           }),
         }),
       }),
@@ -367,6 +369,7 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = vi.fn();
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 
@@ -428,7 +431,7 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
       getSupabaseServiceClient: () => ({
         from: (_table: string) => ({
           select: () => ({
-            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+            eq: () => ({ eq: (col: string, val: unknown) => Promise.resolve(col === 'jev_chunk_index' && val === 0 ? { data: chunkRows, error: null } : { data: null, error: new Error(`unexpected filter ${col}=${String(val)}`) }) }),
           }),
         }),
       }),
@@ -436,6 +439,7 @@ describe('tryChunkRecovery publishes the embedding task on completed settles onl
     vi.doMock('@/lib/adapters', () => ({
       SupabasePersistenceAdapter: class {
         updateAnalysisResult = vi.fn().mockResolvedValue({ updated: true });
+        findJevPlan = vi.fn().mockResolvedValue(null);
       },
     }));
 

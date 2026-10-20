@@ -56,4 +56,7 @@ export { SecurityFixWithoutTestRule, NonNullAfterArraySortFilterRule } from "./s
 export { JsonbReadModifyWriteRule, UntrustedLogInterpolationRule, ConflictMarkerRule } from "./data-lessons-20260924";
 export { SqlSecurityDefinerCallerKeyRule, SqlDropFunctionDefaultArgRule } from "./sql-migrations";
 export { HardcodedTierGrantRule, UntrustedTierFallbackRule, ServiceRoleAnonFallbackRule, RuntimeTierTrustRule } from "./security-lessons-20260924";
+export { AdvisoryLockIsolationGuardRule, IpHeaderSinkRule, LaunchPathIsolationLiteralRule } from "./security-lessons-20261010";
 export { SilentDefaultOnExternalResponseRule, ServerFetchWithoutTimeoutRule, ErrorPathAsymmetryRule, SuccessGuardedPersistenceRule } from "./reliability-lessons-20260924";
+export { UnconsumedStreamLeakRule, UnboundedBodyReadRule, NonIdempotentRetryRule, FailOpenUndefinedFilterRule } from "./artas-rules";
+export { StreamReaderWithoutFinallyRule, UnregisteredSettingsKeyRule } from "./lessons-20261009";

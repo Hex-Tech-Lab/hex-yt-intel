@@ -22,13 +22,14 @@ vi.mock('@/lib/adapters/SupabaseCommentSamplingAdapter', () => ({
   },
 }));
 
-import { POST } from '@/app/api/comments/persist-sample-run/route';
+import { POST, GET } from '@/app/api/comments/persist-sample-run/route';
 
 function makeService() {
   const state = {
     runs: [] as Array<Record<string, unknown>>,
     runsQueried: 0,
     writes: 0,
+    runFound: true,
   };
   const service = {
     __state: state,
@@ -41,7 +42,7 @@ function makeService() {
           return b2;
         };
         b2.maybeSingle = () =>
-          Promise.resolve({ data: state.runsQueried > 0 ? { id: 'run' } : null, error: null });
+          Promise.resolve({ data: state.runFound && state.runsQueried > 0 ? { id: 'run', status: 'completed' } : null, error: null });
         b2.single = () => Promise.resolve({ data: null, error: null });
         return b2;
       };
@@ -122,6 +123,7 @@ describe('POST /api/comments/persist-sample-run — authorization', () => {
     vi.clearAllMocks();
     serviceMock.__state.runsQueried = 0;
     serviceMock.__state.writes = 0;
+    serviceMock.__state.runFound = true;
     verifyContentSig.mockResolvedValue(true);
   });
 
@@ -138,5 +140,54 @@ describe('POST /api/comments/persist-sample-run — authorization', () => {
     const res = await post(body());
     expect(res.status).toBe(200);
     expect(verifyContentSig).toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/comments/persist-sample-run — signed status probe (consume-side redelivery pre-check)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serviceMock.__state.runsQueried = 0;
+    serviceMock.__state.runFound = true;
+    verifyContentSig.mockResolvedValue(true);
+  });
+
+  function probeUrl(query: Record<string, string>): string {
+    const params = new URLSearchParams(query);
+    return `http://localhost/api/comments/persist-sample-run?${params.toString()}`;
+  }
+
+  const PROBE_QUERY = {
+    sampleRunId: '5f0c2b3a-0000-4000-8000-000000000001',
+    userId: '5f0c2b3a-0000-4000-8000-000000000002',
+    exp: String(Date.now() + 60_000),
+    sig: 'probe-signature',
+  };
+
+  it('NEGATIVE CONTROL: invalid signature -> 401 with ZERO database reads', async () => {
+    verifyContentSig.mockResolvedValue(false);
+    const res = await GET(new NextRequest(probeUrl(PROBE_QUERY)));
+    expect(res.status).toBe(401);
+    expect(serviceMock.__state.runsQueried).toBe(0);
+  });
+
+  it('valid signature + existing run -> 200 with the run status, scoped to the signed user id', async () => {
+    const res = await GET(new NextRequest(probeUrl(PROBE_QUERY)));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: 'completed' });
+    // id + user_id scoping: two eq() calls before maybeSingle.
+    expect(serviceMock.__state.runsQueried).toBe(2);
+  });
+
+  it('missing run row -> 404 (the consumer acks with zero work on this outcome)', async () => {
+    serviceMock.__state.runFound = false;
+    const res = await GET(new NextRequest(probeUrl(PROBE_QUERY)));
+    expect(res.status).toBe(404);
+  });
+
+  it('malformed query params (non-uuid sampleRunId) -> 400 before any signature check or DB read', async () => {
+    const res = await GET(new NextRequest(probeUrl({ ...PROBE_QUERY, sampleRunId: 'not-a-uuid' })));
+    expect(res.status).toBe(400);
+    expect(verifyContentSig).not.toHaveBeenCalled();
+    expect(serviceMock.__state.runsQueried).toBe(0);
   });
 });

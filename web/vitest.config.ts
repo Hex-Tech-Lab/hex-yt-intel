@@ -54,6 +54,7 @@ export default defineConfig({
       'components/**/*.test.{ts,tsx}',
       'store/**/*.test.{ts,tsx}',
       'app/api/admin/logs/**/*.test.ts',
+      'app/api/admin/parity-review/**/*.test.ts',
       'app/api/test-auth/**/*.test.ts',
       // ADR 021 Phase 2: the analyses/check route gained an auth-bearing
       // sibling test (qa-intel high finding: authorization-relevant file
@@ -80,7 +81,23 @@ export default defineConfig({
       // signature gate needs a regression test colocated with the route).
       // Named explicitly, same rationale as the app/api globs above.
       'app/api/comments/persist-sample-run/**/*.test.ts',
+      // Named explicitly: the UCIS webhook must merge, never replace, validation_report.
+      'app/api/webhooks/validate/**/*.test.ts',
+      // 2026-09-30 Comments Dispatch B: runs/[analysisId] route gained an
+      // authorization-relevant sibling test (ownership-scoped run status
+      // read). Named explicitly, same rationale as the app/api globs above.
+      // The [analysisId] directory is bracket-ESCAPED -- unescaped,
+      // micromatch reads it as a character class and matches nothing.
+      'app/api/comments/runs/\\[analysisId\\]/**/*.test.ts',
       'app/api/analyses/\\[id\\]/export/**/*.test.ts',
+      // R3b 2.3 (2026-10-01): /plan route gained an authorization-relevant
+      // sibling test (HMAC gate + idempotence regression). Named explicitly,
+      // same rationale as the app/api globs above. The [id] directory is
+      // bracket-ESCAPED -- unescaped, micromatch reads it as a character
+      // class and matches nothing.
+      'app/api/analyses/\\[id\\]/plan/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/stream-tokens/**/*.test.ts',
+      'app/api/analyses/\\[id\\]/grounded-claims/**/*.test.ts',
       'app/billing/**/*.test.tsx',
       // PR #326's pricing page gained a copy-contract sibling test
       // (qa-intel high finding: authorization-relevant file with no
@@ -101,8 +118,15 @@ export default defineConfig({
       // fixture file matching the pattern (real finding, CodeRabbit).
       'middleware.test.ts',
       '../worker/src/__tests__/**/*.test.ts',
+      // error-handler.test.ts lives in middleware/__tests__ so the QualityEngine
+      // sibling-test rule (same dir or its own __tests__) sees it; without this
+      // entry it would silently never execute.
+      '../worker/src/middleware/__tests__/**/*.test.ts',
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
+      '../worker/src/services/JevCommentClassifier.test.ts',
+      '../worker/src/services/sensor-fusion/heuristics/jev-text-parser.test.ts',
+      '../worker/src/services/sensor-fusion/probes/MultimodalProbeRunner.test.ts',
       '../worker/src/services/CommentClassifier.test.ts',
       // qa-intel's own rule tests -- named explicitly (not a bare
       // 'scripts/**') to avoid picking up unrelated future scripts.

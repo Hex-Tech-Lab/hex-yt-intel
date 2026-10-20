@@ -8,6 +8,7 @@
 import { test, describe, expect } from 'vitest';
 import { SourceFile, Project } from 'ts-morph';
 import { VariableNamingRule } from '../rules/quality';
+import { TruncationValidationRule } from '../rules/data-integrity';
 
 // Helper to create a test source file
 function createTestSource(code: string): SourceFile {
@@ -215,6 +216,29 @@ describe('WAVE 9: New Data Integrity Rules', () => {
     const source = createTestSource(code);
     expect(source.getText()).toContain('.slice(0, 50)');
     expect(source.getText()).not.toContain('...');
+  });
+
+  test('TruncationValidationRule flags x.slice/substring/substr truncation without ellipsis', () => {
+    for (const call of ['question.slice(0, 50)', 'question.substring(0, 50)', 'question.substr(0, 50)']) {
+      const findings = TruncationValidationRule.check(createTestSource(`const truncated = ${call};`));
+      expect(findings.length).toBe(1);
+    }
+  });
+
+  test('TruncationValidationRule ignores functions merely named like slice (sliceText, sliceDigest)', () => {
+    const code = `
+      const text = sliceText(words, 0, 3);
+      const digest = sliceDigest(transcript, 0, 3);
+    `;
+    expect(TruncationValidationRule.check(createTestSource(code))).toEqual([]);
+  });
+
+  test('TruncationValidationRule ignores Array.prototype.slice (element range, not text truncation)', () => {
+    const code = `
+      const words: string[] = ['a', 'b', 'c'];
+      const range = words.slice(0, 2);
+    `;
+    expect(TruncationValidationRule.check(createTestSource(code))).toEqual([]);
   });
 
   test('DefaultValueConsistencyRule should detect inconsistent defaults', () => {

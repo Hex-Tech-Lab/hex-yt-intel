@@ -253,8 +253,10 @@ export interface WorkerStreamRequest {
   models?: string[];
   // Full registry-resolved cascade (2026-07-25, includes providerOrder per tier)
   // -- see CreateAnalysisUseCase's resolveAnalysisCascade() and StreamRequest.cascade
-  // in worker/src/routes/analysis.ts.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  // in worker/src/routes/analysis.ts. ADR 041: resolve time also stamps per-tier
+  // dispatch capabilities (maxOutputTokens, requiresProviderOrder) so the worker's
+  // dispatch code is model-agnostic — no inline model-ID comparisons.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: 'none' | 'minimal' | 'low'; reasoningProjective?: 'none' | 'minimal' | 'low' }>;
   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
   maxOutputTokens?: { haiku: number; default: number };
@@ -276,6 +278,8 @@ export interface WorkerStreamRequest {
   cacheWarmTimeoutMs?: number;
   /** Registry-resolved prompt transcript char budget (analysis.transcriptBudgetChars). */
   transcriptBudgetChars?: number;
+  /** R3b Phase 2.6: seconds between real [HH:MM:SS] prompt markers (analysis.jev.timeMarkerIntervalSeconds). */
+  timeMarkerIntervalSeconds?: number;
   /** Optional existing payload from prior partial analysis for retry synthesis hydration (Dimension 11). */
   prior_payload?: Record<string, unknown>;
   /** R1d: registry-resolved byte cap for the worker's prior_payload boundary guard (web/lib/config/prior-payload.ts). */
@@ -285,6 +289,18 @@ export interface WorkerStreamRequest {
   contextExp?: number;
   sig: string;
   exp: number;
+  /** R3b 2.2: v2 token cells + bundle partition for the worker's dual-verify (absent = v1). */
+  tokenVersion?: 1 | 2;
+  streamCount?: number;
+  jevChunkIndex?: number;
+  jevChunkCount?: number;
+  bundleList?: number[][];
+  /** R3b 2.3.5: v2 token slice bounds and hash. */
+  sliceSha256?: string;
+  startWord?: number;
+  endWord?: number;
+  /** R3b 2.3 (P1): Jev semantic-chunk plan forwarded to the worker (absent = no plan / K=1). */
+  jevPlan?: JevPlanEvent;
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
@@ -294,6 +310,43 @@ export interface WorkerStreamRequest {
   commentsSamplePlan?: CommentsSamplePlanConfig;
   commentsSyncPoolConfig?: CommentsSyncPoolConfig;
 }
+
+/**
+ * R3b 2.3 (P1): Shared SSOT for the Jev semantic-chunk plan (ADR 029 v2
+ * relay). Two carriers share this shape:
+ * - job.jevPlan (CreateAnalysisUseCase): server-computed plan at job creation;
+ *   includes `estimateCents` (kept optional here so ONE schema validates both
+ *   carriers).
+ * - worker SSE `event: plan` frame: same fields plus the `v`/`source` envelope.
+ * safeParse only -- never cast. Malformed/absent plan ⇒ K=1 fallback.
+ */
+export const JevPlanCellSchema = z.object({
+  jevChunkIndex: z.number().int().min(0),
+  chunkIndex: z.number().int().min(0),
+  startWord: z.number().int().min(0),
+  endWord: z.number().int().min(0),
+  sha256: z.string().min(1),
+});
+
+export const JevPlanEventSchema = z
+  .object({
+    // Worker SSE frames carry the envelope keys (#392: {v:1,source,...plan}).
+    v: z.literal(1).optional(),
+    source: z.enum(['inline', 'worker']).optional(),
+    K: z.number().int().min(1),
+    streamCount: z.number().int().min(1),
+    cells: z.array(JevPlanCellSchema),
+    estimateCents: z.number().optional(),
+    truncatedFallback: z.boolean(),
+    // T3 (10X PR scan): A6 budget context the worker re-checks before a
+    // slice-fallback full-transcript re-run. Optional — legacy plans (and the
+    // SSE plan event, which strips them for wire compatibility) omit both.
+    costCapCents: z.number().optional(),
+    fullTranscriptCallCents: z.number().optional(),
+  })
+  .strict();
+
+export type JevPlanEvent = z.infer<typeof JevPlanEventSchema>;
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 /**
@@ -307,3 +360,43 @@ export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
  * Contains validated success and cancel URLs on app domain.
  */
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
+
+// ─── Epistemic Schism / Part A: Grounded Extraction ──────────────────────────
+export const ExtractedClaimSchema = z
+  .object({
+    id: z.string().min(1),
+    speaker: z.string().optional(),
+    timestampRange: z.tuple([z.number().min(0), z.number().min(0)]),
+    verbatimQuote: z.string().min(1),
+    atomicAssertion: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+  })
+  // [startSeconds, endSeconds] — a reversed range (end before start) is
+  // malformed model output, not a valid interval.
+  .refine((claim) => claim.timestampRange[1] >= claim.timestampRange[0], {
+    message: 'timestampRange end must be >= start',
+    path: ['timestampRange'],
+  });
+
+export const GroundedExtractionMetadataSchema = z.object({
+  speakerCount: z.number().int().min(0),
+  durationSeconds: z.number().min(0),
+  classification: z.enum(['S1', 'S2', 'S3', 'S4', 'S5', 'S6']),
+});
+
+export const GroundedExtractionPayloadSchema = z
+  .object({
+    claims: z.array(ExtractedClaimSchema),
+    unknowns: z.array(z.string()),
+    metadata: GroundedExtractionMetadataSchema,
+  })
+  // Duplicate claim IDs make downstream per-claim lookups ambiguous
+  // (indices/keys assumed unique); reject them at the boundary.
+  .refine(
+    (payload) => new Set(payload.claims.map((c) => c.id)).size === payload.claims.length,
+    { message: 'Duplicate claim IDs are not allowed', path: ['claims'] }
+  );
+
+export type ExtractedClaim = z.infer<typeof ExtractedClaimSchema>;
+export type GroundedExtractionMetadata = z.infer<typeof GroundedExtractionMetadataSchema>;
+export type GroundedExtractionPayload = z.infer<typeof GroundedExtractionPayloadSchema>;

@@ -22,15 +22,17 @@ describe('shared MarkdownLink override', () => {
   });
 
   describe('SelectedDimensionReadout', () => {
-    it('routes #t= links through TimestampLink (real click seeks the store)', () => {
+    // phase-c T3: MarkdownLink now renders #t= hrefs as real <button>
+    // seek controls (TimestampLink asButton), so these assert by button role.
+    it('routes #t= links through TimestampLink as a seek button (real click seeks the store)', () => {
       render(
         <SelectedDimensionReadout
           dimension={{ label: 'Test', icon: 'solar:case-linear', content: MARKDOWN_WITH_LINKS }}
         />
       );
-      const seekLink = screen.getByRole('link', { name: /seek to 30/i });
-      expect(seekLink).toBeInTheDocument();
-      fireEvent.click(seekLink);
+      const seekButton = screen.getByRole('button', { name: /seek to/i });
+      expect(seekButton.tagName).toBe('BUTTON');
+      fireEvent.click(seekButton);
       expect(useVideoStore.getState().seekTo).toBe(30);
     });
 
@@ -44,8 +46,8 @@ describe('shared MarkdownLink override', () => {
       expect(externalLink).toHaveAttribute('target', '_blank');
       expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
 
-      const seekLink = screen.getByRole('link', { name: /seek to 30/i });
-      expect(seekLink).not.toHaveAttribute('target', '_blank');
+      const seekButton = screen.getByRole('button', { name: /seek to/i });
+      expect(seekButton).not.toHaveAttribute('target');
 
       const relativeLink = screen.getByRole('link', { name: 'dashboard' });
       expect(relativeLink).not.toHaveAttribute('target', '_blank');
@@ -53,15 +55,15 @@ describe('shared MarkdownLink override', () => {
   });
 
   describe('ApexSummaryCard', () => {
-    it('routes #t= links through TimestampLink (real click seeks the store)', () => {
+    it('routes #t= links through TimestampLink as a seek button (real click seeks the store)', () => {
       render(
         <ApexSummaryCard
           dimension={{ key: 'd0', label: 'Apex', icon: 'solar:case-linear', status: 'done', content: MARKDOWN_WITH_LINKS }}
         />
       );
-      const seekLink = screen.getByRole('link', { name: /seek to 30/i });
-      expect(seekLink).toBeInTheDocument();
-      fireEvent.click(seekLink);
+      const seekButton = screen.getByRole('button', { name: /seek to/i });
+      expect(seekButton.tagName).toBe('BUTTON');
+      fireEvent.click(seekButton);
       expect(useVideoStore.getState().seekTo).toBe(30);
     });
 

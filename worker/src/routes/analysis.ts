@@ -6,6 +6,7 @@ import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
+import { annotateWithTimeMarkers, timeAnnotatedReasons, needsCleanTranscript } from "../services/TranscriptTimeMarkers";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
@@ -13,13 +14,27 @@ import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter
 import { PersistService } from "../services/PersistService";
 import { enqueueChapterPersist } from "../services/chapter-persist";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex, secretFingerprint } from "../crypto";
+import { checkAndRecordFallbackBudget, type FallbackBudgetPlan } from "../services/JevFallbackBudget";
+import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
+import { canonicalJson } from "../../../web/lib/utils/canonical-json";
+import { tokenizeTranscript, sliceText, sliceDigest } from "../services/TranscriptSlice";
+
+/** sha256("") — the slice hash PlanAnalysisUseCase signs for projective cells. */
+const EMPTY_SLICE_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+// R3b 2.3.5a: lowercase hex sha256 (partition digest in the v2 token message).
+const sha256Hex = async (input: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { validatePriorPayload, resolvePriorPayloadMaxBytes } from "../../../web/lib/config/prior-payload";
 import { verifyProjectiveContextSig } from "../../../web/lib/config/projective-context";
 import { isProjectiveBundle } from "../../../web/lib/config/synthesis";
 import { isValidAppUrl } from "../middleware/cors";
+import { parseEpistemicPersistRetry, verifyEpistemicShadowSig } from "../../../web/lib/config/epistemic-shadow";
+import { runEpistemicShadow } from "../services/EpistemicShadowRunner";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
 
 declare const process: any;
@@ -103,7 +118,7 @@ interface StreamRequest {
   // per tier, which `models` (flat id list, signed into the HMAC token) can't carry when
   // multiple tiers share the same model id across different providers. Preferred over
   // `models` when present; `models` stays as the signed/legacy fallback for stale clients.
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[]; maxOutputTokens?: number; requiresProviderOrder?: boolean; reasoningGrounded?: string; reasoningProjective?: string }>;
   // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
   // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
   maxOutputTokens?: { haiku: number; default: number };
@@ -132,12 +147,56 @@ interface StreamRequest {
   /** R2b: Vercel signature over the server-loaded prior_payload (see web/lib/config/projective-context.ts). */
   contextSig?: string;
   contextExp?: number;
+  /** Phase C shadow mode: Vercel-signed grant (web/lib/config/epistemic-shadow.ts), first bundle only. */
+  epistemicShadowSig?: string;
+  epistemicShadowExp?: number;
+  epistemicShadowRetry?: unknown;
   sig: string;
   exp: number;
+  // R3b 2.2 (ADR 037 Addendum A3): token-format selector for the dual-verify
+  // rollout. Absent/1 -> legacy v1 message; 2 -> the v2 message additionally
+  // binds streamCount/jevChunkIndex/jevChunkCount and carries the range +
+  // stream-partition guards below. The web side keeps emitting v1 until the
+  // v2 emission wave lands.
+  tokenVersion?: 1 | 2 | unknown;
+  jevChunkIndex?: number;
+  jevChunkCount?: number;
+  streamCount?: number;
+  // R3b 2.3.5a: transcript slice triple bound into the v2 signature. The
+  // plan's per-cell slice (PlanAnalysisUseCase) is forwarded verbatim; the
+  // worker re-derives nothing — it only requires the fields be present,
+  // well-formed, and covered by the signature.
+  sliceSha256?: string;
+  startWord?: number;
+  endWord?: number;
+  // R3b 2.2: the resolved bundle partition (job.streamBundles) forwarded on
+  // v2 requests ONLY, so the worker can count grounded (G) and projective (P)
+  // bundles and enforce streamCount === jevChunkCount*G + P. The worker has
+  // no DB access (ADR 005) and sees only its own bundle's dimensions today;
+  // a v2 request without a well-formed bundleList is rejected (fail closed),
+  // never guessed from STREAM_BUNDLES.
+  bundleList?: number[][];
+  /** R3b Phase 2.6: seconds between real [HH:MM:SS] prompt markers (registry analysis.jev.timeMarkerIntervalSeconds). */
+  timeMarkerIntervalSeconds?: number;
   appUrl?: string;
   dimensions?: number[];
   chunkIndex?: number;
   totalChunks?: number;
+  // R3b 2.3: server-computed Jev plan forwarded by the client when the
+  // transcript was already known at job creation (CreateAnalysisUseCase's
+  // jevPlan field). Null/absent -> the worker calls the S2S /plan endpoint
+  // itself after transcript resolution. Shape mirrors AnalysisPlan
+  // (web/lib/usecases/PlanAnalysisUseCase.ts).
+  jevPlan?: {
+    K: number;
+    streamCount: number;
+    cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
+    estimateCents: number;
+    truncatedFallback: boolean;
+    // T3: A6 budget context (see JevPlanShape); optional for legacy plans.
+    costCapCents?: number;
+    fullTranscriptCallCents?: number;
+  } | null;
   // Resolved server-side (Vercel has the DB access this worker doesn't, see
   // ADR 005) from the settings registry's chat.comments.* keys and forwarded
   // per-request -- never hardcode these worker-side, see fetchCommentsCached.
@@ -175,6 +234,8 @@ interface TokenVerificationResult {
 }
 
 /** Verify HMAC signature of stream request token using stored secret. Returns validation result and secret. */
+// Exported for the R3b 2.2 dual-verify regression tests only (module-scope
+// helper, not part of the route surface).
 // skipcq: JS-0067, JS-R1005 -- module-scope fn is idiomatic in this module (DS "wrap in IIFE" is a false positive);
 // complexity 9 is pre-existing and a refactor is out of this PR's blast radius (untouched lines, chronic finding).
 async function verifyStreamToken(
@@ -184,11 +245,72 @@ async function verifyStreamToken(
   sig: string,
   models: string[] | undefined,
   env: AnalysisEnv,
+  opts?: {
+    tokenVersion?: 1 | 2 | unknown;
+    streamCount?: number;
+    jevChunkIndex?: number;
+    jevChunkCount?: number;
+    bundleList?: number[][];
+    chunkIndex?: number;
+    sliceSha256?: string;
+    startWord?: number;
+    endWord?: number;
+    dimensions?: number[];
+  },
 ): Promise<TokenVerificationResult> {
   const secret = env.STREAM_HMAC_SECRET;
 
   if (Date.now() > exp) {
     return { isValid: false, secret: "", msg: "" };
+  }
+
+  // R3b 2.2: v2 cells must be structurally sane BEFORE any HMAC work so a
+  // forged/unset cell list can never reach the signature compare with a
+  // message the signer would never have produced.
+  const isV2 = opts?.tokenVersion === 2;
+  if (isV2) {
+    const { streamCount, jevChunkIndex, jevChunkCount, bundleList, chunkIndex, sliceSha256, startWord, endWord } = opts ?? {};
+    const cellsInteger = Number.isInteger(streamCount) && Number.isInteger(jevChunkIndex) && Number.isInteger(jevChunkCount);
+    if (!cellsInteger || (jevChunkCount as number) < 1 || (jevChunkIndex as number) < 0 || (jevChunkIndex as number) >= (jevChunkCount as number)) {
+      return { isValid: false, secret, msg: "v2_invalid_cells" };
+    }
+    if (!Array.isArray(bundleList) || bundleList.length === 0 || !bundleList.every((b) => Array.isArray(b) && b.length > 0)) {
+      return { isValid: false, secret, msg: "v2_missing_bundle_list" };
+    }
+    const groundedBundles = bundleList.filter((b) => !isProjectiveBundle(b)).length;
+    const projectiveBundles = bundleList.length - groundedBundles;
+    if ((streamCount as number) !== (jevChunkCount as number) * groundedBundles + projectiveBundles) {
+      return { isValid: false, secret, msg: "v2_stream_count_mismatch" };
+    }
+    // R3b 2.3.5a: slice + per-cell chunk fields must be structurally sane
+    // BEFORE any HMAC work (same fail-closed pattern as v2_invalid_cells).
+    if (!Number.isInteger(chunkIndex) || (chunkIndex as number) < 1) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    if (typeof sliceSha256 !== "string" || !/^[0-9a-f]{64}$/.test(sliceSha256)) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    if (
+      !Number.isInteger(startWord) ||
+      !Number.isInteger(endWord) ||
+      (startWord as number) < 0 ||
+      (startWord as number) > (endWord as number) ||
+      // Projective cells read no transcript words: PlanAnalysisUseCase signs
+      // them with the empty slice (0, 0, sha256("")). That is the ONLY
+      // permitted empty range.
+      ((startWord as number) === (endWord as number) && !(startWord === 0 && sliceSha256 === EMPTY_SLICE_SHA256))
+    ) {
+      return { isValid: false, secret, msg: "v2_invalid_slice" };
+    }
+    // The request's dimensions are not signed; the cell's bundle is
+    // (chunkIndex + partition digest). They must match exactly, or a grounded
+    // cell could claim the projective bundle and skip its signed slice
+    // (resolveCellTranscript), or run any dimensions on any cell's token.
+    const signedBundle = bundleList[(chunkIndex as number) - 1];
+    const dims = opts?.dimensions;
+    if (!signedBundle || !Array.isArray(dims) || dims.length !== signedBundle.length || dims.some((dim, idx) => dim !== signedBundle[idx])) {
+      return { isValid: false, secret, msg: "v2_dimensions_mismatch" };
+    }
   }
 
   const activeSecret = secret;
@@ -201,10 +323,19 @@ async function verifyStreamToken(
     secretsToTry.push(env.DEV_HMAC_SECRET);
   }
 
+  // R3b 2.3.5a: one canonical v2 message — the bundle partition digest and
+  // the transcript slice triple are part of the signed bytes, so a signature
+  // minted for one partition/slice can never verify against another. MUST
+  // stay byte-identical to the web signer (web/lib/stream-token.ts).
+  const buildV2Msg = async (modelStr: string): Promise<string> => {
+    const partitionDigest = await sha256Hex(canonicalJson(opts?.bundleList));
+    return `v2:${videoId}:${analysisId}:${exp}:${modelStr}:${opts?.streamCount}:${opts?.jevChunkIndex}:${opts?.jevChunkCount}:${opts?.chunkIndex}:${partitionDigest}:${opts?.sliceSha256}:${opts?.startWord}:${opts?.endWord}`;
+  };
+
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(models ?? [])].sort().join(",");
-    const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+    const msg = isV2 ? await buildV2Msg(modelStr) : `${videoId}:${analysisId}:${exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
 
     if (timingSafeEqualHex(expected, sig)) {
@@ -213,7 +344,7 @@ async function verifyStreamToken(
   }
 
   const modelStr = [...(models ?? [])].sort().join(",");
-  const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+  const msg = isV2 ? await buildV2Msg(modelStr) : `${videoId}:${analysisId}:${exp}:${modelStr}`;
   return { isValid: false, secret: activeSecret, msg };
 }
 
@@ -730,7 +861,7 @@ async function fetchTranscriptIfMissing(
 
     // L1 Redis transcript cache: 72h TTL (3-day compliance window)
     const CACHE_TTL = 259200;
-    const cacheKey = `transcript:${videoId}`;
+    const cacheKey = transcriptCacheKey(videoId);
 
     if (cache) {
       try {
@@ -793,6 +924,268 @@ async function fetchTranscriptIfMissing(
   return { transcript, segments, channelMeta, comments, confirmedNoCaptions };
 }
 
+// ─── R3b 2.3: Jev plan resolution + SSE plan event ───────────────────────────
+//
+// The plan (K / streamCount / signed transcript cells) is resolved once per
+// analysis, BEFORE any grounded LLM call, and emitted as a dedicated
+// `event: plan` SSE frame. Resolution order (ADR 037 Addendum A):
+//   1. `req.jevPlan` (inline) — Vercel already computed it at job creation
+//      when the transcript was known.
+//   2. S2S POST {appUrl}/api/analyses/{id}/plan — signed with the same
+//      bound-content scheme as /persist, verified by the plan route.
+//   3. K=1 fallback — planning is NEVER allowed to block or fail the
+//      analysis; any failure (network/non-2xx/timeout/malformed body) emits
+//      a degenerate plan and the stream proceeds exactly as it did before
+//      R3b (A2: the client treats K=1 as "no plan").
+//
+// Projective bundles never receive a plan frame — planning partitions the
+// grounded transcript only (isProjectiveBundle guard, same epistemic
+// boundary as the prior_payload R1d guard).
+
+interface JevPlanShape {
+  K: number;
+  streamCount: number;
+  cells: Array<{ jevChunkIndex: number; chunkIndex: number; startWord: number; endWord: number; sha256: string }>;
+  estimateCents: number;
+  truncatedFallback: boolean;
+  // T3 (10X PR scan): A6 budget context for the slice-fallback re-check.
+  // Optional: legacy stored plans and the degenerate K=1 fallback plan omit
+  // them (isValidJevPlan accepts both shapes).
+  costCapCents?: number;
+  fullTranscriptCallCents?: number;
+}
+
+/** K=1 degenerate plan emitted when planning is unavailable or failed. */
+function fallbackPlan(streamCount: number): JevPlanShape {
+  return { K: 1, streamCount, cells: [], estimateCents: 0, truncatedFallback: false };
+}
+
+/** Shape-check a /plan response body (or inline jevPlan) before trusting it. */
+function isValidJevPlan(value: unknown): value is JevPlanShape {
+  if (typeof value !== 'object' || value === null) return false;
+  const p = value as Record<string, unknown>;
+  return (
+    typeof p.K === 'number' && Number.isInteger(p.K) && p.K >= 1 &&
+    typeof p.streamCount === 'number' && Number.isInteger(p.streamCount) && p.streamCount >= 1 &&
+    Array.isArray(p.cells) &&
+    p.cells.every((c) => {
+      if (typeof c !== 'object' || c === null) return false;
+      const cell = c as Record<string, unknown>;
+      return (
+        Number.isInteger(cell.jevChunkIndex) && Number.isInteger(cell.chunkIndex) &&
+        Number.isInteger(cell.startWord) && Number.isInteger(cell.endWord) &&
+        typeof cell.sha256 === 'string' && cell.sha256.length > 0
+      );
+    }) &&
+    typeof p.estimateCents === 'number' &&
+    typeof p.truncatedFallback === 'boolean' &&
+    // T3: budget fields are optional (legacy plans); when present they must
+    // be finite numbers so the fallback re-check never computes with NaN.
+    (p.costCapCents === undefined || (typeof p.costCapCents === 'number' && Number.isFinite(p.costCapCents))) &&
+    (p.fullTranscriptCallCents === undefined || (typeof p.fullTranscriptCallCents === 'number' && Number.isFinite(p.fullTranscriptCallCents)))
+  );
+}
+
+/**
+ * Fetch the plan from Vercel's S2S /plan endpoint. The body is signed with
+ * the same bound-content scheme as /persist (purpose 'plan', same secret
+ * that validated the stream token), verified by the plan route against
+ * `verifyContentSig`. One attempt, bounded by the same 10s AbortSignal
+ * timeout PersistService uses — a slow plan endpoint must never hold the
+ * analysis stream open.
+ */
+async function fetchJevPlan(params: {
+  appUrl: string;
+  analysisId: string;
+  videoId: string;
+  transcript: string;
+  signingKey: string;
+}): Promise<JevPlanShape | null> {
+  const exp = Date.now() + 600_000;
+  const body = { videoId: params.videoId, transcript: params.transcript };
+  const bodyJson = canonicalJson(body);
+  const sig = await signBoundContent(params.signingKey, 'plan', params.analysisId, exp, bodyJson);
+  try {
+    const res = await fetch(`${params.appUrl}/api/analyses/${encodeURIComponent(params.analysisId)}/plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'hex-worker-plan/1.0',
+      },
+      body: JSON.stringify({ ...body, sig, exp }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      console.warn(`[analyze-llm-stream] /plan returned ${res.status} for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan call returned non-2xx', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId, status: res.status },
+      });
+      return null;
+    }
+    const parsed: unknown = await res.json();
+    if (typeof parsed !== 'object' || parsed === null) {
+      console.warn(`[analyze-llm-stream] /plan returned a non-object body for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan response body is not an object', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId },
+      });
+      return null;
+    }
+    const plan = (parsed as Record<string, unknown>).plan;
+    if (!isValidJevPlan(plan)) {
+      console.warn(`[analyze-llm-stream] /plan returned a malformed plan for ${params.analysisId}, falling back to K=1`);
+      Sentry.captureMessage('/plan response plan failed shape check', {
+        level: 'warning',
+        tags: { operation: 'jev-plan-fetch' },
+        extra: { analysisId: params.analysisId },
+      });
+      return null;
+    }
+    return plan;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[analyze-llm-stream] /plan fetch failed for ${params.analysisId}: ${message}, falling back to K=1`);
+    Sentry.captureMessage('/plan fetch failed', {
+      level: 'warning',
+      tags: { operation: 'jev-plan-fetch' },
+      extra: { analysisId: params.analysisId, error: message },
+    });
+    return null;
+  }
+}
+
+/**
+ * R3b 2.3.5d (ADR 037 2.3.5): enforce the signed transcript slice for grounded
+ * v2 cells, falling back to the full transcript on mismatch or range error.
+ *
+ * Mismatch policy: a slice that does not hash to sliceSha256 must NEVER fail
+ * the cell or the analysis. Report to Sentry, send one SSE status frame with
+ * stage: 'jev-fallback' and reason: 'slice_hash_mismatch' | 'slice_out_of_range',
+ * and continue with the full transcript (K=1 semantics).
+ *
+ * T3 (10X PR scan): the full-transcript re-run is a real LLM call, so before
+ * granting it the remaining A6 per-video budget (`analysis.jev.
+ * maxCostUsdCentsPerVideo`, carried on the plan) is re-checked against the
+ * planned estimate plus every fallback already granted this run. Budget
+ * exhausted ⇒ the fallback is refused and the caller fails the cell via the
+ * existing error-frame semantics; the fallback itself (2.3.5 by design) is
+ * untouched when budget remains.
+ */
+type CellTranscriptResolution =
+  | { text: string; startWord: number }
+  | { budgetExhausted: true; message: string };
+
+async function resolveCellTranscript(params: {
+  req: StreamRequest;
+  resolvedTranscript: string;
+  send: (obj: Record<string, unknown>) => void;
+  // T3: budget context resolved by the caller (plan + Upstash ledger). Absent
+  // when no plan was resolved (v1/projective cells never reach the fallback).
+  fallbackBudget?: {
+    plan?: FallbackBudgetPlan;
+    plannedCents: number;
+    cache?: UpstashCacheAdapter;
+  };
+}): Promise<CellTranscriptResolution> {
+  const { req, resolvedTranscript, send } = params;
+  const full = { text: resolvedTranscript, startWord: 0 };
+
+  // Not v2 (tokenVersion absent or 1) -> unchanged, byte for byte
+  if (req.tokenVersion !== 2) {
+    return full;
+  }
+
+  // v2 + projective bundle (empty slice) -> unchanged
+  if (isProjectiveBundle(req.dimensions ?? [])) {
+    return full;
+  }
+
+  // v2 + grounded: startWord, endWord, sliceSha256 guaranteed by verifyStreamToken
+  const startWord = req.startWord ?? 0;
+  const endWord = req.endWord ?? 0;
+  const sliceSha256 = req.sliceSha256 ?? "";
+
+  const fmtCents = (n: number): string => (Number.isFinite(n) ? String(Math.round(n * 100) / 100) : "?");
+
+  const fallBack = async (reason: 'slice_hash_mismatch' | 'slice_out_of_range', computedSha256: string | null): Promise<CellTranscriptResolution> => {
+    Sentry.captureMessage('jev slice hash mismatch; falling back to full transcript', {
+      level: 'warning',
+      tags: { operation: 'jev-slice-verify', reason },
+      extra: {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        startWord,
+        endWord,
+        expectedSha256: sliceSha256,
+        computedSha256,
+      },
+    });
+    // T3: re-check the remaining per-video budget BEFORE executing the
+    // full-transcript re-run. Unenforceable plans (legacy/degenerate, no
+    // budget fields) allow the fallback — current behavior preserved.
+    const budget = await checkAndRecordFallbackBudget({
+      plan: params.fallbackBudget?.plan,
+      plannedCents: params.fallbackBudget?.plannedCents ?? 0,
+      analysisId: req.analysisId,
+      cache: params.fallbackBudget?.cache,
+    });
+    if (!budget.decision.allowed) {
+      const { projectedCents, capCents } = budget.decision;
+      const plannedCents = Math.max(0, params.fallbackBudget?.plannedCents ?? 0);
+      const fullCallCents = Math.max(0, params.fallbackBudget?.plan?.fullTranscriptCallCents ?? 0);
+      const message = `Jev cell skipped: per-video LLM cost cap reached — planned ${fmtCents(plannedCents)}¢ + ${fmtCents(projectedCents - plannedCents - fullCallCents)}¢ earlier fallbacks with this ${fmtCents(fullCallCents)}¢ full-transcript re-run exceeds the ${fmtCents(capCents)}¢ cap.`;
+      Sentry.captureMessage('jev slice fallback refused: per-video cost budget exhausted', {
+        level: 'warning',
+        tags: { operation: 'jev-slice-verify', reason },
+        extra: {
+          analysisId: req.analysisId,
+          chunkIndex: req.chunkIndex,
+          jevChunkIndex: req.jevChunkIndex,
+          plannedCents,
+          fullTranscriptCallCents: fullCallCents,
+          capCents,
+          projectedCents,
+        },
+      });
+      console.warn('[analyze-llm-stream] jev slice fallback refused: per-video cost budget exhausted', {
+        analysisId: req.analysisId,
+        chunkIndex: req.chunkIndex,
+        jevChunkIndex: req.jevChunkIndex,
+        reason,
+        plannedCents,
+        fullTranscriptCallCents: fullCallCents,
+        capCents,
+        projectedCents,
+      });
+      return { budgetExhausted: true, message };
+    }
+    send({ type: 'status', stage: 'jev-fallback', reason });
+    return full;
+  };
+
+  let computedHash: string;
+  try {
+    computedHash = await sliceDigest(resolvedTranscript, startWord, endWord);
+  } catch {
+    // sliceText RangeError: the signed range lies outside this transcript.
+    return fallBack('slice_out_of_range', null);
+  }
+  if (computedHash !== sliceSha256) return fallBack('slice_hash_mismatch', computedHash);
+  return { text: sliceText(tokenizeTranscript(resolvedTranscript), startWord, endWord), startWord };
+}
+
+/** Upstash transcript-cache key. v2: entries written before segments carried
+ * an `estimated` provenance flag (pre #417) have no marker, so provider-invented
+ * times on a cache hit would be presented as real — the version bump makes
+ * legacy entries miss and be refetched with provenance. */
+export function transcriptCacheKey(videoId: string): string {
+  return `transcript:v2:${videoId}`;
+}
+
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
 function buildStreamResponse(
   engine: ReasoningEnginePort,
@@ -805,15 +1198,27 @@ function buildStreamResponse(
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY" | "APIFY_TOKEN" | "TRANSCRIPTAPI_API_KEY" | "SUPADATA_API_KEY" | "SUPADATA_MAX_AI_MINUTES" | "TRANSCRIPT_PROVIDER_ORDER" | "TRANSCRIPT_CHAIN_BUDGET_MS">,
   cache?: UpstashCacheAdapter,
   priorPayload?: Record<string, unknown>,
+  onTranscriptResolved?: (transcript: string) => void,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
   let modelUsed = "";
   let settled = false;
-  // Populated once fetchTranscriptIfMissing resolves inside the stream's start()
-  // handler below; defaults to req.segments (almost always empty from the browser)
-  // so an interrupted/timeout persist firing before resolution still has a value.
-  let resolvedSegments: TranscriptSegment[] | undefined = req.segments;
+  // Populated ONLY from fetchTranscriptIfMissing inside the stream's start()
+  // handler below — request-supplied req.segments are never assigned here.
+  // Phase 2.6 provenance guard (#417 P1, /simplify round): "trusted by
+  // construction" — `resolvedSegments` staying undefined IS the trust signal,
+  // so no separate `segmentsTrusted` flag is needed. A request carrying its
+  // own transcript short-circuits the fetch (fetchTranscriptIfMissing only
+  // enters the fetch/cache branch when the transcript is missing/placeholder),
+  // so trusted sources are exactly: the extractor's own fetch, or the
+  // worker's own Upstash transcript cache (transcript:*, written exclusively
+  // from fetch results — fetchTranscriptIfMissing reads that cache itself).
+  // The HMAC v2 token signs only the slice (sha256,startWord,endWord), not
+  // segment times, so untrusted times could be presented to the model as
+  // real [HH:MM:SS] markers and upserted into the SHARED `transcripts` row
+  // (video_id primary key) poisoning the transcript cache for every user.
+  let resolvedSegments: TranscriptSegment[] | undefined;
   // Flat transcript text, kept alongside segments so the persist call can write
   // a `transcripts` row even when the video has a transcript but no timed
   // segments (e.g. it arrived pre-fetched from initial ingestion and
@@ -917,8 +1322,16 @@ function buildStreamResponse(
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
-        totalChunks: req.totalChunks,
-        segments: resolvedSegments,
+        // R3b 2.5b: a verified v2 cell persists under its own key; its total
+        // is the signed stream count (K x G + P), not the 5-bundle total.
+        totalChunks: req.tokenVersion === 2 ? req.streamCount : req.totalChunks,
+        jevChunkIndex: req.tokenVersion === 2 ? req.jevChunkIndex : undefined,
+        // #417 P1: segments are persisted ONLY when worker-fetched — when
+        // `resolvedSegments` is still undefined the key is OMITTED entirely
+        // (not `[]`), so the persist route's preserve-on-empty rule in
+        // SupabaseTranscriptAdapter.upsertTranscript keeps an existing row's
+        // stored segments/content intact.
+        ...(resolvedSegments ? { segments: resolvedSegments } : {}),
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
@@ -995,6 +1408,24 @@ function buildStreamResponse(
         }
       };
 
+      // R3b 2.3: dedicated SSE event emitter for the named `plan` frame
+      // (event: plan / data: {...}). `send()` only emits default-framed
+      // data: lines; named events need the explicit event: prefix so the
+      // client's EventSource-style parser can route it separately.
+      // T3: the A6 budget fields (costCapCents/fullTranscriptCallCents) are
+      // deliberately STRIPPED — JevPlanEventSchema is .strict(), so emitting
+      // them would make every client safeParse reject the plan (K>1 dispatch
+      // dies). The budget context travels on req.jevPlan / the S2S /plan
+      // response only; the event keeps today's exact wire shape.
+      const sendPlanEvent = (plan: JevPlanShape, source: 'inline' | 'worker') => {
+        try {
+          const { K, streamCount, cells, estimateCents, truncatedFallback } = plan;
+          controller.enqueue(encoder.encode(`event: plan\ndata: ${JSON.stringify({ v: 1, source, K, streamCount, cells, estimateCents, truncatedFallback })}\n\n`));
+        } catch (err: any) {
+          console.debug('[analyze-llm-stream] Client connection closed during plan enqueue:', err instanceof Error ? err.message : String(err));
+        }
+      };
+
       // Send immediate status frame, then fetch transcript asynchronously
       send({ type: "status", stage: "extracting", videoId: req.videoId });
 
@@ -1019,9 +1450,11 @@ function buildStreamResponse(
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;
-      // Only overwrite the req.segments default when the fetch actually produced
-      // timed segments — an interrupted fetch (rejected settle) must not wipe out
-      // whatever the request already carried.
+      // Only assign from the fetch result — request-supplied segments are
+      // never trusted (see the provenance contract above). An interrupted
+      // fetch (rejected settle, or a fulfilled result without segments) leaves
+      // `resolvedSegments` undefined: an interrupted persist then omits
+      // `segments` entirely instead of sending untrusted req.segments.
       if (fetchResult.status === 'fulfilled' && fetchResult.value.segments) {
         resolvedSegments = fetchResult.value.segments;
       }
@@ -1060,24 +1493,38 @@ function buildStreamResponse(
         controller.close();
         return;
       }
+      // Phase C shadow: only a transcript that passed the guard above.
+      onTranscriptResolved?.(resolvedTranscript);
 
-      // Truncation guardrail (2026-09-27, user directive — no success-washing):
-      // when the assembled prompt will slice the transcript, SAY SO in the
-      // client's own log stream. The prompt's in-band notice tells the model;
-      // this status frame tells the human. Budget mirrors
-      // analysis.transcriptBudgetChars (registry-resolved client-side,
-      // forwarded per request; fallback matches getUCISPrompt's legacy 48000).
-      {
-        const budget = req.transcriptBudgetChars ?? 48000;
-        const transcriptLen = resolvedTranscriptText?.length ?? 0;
-        if (transcriptLen > budget) {
-          send({
-            type: "status",
-            stage: "transcript-truncated",
-            message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
-            transcriptLength: transcriptLen,
-            budget,
-          } as unknown as Record<string, unknown>);
+      // R3b 2.3: resolve the Jev plan ONCE, after transcript resolution and
+      // BEFORE any grounded LLM call. Projective bundles never participate:
+      // planning partitions the grounded transcript only. Planning must
+      // never block or fail the analysis — every failure path below emits
+      // a K=1 degenerate plan and the stream proceeds unchanged.
+      // T3: hoisted so the slice-fallback budget re-check at the
+      // resolveCellTranscript call site can read the resolved plan
+      // (projective cells never reach that check — no fallback exists there).
+      let plan: JevPlanShape | undefined;
+      if (!isProjectiveBundle(req.dimensions ?? [])) {
+        if (isValidJevPlan(req.jevPlan)) {
+          // Path 1: inline plan from Vercel (transcript known at job creation).
+          plan = req.jevPlan;
+          sendPlanEvent(plan, 'inline');
+        } else {
+          // Path 2: S2S call to Vercel's /plan endpoint.
+          const planUrl = appUrl || "https://getvintel.com";
+          const fetched = await fetchJevPlan({
+            appUrl: planUrl,
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            transcript: resolvedTranscriptText ?? "",
+            signingKey,
+          });
+          // Path 3: K=1 fallback on any failure (fetchJevPlan already logged
+          // + captured the reason). streamCount mirrors the token's bound
+          // stream count (v2) or the legacy 5-bundle total (v1).
+          plan = fetched ?? fallbackPlan(req.streamCount ?? req.totalChunks ?? 5);
+          sendPlanEvent(plan, 'worker');
         }
       }
 
@@ -1120,6 +1567,99 @@ function buildStreamResponse(
         // fires before the transcript fetch and holds no cache write.
         // Client: useSSEStream awaitWarmGate releases safely on the first delta token.
 
+        // R3b 2.3.5d: resolve the signed cell transcript slice (or fallback to full transcript).
+        // T3: the fallback full-transcript re-run is budget-gated — a refusal
+        // returns the sentinel and the cell fails via the EXISTING error-frame
+        // semantics (client marks the cell failed and continues the run; the
+        // check fires before any LLM call, so a refused cell costs nothing).
+        const cellTranscript = await resolveCellTranscript({
+          req,
+          resolvedTranscript,
+          send,
+          fallbackBudget: plan
+            ? { plan, plannedCents: plan.estimateCents, cache }
+            : undefined,
+        });
+        if ('budgetExhausted' in cellTranscript) {
+          send({ type: "error", error: cellTranscript.message, code: "ERR_JEV_FALLBACK_BUDGET_EXCEEDED" });
+          controller.close();
+          return;
+        }
+
+        // R3b Phase 2.6 time-sync: insert REAL video times ([HH:MM:SS] every
+        // analysis.jev.timeMarkerIntervalSeconds, from the timed segments)
+        // into the text the model reads, AFTER the slice hash check. The
+        // prompt budget is spent on plain words (cut at a word boundary
+        // first), so markers never cost coverage; the prompt builder is then
+        // handed the annotated text's own length so it never cuts again.
+        const transcriptBudget = req.transcriptBudgetChars ?? 48000;
+        // Phase 2.6 Route A/B: the classification cell (dims incl. 11) reads
+        // CLEAN text — markers are factual-grounding scaffolding that would
+        // leak numeric noise into persona/intent classification.
+        // #417 P1 (trusted by construction): `resolvedSegments` is assigned
+        // ONLY from the worker's own fetch/cache result, so no trust flag is
+        // needed — annotating whenever segments exist is safe. When they are
+        // absent (request carried its own transcript, fetch skipped) plain
+        // text is used; the "do not align" path below explains a real
+        // misalignment of worker-fetched segments only.
+        const routeB = needsCleanTranscript(req.dimensions ?? []);
+        const timeAnnotated = routeB ? null : annotateWithTimeMarkers(cellTranscript.text, resolvedSegments, {
+          startWord: cellTranscript.startWord,
+          durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration),
+          intervalSeconds: req.timeMarkerIntervalSeconds,
+          maxChars: transcriptBudget,
+        });
+        if (routeB) {
+          console.info('[analyze-llm-stream] Route B: classification cell gets clean transcript (no time markers)', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, route: 'B' });
+        } else if (resolvedSegments && !timeAnnotated) {
+          // Worker-fetched segments exist but produced no annotation — the
+          // annotator's own `reason` (estimated / invalid_timing /
+          // misaligned) replaces the recomputation the worker used to do.
+          // Never silent: the model falls back to guessed timestamps.
+          const reason = timeAnnotatedReasons(resolvedSegments);
+          if (reason === 'misaligned') {
+            console.warn('[analyze-llm-stream] time markers skipped: segments do not align with the transcript', { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex });
+            Sentry.captureMessage('time markers skipped: segments do not align with transcript', {
+              level: 'warning',
+              tags: { operation: 'time-markers' },
+              extra: { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, segments: resolvedSegments.length },
+            });
+          } else {
+            console.info(`[analyze-llm-stream] time markers skipped: ${reason}`, { analysisId: req.analysisId, chunkIndex: req.chunkIndex, jevChunkIndex: req.jevChunkIndex, reason });
+          }
+        }
+        const promptTranscript = timeAnnotated?.text ?? cellTranscript.text;
+
+        // Truncation guardrail (2026-09-27, user directive — no success-washing):
+        // when the assembled prompt will cut the transcript, SAY SO in the
+        // client's own log stream. Measured on THIS cell's prompt text (a K>1
+        // cell's slice, not the whole video — Phase 2.6 false-positive fix).
+        // Budget mirrors analysis.transcriptBudgetChars (fallback matches
+        // getUCISPrompt's legacy 48000).
+        {
+          const budget = transcriptBudget;
+          // The annotator cut on whitespace-NORMALIZED words (single-space
+          // joined), so when annotation ran the status must report the same
+          // normalized length — returned directly by the annotator (it
+          // already computed it) instead of re-tokenizing here. Raw length
+          // stays for the plain-text fallback (its cut IS raw).
+          const transcriptLen = timeAnnotated
+            ? timeAnnotated.normalizedLength
+            : cellTranscript.text.length;
+          // The annotator made the actual cut on single-space-joined words; trust
+          // its verdict (raw whitespace runs must not fake a truncation).
+          const wasTruncated = timeAnnotated ? timeAnnotated.truncated : transcriptLen > budget;
+          if (wasTruncated) {
+            send({
+              type: "status",
+              stage: "transcript-truncated",
+              message: `Transcript truncated for analysis: model coverage limited to the first ${(budget / 1024).toFixed(0)}K of ${transcriptLen} chars (~${Math.round((budget / transcriptLen) * 100)}%). Long-form coverage is partial.`,
+              transcriptLength: transcriptLen,
+              budget,
+            } as unknown as Record<string, unknown>);
+          }
+        }
+
         const result = await engine.executeAndStream(
           {
             // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
@@ -1128,11 +1668,11 @@ function buildStreamResponse(
             // for these fields explicitly (Dimension 2.3/11.1/11.6) and got
             // Insufficient Data every time because they never arrived here.
             metadata: { ...req.metadata, ...(resolvedChannelMeta || {}) },
-            transcript: resolvedTranscript,
+            transcript: promptTranscript,
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
-            transcriptBudgetChars: req.transcriptBudgetChars,
+            transcriptBudgetChars: timeAnnotated ? timeAnnotated.text.length : req.transcriptBudgetChars,
             prior_payload: priorPayload,
           },
           {
@@ -1301,7 +1841,25 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Server misconfigured" }, 500);
   }
 
-  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
+  // R3b 2.3.5a: tokenVersion allowlist — a present-but-unrecognized version
+  // must fail CLOSED, never silently verify as v1 (previously any non-2 value
+  // fell through to the legacy path). Absent stays v1.
+  if (req.tokenVersion !== undefined && req.tokenVersion !== 1 && req.tokenVersion !== 2) {
+    return c.json({ error: "Invalid token", reason: "unknown_token_version" }, 401);
+  }
+
+  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env, {
+    tokenVersion: req.tokenVersion,
+    streamCount: req.streamCount,
+    jevChunkIndex: req.jevChunkIndex,
+    jevChunkCount: req.jevChunkCount,
+    bundleList: req.bundleList,
+    chunkIndex: req.chunkIndex,
+    sliceSha256: req.sliceSha256,
+    startWord: req.startWord,
+    endWord: req.endWord,
+    dimensions: req.dimensions,
+  });
 
   if (!isTokenValid) {
     // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
@@ -1420,12 +1978,48 @@ analysis.post("/analyze-llm-stream", async (c) => {
       waitUntil: (p) => c.executionCtx.waitUntil(p),
     });
 
-    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching), new ValidationService(), cache);
+    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, isProjectiveBundle(req.dimensions ?? []) ? 'projective' : 'grounded'), new ValidationService(), cache);
 
     const persistController = new AbortController();
     const httpConnSignal = c.req.raw['signal'];
 
-    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache, priorPayload);
+    // Phase C shadow mode (2026-10-08): runs the Epistemic pipeline in the
+    // background only when Vercel signed a grant for this analysis; the live
+    // stream below is unchanged either way.
+    const shadowGranted = req.epistemicShadowSig !== undefined && await verifyEpistemicShadowSig({
+      secret: signingKey,
+      analysisId: req.analysisId,
+      sig: req.epistemicShadowSig,
+      exp: req.epistemicShadowExp,
+      retry: req.epistemicShadowRetry,
+    });
+    const shadowRetry = parseEpistemicPersistRetry(req.epistemicShadowRetry);
+    const shadowAppUrl = req.appUrl || c.env.APP_URL;
+    let shadowStarted = false;
+    const onTranscriptResolved = shadowGranted && shadowAppUrl && shadowRetry
+      ? (transcript: string) => {
+        if (shadowStarted) return;
+        shadowStarted = true;
+        c.executionCtx.waitUntil(runEpistemicShadow({
+          analysisId: req.analysisId,
+          videoId: req.videoId,
+          title: (req.metadata as { title?: string } | undefined)?.title,
+          transcript,
+          durationSeconds: parseVideoDurationSeconds((req.metadata as { duration?: string | number } | undefined)?.duration) ?? 0,
+          appUrl: shadowAppUrl,
+          signingSecret: signingKey,
+          openRouterApiKey: apiKey,
+          persistRetry: shadowRetry,
+          promptBuilder: new PromptBuilder(promptConfig),
+          cascade: new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs, req.promptCaching, 'grounded'),
+        }));
+      }
+      : undefined;
+    if (req.epistemicShadowSig !== undefined && !shadowGranted) {
+      console.warn("[analyze-llm-stream] epistemic shadow grant rejected", { analysisId: req.analysisId });
+    }
+
+    return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache, priorPayload, onTranscriptResolved);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
@@ -1453,3 +2047,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
 });
 
 export default analysis;
+export { verifyStreamToken };
+// R3b 2.3W: exported for unit tests only (plan resolution contract tests in
+// worker/src/__tests__/jev-plan-worker.test.ts).
+export { fetchJevPlan, isValidJevPlan, fallbackPlan };

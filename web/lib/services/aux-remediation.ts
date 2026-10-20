@@ -43,7 +43,7 @@
  * callback (/api/comments/persist-sample-run) once done -- there is no
  * synchronous "fetch comments now" call to make. This harness enqueues that
  * job (system-triggered, no credit-wallet debit -- see
- * enqueueSystemCommentsBackfill's own comment for why the system-triggered
+ * enqueueSystemCommentSampleRun's own comment for why the system-triggered
  * enqueue (rather than /api/comments/tier3/start's user-charged flow) is
  * correct here) and defers
  * to the callback + a later sweep to observe completion: a row whose only
@@ -215,8 +215,9 @@ export async function findAnalysesWithMissingAux(opts?: { limit?: number }): Pro
  */
 async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Record<string, unknown> | null } | null> {
   const token = await signChannelMetaToken(gap.id, gap.videoId);
+  let res: Response | undefined;
   try {
-    const res = await fetch(`${env.cloudflareWorkerUrl}/channel-meta/fetch`, {
+    res = await fetch(`${env.cloudflareWorkerUrl}/channel-meta/fetch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoId: gap.videoId, analysisId: gap.id, sig: token.sig, exp: token.exp }),
@@ -232,6 +233,8 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
     console.error('[aux-remediation] channel-meta fetch threw', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'channel_meta_fetch', analysisId: gap.id } } });
     return null;
+  } finally {
+    await releaseUnreadBody(res);
   }
 }
 
@@ -246,25 +249,83 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
  * row and calls the same worker enqueue endpoint directly with the
  * service-role client, at zero cost to the user's wallet.
  */
-async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
-  const reportObj = asReportObject(gap.validationReport);
+export async function enqueueSystemCommentSampleRun(params: { analysisId: string; userId: string; videoId: string; validationReport: unknown }): Promise<boolean> {
+  const reportObj = asReportObject(params.validationReport);
   const rawCount = (reportObj.metadata as Record<string, unknown> | undefined)?.commentCount;
   const totalCommentCount = typeof rawCount === 'number' ? rawCount : typeof rawCount === 'string' ? parseInt(rawCount, 10) || 0 : 0;
   if (totalCommentCount <= 0) {
-    console.warn('[aux-remediation] no known commentCount, skipping comments backfill enqueue', { analysisId: gap.id });
+    console.warn('[aux-remediation] no known commentCount, skipping comments backfill enqueue', { analysisId: params.analysisId });
+    return false;
+  }
+
+  // Skip fast: an analysis that already has a system-funded run must never
+  // enqueue a second one. This covers the common repeated-finalize case
+  // cheaply; the DB unique index (uq_comment_sample_runs_system_per_analysis)
+  // covers the true race between concurrent finalizes.
+  //
+  // The probe lookups run BEFORE the insert, so a probe failure must be
+  // contained here, not thrown into the caller: both persist-route call
+  // sites (.catch()) and the harness per-gap loop do catch, but fail-closed
+  // in the service guarantees no paid run is ever started on an uncertain
+  // probe — and the error is still reported (log + Sentry).
+  //
+  // There is deliberately no "payload already has comments" skip: the sample
+  // run is what produces the comment classifications behind the sentiment
+  // UI, so skipping it whenever the payload carried >= 10 comments left most
+  // analyses with no sentiment at all (owner report 2026-10-12).
+  try {
+    const { 'comments.system.staleRunMinutes': staleRunMinutes } = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.system.staleRunMinutes'],
+      { 'comments.system.staleRunMinutes': 30 }
+    );
+    // A run stuck pending/sampling past the cutoff would otherwise hold the
+    // unique index forever; release it before the existence check.
+    await SupabaseAuxRemediationAdapter.failStaleSystemSampleRuns(params.analysisId, Number(staleRunMinutes));
+    if (await SupabaseAuxRemediationAdapter.hasSystemSampleRun(params.analysisId)) {
+      console.info('[aux-remediation] analysis already has a system sample run, skipping enqueue', { analysisId: params.analysisId });
+      return false;
+    }
+  } catch (err) {
+    console.error('[aux-remediation] enqueue probe failed; failing closed (no paid run)', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue_probe', analysisId: params.analysisId } } });
     return false;
   }
 
   const runRow = await SupabaseAuxRemediationAdapter.insertSystemCommentSampleRun({
-    analysisId: gap.id,
-    userId: gap.userId,
+    analysisId: params.analysisId,
+    userId: params.userId,
     totalCommentCount,
   });
   if (!runRow) {
     return false;
   }
+  if (runRow.alreadyQueued) {
+    // Lost the insert race (unique index): the winning path owns the enqueue.
+    return false;
+  }
 
-  const token = await signCommentsTier3Token(runRow.id, gap.userId);
+  // Everything between the pending insert and the worker enqueue is wrapped:
+  // an exception here (token signing, settings lookup, config validation)
+  // must mark the run failed, never leave it orphaned 'pending' forever
+  // (external review of #416, P2). The enqueue fetch's own catch below
+  // covers the network leg.
+  try {
+    return await enqueueInsertedSystemSampleRun(params, runRow.id, totalCommentCount);
+  } catch (err) {
+    console.error('[aux-remediation] post-insert enqueue preparation threw', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue_prep', analysisId: params.analysisId, sampleRunId: runRow.id } } });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRow.id);
+    return false;
+  }
+}
+
+async function enqueueInsertedSystemSampleRun(
+  params: { analysisId: string; userId: string; videoId: string },
+  runRowId: string,
+  totalCommentCount: number
+): Promise<boolean> {
+
+  const token = await signCommentsTier3Token(runRowId, params.userId);
 
   // Cochran-mode sampling config (Comments Dispatch A, 2026-09-30): all
   // values are registry-driven, resolved HERE (Vercel) and carried inside
@@ -315,22 +376,24 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
   // #378 review P2: never coerce a bad registry value to 0 and enqueue it.
   const validation = validateCochranSamplingConfig(sampling);
   if (!validation.ok) {
-    console.error('[aux-remediation] invalid comments sampling settings, not enqueueing', { analysisId: gap.id, errors: validation.errors });
+    console.error('[aux-remediation] invalid comments sampling settings, not enqueueing', { analysisId: params.analysisId, errors: validation.errors });
     Sentry.captureMessage('comments cochran backfill not enqueued: invalid sampling settings', {
       level: 'error',
-      extra: { analysisId: gap.id, errors: validation.errors },
+      extra: { analysisId: params.analysisId, errors: validation.errors },
     });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRowId);
     return false;
   }
 
+  let res: Response | undefined;
   try {
-    const res = await fetch(`${env.cloudflareWorkerUrl}/comments/tier3/enqueue`, {
+    res = await fetch(`${env.cloudflareWorkerUrl}/comments/tier3/enqueue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sampleRunId: runRow.id,
-        videoId: gap.videoId,
-        userId: gap.userId,
+        sampleRunId: runRowId,
+        videoId: params.videoId,
+        userId: params.userId,
         totalCommentCount,
         appUrl: env.appUrl || 'https://getvintel.com',
         mode: 'cochran',
@@ -343,10 +406,18 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
     if (!res.ok) throw new Error(`Worker enqueue returned ${res.status}`);
     return true;
   } catch (err) {
-    console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: gap.id, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: gap.id } } });
+    console.error('[aux-remediation] comments-tier3 enqueue failed', { analysisId: params.analysisId, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { contexts: { auxRemediation: { service: 'aux-remediation', phase: 'comments_enqueue', analysisId: params.analysisId } } });
+    await SupabaseAuxRemediationAdapter.markSampleRunFailed(runRowId);
     return false;
+  } finally {
+    await releaseUnreadBody(res);
   }
+}
+
+/** Cancel a response body nobody read, so the socket is released on every exit path (ARTAS V20). */
+async function releaseUnreadBody(res: Response | undefined): Promise<void> {
+  if (res && !res.bodyUsed) await res.body?.cancel().catch((err: unknown) => console.debug('[aux-remediation] body cancel failed', { err: String(err) }));
 }
 
 /**
@@ -376,7 +447,7 @@ export async function remediateAuxGap(gap: AuxGap): Promise<AuxRemediationResult
 
   const nowHasComments = gap.hasComments; // this pass never synchronously gets comments -- only ever enqueues
   if (!nowHasComments) {
-    commentsEnqueued = await enqueueSystemCommentsBackfill(gap);
+    commentsEnqueued = await enqueueSystemCommentSampleRun({ analysisId: gap.id, userId: gap.userId, videoId: gap.videoId, validationReport: gap.validationReport });
     commentsEnqueueFailed = !commentsEnqueued;
   }
 

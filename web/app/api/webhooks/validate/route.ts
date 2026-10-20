@@ -71,15 +71,17 @@ export async function POST(request: NextRequest) {
     // structured-JSON pipeline and fails all v2 analyses on formatting checks.
     // It must NOT downgrade validation_passed that the persist route already
     // set from the authoritative stitched-payload validation — report only.
+    // Stored under its own key and MERGED: replacing the whole report wiped
+    // status, dimension_status, metadata and jev_partial_dimensions written
+    // by the persist finalize two seconds earlier.
     const persistence = new SupabasePersistenceAdapter();
     await trackDatabaseQuery(
       'update',
       'analyses',
       async () => {
-        await persistence.updateValidationReport({
+        await persistence.mergeValidationReport({
           analysisId,
-          report,
-          preserveValidationPassed: true,
+          patch: { markdown_validation: report },
         });
       },
       { analysisId, videoId }
@@ -109,14 +111,19 @@ export async function POST(request: NextRequest) {
       markdown,
       userId,
     }).catch((err) => {
-      console.error('[validate-webhook] Embedding task publish failed', {
+      // Fail-closed: rethrow so the outer catch answers 503 and QStash
+      // redelivers this validate message (the old swallow-and-200 ghost-acked
+      // the delivery while the embed task was silently lost). Redelivery is
+      // safe: this route's only DB write is mergeValidationReport — an atomic
+      // shallow-merge RPC, so replaying the same report merges to the same
+      // state — there is no quota or row-creating write here, and the embed
+      // webhook dedupes via its presence check + analysisId-keyed upsert.
+      console.error('[validate-webhook] Embedding task publish failed — rethrowing for 503/QStash retry', {
         analysisId,
         error: err instanceof Error ? err.message : String(err),
       });
-      Sentry.captureException(err, {
-        tags: { service: 'webhook', operation: 'publish_embedding' },
-        contexts: { analysis: { analysisId } },
-      });
+      addBreadcrumb('Embedding task publish failed — failing closed for QStash retry', { analysisId }, 'error');
+      throw err;
     });
 
     const duration = Math.round(performance.now() - startTime);

@@ -4,13 +4,15 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, IconButton, Tooltip } from '@astryxdesign/core';
 import { GlowBorder, Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightPlaybackDuration, getHighlightsRetryDelayMs, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS } from '@/lib/utils/highlights-settings';
+import { fmtHighlightsDuration, getClampedSegmentEnd, getHighlightsRetryDelayMs, getSpeakingSeconds, HIGHLIGHTS_REGISTRY_FALLBACK, HIGHLIGHTS_STATUS_RETRY_MAX_ATTEMPTS, separateSegments } from '@/lib/utils/highlights-settings';
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { HighlightsTrack, HighlightsNav, TRACK_HEIGHT_PX } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { calculateHighlightsCompression } from '@/lib/hooks/useSegmentPlayback';
-import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
+import { leadInFor, useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 import { dedupedFetch } from '@/lib/utils/dedupe-fetch';
+
+const COLLAPSED_KEY = 'hex:highlights:v1:collapsed';
 
 interface Highlight {
   idx: number;
@@ -59,6 +61,21 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Caption language for the ticker. No translated transcript is in the segment
+  // payload yet, so TRANS. shows a stub; see the translation-stub branch below.
+  const [captionLang, setCaptionLang] = useState<'orig' | 'trans'>('orig');
+  // T16: collapsing frees vertical space for the timeline below. Read after
+  // mount (not in the initializer) so SSR and first client render agree.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === '1'); } catch (err) { console.warn('[highlights] collapse state unreadable; staying expanded', err); }
+  }, []);
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((was) => {
+      try { window.localStorage.setItem(COLLAPSED_KEY, was ? '0' : '1'); } catch (err) { console.warn('[highlights] collapse state not saved; session-only', err); }
+      return !was;
+    });
+  }, []);
   // Tracks which analysisId `data` actually belongs to -- CodeRabbit finding
   // on PR #298: `data` alone isn't enough to guard the fetch effect below,
   // since switching to a NEW analysisId while the OLD analysisId's `data`
@@ -101,11 +118,11 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   // useSegmentPlayback — old DB rows have end_seconds = next highlight's start
   // (could be 120s+), which would produce multi-minute playback segments without this.
   const segments = useMemo(
-    () => (data?.highlights ?? []).map((highlight, idx) => {
+    () => separateSegments((data?.highlights ?? []).map((highlight, idx) => {
       const highlights = data!.highlights;
       const nextStart = idx < highlights.length - 1 ? highlights[idx + 1]?.start : undefined;
       return { ...highlight, end: getClampedSegmentEnd(highlight, segDurFallback, minDur, maxDur, nextStart) };
-    }),
+    })),
     [data, segDurFallback, minDur, maxDur],
   );
 
@@ -291,16 +308,16 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
 
   const activeHighlight = data && playingIdx !== null ? data.highlights[playingIdx] : null;
   const nextHighlight = data && playingIdx !== null ? data.highlights[playingIdx + 1] : null;
-  const activeDuration = activeHighlight
-    ? getHighlightPlaybackDuration(activeHighlight, segDurFallback, minDur, maxDur) + (data?.contextLeadSeconds ?? 0)
-    : segDurFallback;
   const { revealedText, usingVerbatim } = useHighlightTicker(
     playingIdx,
     activeHighlight?.label ?? null,
-    activeDuration,
+    activeHighlight ? getSpeakingSeconds(activeHighlight, minDur, maxDur) : 0,
     elapsedInSegmentSeconds,
     activeHighlight?.verbatimExcerpt ?? null,
-    data?.tickerWordsPerSecond
+    data?.tickerWordsPerSecond,
+    // Playback opens at max(0, start - contextLead), so the real lead-in is clamped near 0s.
+    // ...and never before the previous clip's end (leadFloor, T8).
+    playingIdx !== null && activeHighlight && segments[playingIdx] ? activeHighlight.start - leadInFor(segments[playingIdx], data?.contextLeadSeconds ?? 0) : 0
   );
 
   // Real fix (live report, 2026-08-20): the Astryx <Selector> dropdown read
@@ -356,6 +373,16 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
   }
 
   const { totalHighlightsSeconds, compressionPct } = calculateHighlightsCompression(segments, segDurFallback, videoDurationSeconds);
+  // Shared by the track row and the collapsed header, so the reel stays playable collapsed.
+  const playButton = (
+    <IconButton
+      label={playingIdx === null ? 'Play highlights' : isPaused ? 'Resume highlights' : 'Pause highlights'}
+      icon={<Icon icon={playingIdx === null || isPaused ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+      variant="primary"
+      size="sm"
+      onClick={playingIdx === null ? start : isPaused ? resume : pause}
+    />
+  );
 
   return (
     <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
@@ -363,13 +390,27 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           moment stepper moved to the footer row (below) per the 2nd
           layout revision, replacing the old text-label Play button slot. */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[var(--ink)]">Highlights Reel</span>
-        <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-controls="highlights-reel-body"
+          data-testid="highlights-collapse-toggle"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink)] hover:text-[var(--accent)]"
+        >
+          <Icon icon={collapsed ? 'solar:alt-arrow-right-linear' : 'solar:alt-arrow-down-linear'} size={12} />
+          Highlights Reel
+        </button>
+        <span className="flex items-center gap-2 text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
+          {collapsed ? playButton : null}
         </span>
       </div>
+
+      {collapsed ? null : (
+      <div id="highlights-reel-body" className="flex flex-col gap-2">
 
       {/* Timeline row: the track stays one continuous element (real
           highlight-timestamp positions preserved -- unlike a visually
@@ -407,13 +448,7 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
               start (nothing playing) / pause (playing, not paused) /
               resume (playing, paused) -- playingIdx and player position
               are preserved across pause/resume. */}
-          <IconButton
-            label={playingIdx === null ? 'Play highlights' : isPaused ? 'Resume highlights' : 'Pause highlights'}
-            icon={<Icon icon={playingIdx === null || isPaused ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
-            variant="primary"
-            size="sm"
-            onClick={playingIdx === null ? start : isPaused ? resume : pause}
-          />
+          {playButton}
         </div>
       </div>
 
@@ -463,13 +498,20 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           media-time poll: it advances with speech, freezes when playback
           pauses, never loops, and is static text under
           prefers-reduced-motion by construction (no animation at all). */}
-      <div className="flex items-center justify-between gap-2 mt-2">
+      {/* Mobile: ticker takes a full-width row, speed + nav sit on the row below.
+          From sm up the three share one row (ticker flexes, controls keep their width). */}
+      <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
         <div
           className="flex-1 min-w-0 h-8 px-2.5 rounded bg-slate-950/70 border border-slate-800/80 overflow-hidden relative flex items-center"
           data-testid="verbatim-caption"
           aria-live="polite"
         >
-          {activeHighlight && playingIdx !== null ? (
+          {captionLang === 'trans' ? (
+            <span data-testid="translation-stub" className="italic text-[var(--ink-muted)] text-xs truncate">
+              Translation pending...
+            </span>
+          ) : activeHighlight && playingIdx !== null ? (
             <div className="flex items-center gap-2 w-full min-w-0 overflow-hidden">
               <span className="font-mono text-[10px] text-emerald-400 font-semibold shrink-0 select-none bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/50">
                 {playingIdx + 1}/{data.highlights.length}
@@ -520,8 +562,18 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
             </span>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setCaptionLang((lang) => (lang === 'orig' ? 'trans' : 'orig'))}
+          aria-pressed={captionLang === 'trans'}
+          aria-label="Toggle caption language: original or translation"
+          className="h-8 shrink-0 inline-flex items-center text-[10px] font-mono font-medium text-[var(--ink-muted)] hover:text-[var(--accent)] px-2 border border-[var(--line)] hover:border-[var(--accent-a70)]"
+        >
+          {captionLang === 'trans' ? 'TRANS.' : 'ORIG.'}
+        </button>
+        </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:flex-shrink-0">
           {/* Real fix (live report, 2026-08-21): height was left to derive
               from padding + line-height (21px rendered) while HighlightsNav's
               own strip derives its height from its fixed h-4 buttons (18px
@@ -540,6 +592,8 @@ export const HighlightsScrubber = memo(function HighlightsScrubber({ analysisId,
           <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
         </div>
       </div>
+      </div>
+      )}
     </Card>
   );
 },

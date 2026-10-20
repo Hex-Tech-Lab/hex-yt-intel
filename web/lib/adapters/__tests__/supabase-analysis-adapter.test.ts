@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SupabaseAnalysisAdapter } from '@/lib/adapters/SupabaseAnalysisAdapter';
+import { SupabaseAnalysisAdapter, metadataColumns } from '@/lib/adapters/SupabaseAnalysisAdapter';
 
 // Mock Supabase service client
 const mockMaybeSingle = vi.fn();
@@ -8,11 +8,18 @@ const mockEq = vi.fn();
 const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockSelect = vi.fn();
+const mockIs = vi.fn();
+const mockUpdate = vi.fn();
+const mockNot = vi.fn();
+const mockRpc = vi.fn();
 
 const queryBuilder: any = {
   select: mockSelect,
   eq: mockEq,
   neq: mockNeq,
+  is: mockIs,
+  update: mockUpdate,
+  not: mockNot,
   order: mockOrder,
   limit: mockLimit,
   maybeSingle: mockMaybeSingle,
@@ -21,6 +28,8 @@ const queryBuilder: any = {
 mockSelect.mockImplementation(() => queryBuilder);
 mockEq.mockImplementation(() => queryBuilder);
 mockNeq.mockImplementation(() => queryBuilder);
+mockIs.mockImplementation(() => queryBuilder);
+mockUpdate.mockImplementation(() => queryBuilder);
 mockOrder.mockImplementation(() => queryBuilder);
 mockLimit.mockImplementation(() => queryBuilder);
 
@@ -29,6 +38,7 @@ const mockFrom = vi.fn(() => queryBuilder);
 vi.mock('@/lib/supabase', () => ({
   getSupabaseServiceClient: () => ({
     from: mockFrom,
+    rpc: mockRpc,
   }),
 }));
 
@@ -105,5 +115,159 @@ describe('SupabaseAnalysisAdapter.findCachedAnalysis (Content & Status Invariant
     expect(mockNeq).toHaveBeenCalledWith('billing_status', 'failed');
     expect(mockNeq).toHaveBeenCalledWith('billing_status', 'cancelled');
     expect(mockNeq).toHaveBeenCalledWith('billing_status', 'processing');
+  });
+});
+
+describe('SupabaseAnalysisAdapter.persistJevPlan (ownership/idempotence)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('conditionally updates only a plan-less row scoped to the analysis id, and stores the plan', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { jev_plan: { K: 1 } }, error: null });
+
+    const result = await SupabaseAnalysisAdapter.persistJevPlan({
+      analysisId: 'analysis-plan-1',
+      plan: { K: 1, streamCount: 5, cells: [], estimateCents: 27, truncatedFallback: false },
+    });
+
+    // Write is scoped to the analysis id and conditional on jev_plan being null.
+    expect(mockFrom).toHaveBeenCalledWith('analyses');
+    expect(mockUpdate).toHaveBeenCalledWith({ jev_plan: { K: 1, streamCount: 5, cells: [], estimateCents: 27, truncatedFallback: false } });
+    expect(mockEq).toHaveBeenCalledWith('id', 'analysis-plan-1');
+    expect(mockIs).toHaveBeenCalledWith('jev_plan', null);
+    expect(mockSelect).toHaveBeenCalledWith('jev_plan');
+    expect(result.stored).toBe(true);
+    expect(result.plan).toEqual({ K: 1 });
+  });
+
+  it('returns the already-stored plan without writing again when the conditional update lands on zero rows', async () => {
+    // First maybeSingle: conditional update matched no rows; second: the follow-up read finds the stored plan.
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockMaybeSingle.mockResolvedValueOnce({ data: { jev_plan: { K: 3, streamCount: 13 } }, error: null });
+
+    const result = await SupabaseAnalysisAdapter.persistJevPlan({
+      analysisId: 'analysis-plan-2',
+      plan: { K: 1 },
+    });
+
+    expect(result.stored).toBe(false);
+    expect(result.plan).toEqual({ K: 3, streamCount: 13 });
+    // The follow-up read is also scoped to the analysis id.
+    expect(mockEq).toHaveBeenCalledWith('id', 'analysis-plan-2');
+    expect(mockIs).toHaveBeenCalledWith('jev_plan', null);
+  });
+
+  it('throws when no plan exists and the analysis row is gone', async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      SupabaseAnalysisAdapter.persistJevPlan({ analysisId: 'analysis-missing', plan: { K: 1 } })
+    ).rejects.toThrow('persistJevPlan: analysis row not found: analysis-missing');
+  });
+});
+
+describe('SupabaseAnalysisAdapter.markJevPlanDegraded (R3b 2.5 degradation hatch)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates only this analysis, only where a plan already exists', async () => {
+    mockNot.mockResolvedValueOnce({ error: null });
+    const plan = { K: 2, streamCount: 9, cells: [], degraded: true };
+    await SupabaseAnalysisAdapter.markJevPlanDegraded({ analysisId: 'a-1', plan });
+    expect(mockFrom).toHaveBeenCalledWith('analyses');
+    expect(mockUpdate).toHaveBeenCalledWith({ jev_plan: plan });
+    expect(mockEq).toHaveBeenCalledWith('id', 'a-1');
+    expect(mockNot).toHaveBeenCalledWith('jev_plan', 'is', null);
+  });
+
+  it('throws a write error', async () => {
+    mockNot.mockResolvedValueOnce({ error: { message: 'boom' } });
+    await expect(SupabaseAnalysisAdapter.markJevPlanDegraded({ analysisId: 'a-1', plan: { degraded: true } })).rejects.toEqual({ message: 'boom' });
+  });
+});
+
+describe('SupabaseAnalysisAdapter.isAdminUser (R3b admin gate)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('true only for users.role === admin', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { role: 'admin' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-1' })).toBe(true);
+    expect(mockFrom).toHaveBeenCalledWith('users');
+    expect(mockEq).toHaveBeenCalledWith('id', 'u-1');
+    mockMaybeSingle.mockResolvedValueOnce({ data: { role: 'user' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-2' })).toBe(false);
+  });
+
+  it('resolves an analysis to its owner first', async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { user_id: 'owner-1' }, error: null })
+      .mockResolvedValueOnce({ data: { role: 'admin' }, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ analysisId: 'an-1' })).toBe(true);
+    expect(mockEq).toHaveBeenCalledWith('id', 'an-1');
+    expect(mockEq).toHaveBeenCalledWith('id', 'owner-1');
+  });
+
+  it('fails closed: missing owner, missing user, or a read error => false', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ analysisId: 'gone' })).toBe(false);
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'nobody' })).toBe(false);
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
+    expect(await SupabaseAnalysisAdapter.isAdminUser({ userId: 'u-1' })).toBe(false);
+  });
+});
+
+describe('SupabaseAnalysisAdapter.mergeValidationReport (webhook must never replace the report)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('merges through the atomic RPC and never issues a full update', async () => {
+    mockRpc.mockResolvedValueOnce({ error: null });
+    await SupabaseAnalysisAdapter.mergeValidationReport({ analysisId: 'a-1', patch: { markdown_validation: { passed: true } } });
+    expect(mockRpc).toHaveBeenCalledWith('merge_analysis_validation_report', { p_analysis_id: 'a-1', p_patch: { markdown_validation: { passed: true } } });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('throws an RPC error', async () => {
+    mockRpc.mockResolvedValueOnce({ error: { message: 'boom' } });
+    await expect(SupabaseAnalysisAdapter.mergeValidationReport({ analysisId: 'a-1', patch: {} })).rejects.toEqual({ message: 'boom' });
+  });
+});
+
+// Regression: channel_id/published_at/thumbnail_url were never written (only the
+// validation_report.metadata blob was), so the dashboard metadata panel stayed grey.
+describe('metadataColumns', () => {
+  it('maps job metadata to the analyses video-metadata columns', () => {
+    expect(
+      metadataColumns('EyC1P3hyMgI', {
+        channelTitle: 'Recall',
+        channelId: 'UC123',
+        publishedAt: '2026-09-01T00:00:00Z',
+      } as never),
+    ).toEqual({
+      channel_title: 'Recall',
+      channel_id: 'UC123',
+      published_at: '2026-09-01T00:00:00Z',
+      thumbnail_url: 'https://i.ytimg.com/vi/EyC1P3hyMgI/hqdefault.jpg',
+    });
+  });
+
+  it('omits fields the metadata does not carry instead of writing empties', () => {
+    expect(metadataColumns('abc')).toEqual({
+      thumbnail_url: 'https://i.ytimg.com/vi/abc/hqdefault.jpg',
+    });
+  });
+
+  it('drops a publishedAt that is not a date rather than failing the row update', () => {
+    expect(metadataColumns('abc', { channelTitle: 'c', publishedAt: 'not-a-date' } as never)).not.toHaveProperty('published_at');
+  });
+
+  it('drops a non-ISO publishedAt before it reaches the timestamptz column', () => {
+    expect(metadataColumns('abc', { channelTitle: 'c', publishedAt: 'Sep 1 2026' } as never)).not.toHaveProperty('published_at');
   });
 });

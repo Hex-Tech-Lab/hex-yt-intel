@@ -95,6 +95,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findHighlightsForAnalysis(analysisId);
   }
 
+  mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void> {
+    return SupabaseAnalysisAdapter.mergeValidationReport(params);
+  }
+
   updateValidationReport(params: { analysisId: string; report: any; passed?: boolean; preserveValidationPassed?: boolean }): Promise<void> {
     return SupabaseAnalysisAdapter.updateValidationReport(params);
   }
@@ -105,6 +109,22 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   saveExecutiveDigest(params: { analysisId: string; userId: string; digest: unknown }): Promise<boolean> {
     return SupabaseAnalysisAdapter.saveExecutiveDigest(params);
+  }
+
+  persistJevPlan(params: { analysisId: string; plan: unknown }): Promise<{ plan: unknown; stored: boolean }> {
+    return SupabaseAnalysisAdapter.persistJevPlan(params);
+  }
+
+  findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
+    return SupabaseAnalysisAdapter.findJevPlan(params);
+  }
+
+  isAdminUser(params: { userId: string } | { analysisId: string }): Promise<boolean> {
+    return SupabaseAnalysisAdapter.isAdminUser(params);
+  }
+
+  markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void> {
+    return SupabaseAnalysisAdapter.markJevPlanDegraded(params);
   }
 
   getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
@@ -227,6 +247,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const chunkRows = anyPayload.chunks.map((c: any, idx: number) => ({
         analysis_id: params.analysisId,
         chunk_index: idx,
+        // R3b: Jev chunk 0 (K=1); column is part of unique_analysis_chunk_cell.
+        jev_chunk_index: 0,
         payload: { text: c.text ?? String(c), metadata: c.metadata ?? {} },
         dimensions_covered: c.dimensionsCovered ?? [],
         status: 'completed' as const,
@@ -235,7 +257,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       try {
         await service
           .from('analysis_chunks')
-          .upsert(chunkRows, { onConflict: 'analysis_id,chunk_index' });
+          .upsert(chunkRows, { onConflict: 'analysis_id,jev_chunk_index,chunk_index' });
       } catch (err) {
         console.error('[SupabasePersistenceAdapter] chunk upsert failed:', err);
       }
@@ -444,6 +466,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   async persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
+    jevChunkIndex?: number;
     dimensionsCovered: number[];
     payload: any;
     status: 'completed' | 'failed' | 'interrupted';
@@ -463,6 +486,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const rowData = {
         analysis_id: params.analysisId,
         chunk_index: params.chunkIndex,
+        // R3b: Jev chunk 0 (K=1); column is part of unique_analysis_chunk_cell.
+        jev_chunk_index: params.jevChunkIndex ?? 0,
         dimensions_covered: params.dimensionsCovered,
         payload: params.payload ?? {},
         status: params.status,
@@ -485,6 +510,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
           .update(rowData, { count: 'exact' })
           .eq('analysis_id', params.analysisId)
           .eq('chunk_index', params.chunkIndex)
+          // R3b: Jev chunk 0 only (K=1) — other Jev chunks are separate rows.
+          .eq('jev_chunk_index', params.jevChunkIndex ?? 0)
           .neq('status', 'completed');
 
         if (updErr) {
@@ -500,7 +527,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
           const { error: insErr } = await service
             .from('analysis_chunks')
             .upsert(rowData, {
-              onConflict: 'analysis_id,chunk_index',
+              onConflict: 'analysis_id,jev_chunk_index,chunk_index',
               ignoreDuplicates: true,
             });
 
@@ -520,7 +547,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const { error } = await service
         .from('analysis_chunks')
         .upsert(rowData, {
-          onConflict: 'analysis_id,chunk_index'
+          onConflict: 'analysis_id,jev_chunk_index,chunk_index'
         });
 
       if (error) {
@@ -573,6 +600,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .update({ status: 'failed', updated_at: new Date().toISOString() }, { count: 'exact' })
         .eq('analysis_id', params.analysisId)
         .eq('chunk_index', params.chunkIndex)
+        // R3b: Jev chunk 0 only (K=1).
+        .eq('jev_chunk_index', 0)
         .eq('status', 'completed');
       // P0 (PR #314 second review round): narrow the CAS to the EXACT row
       // revision the caller observed, so a concurrent writer that replaced
@@ -606,7 +635,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const { data, error } = await service
         .from('analysis_chunks')
         .select('chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
-        .eq('analysis_id', params.analysisId);
+        .eq('analysis_id', params.analysisId)
+        // R3b: Jev chunk 0 only (K=1) — stitchers consume one Jev chunk's
+        // bundles per call today.
+        .eq('jev_chunk_index', 0);
 
       if (error) {
         console.error('[SupabasePersistenceAdapter] findAnalysisChunks failed:', error.message);
@@ -618,6 +650,26 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         tags: { method: 'findAnalysisChunks' },
         extra: { analysisId: params.analysisId },
       });
+      throw error;
+    }
+  }
+
+  async findAnalysisCells(params: {
+    analysisId: string;
+  }): Promise<Array<{ jev_chunk_index: number; chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analysis_chunks')
+        .select('jev_chunk_index, chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
+        .eq('analysis_id', params.analysisId);
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] findAnalysisCells failed:', error.message);
+        throw error;
+      }
+      return data || [];
+    } catch (error: unknown) {
+      Sentry.captureException(error, { tags: { method: 'findAnalysisCells' }, extra: { analysisId: params.analysisId } });
       throw error;
     }
   }
@@ -644,6 +696,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .from('analysis_chunks')
         .select('chunk_index, dimensions_covered, status')
         .eq('analysis_id', params.analysisId)
+        // R3b: Jev chunk 0 only (K=1).
+        .eq('jev_chunk_index', 0)
         .abortSignal(AbortSignal.timeout(3000));
 
       if (error) {
@@ -675,6 +729,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .select('chunk_index, status')
         .eq('analysis_id', analysisId)
         .eq('chunk_index', chunkIndex)
+        // R3b: Jev chunk 0 only (K=1).
+        .eq('jev_chunk_index', 0)
         .single();
 
       if (error && error.code !== 'PGRST116') {

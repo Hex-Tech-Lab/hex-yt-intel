@@ -1,0 +1,11 @@
+-- R3b step 2.1 cleanup (ADR 037 Addendum A): drop the legacy 2-column unique
+-- key on analysis_chunks. Since #385 (deployed 2026-09-30), every upsert
+-- targets unique_analysis_chunk_cell (analysis_id, jev_chunk_index,
+-- chunk_index), added by 20260930180000.
+--
+-- DEPLOYMENT ORDERING: merge ONLY while the deployed web build carries #385's
+-- 3-column onConflict code (CI and the Supabase integration apply migrations on
+-- merge). Dropping this key under older code breaks every chunk upsert with
+-- "no unique or exclusion constraint matching the ON CONFLICT specification".
+-- K>1 Jev chunks cannot share a bundle chunk_index until this key is gone.
+alter table public.analysis_chunks drop constraint if exists unique_analysis_chunk;

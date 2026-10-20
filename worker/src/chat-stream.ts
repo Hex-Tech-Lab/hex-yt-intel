@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/cloudflare";
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CASCADE_FALLBACKS } from "../../web/lib/config/cascade";
+import { chatPayloadDigest, chatTokenMessage } from "../../web/lib/utils/chat-payload-digest";
 
 // Deploy-time snapshot only -- see CASCADE_FALLBACKS' doc comment in cascade.ts.
 // Real per-request values come from ChatStreamRequest.cascade, registry-resolved
@@ -63,6 +64,8 @@ interface ChatStreamRequest {
   requestId?: string;
   // Optional user knowledge context for adaptive OPTIONS generation
   knowledgeContext?: UserKnowledgeContext;
+  // Registry-resolved streaming timeout per model tier (T20).
+  timeoutMs?: number;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -89,17 +92,51 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Run the chat cascade, committing to the first model that produces tokens. The model
- *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
-export async function streamChatCascade(
-  apiKey: string,
-  grounding: string,
-  history: Array<{ role: string; content: string }>,
-  onDelta: (chunk: string) => void,
-  models?: string[],
-  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  userId?: string,
-): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[] }> {
+/** How the cascade ended; lets the caller pick the right user message and skip persisting a disconnect. */
+export type ChatCascadeOutcome = 'served' | 'partial' | 'client_abort' | 'budget_spent' | 'exhausted';
+
+export interface ChatCascadeResult {
+  content: string;
+  servedByModel: string | null;
+  servedByProvider: string | null;
+  attempts: string[];
+  partial: boolean;
+  outcome: ChatCascadeOutcome;
+}
+
+/** Options for {@link streamChatCascade}. `models` / `cascade` come from the bouncer
+ *  (per-tier app_settings); `cascade` is preferred, `models` is the legacy fallback. */
+export interface StreamChatCascadeOptions {
+  apiKey: string;
+  grounding: string;
+  history: Array<{ role: string; content: string }>;
+  onDelta: (chunk: string) => void;
+  models?: string[];
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  userId?: string;
+  timeoutMs?: number;
+  clientSignal?: AbortSignal;
+}
+
+/** Run the chat cascade, committing to the first model that produces tokens. Falls back
+ *  to CHAT_MODELS when neither `cascade` nor `models` is supplied. */
+export async function streamChatCascade(opts: StreamChatCascadeOptions): Promise<ChatCascadeResult> {
+  const {
+    apiKey,
+    grounding,
+    history,
+    onDelta,
+    models,
+    cascade,
+    userId,
+    timeoutMs,
+    clientSignal,
+  } = opts;
+  const effectiveTimeoutMs = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 50000;
+  // One cumulative budget for the whole cascade: every fallback model gets only the time left.
+  const deadline = Date.now() + effectiveTimeoutMs;
+  let budgetSpent = false;
+  let clientAborted = false;
   const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
@@ -121,10 +158,31 @@ export async function streamChatCascade(
     : CHAT_CASCADE;
 
   for (const { model, providerOrder } of chain) {
+    if (clientSignal?.aborted) {
+      clientAborted = true;
+      break;
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      budgetSpent = true;
+      break;
+    }
     let full = "";
     let servedByProvider: string | null = null;
+    let inBandError = false;
+    const attemptStartedAt = Date.now();
     const translatedModel = translateModelId(model);
     attempts.push(translatedModel);
+    // T22: every path that falls through to the next tier is reported, not just
+    // thrown errors -- a 429/empty reply used to retry the same input on the next
+    // provider (seen as Cerebras+Groq pairs in OpenRouter) with no Sentry trace.
+    const reportFallback = (reason: string, extra: Record<string, unknown> = {}) => {
+      Sentry.captureMessage(`chat-cascade model failed: ${translatedModel}`, {
+        level: 'warning',
+        tags: { operation: 'chat-cascade-fallback', model: translatedModel, provider: providerOrder?.join(',') ?? 'default', reason, isTimeout: String(reason === 'timeout') },
+        extra: { ...extra, attempts },
+      });
+    };
     try {
       // skipcq: JS-0827
       console.log(`[chat-cascade] Attempting model=${translatedModel} with providers=${providerOrder?.join(',') || 'default'}`);
@@ -150,21 +208,33 @@ export async function streamChatCascade(
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
-        signal: AbortSignal.timeout(50000),
+        // Per-attempt deadline = remaining cumulative budget, plus the client disconnect signal.
+        signal: AbortSignal.any([
+          AbortSignal.timeout(remainingMs),
+          ...(clientSignal ? [clientSignal] : []),
+        ]),
       });
       if (!res.ok) {
         // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned ${res.status} ${res.statusText}`);
+        reportFallback(`http_${res.status}`);
+        // Release the unread body before the next tier.
+        await res.body?.cancel().catch((e: unknown) => {
+          // skipcq: JS-0827
+          console.warn('[chat-cascade] body cancel failed', e instanceof Error ? e.message : String(e));
+        });
         continue; // try next model
       }
       if (!res.body) {
         // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned empty body`);
+        reportFallback('empty_body');
         continue;
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let streamError: Error | null = null;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -189,35 +259,93 @@ export async function streamChatCascade(
               full += delta;
               onDelta(delta);
             }
+            // OpenRouter reports mid-stream failures as an SSE chunk inside the
+            // HTTP 200; surface it so the cut-off path (partial/next model) runs.
+            if (json.error || json.choices?.[0]?.finish_reason === 'error') {
+              streamError = new Error(
+                typeof json.error?.message === 'string' ? json.error.message : 'upstream stream error'
+              );
+              inBandError = true;
+              break;
+            }
           } catch (e) {
             /* keep-alive / partial frame */
             // skipcq: JS-0827
             console.warn("[chat-stream] JSON parse delta skipped", e instanceof Error ? e.message : String(e));
           }
         }
+        if (streamError) {
+          // Release the rest of the upstream body before falling through.
+          void reader.cancel().catch((err: unknown) => {
+            // skipcq: JS-0827
+            console.warn('[chat-cascade] reader cancel failed', err instanceof Error ? err.message : String(err));
+          });
+          throw streamError;
+        }
       }
       if (full) {
         // skipcq: JS-0827
         console.log(`[chat-cascade] Model ${translatedModel} succeeded via provider=${servedByProvider || 'unknown'} with ${full.length} chars`);
-        return { content: full, servedByModel: translatedModel, servedByProvider, attempts };
+        return { content: full, servedByModel: translatedModel, servedByProvider, attempts, partial: false, outcome: 'served' };
       }
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} produced empty response`);
+      reportFallback('empty_response');
     } catch (e) {
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
-      const isTimeout = e instanceof DOMException && e.name === 'AbortError';
+      // Only the abort caused by the client's own signal counts as a disconnect; a real
+      // model/network error that lands in the same window is still reported below.
+      const isClientAbort = clientSignal?.aborted === true
+        && (e === clientSignal.reason || (e instanceof DOMException && e.name === 'AbortError'));
+      if (isClientAbort) {
+        // Client disconnected: not a model failure, so no Sentry and no next model.
+        clientAborted = true;
+        // skipcq: JS-0827
+        console.log(`[chat-cascade] client_abort during model=${translatedModel}; stopping cascade`);
+        if (full) {
+          return { content: full, servedByModel: translatedModel, servedByProvider, attempts, partial: true, outcome: 'client_abort' };
+        }
+        break;
+      }
+      // AbortSignal.timeout() rejects with TimeoutError, not AbortError. Every attempt is capped
+      // by the shared budget, so a TimeoutError here means the cumulative deadline has fired.
+      const isTimeout = e instanceof DOMException && e.name === 'TimeoutError';
+      const isAbort = e instanceof DOMException && e.name === 'AbortError';
+      if (isTimeout) budgetSpent = true;
       // skipcq: JS-0827
-      console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
+      console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? `budget spent after ${Date.now() - attemptStartedAt}ms of a ${effectiveTimeoutMs}ms budget` : msg}`);
       // Previously console-only -- tangent hunt after LLMCascade.ts's
       // abort/timeout-suppression incident (see its timeoutMs doc comment).
       // captureMessage matches LLMCascade's own fallback-capture convention.
-      Sentry.captureMessage(`chat-cascade model failed: ${translatedModel}`, {
-        level: 'warning',
-        tags: { operation: 'chat-cascade-fallback', model: translatedModel, isTimeout: String(isTimeout) },
-        extra: { msg, attempts },
-      });
+      const reason = inBandError ? 'stream_error' : isTimeout ? 'timeout' : isAbort ? 'cancelled' : 'error';
+      // The user already saw part of this answer; starting the next tier would
+      // append a second answer to it while only the second is persisted. Keep
+      // the partial text instead and report it as a cut-off reply.
+      if (full) {
+        Sentry.captureMessage(`chat-cascade answer cut off: ${translatedModel}`, {
+          level: 'error',
+          tags: { operation: 'chat-cascade-partial', model: translatedModel, reason },
+          extra: { msg, attempts, chars: full.length },
+        });
+        return { content: full, servedByModel: translatedModel, servedByProvider, attempts, partial: true, outcome: 'partial' };
+      }
+      // A budget-spent timeout is reported once, by the budget report below.
+      if (!isTimeout) reportFallback(reason, { msg });
     }
+  }
+  if (clientAborted) {
+    // skipcq: JS-0827
+    console.log(`[chat-cascade] client disconnected; no further models attempted (attempted: ${attempts.join(' -> ')})`);
+    return { content: "", servedByModel: null, servedByProvider: null, attempts, partial: false, outcome: 'client_abort' };
+  }
+  if (budgetSpent) {
+    Sentry.captureMessage('chat-cascade: budget spent, no further models attempted', {
+      level: 'error',
+      tags: { operation: 'chat-cascade-budget-exhausted' },
+      extra: { attempts, userId, budgetMs: effectiveTimeoutMs },
+    });
+    return { content: "", servedByModel: null, servedByProvider: null, attempts, partial: false, outcome: 'budget_spent' };
   }
   // skipcq: JS-0827
   console.error(`[chat-cascade] All models in cascade exhausted (attempted: ${attempts.join(' -> ')}), returning empty response`);
@@ -229,7 +357,7 @@ export async function streamChatCascade(
     tags: { operation: 'chat-cascade-exhausted' },
     extra: { attempts, userId },
   });
-  return { content: "", servedByModel: null, servedByProvider: null, attempts };
+  return { content: "", servedByModel: null, servedByProvider: null, attempts, partial: false, outcome: 'exhausted' };
 }
 
 export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
@@ -270,13 +398,19 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
 
+  // The signature covers grounding/history/tier/cascade/timeoutMs (chatPayloadDigest),
+  // so the browser can't edit what the LLM sees or which models run.
+  const payloadDigest = await chatPayloadDigest({
+    tier: req.tier,
+    grounding: req.grounding,
+    history: req.history,
+    cascade: req.cascade,
+    timeoutMs: req.timeoutMs,
+  });
   for (const s of secretsToTry) {
     if (!s) continue;
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
-    const expected = await hmacHex(s, msg);
-
-    if (timingSafeEqualHex(expected, req.sig)) {
+    const models = req.models ?? [];
+    if (timingSafeEqualHex(await hmacHex(s, chatTokenMessage(req.conversationId, req.userId, req.exp, models, payloadDigest)), req.sig)) {
       signingKey = s;
       isTokenValid = true;
       break;
@@ -385,23 +519,47 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       let servedByModel: string | null = null;
       let servedByProvider: string | null = null;
       let cascadeAttempts: string[] = [];
+      let partial = false;
+      let outcome: ChatCascadeOutcome | 'threw';
       try {
-        const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
-          send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, req.cascade, req.userId);
+        const result = await streamChatCascade({
+          apiKey,
+          grounding,
+          history,
+          onDelta: (chunk) => {
+            send({ type: "delta", content: chunk, requestId: req.requestId });
+          },
+          models: req.models,
+          cascade: req.cascade,
+          userId: req.userId,
+          timeoutMs: req.timeoutMs,
+          clientSignal,
+        });
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
         cascadeAttempts = result.attempts;
-        if (!full) {
+        partial = result.partial;
+        outcome = result.outcome;
+        if (partial && outcome !== 'client_abort') {
+          const notice = "\n\n_The response was cut off. Please try again._";
+          full += notice;
+          send({ type: "delta", content: notice, requestId: req.requestId });
+        }
+        if (!full && outcome === 'budget_spent') {
+          full = "Sorry, this took too long to answer. Please try again.";
+          send({ type: "delta", content: full, requestId: req.requestId });
+        } else if (!full && outcome === 'exhausted') {
           full = "Sorry, I couldn't generate a response. All fallback models failed to respond. Please check your internet connection and try again.";
           send({ type: "delta", content: full, requestId: req.requestId });
         }
+        // client_abort with no text: nobody is listening, so nothing is sent or persisted.
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'streamChatCascade' } } });
         // skipcq: JS-0827
         console.error("[chat-stream] streamChatCascade failed:", msg);
+        outcome = 'threw';
         full = "The model request failed. Your message is saved — please try again.";
         send({ type: "delta", content: full, requestId: req.requestId });
       }
@@ -414,6 +572,8 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         servedByModel,
         servedByProvider,
         attempts: cascadeAttempts,
+        partial,
+        outcome,
       });
 
       // STAGE 3: Persist chat content server-to-server

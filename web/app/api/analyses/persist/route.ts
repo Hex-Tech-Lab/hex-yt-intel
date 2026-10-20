@@ -5,6 +5,8 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { verifyContentSig } from '@/lib/stream-token';
+import { checkPersistCell, planToDegrade } from '@/lib/jev/stored-plan';
+import { reduceCellsToBundleRows } from '@/lib/jev/reduce-cells';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
@@ -20,6 +22,7 @@ import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import { claimSideEffectsPending, clearSideEffectsPending } from '@/lib/services/side-effect-outbox';
+import { enqueueSystemCommentSampleRun } from '@/lib/services/aux-remediation';
 import { hasUsableDimensionsPayload } from '@/lib/utils/has-usable-dimensions-payload';
 import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus, CROSS_DOMAIN_BRIDGES_DEFAULT_MAX_CHARS } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
@@ -209,13 +212,20 @@ export async function POST(request: NextRequest) {
       // tokensUsed/costUsd -- see canonical construction below).
       generationId: z.string().optional(),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
-      totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
-        message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
-      }).optional(),
+      // R3b 2.5b: totalChunks is checked after signature verification by
+      // checkPersistCell (TOTAL_STREAMS for v1/K=1, the plan's streamCount
+      // for a v2 cell), not by a fixed refine here.
+      totalChunks: z.number().int().min(1).optional(),
+      // R3b 2.5b: present only for a v2 (K>1) cell, from the verified stream
+      // token; signed (see canonical below). Absent = jev chunk 0 (K=1).
+      jevChunkIndex: z.number().int().min(0).optional(),
       segments: z.array(z.object({
         start: z.number(),
         duration: z.number(),
         text: z.string(),
+        // Phase 2.6: provider-invented caption time; kept so a stored
+        // transcript is never presented to the model as real timing.
+        estimated: z.boolean().optional(),
       })).optional(),
       // Flat transcript text carried alongside segments so a `transcripts` row
       // can still be written when the video's transcript arrived pre-fetched
@@ -301,6 +311,7 @@ export async function POST(request: NextRequest) {
         generationId,
         chunkIndex,
         totalChunks,
+        jevChunkIndex,
         segments,
         transcript,
         channelMeta: rawChannelMeta,
@@ -339,6 +350,11 @@ export async function POST(request: NextRequest) {
         tokensUsed: tokensUsed ?? null,
         costUsd: costUsd ?? null,
         generationId: generationId ?? null,
+        // R3b 2.5b: a v2 cell's identity is signed so a captured cell body
+        // can't be replayed as another cell. Added ONLY when present, so a
+        // v1/K=1 canonical is byte-identical to before (no stale-worker
+        // signature mismatch during rollout).
+        ...(jevChunkIndex !== undefined ? { cell: { jevChunkIndex, chunkIndex: chunkIndex ?? null, totalChunks: totalChunks ?? null } } : {}),
       });
       let isSigValid = false;
       try {
@@ -353,6 +369,32 @@ export async function POST(request: NextRequest) {
       if (!isSigValid) {
         console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
         return { type: 'error' as const, error: 'Invalid signature', status: 401 };
+      }
+
+      // R3b 2.5b: the cell must be one this analysis expects. The plan is only
+      // read for a v2 cell; a v1/K=1 persist keeps today's checks exactly.
+      const cellCheck = checkPersistCell(
+        jevChunkIndex === undefined ? null : await new SupabasePersistenceAdapter().findJevPlan({ analysisId }),
+        { jevChunkIndex, chunkIndex, totalChunks },
+        TOTAL_STREAMS,
+      );
+      if (!cellCheck.ok) {
+        console.warn('[analyses/persist] Rejected unexpected cell', { analysisId, jevChunkIndex, chunkIndex, totalChunks, reason: cellCheck.reason });
+        return { type: 'error' as const, error: `Unexpected cell: ${cellCheck.reason}`, status: 400 };
+      }
+
+      // R3b 2.5 degradation hatch: a v1 chunk for a K>1 plan means the browser
+      // fell back to K=1 (/stream-tokens failed). Mark the plan degraded so
+      // projective context, finalize and the reaper stop waiting for cells.
+      // Best-effort: a failure here never fails the persist.
+      if (jevChunkIndex === undefined && chunkIndex !== undefined) {
+        try {
+          const adapter = new SupabasePersistenceAdapter();
+          const degraded = planToDegrade(await adapter.findJevPlan({ analysisId }));
+          if (degraded) await adapter.markJevPlanDegraded({ analysisId, plan: degraded });
+        } catch (degradeErr) {
+          Sentry.captureException(degradeErr, { tags: { route: 'analyses-persist', phase: 'jev-plan-degrade' }, extra: { analysisId } });
+        }
       }
 
       // Cross-field check (end_seconds > start_seconds) that Zod's
@@ -412,7 +454,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
+      // A v2 cell's totalChunks is the cell count (K x G + P); completeness
+      // and stitching below always count bundles.
+      const resolvedTotal = jevChunkIndex === undefined ? (totalChunks ?? TOTAL_STREAMS) : TOTAL_STREAMS;
 
       // R1b (2026-09-29): registry-resolved cap for the crossDomainBridges
       // field (UCIS sub-dimension 8.3) consumed by stitchChunksIntoPayload.
@@ -584,6 +628,7 @@ export async function POST(request: NextRequest) {
           () => persistenceAdapter.persistAnalysisChunk({
             analysisId,
             chunkIndex,
+            jevChunkIndex,
             dimensionsCovered,
             payload,
             // A payload-less or malformed chunk never produced trustworthy
@@ -614,6 +659,13 @@ export async function POST(request: NextRequest) {
         // content is what's actually persisted. Do not remove this call to "avoid
         // duplication" — partial/interrupted analyses would silently stop getting a
         // transcript row at all, regressing the original P3 fix this exists for.
+        // (#417 P1 provenance guard — /simplify round) When the chunk carries
+        // NO segments, send `segments: undefined` (OMIT the key, not `[]`) and
+        // let the adapter's preserve-on-empty rule own the write semantics:
+        // existing row → segments/content untouched; no row → insert-if-absent
+        // flat-transcript row (original P3 fix preserved). The old route-level
+        // hasTranscriptRow probe (check-then-write race, duplicated at both
+        // call sites) is gone — the rule lives in SupabaseTranscriptAdapter.
         const hasSegments = segments && segments.length > 0;
         const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
         if (hasSegments || hasFlatTranscript) {
@@ -621,7 +673,7 @@ export async function POST(request: NextRequest) {
           await SupabaseTranscriptAdapter.upsertTranscript({
             videoId,
             content: segmentsText || transcript || markdown,
-            segments: segments || [],
+            segments: hasSegments ? segments : undefined,
             language: 'en',
             hash: row.transcriptHash || undefined,
           }).catch(e => {
@@ -657,11 +709,27 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Verify chunk completeness immediately after persisting chunk
-        const chunks = await retryWithBackoff(
-          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
-          2
-        );
+        // Completeness input: one row per bundle.
+        // - v1 / K=1 (no jevChunkIndex) — including a K>1 analysis whose
+        //   browser fell back to K=1 dispatch (the degradation hatch): today's
+        //   jev-chunk-0 rows, unchanged.
+        // - v2 (K>1, R3b 2.5c): every cell row is read and each bundle's
+        //   cells are reduced into one bundle row (reduceCellsToBundleRows);
+        //   a bundle with a missing/interrupted cell is omitted, so the
+        //   completeness logic below waits exactly as it does for a missing
+        //   bundle today. Partial dimensions go to validation_report.
+        let jevPartialDimensions: number[] = [];
+        const chunks = jevChunkIndex === undefined
+          ? await retryWithBackoff(() => persistenceAdapter.findAnalysisChunks({ analysisId }), 2)
+          : await (async () => {
+            const [storedPlan, cells] = await Promise.all([
+              retryWithBackoff(() => persistenceAdapter.findJevPlan({ analysisId }), 2),
+              retryWithBackoff(() => persistenceAdapter.findAnalysisCells({ analysisId }), 2),
+            ]);
+            const reduced = reduceCellsToBundleRows(storedPlan, cells ?? []);
+            jevPartialDimensions = reduced.partialDimensions;
+            return reduced.rows;
+          })();
         const FINAL_CHUNK_STATUS = 'completed';
         const finalChunks = chunks ? chunks.filter(c => c.status === FINAL_CHUNK_STATUS) : [];
 
@@ -1000,6 +1068,9 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isFullyValidated,
+            // R3b 2.5c: dimensions built from only part of the video (a K>1
+            // cell failed or omitted them). Drives the UI's partial badge.
+            ...(jevPartialDimensions.length > 0 ? { jev_partial_dimensions: jevPartialDimensions } : {}),
             ...(sideEffectsClaimed ? claimSideEffectsPending({}) : {}),
             ...withFreshAuxMetadata(channelMeta, comments),
           };
@@ -1134,6 +1205,15 @@ export async function POST(request: NextRequest) {
               console.warn('[analyses/persist] Failed to publish embedding task for chunks', { analysisId, error: String(e) });
             });
 
+            // Comment insights: one system-paid Cochran sample run per finalized
+            // analysis (~$0.003/video in the 2026-10-01 backfill). Previously only
+            // the remediation pass started runs (for rows missing `comments`), so
+            // no new analysis ever got a Comment insights card. Best-effort; never
+            // marks side effects failed (no outbox replay => no duplicate runs).
+            await enqueueSystemCommentSampleRun({ analysisId, userId: row.userId, videoId, validationReport: priorReport }).catch((e) => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'enqueue_comment_sample_run', analysisId } } });
+            });
+
             // Usage-log: analysis genuinely completed (chunked path). Purely
             // additive, fire-and-forget -- consumeQuota() itself never
             // throws (see PostgresBillingAdapter), and this .catch() is a
@@ -1181,6 +1261,31 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        return { type: 'chunk_saved' as const, analysisId, chunkIndex };
+      }
+
+      // R3b 2.5c: a v2 (K>1) cell that did not take the chunk branch above
+      // (interrupted with no usable payload) records ITS OWN row as
+      // 'interrupted' and never writes the parent: the parent belongs to the
+      // whole cell set (interrupted cells are not terminal, so finalize keeps
+      // waiting; the reaper settles a run that never completes). Unlike K=1,
+      // where this path writes the parent 'interrupted' directly.
+      if (jevChunkIndex !== undefined && chunkIndex !== undefined) {
+        await retryWithBackoff(
+          () => persistenceAdapter.persistAnalysisChunk({
+            analysisId,
+            chunkIndex,
+            jevChunkIndex,
+            dimensionsCovered: [],
+            payload: {},
+            status: 'interrupted',
+            tokensUsed,
+            costUsd,
+            cachedTokens,
+            generationId,
+          }),
+          2
+        );
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
       }
 
@@ -1376,13 +1481,16 @@ export async function POST(request: NextRequest) {
       // overwrites whatever partial content the safety-net write left behind.
       // See the comment at the chunk-path call site (~line 475) for the full
       // relationship — the two calls are deliberately not consolidated into one.
+      // Same preserve-on-empty contract as the chunk path: empty incoming
+      // segments are sent as `undefined` (omitted) and the ADAPTER owns the
+      // no-erase guarantee; no route-level probe.
       const finalHasSegments = segments && segments.length > 0;
       const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
       if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
         await SupabaseTranscriptAdapter.upsertTranscript({
           videoId,
           content: transcript || stitchedMarkdown || markdown,
-          segments: segments || [],
+          segments: finalHasSegments ? segments : undefined,
           language: 'en',
           hash: row.transcriptHash || undefined,
         }).catch(e => {
@@ -1512,6 +1620,15 @@ export async function POST(request: NextRequest) {
           sideEffectsFailedNonChunk = true;
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_embedding_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish embedding task', { analysisId, error: String(e) });
+        });
+
+        // Comment insights: one system-paid Cochran sample run per finalized
+        // analysis (~$0.003/video in the 2026-10-01 backfill). Previously only
+        // the remediation pass started runs (for rows missing `comments`), so
+        // no new analysis ever got a Comment insights card. Best-effort; never
+        // marks side effects failed (no outbox replay => no duplicate runs).
+        await enqueueSystemCommentSampleRun({ analysisId, userId: row.userId, videoId, validationReport: priorReport }).catch((e) => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'enqueue_comment_sample_run', analysisId } } });
         });
 
         // Usage-log: analysis genuinely completed (non-chunked path). Same

@@ -45,12 +45,12 @@ function reconstructGroundingMarkdown(analysisMarkdown: string | null, analysisP
 
 function formatTimestamp(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${m}:${String(s).padStart(2, '0')}`;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
 /**
@@ -81,6 +81,26 @@ interface AnalysisRecord {
   validation_passed: boolean | null;
   validation_report: { status?: string } | null;
   billing_status: string | null;
+}
+
+type MetadataColumns = { thumbnail_url: string; channel_title?: string; channel_id?: string; published_at?: string };
+
+/**
+ * Video-metadata columns derived from the job metadata. The dashboard and history
+ * read these columns, but before this only the blob in validation_report.metadata
+ * was written, so channel_id/published_at/thumbnail_url stayed null on every row (and
+ * channel_title was written only on the stub-update path).
+ */
+export function metadataColumns(videoId: string, metadata?: AnalysisJobMetadata): MetadataColumns {
+  const cols: MetadataColumns = {
+    thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+  };
+  if (metadata?.channelTitle) cols.channel_title = metadata.channelTitle;
+  if (metadata?.channelId) cols.channel_id = metadata.channelId;
+  // publishedAt is z.string() with no date check; a non-date would fail the whole row update.
+  const published = metadata?.publishedAt;
+  if (published && /^\d{4}-\d{2}-\d{2}/.test(published) && !Number.isNaN(Date.parse(published))) cols.published_at = published;
+  return cols;
 }
 
 /**
@@ -122,8 +142,8 @@ export class SupabaseAnalysisAdapter {
       const payload = existing.analysis_payload as Record<string, unknown>;
       
       const raw = Array.isArray(payload.dimensions) ? payload.dimensions : Object.values(payload.dimensions ?? {});
-      const dimensions = raw.reduce<Record<string, unknown>>((acc, d: any) => {
-        if (d && typeof d.number === 'number') acc[d.number] = d;
+      const dimensions = raw.reduce<Record<string, unknown>>((acc, dim: any) => {
+        if (dim && typeof dim.number === 'number') acc[dim.number] = dim;
         return acc;
       }, {});
 
@@ -216,7 +236,7 @@ export class SupabaseAnalysisAdapter {
         .from('analyses')
         .update({
           title: params.title,
-          channel_title: params.validationReport.metadata?.channelTitle || '',
+          ...metadataColumns(params.videoId, params.validationReport.metadata),
           // Only overwrite on an actual signal; a retry/refresh call with no UA
           // (or an unparseable one) must not clobber the platform recorded on
           // the original request.
@@ -285,8 +305,9 @@ export class SupabaseAnalysisAdapter {
     // Store transcript hash (ADR 006: cache key based on input transcript) and the
     // UA-derived client platform (cosmetic device signal, RCA 2026-07-24) if
     // present. `reserve_analysis_quota` doesn't accept either column, so a
-    // single follow-up update covers both fields the RPC can't set directly.
-    const followUpUpdate: Record<string, string> = {};
+    // single follow-up update covers both fields the RPC can't set directly, plus the
+    // video-metadata columns (the RPC only stores the validation_report blob).
+    const followUpUpdate: Record<string, string> = { ...metadataColumns(params.videoId, params.validationReport.metadata) };
     if (params.transcriptHash) followUpUpdate.transcript_hash = params.transcriptHash;
     if (params.clientPlatform) followUpUpdate.client_platform = params.clientPlatform;
 
@@ -301,7 +322,7 @@ export class SupabaseAnalysisAdapter {
           tags: { operation: 'analysis-persist-stub-followup' },
           extra: { analysisId, videoId: params.videoId },
         });
-        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash / client platform:', followUpError.message);
+        console.warn('[SupabaseAnalysisAdapter] Failed to store follow-up columns (transcript hash / client platform / video metadata):', followUpError.message);
       }
     }
 
@@ -852,6 +873,19 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /** Atomic shallow merge of `patch` into validation_report (never replaces the report). */
+  static async mergeValidationReport(params: { analysisId: string; patch: Record<string, unknown> }): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const { error } = await service.rpc('merge_analysis_validation_report', {
+      p_analysis_id: params.analysisId,
+      p_patch: params.patch,
+    });
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'mergeValidationReport' }, extra: { analysisId: params.analysisId } });
+      throw error;
+    }
+  }
+
   static async updateValidationReport(params: {
     analysisId: string;
     report: any;
@@ -945,6 +979,106 @@ export class SupabaseAnalysisAdapter {
       });
       throw error;
     }
+  }
+
+  /**
+   * R3b 2.3 (ADR 037 Addendum A, Option P1): persist the computed Jev plan
+   * idempotently — the update is conditional on the row having no stored
+   * plan, so a concurrent/second /plan call can never overwrite or
+   * re-chunk. Returns the now-authoritative plan plus whether the caller's
+   * write landed (false ⇒ the previously stored plan was returned).
+   */
+  static async persistJevPlan(params: {
+    analysisId: string;
+    plan: unknown;
+  }): Promise<{ plan: unknown; stored: boolean }> {
+    try {
+      const service = getSupabaseServiceClient();
+      // Conditional update: only a plan-less row accepts a new plan.
+      const { data, error } = await service
+        .from('analyses')
+        .update({ jev_plan: params.plan })
+        .eq('id', params.analysisId)
+        .is('jev_plan', null)
+        .select('jev_plan')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] persistJevPlan failed:', error.message);
+        throw error;
+      }
+      if (data) return { plan: data.jev_plan, stored: true };
+
+      // Update landed on zero rows: either the plan already exists (normal
+      // second call — return it) or the analysis row itself is gone (error).
+      const { data: existing, error: fetchError } = await service
+        .from('analyses')
+        .select('jev_plan')
+        .eq('id', params.analysisId)
+        .maybeSingle();
+      if (fetchError) throw fetchError;
+      if (existing?.jev_plan != null) return { plan: existing.jev_plan, stored: false };
+      throw new Error(`persistJevPlan: analysis row not found: ${params.analysisId}`);
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'persistJevPlan' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+  }
+
+  /** R3b 2.3: read the stored Jev plan for an analysis, null when absent. */
+  /** R3b 2.5: record that the browser fell back to K=1 for this plan (see planToDegrade). */
+  static async markJevPlanDegraded(params: { analysisId: string; plan: Record<string, unknown> }): Promise<void> {
+    const service = getSupabaseServiceClient();
+    const { error } = await service
+      .from('analyses')
+      .update({ jev_plan: params.plan })
+      .eq('id', params.analysisId)
+      .not('jev_plan', 'is', null);
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'markJevPlanDegraded' }, extra: { analysisId: params.analysisId } });
+      throw error;
+    }
+  }
+
+  /** R3b admin gate: users.role === 'admin' for a user, or an analysis's owner. Any miss or error => false (fail closed). */
+  static async isAdminUser(params: { userId: string } | { analysisId: string }): Promise<boolean> {
+    const service = getSupabaseServiceClient();
+    let userId = 'userId' in params ? params.userId : null;
+    if ('analysisId' in params) {
+      const { data, error } = await service.from('analyses').select('user_id').eq('id', params.analysisId).maybeSingle();
+      if (error) {
+        Sentry.captureException(error, { tags: { method: 'isAdminUser', phase: 'owner' }, extra: { analysisId: params.analysisId } });
+        return false;
+      }
+      userId = (data?.user_id as string | undefined) ?? null;
+    }
+    if (!userId) return false;
+    const { data, error } = await service.from('users').select('role').eq('id', userId).maybeSingle();
+    if (error) {
+      Sentry.captureException(error, { tags: { method: 'isAdminUser', phase: 'role' } });
+      return false;
+    }
+    return data?.role === 'admin';
+  }
+
+  static async findJevPlan(params: { analysisId: string }): Promise<unknown | null> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('analyses')
+      .select('jev_plan')
+      .eq('id', params.analysisId)
+      .maybeSingle();
+    if (error) {
+      Sentry.captureException(error, {
+        tags: { method: 'findJevPlan' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+    return data?.jev_plan ?? null;
   }
 
   /** Real segment timing for the source video, if still within the 72h

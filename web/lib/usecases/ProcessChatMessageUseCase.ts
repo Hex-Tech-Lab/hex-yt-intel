@@ -15,8 +15,10 @@ import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-
 import { formatTimestamp } from '@/lib/utils/entity-time-seek';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
-import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
+import { resolveChatCascade, resolveChatWritingCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
+import { isWritingRequest } from '@/lib/utils/chat-intent';
 import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
+import { chatPayloadDigest } from '@/lib/utils/chat-payload-digest';
 
 // Fallback used only if the settings registry is unreachable (see
 // getRegistrySettings call below) -- matches the values these keys replaced
@@ -34,6 +36,11 @@ const CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number> = {
 // Fallback used only if the settings registry is unreachable -- see
 // supabase/migrations/20260725130000_chat_transcript_range_leadin_settings.sql.
 const CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK = 5;
+
+// Fallbacks used only if the settings registry is unreachable -- see
+// supabase/migrations/20261012170000_chat_stream_timeout_settings.sql.
+const CHAT_STREAM_TIMEOUT_MS_FALLBACK = 50_000;
+const CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK = 90_000;
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -69,6 +76,8 @@ export interface ProcessChatMessageSuccess {
     // access) instead of via a client-side keyword regex on conversation text,
     // which had no relationship to whether the sample was actually incomplete.
     hasMoreComments?: boolean;
+    // Client and worker timeout in milliseconds resolved from Settings Registry (T20)
+    timeoutMs?: number;
   };
 }
 
@@ -516,19 +525,55 @@ export class ProcessChatMessageUseCase {
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
 
-    // 9. Resolve LLM models based on reasoning flag
-    const chatModels = isReasoning
+    // 9. Resolve LLM models based on reasoning flag. T21: a creative-writing
+    // request (blog, LinkedIn post, script...) uses cascade.chatWriting; the
+    // signed model list is taken from that same cascade so the two agree.
+    // Free tier keeps the normal chat cascade for writing too (owner: free cost
+    // first; gpt-oss is ~3x cheaper than Haiku 5.5 per OpenRouter, 2026-10-12).
+    const isPaidTier = tier === 'light' || tier === 'pro' || tier === 'max' || tier === 'enterprise';
+    // Writing intent beats the keyword-based reasoning check ("a LinkedIn post
+    // about why...") but not an explicit /reason or /think command.
+    const isReasoningCommand = trimmedRaw.startsWith('/reason') || trimmedRaw.startsWith('/think');
+    const writingCascade = !isReasoningCommand && isPaidTier && isWritingRequest(finalContent) ? await resolveChatWritingCascade() : null;
+    const chatModels = writingCascade
+      ? [...new Set(writingCascade.map((item) => item.model))]
+      : isReasoning
       ? await this.modelResolution.resolveModels(tier, 'reasoning')
       : await this.modelResolution.resolveModels(tier, 'chat');
     // Full registry-resolved tiers (with providerOrder), forwarded to the worker
     // alongside chatModels -- see ChatStreamRequest.cascade in worker/src/chat-stream.ts.
     // Free-vs-paid reasoning cascade (same rationale as SettingsModelAdapter;
     // tiers differ by volume, never by model).
-    const chatCascade: CascadeItem[] = isReasoning
-      ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
-      : await resolveChatCascade();
+    const chatCascade: CascadeItem[] = writingCascade
+      ?? (isReasoning
+        ? await resolveReasoningCascade(tier === 'free' ? 'free' : 'pro')
+        : await resolveChatCascade());
 
-    // 10. Generate cryptographic stream token
+    // 10. Resolve streaming timeout from Settings Registry
+    // T20: decoupling hardcoded 50s timeout into settings registry. Writing requests
+    // use chat.stream.writingTimeoutMs (default 90s); standard chat uses chat.stream.timeoutMs (default 50s).
+    const timeoutSettings = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.stream.timeoutMs', 'chat.stream.writingTimeoutMs'],
+      {
+        'chat.stream.timeoutMs': CHAT_STREAM_TIMEOUT_MS_FALLBACK,
+        'chat.stream.writingTimeoutMs': CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK,
+      }
+    );
+    const resolvedTimeoutMs = writingCascade
+      ? Number(timeoutSettings['chat.stream.writingTimeoutMs']) || CHAT_STREAM_WRITING_TIMEOUT_MS_FALLBACK
+      : Number(timeoutSettings['chat.stream.timeoutMs']) || CHAT_STREAM_TIMEOUT_MS_FALLBACK;
+
+    // 11. Generate cryptographic stream token
+    // The browser relays these to the worker; signing their digest stops a
+    // signed-in user from editing what the LLM sees or which models run.
+    const relayedHistory = history.map((m) => ({ role: m.role, content: m.content }));
+    const payloadDigest = await chatPayloadDigest({
+      tier,
+      grounding,
+      history: relayedHistory,
+      cascade: chatCascade,
+      timeoutMs: resolvedTimeoutMs,
+    });
     let sig: string;
     let exp: number;
     try {
@@ -536,6 +581,7 @@ export class ProcessChatMessageUseCase {
         conversationId,
         userId,
         models: chatModels,
+        payloadDigest,
       });
       sig = token.sig;
       exp = token.exp;
@@ -565,9 +611,10 @@ export class ProcessChatMessageUseCase {
           userId,
           tier,
           grounding,
-          history: history.map((m) => ({ role: m.role, content: m.content })),
+          history: relayedHistory,
           models: chatModels,
           cascade: chatCascade,
+          timeoutMs: resolvedTimeoutMs,
           // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
           // actually vary by conversation content instead of always falling
           // through to the static fallback (this field was previously never

@@ -14,6 +14,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { getSpeakingSeconds } from '@/lib/utils/highlights-settings';
 import { useHighlightTicker, previewWords } from './useHighlightTicker';
 
 describe('useHighlightTicker', () => {
@@ -31,6 +32,22 @@ describe('useHighlightTicker', () => {
   it('reveals the first word immediately at elapsed=0, not a blank flash', () => {
     const { result } = renderHook(() => useHighlightTicker(0, 'one two three four', 10, 0));
     expect(result.current.revealedText).toBe('one...');
+  });
+
+  it('does not start the reveal clock until the lead-in has played (entry drift, 2026-10-02)', () => {
+    const twentyWords = Array.from({ length: 20 }, (unused, position) => `w${position + 1}`).join(' ');
+    // 2.5s lead-in, 2.5 w/s: during the lead-in only the first word shows;
+    // 2s into the highlight's own speech (elapsed 4.5s) shows 5 words, not 12.
+    const during = renderHook(() => useHighlightTicker(0, twentyWords, 10, 2, null, 2.5, 2.5));
+    expect(during.result.current.revealedText).toBe('w1...');
+    const after = renderHook(() => useHighlightTicker(0, twentyWords, 10, 4.5, null, 2.5, 2.5));
+    expect(after.result.current.revealedText.replace(/\.\.\.$/, '').split(' ')).toHaveLength(5);
+  });
+
+  it('a lead-in of 0 (default) keeps the previous pacing', () => {
+    const twentyWords = Array.from({ length: 20 }, (unused, position) => `w${position + 1}`).join(' ');
+    const { result } = renderHook(() => useHighlightTicker(0, twentyWords, 10, 2, null, 2.5));
+    expect(result.current.revealedText.replace(/\.\.\.$/, '').split(' ')).toHaveLength(5);
   });
 
   it('reveals words at the words-per-second pace, not a duration ratio', () => {
@@ -173,5 +190,47 @@ describe('useHighlightTicker usingVerbatim flag', () => {
     expect(result.current.usingVerbatim).toBe(false);
     expect(result.current.revealedText.length).toBeGreaterThan(0);
     expect(result.current.revealedText).not.toMatch(/^\s*$/);
+  });
+});
+
+describe('useHighlightTicker – verbatim pace follows the speaker (T10)', () => {
+  const thirtyWords = Array.from({ length: 30 }, (unused, position) => `w${position}`).join(' ');
+
+  it('paces a verbatim excerpt by its own words over the speaking window, not the 2.5 default', () => {
+    // 30 words over a 10s speaking span = 3 words/s; 4s past the 2s lead-in -> 12 words.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 10, 6, thirtyWords, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(12); // 4s of speech x 3 words/s
+  });
+
+  it('keeps the registry pace for a paraphrased label (no verbatim)', () => {
+    const { result } = renderHook(() => useHighlightTicker(0, thirtyWords, 12, 6, null, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(10);
+  });
+
+  it('clamps an implausible derived pace', () => {
+    // 30 words in a 1s span would be 30 words/s; clamped to 6.
+    const { result } = renderHook(() => useHighlightTicker(0, 'label', 1, 3, thirtyWords, 2.5, 2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(6);
+  });
+});
+
+describe('getSpeakingSeconds', () => {
+  it('returns the raw span inside [minDur, maxDur]', () => {
+    expect(getSpeakingSeconds({ start: 10, end: 18 }, 3, 20)).toBe(8);
+  });
+  it('returns 0 for a legacy span reaching the next highlight', () => {
+    expect(getSpeakingSeconds({ start: 10, end: 140 }, 3, 20)).toBe(0);
+  });
+  it('returns 0 without an end', () => {
+    expect(getSpeakingSeconds({ start: 10, end: null }, 3, 20)).toBe(0);
+  });
+});
+
+describe('useHighlightTicker – shifted legacy clip (T8)', () => {
+  it('starts the reveal part-way into the excerpt when the clip opens after its words began', () => {
+    const tenWords = 'a b c d e f g h i j';
+    // Clip opened 2s after its own start (leadIn -2); 0s elapsed at 2.5 w/s fallback (no speaking span) -> 5 words already spoken.
+    const { result } = renderHook(() => useHighlightTicker(0, tenWords, 0, 0, null, 2.5, -2));
+    expect(result.current.revealedText.replace('...', '').split(' ')).toHaveLength(5);
   });
 });

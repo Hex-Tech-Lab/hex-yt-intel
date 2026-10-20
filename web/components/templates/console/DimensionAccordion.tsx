@@ -121,7 +121,8 @@ export const DimensionAccordion = memo(
 
     return (
       <section className="hx-rise flex flex-col gap-4">
-        <div className="flex items-center justify-between mb-2">
+        {/* One 16px rhythm: mt-3 + the parent's 4px gap above, gap-4 below. */}
+        <div className="flex items-center justify-between mt-3">
           <MonoLabel index="//">synthesis dimensions</MonoLabel>
           {progress && (
             <span className="hx-mono text-[11px] tracking-wider text-[var(--accent-ink)] font-semibold">
