@@ -4,7 +4,7 @@ import { clearClientCache } from '@/lib/utils/client-cache';
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
-    user: { id: 'test-user-id', email: 'test@example.com' },
+    user: { id: process.env.TEST_USER_BYPASS_ID || 'mock-user-1', email: 'test@example.com' },
     session: { access_token: 'test-token' },
     isLoading: false,
     isAuthenticated: true,

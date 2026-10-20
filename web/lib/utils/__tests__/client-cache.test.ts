@@ -121,7 +121,7 @@ describe('client-cache utility', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it('supports peekCachedQuery to inspect cache synchronously', async () => {
+  it('supports peekCachedQuery to inspect cache synchronously', () => {
     expect(peekCachedQuery('peek-key')).toBeUndefined();
 
     setCachedQuery('peek-key', { value: 42 }, 2000);

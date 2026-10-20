@@ -17,7 +17,7 @@ export interface AuthOptions {
  * user's subscription tier. Returns null when the session is missing or
  * invalid — the controller maps null → 401.
  *
- * Current implementation: getSupabaseClientWithAuth() + getUser() + getUserTier()
+ * Current implementation: getSupabaseClientWithAuth() + user identity verification + getUserTier()
  */
 export interface AuthPort {
   /**
