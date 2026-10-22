@@ -1,22 +1,24 @@
 export const dynamic = 'force-dynamic';
 
+import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
+import PDFDocument from 'pdfkit';
+
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { getUserTier } from '@/lib/services/traffic';
 import { logUsage } from '@/lib/usage';
 import { ERROR_CODES } from '@/lib/error-codes';
-import PDFDocument from 'pdfkit';
-import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { filterHallucinationContent } from '@/lib/utils/hallucination-filter';
 import { FULL_REPORT_TIERS } from '@/lib/config/report-tiers';
 
 /** Sanitize filename to prevent header injection and ensure system compatibility. */
 function sanitizeFilename(name: string): string {
-  return name
+  const sanitized = name
     .replace(/[\\/:"*?<>|]/g, '_') // Strip path separators and invalid chars
     .replace(/["';\n\r]/g, '')     // Prevent Content-Disposition injection
-    .trim()
-    .slice(0, 120);              // Constraint for safe header length
+    .trim();
+  return sanitized.length > 120 ? sanitized.slice(0, 117) + '...' : sanitized;
 }
 
 /** Renders a finished PDFDocument into an attachment Response. */
@@ -38,6 +40,7 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${safeName}"`,
+            'Cache-Control': 'private, no-store',
           },
         })
       );
@@ -97,7 +100,7 @@ export async function GET(
 
     const query = service
       .from('analyses')
-      .select('*')
+      .select('id, title, channel_title, created_at, analysis_markdown')
       .eq('id', id);
     if (!isAdmin) {
       query.eq('user_id', userId);
@@ -199,7 +202,7 @@ function exportSummaryPDF(analysis: ExportableAnalysis) {
     if (used >= MAX_CHARS) break;
     const lines = section.split(/\r?\n/);
     const heading = (lines[0] || '').replace(/^#+\s/, '').trim();
-    const body = lines.slice(1).join(' ').replace(/\s+/g, ' ').trim();
+    const body = lines.filter((_, lineIndex) => lineIndex > 0).join(' ').replace(/\s+/g, ' ').trim();
     if (!heading && !body) continue;
 
     if (heading) {
@@ -207,7 +210,7 @@ function exportSummaryPDF(analysis: ExportableAnalysis) {
     }
     if (body) {
       const remaining = MAX_CHARS - used;
-      const snippet = body.length > remaining ? body.slice(0, remaining).trimEnd() + '…' : body;
+      const snippet = body.length > remaining ? (body.slice(0, remaining) + '...').trimEnd() : body;
       doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(snippet, { align: 'left' });
       used += snippet.length;
     }

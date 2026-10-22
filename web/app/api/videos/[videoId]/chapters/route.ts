@@ -127,8 +127,28 @@ export async function GET(
   const { videoId } = await params;
 
   try {
-    const { chapters, confirmed } = await SupabaseTranscriptAdapter.getChaptersWithStatus(videoId);
-    return NextResponse.json({ chapters, confirmed });
+    const { chapters, confirmed, earliestExpiresAt } = await SupabaseTranscriptAdapter.getChaptersWithStatus(videoId);
+
+    let cacheControl = 'no-store';
+    if (confirmed && earliestExpiresAt) {
+      const expiresMs = new Date(earliestExpiresAt).getTime();
+      const remainingSeconds = Math.floor((expiresMs - Date.now()) / 1000);
+      if (!isNaN(expiresMs) && remainingSeconds > 0) {
+        const defaultMaxAge = 86400;
+        const maxAge = Math.min(defaultMaxAge, remainingSeconds);
+        const sMaxAge = Math.min(604800, remainingSeconds);
+        cacheControl = `public, max-age=${maxAge}, s-maxage=${sMaxAge}, stale-while-revalidate=${maxAge}`;
+      }
+    }
+
+    return NextResponse.json(
+      { chapters, confirmed },
+      {
+        headers: {
+          'Cache-Control': cacheControl,
+        },
+      }
+    );
   } catch (error: unknown) {
     const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
     Sentry.captureException(error, {

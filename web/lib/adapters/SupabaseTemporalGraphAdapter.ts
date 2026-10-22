@@ -1,7 +1,9 @@
-import type { TemporalKnowledgePort, TemporalAnchor, TemporalSubgraphNode } from '@/lib/ports/TemporalKnowledgePort';
+import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { hammingDistance } from '@/lib/utils/simhash';
-import * as Sentry from '@sentry/nextjs';
+
+import type { TemporalKnowledgePort, TemporalAnchor, TemporalSubgraphNode } from '@/lib/ports/TemporalKnowledgePort';
 
 export class SupabaseTemporalGraphAdapter implements TemporalKnowledgePort {
   async storeSimHashAnchors(params: {
@@ -42,7 +44,7 @@ export class SupabaseTemporalGraphAdapter implements TemporalKnowledgePort {
       // Fetch all anchors for this analysis
       const { data, error } = await service
         .from('analysis_simhash_anchors')
-        .select('*')
+        .select('id, analysis_id, simhash_64, window_start, window_end, salient_claim, verbatim_anchor')
         .eq('analysis_id', params.analysisId);
         
       if (error) throw error;

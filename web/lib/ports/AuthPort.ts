@@ -7,17 +7,23 @@ export interface AuthIdentity {
   tier: UserTier;
 }
 
+/** Options for request authentication. */
+export interface AuthOptions {
+  requireActiveSession?: boolean;
+}
+
 /**
  * Verifies the request carries a valid Supabase session and resolves the
  * user's subscription tier. Returns null when the session is missing or
  * invalid — the controller maps null → 401.
  *
- * Current implementation: getSupabaseClientWithAuth() + getUser() + getUserTier()
+ * Current implementation: getSupabaseClientWithAuth() + user identity verification + getUserTier()
  */
 export interface AuthPort {
   /**
    * Authenticate the incoming request.
+   * @param options - Optional configuration, such as requiring active session validation.
    * @returns AuthIdentity on success, null if session is missing/invalid.
    */
-  authenticate(): Promise<AuthIdentity | null>;
+  authenticate(options?: AuthOptions): Promise<AuthIdentity | null>;
 }
